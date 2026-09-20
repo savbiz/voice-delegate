@@ -2,9 +2,9 @@
 
 ## Boundaries
 
-The browser owns microphone capture, WebRTC playback, and display-only captions. FastAPI owns admission, session capability keys, time budgets, and server credentials. The session manager owns exactly one provider connection per application session and is the sole executor of delegation requests. The provider adapter translates public wire events into typed application events. M2 adds a LangGraph worker behind `delegate_task(goal, context)`.
+The browser owns microphone capture, WebRTC playback, and display-only captions. FastAPI owns admission, session capability keys, time budgets, and server credentials. The session manager owns exactly one provider connection per application session and is the sole executor of delegation requests. The provider adapter translates public wire events into typed application events. M2 runs a LangGraph worker behind `delegate_task(goal, context)`.
 
-Keeping audio on a direct media connection avoids an application audio hop. A sideband provides server-side authority without routing the microphone through Python. Backend results will enter as commentary, separate from trusted instructions.
+Keeping audio on a direct media connection avoids an application audio hop. A sideband provides server-side authority without routing the microphone through Python. Backend results enter as commentary, separate from trusted instructions.
 
 ```mermaid
 sequenceDiagram
@@ -33,7 +33,29 @@ sequenceDiagram
     end
 ```
 
-M1 handles an unexpected delegation with a short unavailable commentary linked to the provider delegation ID. No LangGraph package or tool execution is installed until M2. This keeps the milestone boundary explicit.
+M2 dispatches delegation to a LangGraph worker in the background. Bounded transcripts provide goal/context. Results return through commentary; interruptions invalidate the active generation before cancellation. See [M2](m2.md) and [ADR 005](decisions/005-bounded-delegation.md).
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant S as Session manager
+    participant V as GPT-Live
+    participant W as LangGraph worker
+    V->>S: Transcripts and delegation ID
+    S->>W: delegate_task(goal, context)
+    alt Worker completes
+        W-->>S: Result
+        S->>S: Check generation and clip result
+        S->>V: Commentary with delegation ID
+        V-->>B: Narrated result
+    else User interrupts
+        B->>S: Microphone onset or Cancel task
+        S->>S: Invalidate generation
+        S->>W: Cancel task
+        W-->>S: Discard any late result
+    end
+```
+
 
 ## Lifecycle
 
@@ -53,6 +75,7 @@ All `/api` routes require the configured exact Origin. Session routes also requi
 | `POST /api/sessions/{id}/offer` | JSON SDP offer; return SDP answer |
 | `POST /api/sessions/{id}/heartbeat` | Refresh browser liveness and return state |
 | `POST /api/sessions/{id}/close` | Close and report finalization confirmation |
+| `POST /api/sessions/{id}/interrupt` | Invalidate and cancel the active worker |
 | `POST /api/sessions/{id}/token` | 501 for GPT-Live; capability boundary for later adapters |
 
 ## Resource budgets
@@ -70,7 +93,7 @@ All `/api` routes require the configured exact Origin. Session routes also requi
 | Normalized event queue | 64 | Fail on slow consumers rather than accumulate stale work |
 | WebSocket write high-water mark | 32 KiB | Backpressure for outbound control messages |
 | Commentary write deadline | 2 s | Prevent stuck sends from blocking event handling indefinitely |
-| M1 commentary content | 500 UTF-8 bytes | Conservative bound for the fixed unavailable response; M2 uses token accounting |
+| M1 commentary content | 500 UTF-8 bytes | Conservative wire guard alongside M2 configurable token accounting |
 | Browser captions / timing rows | 6,000 characters per speaker / 20 | Bound DOM memory during long sessions |
 
 WebRTC audio buffers belong to the browser and provider. We do not claim to bound those with a Python queue. M3 must define bounded audio buffers if an audio relay is introduced.

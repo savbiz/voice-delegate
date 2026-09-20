@@ -1,0 +1,28 @@
+{
+  "type": "function",
+  "name": "delegate_task",
+  "description": "Delegate arithmetic or a project-reference lookup to the worker.",
+  "parameters": {
+    "additionalProperties": false,
+    "description": "Untrusted goal and transcript context, separate from worker instructions.",
+    "properties": {
+      "goal": {
+        "maxLength": 8192,
+        "minLength": 1,
+        "title": "Goal",
+        "type": "string"
+      },
+      "context": {
+        "default": "",
+        "maxLength": 32768,
+        "title": "Context",
+        "type": "string"
+      }
+    },
+    "required": [
+      "goal"
+    ],
+    "title": "DelegationInput",
+    "type": "object"
+  }
+}

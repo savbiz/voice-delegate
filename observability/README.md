@@ -1,6 +1,6 @@
 # OpenTelemetry
 
-M1 includes optional `provider.connect` spans for signaling setup, with no SDP, transcript, session key or credential attributes. Export is disabled by default, including offline tests. Turn-level traces, provider/delegation metrics, Prometheus, and Grafana belong to M4; setup duration is not turn latency.
+M2 includes optional `provider.connect` spans for signaling setup and `delegate_task` spans for worker execution, with no SDP, transcript, session key or credential attributes. Export is disabled by default, including offline tests. Turn-level traces, provider/delegation metrics, Prometheus, and Grafana belong to M4; setup duration is not turn latency.
 
 Set `VOICE_OTEL_ENABLED=true` to export traces to the console. For the optional local collector:
 

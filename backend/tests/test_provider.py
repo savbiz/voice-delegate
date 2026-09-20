@@ -48,7 +48,7 @@ def test_delegation_contains_identity_not_invented_task_text() -> None:
             }
         )
     )
-    assert event == DelegationRequested("item-1")
+    assert event == DelegationRequested("item-1", 1000)
 
 
 def test_audio_is_not_retained_in_application_queue() -> None:

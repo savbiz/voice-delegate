@@ -4,6 +4,8 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Literal
 
+from voice_delegate.delegation.history import History
+from voice_delegate.delegation.runner import DelegationState
 from voice_delegate.providers.base import RealtimeConnection
 
 
@@ -20,6 +22,8 @@ class Session:
     watcher: asyncio.Task[None] | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     finalized: bool = False
+    history: History = field(default_factory=History)
+    delegation: DelegationState = field(default_factory=DelegationState)
 
 
 class SessionError(Exception):

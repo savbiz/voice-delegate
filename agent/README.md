@@ -1,5 +1,5 @@
-# Worker — M2
+# LangGraph delegated worker
 
-Implement a LangGraph agent behind the internal async `delegate_task(goal, context)` boundary. Include timeout, cancellation, bounded steps and results, and an offline fake model. Select the worker model independently of the voice provider. No LangGraph worker is implemented or installed in M1.
+`src/voice_delegate_agent/graph.py` compiles a reason → tool → reason graph. Each invocation has its own state and no checkpoint storage. The injectable planner chooses one local tool or produces a final result. `OfflinePlanner` is deterministic; `OpenAIPlanner` enables a separately configured text model. Tools are a finite arithmetic interpreter and a small local project reference lookup. Neither can mutate external state.
 
-Public reference for M2: https://docs.langchain.com/oss/python/langgraph/overview
+FastAPI owns timeout, cancellation, deduplication and result token/byte budgets. The graph owns its step budget. Instructions are separated from untrusted task context. See [M2 usage and limits](../docs/m2.md).

@@ -1,5 +1,7 @@
 """Load validated server settings without exposing credentials to clients."""
 
+from typing import Literal
+
 from dotenv import load_dotenv
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -18,6 +20,11 @@ class Settings(BaseSettings):
     access_token: SecretStr = SecretStr("")
     otel_enabled: bool = False
     otel_endpoint: str = ""
+    worker_mode: Literal["offline", "openai"] = "offline"
+    worker_model: str = "gpt-4.1-mini"
+    delegation_timeout_seconds: float = Field(default=15, gt=0, le=120)
+    delegation_result_tokens: int = Field(default=120, ge=8, le=480)
+    worker_max_steps: int = Field(default=4, ge=1, le=12)
     max_sessions: int = Field(default=4, ge=1, le=100)
     session_ttl_seconds: float = Field(default=300, gt=0, le=3600)
     heartbeat_timeout_seconds: float = Field(default=45, gt=0)
@@ -28,6 +35,8 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production(self) -> "Settings":
         """Require an explicit browser origin and access gate on public deployments."""
+        if self.worker_mode == "openai" and not self.openai_api_key.get_secret_value():
+            raise ValueError("VOICE_WORKER_MODE=openai requires OPENAI_API_KEY")
         if self.environment == "production":
             if len(self.access_token.get_secret_value()) < 24:
                 raise ValueError("Production requires VOICE_ACCESS_TOKEN of at least 24 characters")

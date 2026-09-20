@@ -1,19 +1,21 @@
 # voice-delegate
 
-A small, clean-room reference architecture for real-time voice agents: GPT-Live handles the conversation over WebRTC while a separate worker will handle delegated reasoning and tools. FastAPI owns session lifetime and server-side control; provider contracts make transport differences explicit. The project is designed to make cancellation, resource budgets, and failure recovery understandable and testable. Working name; Apache-2.0. Copyright 2026 Savino Bizzoca.
+A small, clean-room reference architecture for real-time voice agents: GPT-Live handles the conversation over WebRTC while a separate LangGraph worker handles delegated reasoning and tools. FastAPI owns session lifetime and server-side control; provider contracts make transport differences explicit. The project is designed to make cancellation, resource budgets, and failure recovery understandable and testable. Working name; Apache-2.0. Copyright 2026 Savino Bizzoca.
 
-**Status: M1 implementation candidate (`0.1.0.dev2`).** The Python scaffold, GPT-Live adapter, lifecycle service, browser client, and offline CI are implemented. Real microphone/speaker verification is still required before tagging M1. M2–M4 remain roadmap items, not shipped features.
+**Status: M2 release candidate (`0.1.0.dev3`, tag `v0.1.0-m2-rc.1`).** Sessions, the React browser, a LangGraph worker, cancellation and bounded results are implemented. Offline verification passes; real microphone/paid-model validation remains the release gate. M3–M4 are roadmap items.
+
+New: [M2 usage, offline worker demo, cancellation and limits](docs/m2.md).
 
 ```mermaid
 flowchart TD
     B[Browser] <-->|WebRTC audio| V[GPT-Live]
     B -->|SDP and lifecycle| A[FastAPI]
     A <-->|Sideband control| V
-    A -.->|M2 internal delegate_task| W[LangGraph worker]
-    W -.->|M2 compact result| A
+    A -->|delegate_task| W[LangGraph worker]
+    W -->|Compact result| A
 ```
 
-**90-second demo GIF:** placeholder — record after the live M1 smoke test. Suggested sequence: connect, speak, interrupt, inspect timing, end; add delegation when M2 ships.
+**90-second demo GIF:** placeholder — record after the live M1 smoke test. Suggested sequence: connect, speak, interrupt, inspect timing, end; include a delegated calculation and cancellation.
 
 ## Quickstart — no API key required for the simulated demo
 
@@ -46,22 +48,23 @@ See [PyCharm and local development](docs/local-development.md) and [GitHub, Verc
 | `frontend/` | React 19, TypeScript, Vite 8, Tailwind 4, Vitest, Playwright, pnpm |
 | `backend/src/voice_delegate/` | FastAPI, Pydantic, httpx, provider/session/limits modules |
 | `backend/tests/` | Offline pytest tests; uv, Ruff and strict mypy configured at root |
-| `agent/` | Reserved for LangGraph in M2; no premature dependency |
+| `agent/` | LangGraph worker, offline/OpenAI planners, read-only tools |
 | `observability/` | Optional OTel collector and tracing setup |
 | `realtime/` | WebRTC boundary documentation; browser controller lives in frontend |
 | `deployment/` | Backend Dockerfile and deployment guide |
 | `evals/`, `docs/` | Evaluation boundaries, architecture and ADRs |
 
-## What M1 implements
+## What is implemented
 
 - Application session creation and ownership keys; duplicate-offer protection.
 - Server-mediated GPT-Live WebRTC SDP exchange and server-side event connection.
 - Start/end browser controls, microphone cleanup, independent bounded captions, estimated per-turn transcript gaps.
 - Absolute lifetime, browser heartbeat expiry, request size and session capacity limits.
 - Bounded WebSocket/event queues and graceful close with explicit confirmed/unconfirmed finalization.
+- LangGraph delegation with offline/OpenAI planners, timeout, result clipping and interruption cancellation.
 - Python 3.12, uv lockfile, Ruff, strict mypy, pytest-asyncio, a fake control provider, and GitHub Actions workflow.
 
-GPT-Live uses client delegation. `delegate_task(goal, context)` is the **planned internal worker contract**, not a voice-model function schema. In M1 the model is instructed to converse only; a delegation request receives an explicit unavailable response. No task is executed or falsely reported successful.
+GPT-Live uses client delegation. `delegate_task(goal, context)` is the **internal worker contract**, not a voice-model function schema. M2 starts an asynchronous worker and returns compact commentary. `VOICE_WORKER_MODE=offline` uses a scripted planner by default; set `openai` for natural-language tool selection. No web search or external actions are available.
 
 The capability-aware `/token` endpoint returns **501** for this adapter. Live's documented browser flow creates sessions using server credentials and SDP; this project does not invent a Live ephemeral credential API. The browser uses `/offer`. See [ADR 001](docs/decisions/001-live-client-delegation.md).
 
@@ -69,9 +72,17 @@ The capability-aware `/token` endpoint returns **501** for this adapter. Live's 
 
 - **One delegation entry point:** the conversation layer need not carry every tool schema or workflow. The worker can evolve and be tested independently. GPT-Live's native delegation maps into the same application boundary.
 - **Bounded buffers:** a slow consumer must not accumulate unlimited events or increasingly stale speech. M1 bounds application events and WebSocket buffers; the browser/provider own WebRTC audio buffers. There is no Python audio relay.
-- **Clamp history:** future reconnections and worker requests need relevant context within a known cost and latency budget. Turn/token clamping is scheduled for M3; M1 stores no server transcript history and does not claim this feature.
+- **Clamp history:** future reconnections and worker requests need relevant context within a known cost and latency budget. M2 retains bounded transcript context for worker requests; failover replay and its turn policy remain M3.
 - **Trace per turn:** a user-visible interaction should correlate provider activity, worker execution, and interruptions. M4 will add application-defined turn spans; full-duplex transcript fragments are not reliable turn boundaries on their own.
 - **Fake provider for evals:** reproducible failure sequences and injected clocks make lifecycle behavior testable without credentials. Scripted tests verify orchestration, not a real model's delegation quality or network latency. Live model-quality and audio-latency measurements remain separate.
+
+## Try the real worker offline
+
+```bash
+uv run python -m voice_delegate.delegation.demo "calculate (120 + 80) * 1.22"
+```
+
+This executes the LangGraph graph and calculator without any API call and returns 244. See [M2](docs/m2.md) for enabling the paid text model and testing interruption.
 
 ## Verification
 
@@ -83,7 +94,7 @@ uv run pytest
 pnpm --dir frontend build
 pnpm --dir frontend test
 pnpm --dir frontend test:e2e
-uv build --package voice-delegate
+uv build --all-packages
 ```
 
 Pytest disables IP sockets; only local Unix sockets used by asyncio are allowed. HTTP tests use in-process ASGI and mock transports. Test fixtures contain invented identifiers and no recordings from private systems. Dependency installation needs internet; the tests themselves do not.

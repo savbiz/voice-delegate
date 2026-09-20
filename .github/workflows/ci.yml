@@ -16,7 +16,7 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run mypy
       - run: uv run pytest
-      - run: uv build --package voice-delegate
+      - run: uv build --all-packages
       - uses: pnpm/action-setup@v4
         with:
           version: "11.19.0"

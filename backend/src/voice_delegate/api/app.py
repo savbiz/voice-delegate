@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner, OpenAIPlanner
 
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.limits.http import BodyLimitMiddleware
@@ -30,7 +31,17 @@ def create_app(
         settings.openai_api_key.get_secret_value(), settings.close_timeout_seconds
     )
     telemetry = configure_tracing(settings)
-    manager = SessionManager(provider, settings, tracer=get_tracer(telemetry))
+    planner = (
+        OpenAIPlanner(settings.openai_api_key.get_secret_value(), settings.worker_model)
+        if settings.worker_mode == "openai"
+        else OfflinePlanner()
+    )
+    manager = SessionManager(
+        provider,
+        settings,
+        tracer=get_tracer(telemetry),
+        worker=LangGraphWorker(planner, settings.worker_max_steps),
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -42,10 +53,12 @@ def create_app(
             with suppress(asyncio.CancelledError):
                 await janitor
             await manager.aclose()
+            if isinstance(planner, OpenAIPlanner):
+                await planner.aclose()
             if telemetry is not None:
                 await asyncio.to_thread(telemetry.shutdown)
 
-    app = FastAPI(title="voice-delegate", version="0.1.0.dev2", lifespan=lifespan)
+    app = FastAPI(title="voice-delegate", version="0.1.0.dev3", lifespan=lifespan)
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 
