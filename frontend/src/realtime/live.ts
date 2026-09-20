@@ -1,4 +1,6 @@
 /** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
+import { watchSpeech } from "./vad";
+
 export function mountLive(root: HTMLElement, accessCode: string): () => void {
 
 function element<T extends HTMLElement>(id: string): T {
@@ -9,11 +11,14 @@ function element<T extends HTMLElement>(id: string): T {
 const start = element<HTMLButtonElement>("start");
 const stop = element<HTMLButtonElement>("stop");
 const status = element("status");
+const taskStatus = element("task-status");
+const cancelTask = element<HTMLButtonElement>("cancel-task");
 const audio = element<HTMLAudioElement>("audio");
 const captions = { user: element("user"), assistant: element("assistant") };
 const timings = element<HTMLOListElement>("timings");
 type Session = { id: string; key: string };
 type Turn = { end: number; reply?: number; row: HTMLLIElement };
+let stopVad: (() => void) | undefined;
 let peer: RTCPeerConnection | undefined;
 let microphone: MediaStream | undefined;
 let channel: RTCDataChannel | undefined;
@@ -26,6 +31,8 @@ let turn: Turn | undefined;
 let turnNumber = 0;
 
 function release(): void {
+  stopVad?.();
+  stopVad = undefined;
   clearInterval(heartbeat);
   clearTimeout(startup);
   microphone?.getTracks().forEach(track => track.stop());
@@ -97,7 +104,7 @@ function processEvent(raw: unknown): void {
   } else if (event.type === "error") {
     void finish("The provider reported an error.");
   } else if (event.type === "session.delegation.created") {
-    status.textContent = "Task execution arrives in M2. No external action was taken.";
+    taskStatus.textContent = "Worker running… You can interrupt by speaking.";
   }
   const speaker = event.type === "session.input_transcript.delta" ? "user"
     : event.type === "session.output_transcript.delta" ? "assistant" : undefined;
@@ -146,6 +153,13 @@ const onStart = () => { void begin(); };
 const onStop = () => { void finish("Conversation ended."); };
 start.addEventListener("click", onStart);
 stop.addEventListener("click", onStop);
+const onCancelTask = () => {
+  const owner = session;
+  if (owner) void request(`/sessions/${owner.id}/interrupt`, owner)
+    .then(() => { taskStatus.textContent = "Worker cancellation requested."; })
+    .catch(() => { taskStatus.textContent = "Cancellation not confirmed."; });
+};
+cancelTask.addEventListener("click", onCancelTask);
 
 async function begin(): Promise<void> {
   const attempt = ++generation;
@@ -161,7 +175,7 @@ async function begin(): Promise<void> {
     const config = await request("/config") as { voice_available: boolean };
     if (attempt !== generation) return;
     if (!config.voice_available) throw new Error("Set OPENAI_API_KEY on the backend to use live voice. Free demo works without a key.");
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
     if (attempt !== generation) { stream.getTracks().forEach(track => track.stop()); return; }
     microphone = stream;
     const connection = new RTCPeerConnection();
@@ -195,9 +209,17 @@ async function begin(): Promise<void> {
       return;
     }
     session = created;
+    try {
+      stopVad = watchSpeech(stream, () => {
+        if (attempt !== generation) return;
+        void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
+      });
+    } catch { /* Transcript events still cancel work if local audio analysis is unavailable. */ }
     heartbeat = setInterval(() => {
       if (attempt !== generation) return;
-      void request(`/sessions/${created.id}/heartbeat`, created).catch(() => {
+      void request(`/sessions/${created.id}/heartbeat`, created).then(result => {
+        if (attempt === generation) taskStatus.textContent = `Worker: ${(result as { delegation: string }).delegation}`;
+      }).catch(() => {
         if (attempt === generation) void finish("Server connection lost or session expired.");
       });
     }, 10000);
@@ -227,6 +249,7 @@ return () => {
   window.removeEventListener("pagehide", onPageHide);
   start.removeEventListener("click", onStart);
   stop.removeEventListener("click", onStop);
+  cancelTask.removeEventListener("click", onCancelTask);
   onPageHide();
 };
 }

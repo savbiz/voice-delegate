@@ -12,6 +12,8 @@ function Live({ code }: { code: string }) {
     <p className="notice">Live voice requires a server API key and incurs provider usage charges. Your microphone is requested only when you start.</p>
     <div className="actions"><button id="start">Start conversation</button><button id="stop" disabled>Stop</button></div>
     <p id="status" role="status">Ready to connect</p>
+    <p id="task-status" aria-live="polite">Worker: idle</p>
+    <button id="cancel-task">Cancel task</button>
     <audio id="audio" controls autoPlay aria-label="Assistant audio" />
     <div className="grid gap-4 md:grid-cols-2"><section><h2>You</h2><p id="user">—</p></section><section><h2>Assistant</h2><p id="assistant">—</p></section></div>
     <section><h2>Turn timing</h2><p className="muted">Transcript timestamp gap: a proxy, not measured audio latency. May be negative during overlap.</p><ol id="timings" /></section>
@@ -37,11 +39,11 @@ function App() {
   const [mode, setMode] = useState('demo');
   const [code, setCode] = useState('');
   return <main className="mx-auto max-w-4xl px-6 py-12">
-    <header className="mb-10"><span className="badge">OPEN REFERENCE · M1 PREVIEW</span><h1 className="mt-5 text-5xl font-semibold tracking-tight">voice-delegate<span className="text-emerald-400">.</span></h1><p className="mt-4 text-lg text-slate-400">A fast voice conversation. A separate worker for the heavy lifting.</p></header>
+    <header className="mb-10"><span className="badge">OPEN REFERENCE · M2 PREVIEW</span><h1 className="mt-5 text-5xl font-semibold tracking-tight">voice-delegate<span className="text-emerald-400">.</span></h1><p className="mt-4 text-lg text-slate-400">A fast voice conversation. A separate worker for the heavy lifting.</p></header>
     <nav className="actions" aria-label="Conversation mode"><button aria-pressed={mode === 'demo'} onClick={() => setMode('demo')}>Free demo</button><button aria-pressed={mode === 'live'} onClick={() => setMode('live')}>Live voice</button></nav>
     {mode === 'live' && <label className="block my-5">Deployment access code <input type="password" autoComplete="off" value={code} onChange={e => setCode(e.target.value)} placeholder="Only if configured on the server" /></label>}
     {mode === 'demo' ? <Demo /> : <Live code={code} />}
-    <footer className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-500">React 19 · FastAPI · WebRTC<br />M1: session lifecycle and voice transport. Delegated worker arrives in M2.</footer>
+    <footer className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-500">React 19 · FastAPI · WebRTC<br />M2: bounded LangGraph delegation and interruption cancellation.</footer>
   </main>;
 }
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);

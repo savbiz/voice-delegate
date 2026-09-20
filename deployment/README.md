@@ -53,6 +53,10 @@ The shared code gates a controlled demo, not a multiuser production service. Bef
 
 Hosting plans, sleep policies and quotas change: check the platform dashboards before accepting costs. A sleeping backend adds cold-start latency and cannot sustain active control sessions while asleep. The free frontend simulation needs no paid model; live provider calls are billed separately from hosting.
 
+## M2 worker settings
+
+The Dockerfile includes both uv workspace packages (`backend/` and `agent/`). Keep the build context at the repository root. For natural-language work, add `VOICE_WORKER_MODE=openai` and `VOICE_WORKER_MODEL=gpt-4.1-mini` to backend service variables, with the existing project API key. This adds text-model usage charges. Leaving worker mode at its default `offline` uses a scripted planner. Worker configuration never belongs in Vercel's public build variables. See [M2](../docs/m2.md).
+
 ## Local container check
 
 With Docker installed, from the repository root:
