@@ -1,4 +1,4 @@
-# Roadmap M1–M8
+# Roadmap M1–M9
 
 Implementation and release acceptance are separate. Passing offline tests is not proof of
 live voice quality, provider access, acoustic latency or production readiness.
@@ -13,8 +13,9 @@ live voice quality, provider access, acoustic latency or production readiness.
 | M6 — Complete use case | Read-only questions over public project documentation with source citations | Useful end-to-end workflow beyond calculator | Implemented: cited documentation search and worker tool; hosted/live narration acceptance pending |
 | M7 — Advanced voice experience | Multilingual behavior, mirroring, interruption-aware summaries, accessibility, additional providers | Multilingual and user-correction scenarios pass | Implemented candidate: language/mirror controls, interruption recap, accessibility and Realtime adapter; live language evaluation pending |
 | M8 — Scaling | Multiple instances, session ownership, separate workers, backpressure, load tests | Recovery and isolation work across processes under load | Implemented same-host reference: two APIs, separate bounded worker, shared leases, ownership routing and crash/load tests; hosted real-voice acceptance pending |
+| M9 — Measured quality and feedback | Versioned task evaluations, clear recovery states, minimal diagnostic feedback | Regression reports, verified recovery UX and bounded feedback from a private pilot | Planned; see [M9 scope and acceptance](m9.md) |
 
-All eight implementation milestones now have code and offline verification. Release acceptance
+The first eight implementation milestones now have code and offline verification. Release acceptance
 still requires the listed live/hosted evidence. M8 deliberately targets multiple processes on
 one host; cross-host high availability is a further architectural change.
 
