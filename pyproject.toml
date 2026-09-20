@@ -1,26 +1,17 @@
 [project]
-name = "voice-delegate"
-version = "0.1.0.dev1"
-description = "Reference architecture for voice conversations with delegated workers"
-readme = "README.md"
-authors = [
-    { name = "Savino Bizzoca" }
-]
+name = "voice-delegate-workspace"
+version = "0.1.0.dev2"
 requires-python = ">=3.12"
-license = "Apache-2.0"
-license-files = ["LICENSE"]
-dependencies = [
-    "fastapi>=0.141.1",
-    "httpx>=0.28.1",
-    "pydantic-settings>=2.15.0",
-    "python-dotenv>=1.2.3",
-    "uvicorn[standard]>=0.53.0",
-    "websockets>=17.1",
-]
+dependencies = ["voice-delegate"]
 
-[build-system]
-requires = ["uv_build>=0.12.15,<0.13.0"]
-build-backend = "uv_build"
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["backend"]
+
+[tool.uv.sources]
+voice-delegate = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -41,9 +32,9 @@ select = ["E", "F", "I", "UP", "B", "ASYNC"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["src", "tests", "worker"]
+files = ["backend/src", "backend/tests", "agent"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["tests", "evals"]
+testpaths = ["backend/tests", "evals"]
 addopts = "--disable-socket --allow-unix-socket -ra"

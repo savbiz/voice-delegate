@@ -1,5 +1,6 @@
 """Local-demo HTTP routes with per-session ownership and origin validation."""
 
+from secrets import compare_digest
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
@@ -21,11 +22,31 @@ def build_router(manager: SessionManager) -> APIRouter:
 
     router = APIRouter(prefix="/api", dependencies=[Depends(check_origin)])
 
-    async def owned(session_id: str, x_session_key: Annotated[str, Header()] = "") -> Session:
+    async def authorize(request: Request) -> None:
+        expected = manager.settings.access_token.get_secret_value()
+        actual = request.headers.get("authorization", "").removeprefix("Bearer ")
+        if expected and (
+            not request.headers.get("authorization", "").startswith("Bearer ")
+            or not compare_digest(actual.encode(), expected.encode())
+        ):
+            raise HTTPException(401, "A valid demo access code is required")
+
+    @router.post("/config")
+    async def configuration() -> dict[str, bool]:
+        return {
+            "requires_access_code": bool(manager.settings.access_token.get_secret_value()),
+            "voice_available": bool(manager.settings.openai_api_key.get_secret_value()),
+        }
+
+    async def owned(
+        session_id: str,
+        _: Annotated[None, Depends(authorize)],
+        x_session_key: Annotated[str, Header()] = "",
+    ) -> Session:
         return manager.get(session_id, x_session_key)
 
     @router.post("/sessions", status_code=201)
-    async def create() -> Created:
+    async def create(_: Annotated[None, Depends(authorize)]) -> Created:
         session = manager.create()
         return Created(
             id=session.id, key=session.key, ttl_seconds=manager.settings.session_ttl_seconds

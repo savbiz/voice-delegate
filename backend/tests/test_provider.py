@@ -8,8 +8,6 @@ from typing import cast
 import httpx
 import pytest
 from pydantic import ValidationError
-from websockets.asyncio.client import ClientConnection
-
 from voice_delegate.providers.models import (
     Commentary,
     DelegationRequested,
@@ -23,6 +21,7 @@ from voice_delegate.providers.openai import (
     OpenAILiveProvider,
     normalize_event,
 )
+from websockets.asyncio.client import ClientConnection
 
 
 def test_transcripts_preserve_fragments_and_timing() -> None:

@@ -3,7 +3,6 @@
 import asyncio
 
 import pytest
-
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate.providers.models import (

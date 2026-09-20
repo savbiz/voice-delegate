@@ -8,7 +8,11 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 node_modules/
-client/dist/
+frontend/dist/
 dist/
 *.egg-info/
 .DS_Store
+playwright-report/
+test-results/
+.idea/
+*.bundle

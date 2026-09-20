@@ -1,7 +1,6 @@
 """Exercise the HTTP boundary in-process with real sockets disabled."""
 
 import httpx
-
 from voice_delegate.api.app import create_app
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeProvider
@@ -15,7 +14,7 @@ async def test_offer_auth_validation_and_cleanup() -> None:
             transport=httpx.ASGITransport(app=app), base_url="http://testserver"
         ) as client:
             assert (await client.post("/api/sessions")).status_code == 403
-            client.headers["Origin"] = "http://localhost:8000"
+            client.headers["Origin"] = "http://localhost:5173"
             created = await client.post("/api/sessions")
             assert created.status_code == 201
             assert created.headers["Cache-Control"] == "no-store"
@@ -56,7 +55,7 @@ async def test_lifespan_closes_active_session() -> None:
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
             base_url="http://testserver",
-            headers={"Origin": "http://localhost:8000"},
+            headers={"Origin": "http://localhost:5173"},
         ) as client:
             payload = (await client.post("/api/sessions")).json()
             response = await client.post(
@@ -66,3 +65,38 @@ async def test_lifespan_closes_active_session() -> None:
             )
             assert response.status_code == 200
     assert provider.connections[0].closed
+
+
+async def test_deployment_gate_and_cors() -> None:
+    from pydantic import SecretStr
+
+    settings = Settings(
+        environment="production",
+        allowed_origin="https://voice.example",
+        access_token=SecretStr("a-test-access-code-long-enough"),
+    )
+    app = create_app(settings, FakeProvider())
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://testserver",
+        headers={"Origin": "https://voice.example"},
+    ) as client:
+        preflight = await client.options(
+            "/api/sessions",
+            headers={
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "authorization,x-session-key,content-type",
+            },
+        )
+        assert preflight.status_code == 200
+        assert preflight.headers["Access-Control-Allow-Origin"] == "https://voice.example"
+        assert (await client.post("/api/sessions")).status_code == 401
+        client.headers["Authorization"] = "Bearer a-test-access-code-long-enough"
+        created = await client.post("/api/sessions")
+        assert created.status_code == 201
+        payload = created.json()
+        client.headers["X-Session-Key"] = payload["key"]
+        client.headers.pop("Authorization")
+        assert (await client.post(f"/api/sessions/{payload['id']}/close")).status_code == 401
+        client.headers["Authorization"] = "Bearer a-test-access-code-long-enough"
+        assert (await client.post(f"/api/sessions/{payload['id']}/close")).status_code == 200

@@ -1,17 +1,17 @@
-"""FastAPI factory owning provider clients, session cleanup, and static browser assets."""
+"""FastAPI factory owning provider clients, session cleanup, and browser API access."""
 
 import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
-from pathlib import Path
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.limits.http import BodyLimitMiddleware
+from voice_delegate.observability.tracing import configure_tracing, get_tracer
 from voice_delegate.providers.base import RealtimeProvider
 from voice_delegate.providers.models import ProviderError, UnsupportedCapability
 from voice_delegate.providers.openai import OpenAILiveProvider
@@ -29,7 +29,8 @@ def create_app(
     provider = provider or OpenAILiveProvider(
         settings.openai_api_key.get_secret_value(), settings.close_timeout_seconds
     )
-    manager = SessionManager(provider, settings)
+    telemetry = configure_tracing(settings)
+    manager = SessionManager(provider, settings, tracer=get_tracer(telemetry))
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -41,11 +42,18 @@ def create_app(
             with suppress(asyncio.CancelledError):
                 await janitor
             await manager.aclose()
+            if telemetry is not None:
+                await asyncio.to_thread(telemetry.shutdown)
 
-    app = FastAPI(title="voice-delegate", version="0.1.0.dev1", lifespan=lifespan)
+    app = FastAPI(title="voice-delegate", version="0.1.0.dev2", lifespan=lifespan)
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+
     app.add_middleware(
-        TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "testserver"]
+        CORSMiddleware,
+        allow_origins=[settings.allowed_origin],
+        allow_methods=["POST"],
+        allow_headers=["Content-Type", "X-Session-Key", "Authorization"],
     )
 
     @app.exception_handler(SessionError)
@@ -66,7 +74,4 @@ def create_app(
         return {"status": "ok"}
 
     app.include_router(build_router(manager))
-    assets = Path("client/dist")
-    if assets.is_dir():
-        app.mount("/", StaticFiles(directory=assets, html=True), name="client")
     return app

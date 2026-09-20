@@ -8,6 +8,8 @@ from collections.abc import Callable
 from contextlib import suppress
 from uuid import uuid4
 
+from opentelemetry import trace
+
 from voice_delegate.config import Settings
 from voice_delegate.providers.base import RealtimeProvider
 from voice_delegate.providers.models import (
@@ -38,7 +40,9 @@ class SessionManager:
         provider: RealtimeProvider,
         settings: Settings,
         clock: Callable[[], float] = time.monotonic,
+        tracer: trace.Tracer | None = None,
     ) -> None:
+        self.tracer = tracer or trace.NoOpTracerProvider().get_tracer(__name__)
         self.provider = provider
         self.settings = settings
         self.clock = clock
@@ -79,9 +83,12 @@ class SessionManager:
             session.state = "connecting"
             try:
                 async with asyncio.timeout(self.settings.connect_timeout_seconds):
-                    session.connection = await self.provider.connect(
-                        config=self.config(), offer_sdp=offer_sdp
-                    )
+                    with self.tracer.start_as_current_span(
+                        "provider.connect", record_exception=False
+                    ):
+                        session.connection = await self.provider.connect(
+                            config=self.config(), offer_sdp=offer_sdp
+                        )
             except (ProviderError, TimeoutError, asyncio.CancelledError):
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
