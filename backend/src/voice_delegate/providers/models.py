@@ -19,6 +19,7 @@ class ProviderCapabilities:
     ephemeral_credentials: bool = False
     server_control: bool = True
     client_delegation: bool = True
+    text_replay: bool = False
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,7 @@ class SessionConfig:
     model: str
     voice: str
     instructions: str
+    history: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -54,6 +56,7 @@ class Transcript:
     text: str
     start_ms: float
     end_ms: float
+    committed: bool = False
 
 
 @dataclass(frozen=True)
@@ -62,6 +65,7 @@ class DelegationRequested:
 
     delegation_id: str
     offset_ms: float = 0
+    goal: str = ""
 
 
 @dataclass(frozen=True)

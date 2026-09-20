@@ -97,10 +97,12 @@ class OpenAILiveConnection:
         self._close_lock = asyncio.Lock()
         self._reader = asyncio.create_task(self._read(), name="live-sideband-reader")
 
+    normalize = staticmethod(normalize_event)
+
     async def _read(self) -> None:
         try:
             async for raw in self._socket:
-                event = normalize_event(raw)
+                event = self.normalize(raw)
                 if isinstance(event, SessionClosed):
                     self._finalized.set()
                 if event is not None:

@@ -27,6 +27,8 @@ let heartbeat: ReturnType<typeof setInterval> | undefined;
 let startup: ReturnType<typeof setTimeout> | undefined;
 let generation = 0;
 let ending = false;
+let recovering = false;
+let fallbackAttempted = false;
 let turn: Turn | undefined;
 let turnNumber = 0;
 
@@ -92,7 +94,7 @@ async function finish(message: string): Promise<void> {
 function processEvent(raw: unknown): void {
   if (typeof raw !== "object" || raw === null) return;
   const event = raw as Record<string, unknown>;
-  if (event.type === "session.started") {
+  if (event.type === "session.started" || event.type === "session.created") {
     clearTimeout(startup);
     status.textContent = "Connected. Speak naturally.";
   } else if (event.type === "session.closed") {
@@ -102,12 +104,13 @@ function processEvent(raw: unknown): void {
       status.textContent = "Conversation ended. Provider finalization confirmed.";
     }
   } else if (event.type === "error") {
-    void finish("The provider reported an error.");
+    void recover("The provider reported an error.");
   } else if (event.type === "session.delegation.created") {
     taskStatus.textContent = "Worker running… You can interrupt by speaking.";
   }
-  const speaker = event.type === "session.input_transcript.delta" ? "user"
-    : event.type === "session.output_transcript.delta" ? "assistant" : undefined;
+  const speaker = ["session.input_transcript.delta", "conversation.item.input_audio_transcription.completed"].includes(String(event.type)) ? "user"
+    : ["session.output_transcript.delta", "response.output_audio_transcript.delta"].includes(String(event.type)) ? "assistant" : undefined;
+  if (event.type === "conversation.item.input_audio_transcription.completed") event.delta = event.transcript;
   if (!speaker || typeof event.delta !== "string") return;
   const caption = captions[speaker];
   caption.textContent = ((caption.textContent === "—" ? "" : caption.textContent) + event.delta).slice(-6000);
@@ -161,7 +164,28 @@ const onCancelTask = () => {
 };
 cancelTask.addEventListener("click", onCancelTask);
 
-async function begin(): Promise<void> {
+async function recover(message: string): Promise<void> {
+  if (ending || recovering) return;
+  const owner = session;
+  if (!owner || fallbackAttempted) { await finish(message); return; }
+  recovering = true;
+  try {
+    const state = await request(`/sessions/${owner.id}/heartbeat`, owner) as { generation: number; fallback_available: boolean };
+    if (ending || session !== owner) return;
+    if (!state.fallback_available) { await finish(message); return; }
+    fallbackAttempted = true;
+    generation += 1;
+    release();
+    session = owner;
+    start.disabled = true;
+    status.textContent = "Reconnecting with Azure… The last unfinished phrase may need repeating.";
+    await begin(owner, state.generation);
+  } catch { await finish("Fallback failed."); }
+  finally { recovering = false; }
+}
+
+async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
+  if (!existing) fallbackAttempted = false;
   const attempt = ++generation;
   start.disabled = true;
   stop.disabled = false;
@@ -188,7 +212,7 @@ async function begin(): Promise<void> {
     });
     connection.addEventListener("connectionstatechange", () => {
       if (attempt === generation && connection.connectionState === "failed") {
-        void finish("Media connection failed.");
+        void recover("Media connection failed.");
       }
     });
     channel = connection.createDataChannel("oai-events");
@@ -197,13 +221,13 @@ async function begin(): Promise<void> {
       try { processEvent(JSON.parse(message.data)); } catch { void finish("Invalid provider event."); }
     });
     channel.addEventListener("close", () => {
-      if (attempt === generation) void finish("Event connection closed.");
+      if (attempt === generation) void recover("Event connection closed.");
     });
     await connection.setLocalDescription(await connection.createOffer());
     await gather(connection);
     if (attempt !== generation) return;
     status.textContent = "Connecting…";
-    const created = await request("/sessions") as Session;
+    const created = existing ?? await request("/sessions") as Session;
     if (attempt !== generation) {
       await request(`/sessions/${created.id}/close`, created);
       return;
@@ -218,14 +242,18 @@ async function begin(): Promise<void> {
     heartbeat = setInterval(() => {
       if (attempt !== generation) return;
       void request(`/sessions/${created.id}/heartbeat`, created).then(result => {
-        if (attempt === generation) taskStatus.textContent = `Worker: ${(result as { delegation: string }).delegation}`;
+        if (attempt === generation) {
+          const state = result as { delegation: string; state: string };
+          taskStatus.textContent = `Worker: ${state.delegation}`;
+          if (state.state === "reconnecting") void recover("Provider connection lost.");
+        }
       }).catch(() => {
         if (attempt === generation) void finish("Server connection lost or session expired.");
       });
     }, 10000);
     startup = setTimeout(() => { void finish("Voice startup timed out."); }, 40000);
-    const result = await request(`/sessions/${created.id}/offer`, created,
-      { sdp: connection.localDescription?.sdp }) as { sdp: string };
+    const result = await request(`/sessions/${created.id}/${existing ? "reconnect" : "offer"}`, created,
+      { sdp: connection.localDescription?.sdp, ...(existing ? { generation: serverGeneration } : {}) }) as { sdp: string };
     if (attempt !== generation) return;
     await connection.setRemoteDescription({ type: "answer", sdp: result.sdp });
   } catch (error) {

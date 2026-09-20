@@ -17,11 +17,17 @@ class Session:
     key: str = field(repr=False)
     created_at: float
     last_heartbeat: float
-    state: Literal["created", "connecting", "connected", "closing", "closed"] = "created"
+    state: Literal["created", "connecting", "connected", "reconnecting", "closing", "closed"] = (
+        "created"
+    )
     connection: RealtimeConnection | None = None
     watcher: asyncio.Task[None] | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     finalized: bool = False
+    generation: int = 0
+    fallback_used: bool = False
+    previous_finalized: bool = True
+    committed_history: History = field(default_factory=History)
     history: History = field(default_factory=History)
     delegation: DelegationState = field(default_factory=DelegationState)
 

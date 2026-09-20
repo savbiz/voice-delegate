@@ -13,6 +13,7 @@ from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner, OpenAIPl
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.limits.http import BodyLimitMiddleware
 from voice_delegate.observability.tracing import configure_tracing, get_tracer
+from voice_delegate.providers.azure import AzureRealtimeProvider
 from voice_delegate.providers.base import RealtimeProvider
 from voice_delegate.providers.models import ProviderError, UnsupportedCapability
 from voice_delegate.providers.openai import OpenAILiveProvider
@@ -41,6 +42,11 @@ def create_app(
         settings,
         tracer=get_tracer(telemetry),
         worker=LangGraphWorker(planner, settings.worker_max_steps),
+        fallback=AzureRealtimeProvider(
+            settings.azure_endpoint, settings.azure_api_key.get_secret_value()
+        )
+        if settings.fallback_enabled
+        else None,
     )
 
     @asynccontextmanager

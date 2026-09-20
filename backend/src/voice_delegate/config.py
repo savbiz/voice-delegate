@@ -12,6 +12,11 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="VOICE_", extra="ignore")
     openai_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="OPENAI_API_KEY")
+    azure_endpoint: str = ""
+    azure_api_key: SecretStr = SecretStr("")
+    azure_deployment: str = "gpt-realtime"
+    azure_voice: str = "marin"
+    fallback_enabled: bool = False
     model: str = "gpt-live-1"
     voice: str = "marin"
     allowed_origin: str = "http://localhost:5173"
@@ -35,6 +40,24 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production(self) -> "Settings":
         """Require an explicit browser origin and access gate on public deployments."""
+        if self.fallback_enabled:
+            from urllib.parse import urlparse
+
+            endpoint = urlparse(self.azure_endpoint)
+            if (
+                endpoint.scheme != "https"
+                or not endpoint.hostname
+                or not endpoint.hostname.endswith(".openai.azure.com")
+                or endpoint.path not in {"", "/"}
+                or endpoint.query
+                or endpoint.fragment
+                or endpoint.username
+                or endpoint.password
+                or endpoint.port not in {None, 443}
+            ):
+                raise ValueError("Azure endpoint must be an HTTPS Azure OpenAI resource origin")
+            if not self.azure_api_key.get_secret_value():
+                raise ValueError("Azure fallback requires VOICE_AZURE_API_KEY")
         if self.worker_mode == "openai" and not self.openai_api_key.get_secret_value():
             raise ValueError("VOICE_WORKER_MODE=openai requires OPENAI_API_KEY")
         if self.environment == "production":

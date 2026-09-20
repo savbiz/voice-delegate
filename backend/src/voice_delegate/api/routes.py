@@ -9,7 +9,7 @@ from voice_delegate.providers.models import UnsupportedCapability
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import Session
 
-from .schemas import Answer, Closed, Created, Offer, Status
+from .schemas import Answer, Closed, Created, Offer, Reconnect, Status
 
 
 def build_router(manager: SessionManager) -> APIRouter:
@@ -57,10 +57,20 @@ def build_router(manager: SessionManager) -> APIRouter:
         result = await manager.connect(session, body.sdp)
         return Answer(sdp=result.sdp)
 
+    @router.post("/sessions/{session_id}/reconnect")
+    async def reconnect(body: Reconnect, session: Annotated[Session, Depends(owned)]) -> Answer:
+        result = await manager.reconnect(session, body.sdp, body.generation)
+        return Answer(sdp=result.sdp)
+
     @router.post("/sessions/{session_id}/heartbeat")
     async def heartbeat(session: Annotated[Session, Depends(owned)]) -> Status:
         manager.heartbeat(session)
-        return Status(state=session.state, delegation=session.delegation.status)
+        return Status(
+            state=session.state,
+            delegation=session.delegation.status,
+            generation=session.generation,
+            fallback_available=manager.fallback is not None and not session.fallback_used,
+        )
 
     @router.post("/sessions/{session_id}/close")
     async def close(session: Annotated[Session, Depends(owned)]) -> Closed:

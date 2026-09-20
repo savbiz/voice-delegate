@@ -48,6 +48,7 @@ class SessionManager:
         clock: Callable[[], float] = time.monotonic,
         tracer: trace.Tracer | None = None,
         worker: Worker | None = None,
+        fallback: RealtimeProvider | None = None,
     ) -> None:
         self.tracer = tracer or trace.NoOpTracerProvider().get_tracer(__name__)
         self.delegator = DelegationRunner(
@@ -58,6 +59,7 @@ class SessionManager:
             tracer=self.tracer,
         )
         self.provider = provider
+        self.fallback = fallback
         self.settings = settings
         self.clock = clock
         self.sessions: dict[str, Session] = {}
@@ -116,6 +118,8 @@ class SessionManager:
         assert connection is not None
         try:
             async for event in connection.events():
+                if connection is not session.connection:
+                    return
                 if isinstance(event, SessionClosed):
                     session.finalized = True
                     break
@@ -124,7 +128,16 @@ class SessionManager:
                 if isinstance(event, ProviderFailure):
                     break
                 if isinstance(event, Transcript):
+                    if (
+                        not event.committed
+                        and session.history.entries
+                        and session.history.entries[-1].speaker != event.speaker
+                    ):
+                        # Live fragments have no final marker: seal the previous speaker segment.
+                        session.committed_history.append(session.history.entries[-1])
                     session.history.append(event)
+                    if event.committed:
+                        session.committed_history.append(event)
                     if (
                         event.speaker == "user"
                         and event.text.strip()
@@ -139,7 +152,8 @@ class SessionManager:
                         session.delegation,
                         event.delegation_id,
                         DelegationInput(
-                            goal=session.history.goal() or " ", context=session.history.context()
+                            goal=event.goal or session.history.goal() or " ",
+                            context=session.history.context(),
                         ),
                         connection,
                         lambda: session.state == "connected",
@@ -147,14 +161,61 @@ class SessionManager:
         except ProviderError:
             logger.warning("Session provider stream failed")
         finally:
-            if session.state not in {"closing", "closed"}:
-                await self.close(session)
+            if session.state not in {"closing", "closed", "reconnecting"}:
+                if (
+                    self.fallback is not None
+                    and not session.fallback_used
+                    and not session.finalized
+                ):
+                    self.delegator.cancel(session.delegation)
+                    session.state = "reconnecting"
+                else:
+                    await self.close(session)
+
+    async def reconnect(self, session: Session, offer_sdp: str, generation: int) -> WebRTCAnswer:
+        """Consume one fallback attempt; never retry an ambiguous billable POST."""
+        async with session.lock:
+            if self.fallback is None or not self.fallback.capabilities.text_replay:
+                raise SessionError(501, "Fallback is not configured or cannot replay text")
+            if session.fallback_used or generation != session.generation:
+                raise SessionError(409, "Stale or duplicate fallback attempt")
+            if session.state not in {"connected", "reconnecting"}:
+                raise SessionError(409, "Session cannot reconnect")
+            session.state = "reconnecting"
+            session.fallback_used = True
+            session.generation += 1
+            self.delegator.cancel(session.delegation)
+            if session.watcher is not None:
+                session.watcher.cancel()
+                with suppress(asyncio.CancelledError):
+                    await session.watcher
+            try:
+                async with asyncio.timeout(self.settings.connect_timeout_seconds):
+                    if session.connection is not None:
+                        session.previous_finalized = await session.connection.aclose()
+                    session.connection = None
+                    config = SessionConfig(
+                        self.settings.azure_deployment,
+                        self.settings.azure_voice,
+                        M2_INSTRUCTIONS,
+                        tuple((e.speaker, e.text) for e in session.committed_history.entries),
+                    )
+                    session.connection = await self.fallback.connect(
+                        config=config, offer_sdp=offer_sdp
+                    )
+                session.state = "connected"
+                session.watcher = asyncio.create_task(self._watch(session), name="fallback-events")
+                return session.connection.answer
+            except BaseException:
+                session.state = "closed"
+                self.sessions.pop(session.id, None)
+                raise
 
     async def close(self, session: Session) -> bool:
         """Idempotently close upstream before canceling the event consumer."""
         async with session.lock:
             if session.state == "closed":
-                return session.finalized
+                return session.finalized and session.previous_finalized
             session.state = "closing"
             self.delegator.cancel(session.delegation)
             try:
@@ -168,7 +229,7 @@ class SessionManager:
                         await watcher
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
-            return session.finalized
+            return session.finalized and session.previous_finalized
 
     async def expire(self) -> None:
         """Expire abandoned setup, lost browsers, and absolute time budgets."""
@@ -195,3 +256,5 @@ class SessionManager:
         await asyncio.gather(*(self.close(s) for s in list(self.sessions.values())))
         await self.delegator.aclose()
         await self.provider.aclose()
+        if self.fallback is not None:
+            await self.fallback.aclose()

@@ -18,6 +18,12 @@ class Offer(BaseModel):
         return value
 
 
+class Reconnect(Offer):
+    """A new browser peer offer tied to the current transport generation."""
+
+    generation: int = Field(ge=0)
+
+
 class Created(BaseModel):
     """An application session and per-session capability key."""
 
@@ -37,6 +43,8 @@ class Status(BaseModel):
 
     state: str
     delegation: str = "idle"
+    generation: int = 0
+    fallback_available: bool = False
 
 
 class Closed(BaseModel):
