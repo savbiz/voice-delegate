@@ -109,6 +109,10 @@ The provider creation POST is never automatically retried: an ambiguous response
 
 ## Roadmap and release gates
 
+The full plan includes **M1–M8**: see [scope, acceptance and status](docs/roadmap.md).
+The table below covers the original v0.1 milestones; M5–M8 extend it with a controlled
+public demo, a complete use case, advanced voice UX and optional scaling.
+
 | Week | Milestone | Release gate |
 |---|---|---|
 | 1 | M1: GPT-Live sessions, provider contract, browser | Offline checks + real voice, interruption, and cleanup smoke test; then `v0.1.0-m1` |
