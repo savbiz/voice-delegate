@@ -1,6 +1,6 @@
 [project]
 name = "voice-delegate-workspace"
-version = "0.1.0.dev2"
+version = "0.1.0.dev3"
 requires-python = ">=3.12"
 dependencies = ["voice-delegate"]
 
@@ -8,7 +8,7 @@ dependencies = ["voice-delegate"]
 package = false
 
 [tool.uv.workspace]
-members = ["backend"]
+members = ["backend", "agent"]
 
 [tool.uv.sources]
 voice-delegate = { workspace = true }
@@ -32,7 +32,7 @@ select = ["E", "F", "I", "UP", "B", "ASYNC"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["backend/src", "backend/tests", "agent"]
+files = ["backend/src", "backend/tests", "agent/src"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
