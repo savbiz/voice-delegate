@@ -59,7 +59,7 @@ class SessionManager:
     def get(self, session_id: str, key: str) -> Session:
         """Resolve ownership without disclosing whether another session exists."""
         session = self.sessions.get(session_id)
-        if session is None or not secrets.compare_digest(session.key, key):
+        if session is None or not secrets.compare_digest(session.key.encode(), key.encode()):
             raise SessionError(404, "Session not found")
         return session
 

@@ -90,6 +90,18 @@ async def test_setup_timeout_releases_capacity() -> None:
     assert session.state == "closed"
 
 
+async def test_canceled_setup_releases_capacity() -> None:
+    manager = SessionManager(SlowProvider(), Settings())
+    session = manager.create()
+    setup = asyncio.create_task(manager.connect(session, "v=0\r\n"))
+    await asyncio.sleep(0)
+    setup.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await setup
+    assert not manager.sessions
+    assert session.state == "closed"
+
+
 async def test_m1_delegation_reports_unavailable_without_fake_success() -> None:
     provider = FakeProvider()
     manager = SessionManager(provider, Settings())

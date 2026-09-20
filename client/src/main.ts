@@ -88,7 +88,11 @@ function processEvent(raw: unknown): void {
     clearTimeout(startup);
     status.textContent = "Connected. Speak naturally.";
   } else if (event.type === "session.closed") {
-    if (!ending) void finish("Conversation ended.");
+    if (!ending) {
+      generation += 1;
+      release();
+      status.textContent = "Conversation ended. Provider finalization confirmed.";
+    }
   } else if (event.type === "error") {
     void finish("The provider reported an error.");
   } else if (event.type === "session.delegation.created") {
