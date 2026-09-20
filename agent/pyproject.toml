@@ -1,6 +1,6 @@
 [project]
 name = "voice-delegate-agent"
-version = "0.1.0.dev4"
+version = "0.1.0.dev5"
 requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]

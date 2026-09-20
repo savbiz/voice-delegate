@@ -69,7 +69,7 @@ def create_app(
             if telemetry is not None:
                 await asyncio.to_thread(telemetry.shutdown)
 
-    app = FastAPI(title="voice-delegate", version="0.1.0.dev4", lifespan=lifespan)
+    app = FastAPI(title="voice-delegate", version="0.1.0.dev5", lifespan=lifespan)
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 

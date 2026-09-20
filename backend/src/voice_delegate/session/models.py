@@ -21,6 +21,7 @@ class Session:
     state: Literal["created", "connecting", "connected", "reconnecting", "closing", "closed"] = (
         "created"
     )
+    principal: str = field(default="local", repr=False)
     connection: RealtimeConnection | None = None
     watcher: asyncio.Task[None] | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)

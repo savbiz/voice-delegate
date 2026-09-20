@@ -10,3 +10,4 @@
 **/.mypy_cache
 **/.ruff_cache
 frontend
+.local

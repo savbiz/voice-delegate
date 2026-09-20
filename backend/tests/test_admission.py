@@ -1,0 +1,130 @@
+"""Public-demo admission must survive restarts and enforce identity before provider work."""
+
+from pathlib import Path
+
+import httpx
+import pytest
+from pydantic import SecretStr
+from voice_delegate.api.app import create_app
+from voice_delegate.config import Settings
+from voice_delegate.providers.fake import FakeProvider
+from voice_delegate.session.manager import SessionManager
+from voice_delegate.session.models import SessionError
+
+
+def public_settings(path: Path, **overrides: object) -> Settings:
+    data: dict[str, object] = {
+        "environment": "production",
+        "public_demo": True,
+        "allowed_origin": "https://demo.example",
+        "quota_database": str(path / "quotas.sqlite3"),
+        "invite_tokens": {"alice": "a" * 32, "bob": "b" * 32},
+        "session_ttl_seconds": 10,
+        "daily_sessions_per_user": 2,
+        "daily_voice_seconds_per_user": 22,
+        "daily_voice_seconds_global": 33,
+    }
+    data.update(overrides)
+    return Settings.model_validate(data)
+
+
+async def test_quotas_persist_across_restart_and_global_budget(tmp_path: Path) -> None:
+    settings = public_settings(tmp_path)
+    manager = SessionManager(FakeProvider(), settings)
+    first = manager.create("alice")
+    with pytest.raises(SessionError) as concurrent:
+        manager.create("alice")
+    assert concurrent.value.status == 429
+    await manager.close(first)
+    await manager.aclose()
+    manager = SessionManager(FakeProvider(), settings)
+    await manager.close(manager.create("alice"))
+    with pytest.raises(SessionError) as daily:
+        manager.create("alice")
+    assert daily.value.status == 429
+    await manager.close(manager.create("bob"))
+    with pytest.raises(SessionError):
+        manager.create("bob")
+    await manager.aclose()
+    assert b"a" * 32 not in (tmp_path / "quotas.sqlite3").read_bytes()
+
+
+async def test_personal_invitation_cannot_use_another_users_session(tmp_path: Path) -> None:
+    app = create_app(public_settings(tmp_path), FakeProvider())
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        ) as client:
+            client.headers["Origin"] = "https://demo.example"
+            assert (await client.post("/api/sessions")).status_code == 401
+            client.headers["Authorization"] = "Bearer " + "a" * 32
+            created = (await client.post("/api/sessions")).json()
+            client.headers["X-Session-Key"] = created["key"]
+            client.headers["Authorization"] = "Bearer " + "b" * 32
+            path = f"/api/sessions/{created['id']}"
+            assert (await client.post(path + "/close")).status_code == 404
+            client.headers["Authorization"] = "Bearer " + "a" * 32
+            assert (await client.post(path + "/close")).status_code == 200
+
+
+async def test_kill_switch_prevents_admission_before_provider_work() -> None:
+    provider = FakeProvider()
+    manager = SessionManager(provider, Settings(demo_enabled=False))
+    with pytest.raises(SessionError) as rejected:
+        manager.create()
+    assert rejected.value.status == 503
+    assert not provider.connections
+    await manager.aclose()
+
+
+def test_public_configuration_rejects_shared_gate_and_duplicate_invites(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="named invitations"):
+        public_settings(tmp_path, invite_tokens={})
+    with pytest.raises(ValueError, match="unique random"):
+        public_settings(
+            tmp_path, invite_tokens={"alice": SecretStr("a" * 32), "bob": SecretStr("a" * 32)}
+        )
+
+
+def test_invalid_configuration_does_not_echo_invitation_secrets(tmp_path: Path) -> None:
+    sensitive = "private-token-for-validation-test-1234"
+    with pytest.raises(ValueError) as error:
+        public_settings(tmp_path, invite_tokens={"alice": sensitive, "bob": sensitive})
+    assert sensitive not in str(error.value)
+
+
+async def test_unwritable_budget_store_fails_closed(tmp_path: Path) -> None:
+    manager = SessionManager(FakeProvider(), public_settings(tmp_path))
+    database = manager.admission.database
+    assert database is not None
+    database.execute("PRAGMA query_only=ON")
+    with pytest.raises(SessionError) as rejected:
+        manager.create("alice")
+    assert rejected.value.status == 503
+    assert not manager.sessions
+    await manager.aclose()
+
+
+async def test_delegation_allowance_prevents_additional_worker_calls() -> None:
+    from voice_delegate.delegation.contracts import DelegationInput
+    from voice_delegate.delegation.runner import DelegationRunner, DelegationState
+    from voice_delegate.providers.fake import FakeConnection
+
+    class Worker:
+        calls = 0
+
+        async def delegate_task(self, goal: str, context: str) -> str:
+            self.calls += 1
+            return "done"
+
+    worker = Worker()
+    runner = DelegationRunner(worker, request_limit=1)
+    state = DelegationState()
+    connection = FakeConnection()
+    runner.start(state, "first", DelegationInput(goal="task"), connection, lambda: True)
+    assert state.task is not None
+    await state.task
+    runner.start(state, "second", DelegationInput(goal="task"), connection, lambda: True)
+    assert state.status == "request_limit"
+    assert worker.calls == 1
+    await runner.aclose()

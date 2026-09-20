@@ -7,6 +7,8 @@ from collections.abc import Callable
 
 from langchain_core.tools import tool
 
+from .reference import search_documentation
+
 OPERATORS: dict[type[ast.operator], Callable[[float, float], float]] = {
     ast.Add: operator.add,
     ast.Sub: operator.sub,
@@ -64,4 +66,4 @@ def reference_lookup(topic: str) -> str:
     )
 
 
-TOOLS = [calculate, reference_lookup]
+TOOLS = [calculate, reference_lookup, search_documentation]

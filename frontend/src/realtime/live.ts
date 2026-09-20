@@ -1,4 +1,5 @@
 /** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
+import type { Source } from "../reference";
 import { watchSpeech } from "./vad";
 
 export function mountLive(root: HTMLElement, accessCode: string): () => void {
@@ -15,6 +16,7 @@ const taskStatus = element("task-status");
 const cancelTask = element<HTMLButtonElement>("cancel-task");
 const audio = element<HTMLAudioElement>("audio");
 const captions = { user: element("user"), assistant: element("assistant") };
+const sources = element("sources");
 const timings = element<HTMLOListElement>("timings");
 type Session = { id: string; key: string };
 type Turn = { end: number; reply?: number; row: HTMLLIElement };
@@ -31,6 +33,21 @@ let recovering = false;
 let fallbackAttempted = false;
 let turn: Turn | undefined;
 let turnNumber = 0;
+
+function renderSources(items: Source[]): void {
+  sources.replaceChildren();
+  for (const [index, source] of items.slice(0, 3).entries()) {
+    const detail = document.createElement("details");
+    const title = document.createElement("summary");
+    title.textContent = `[${index + 1}] ${source.title} — ${source.section}`;
+    const text = document.createElement("blockquote");
+    text.textContent = source.text;
+    const origin = document.createElement("small");
+    origin.textContent = `${source.path} · Snapshot ${source.id}`;
+    detail.append(title, text, origin);
+    sources.append(detail);
+  }
+}
 
 function release(): void {
   stopVad?.();
@@ -61,7 +78,12 @@ async function request(path: string, owner?: Session, body?: unknown): Promise<u
     signal: AbortSignal.timeout(35000),
   });
   if (!response.ok) {
-    throw new Error(`Request failed (${response.status}). Check server configuration and access.`);
+    const messages: Record<number, string> = {
+      401: "Your invitation is missing, invalid or revoked.",
+      429: "Demo allowance reached or another conversation is active. Try again later.",
+      503: "New conversations are temporarily unavailable.",
+    };
+    throw new Error(messages[response.status] ?? `Request failed (${response.status}). Check server configuration and access.`);
   }
   return response.json();
 }
@@ -193,6 +215,7 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
   captions.user.textContent = "—";
   captions.assistant.textContent = "—";
   timings.replaceChildren();
+  renderSources([]);
   turn = undefined;
   turnNumber = 0;
   try {
@@ -243,7 +266,8 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
       if (attempt !== generation) return;
       void request(`/sessions/${created.id}/heartbeat`, created).then(result => {
         if (attempt === generation) {
-          const state = result as { delegation: string; state: string };
+          const state = result as { delegation: string; state: string; sources?: Source[] };
+          renderSources(state.sources ?? []);
           taskStatus.textContent = `Worker: ${state.delegation}`;
           if (state.state === "reconnecting") void recover("Provider connection lost.");
         }

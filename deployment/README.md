@@ -69,3 +69,15 @@ docker run --rm --env-file .env -p 8000:8000 voice-delegate-api
 This container uses your local development origin unless production settings are supplied. `.env` is excluded from the image. Docker and hosted deployment must be validated in your environment; the delivered candidate is checked through local Python and browser tools.
 
 Public references: [Vercel Vite](https://vercel.com/docs/frameworks/frontend/vite), [Render FastAPI](https://render.com/docs/deploy-fastapi), [Railway FastAPI](https://docs.railway.com/guides/fastapi).
+
+## M5 controlled public demo
+
+Use [M5 configuration and rollback](../docs/m5.md) before opening access to other users.
+Personal invitation tokens replace a shared code in public-demo mode. Mount durable quota
+storage at `/app/.local` owned by UID 10001, and keep one API worker. Reuse that volume across
+image replacement and rollback. Admission reserves the full session allowance up front;
+there are no refunds on failed creation. Local Docker checks cover authentication and
+quota persistence after restart, not the availability of a publicly hosted deployment.
+
+The [M6 documentation workflow](../docs/m6.md) is bundled with the agent and available
+through the Documentation tab without a paid model call.

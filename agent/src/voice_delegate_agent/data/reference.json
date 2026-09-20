@@ -1,0 +1,394 @@
+[
+  {
+    "id": "8e3e05ad99a8eb9d",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Boundaries",
+    "text": "The browser owns microphone capture, WebRTC playback, and display-only captions. FastAPI owns admission, session capability keys, time budgets, and server credentials. The session manager owns exactly one provider connection per application session and is the sole executor of delegation requests. The provider adapter translates public wire events into typed application events. M2 runs a LangGraph worker behind `delegate_task(goal, context)`.",
+    "digest": "8e3e05ad99a8eb9d9ff3b8e8e80c499564da53cc6c8bc590f884366747b635ac"
+  },
+  {
+    "id": "ef8cb0ae8b3ae8d6",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Boundaries",
+    "text": "Keeping audio on a direct media connection avoids an application audio hop. A sideband provides server-side authority without routing the microphone through Python. Backend results enter as commentary, separate from trusted instructions.",
+    "digest": "ef8cb0ae8b3ae8d67c37ad8945239254ded8a3c9d94aa1eb8ef59aaa7dfd9128"
+  },
+  {
+    "id": "106d5f23f96b1fc8",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Boundaries",
+    "text": "```mermaid\nsequenceDiagram\n    participant B as Browser\n    participant A as FastAPI\n    participant S as Session manager\n    participant V as GPT-Live\n    B->>B: Capture microphone and gather ICE\n    B->>A: Create application session\n    A->>S: Reserve capacity and ownership key\n    B->>A: SDP offer with session key\n    S->>V: Create Live session with SDP\n    V-->>S: Provider ID and SDP answer\n    S->>V: Attach sideband\n    S-->>B: SDP answer through FastAPI\n    B->>V: Establish WebRTC audio\n    V-->>B: session.started and spoken audio\n    V-->>S: Sideband transcript and lifecycle events\n    alt User ends or deadline expires\n        S->>V: session.close\n        V-->>S: session.closed\n        S-->>B: Finalization status\n        B->>B: Release microphone and peer\n    else Control channel fails\n        S->>S: Bounded cleanup; mark unconfirmed if needed\n    end\n```",
+    "digest": "106d5f23f96b1fc8d67e0437246f17993014247e50d2f203e726b692e06d5c89"
+  },
+  {
+    "id": "cda119c158df130d",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Boundaries",
+    "text": "M2 dispatches delegation to a LangGraph worker in the background. Bounded transcripts provide goal/context. Results return through commentary; interruptions invalidate the active generation before cancellation. See [M2](m2.md) and [ADR 005](decisions/005-bounded-delegation.md).",
+    "digest": "cda119c158df130d9df6f936b2300dfa09e87ff02b3760fe92b2c4b590e1bb0a"
+  },
+  {
+    "id": "a78a39e3bfe94701",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Boundaries",
+    "text": "```mermaid\nsequenceDiagram\n    participant B as Browser\n    participant S as Session manager\n    participant V as GPT-Live\n    participant W as LangGraph worker\n    V->>S: Transcripts and delegation ID\n    S->>W: delegate_task(goal, context)\n    alt Worker completes\n        W-->>S: Result\n        S->>S: Check generation and clip result\n        S->>V: Commentary with delegation ID\n        V-->>B: Narrated result\n    else User interrupts\n        B->>S: Microphone onset or Cancel task\n        S->>S: Invalidate generation\n        S->>W: Cancel task\n        W-->>S: Discard any late result\n    end\n```",
+    "digest": "a78a39e3bfe94701c2d5a3a1adf5c30506eb4fc349a0a796f4ced04d74df3d6f"
+  },
+  {
+    "id": "43cc9676e906d976",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Lifecycle",
+    "text": "`created → connecting → connected → closing → closed` is application transport state. `connected` means SDP and sideband setup completed; the browser separately waits for `session.started` before displaying voice readiness. A session lock serializes offer and close operations. A duplicate offer returns 409. Closed sessions are removed rather than retained indefinitely. Repeating the internal close is safe; a later HTTP request for an already-removed session returns 404.",
+    "digest": "43cc9676e906d9768702d303089528c6a74a3487cbb3ef4053b8fdf6478a3a39"
+  },
+  {
+    "id": "67df1905e4c81fa2",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Lifecycle",
+    "text": "A single WebSocket reader receives lifecycle events even while close is waiting. Queue exhaustion ends event consumption with an error rather than dropping delegation or termination messages silently. Graceful finalization may be unconfirmed after overflow or a transport failure. The browser heartbeat maintains liveness; it never resets the absolute session deadline.",
+    "digest": "67df1905e4c81fa29918f000eca420200f27dda7d450e73941293b5bb755be9e"
+  },
+  {
+    "id": "aac40d38fdf60143",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "API",
+    "text": "All `/api` routes require the configured exact Origin. Session routes also require the configured bearer access code; production startup requires a code of at least 24 characters. CORS allows only the explicit frontend origin. Routes with `{id}` also require `X-Session-Key`.",
+    "digest": "aac40d38fdf601435b43fd842b51adb5b5f0bc93a60de49efe36844384a91306"
+  },
+  {
+    "id": "b3c07ff7cecea677",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "API",
+    "text": "| Method and path | Meaning |\n|---|---|\n| `GET /healthz` | Process health; no provider call |\n| `POST /api/config` | Report whether a demo access code is required |\n| `POST /api/sessions` | Reserve an application session; return ID, key, TTL |\n| `POST /api/sessions/{id}/offer` | JSON SDP offer; return SDP answer |\n| `POST /api/sessions/{id}/heartbeat` | Refresh browser liveness and return state |\n| `POST /api/sessions/{id}/close` | Close and report finalization confirmation |\n| `POST /api/sessions/{id}/interrupt` | Invalidate and cancel the active worker |\n| `POST /api/sessions/{id}/token` | 501 for GPT-Live; capability boundary for later adapters |",
+    "digest": "b3c07ff7cecea6772dad54a197661f4a8a28da6227e661877412763e8ad72b82"
+  },
+  {
+    "id": "bb9472882302815c",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Resource budgets",
+    "text": "| Limit | M1 value | Reason and exhaustion behavior |\n|---|---|---|\n| Concurrent application sessions | 4, configurable | Bound sockets and spend; admission returns 429 |\n| Absolute lifetime | 300 s, configurable | Bound duration-based voice cost; server closes |\n| Missing heartbeat | 45 s, configurable | Reclaim abandoned tabs and setup reservations |\n| Connect deadline | 20 s, configurable | Bound setup; recovery cleanup can add up to 10 s |\n| Graceful close wait | 5 s, configurable | Avoid indefinite shutdown; finalization may be unconfirmed |\n| WebSocket close handshake | 2 s | Bound transport cleanup after grace period |\n| HTTP request body | 64 KiB | Reject large bodies before JSON parsing, including chunked bodies |\n| Sideband frame queue / message size | 16 / 1 MiB | Bound reflected media and event memory |\n| Normalized event queue | 64 | Fail on slow consumers rather than accumulate stale work |\n| WebSocket write high-water mark | 32 KiB | Backpressure for outbound control messages |\n| Commentary write deadline | 2 s | Prevent stuck sends from blocking event handling indefinitely |\n| M1 commentary content | 500 UTF-8 bytes | Conservative wire guard alongside M2 configurable token accounting |\n| Browser captions / timing rows | 6,000 characters per speaker / 20 | Bound DOM memory during long sessions |",
+    "digest": "bb9472882302815c239c43ae6a8bdaa1b79b35adbbf31bd57e2db5cc97166c09"
+  },
+  {
+    "id": "bd3cc8e8f1b225b4",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Resource budgets",
+    "text": "WebRTC audio buffers belong to the browser and provider. We do not claim to bound those with a Python queue. M3 must define bounded audio buffers if an audio relay is introduced.",
+    "digest": "bd3cc8e8f1b225b41105251a89e5f0ded9ea43c718a40e1a4130ca548d62973b"
+  },
+  {
+    "id": "2b78ea7778bc6018",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "M2–M4 design commitments",
+    "text": "- M2: construct task context from transcripts and application state, not from delegation metadata alone. Keep worker instructions separate from voice instructions. Cancellation suppresses late results and cannot undo already-completed external side effects.\n- M3: adapter capabilities determine supported fallback. Reconnect uses a new peer connection, a generation ID, and clamped committed text history. Never replay tool executions blindly.\n- M4: application-defined turn spans parent provider and delegation spans. Distinguish signaling TTFB, first observed audio, playback onset, transcript gap, and end-to-end task latency. Recorded fake scenarios test scheduling and limits; a real model is required to evaluate model behavior.",
+    "digest": "2b78ea7778bc60182504b1da77fdfdd8194c94ccd904a875b364de3d8cb3bae7"
+  },
+  {
+    "id": "7f350a35acf20996",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Sources",
+    "text": "Reviewed public documentation on 2026-09-20:",
+    "digest": "7f350a35acf20996642605c9c96087e079b6bb20b0f0d0fc5d9c83bb18048584"
+  },
+  {
+    "id": "49c9987a4df356c9",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Sources",
+    "text": "- [GPT-Live WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live)\n- [GPT-Live sideband](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live)\n- [Session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations)\n- [Delegation](https://developers.openai.com/api/docs/guides/live-delegation)\n- [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)",
+    "digest": "49c9987a4df356c9cbcf323b8e7694b3c5e9c14bbb316f0ebd123b005983fc00"
+  },
+  {
+    "id": "f1d07dc69d023915",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Sources",
+    "text": "Application limits and ownership rules are first-principles design choices, not upstream service guarantees.",
+    "digest": "f1d07dc69d0239150195d501d34a13d46d689bf063d2c0c1d9b59f8c0d3f59b2"
+  },
+  {
+    "id": "25f0683df1c89359",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "M2 — delegated worker",
+    "text": "M2 adds an actual LangGraph model/tool loop, `delegate_task(goal, context)`, asynchronous dispatch, finite context and result budgets, timeouts, duplicate suppression, and cancellation on interruption/close. The release candidate is `v0.1.0-m2-rc.1`. Live voice and a paid worker response still need an account smoke test before the full M2 release.",
+    "digest": "25f0683df1c89359a1be7b4ac3f45f28a0cea5377fc579c88eb81408e4f9a9b2"
+  },
+  {
+    "id": "045fa380d6f7b83a",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Try it without an API key",
+    "text": "From the repository root (the folder containing pyproject.toml):",
+    "digest": "045fa380d6f7b83a468dd951f6657b3718d929d5e99cb1b0f5d4b00ba857dc92"
+  },
+  {
+    "id": "4d5e4bfeb5f3cf8f",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Try it without an API key",
+    "text": "```bash\nuv sync --locked\nuv run python -m voice_delegate.delegation.demo \"calculate (120 + 80) * 1.22\"\nuv run python -m voice_delegate.delegation.demo \"architecture\"\n```",
+    "digest": "4d5e4bfeb5f3cf8fd5032385c20bd4ac8eba79461f0978ba2d1274a9111f3c5e"
+  },
+  {
+    "id": "32d90a10b5db2876",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Try it without an API key",
+    "text": "The first result is `Offline worker result: 244`. This runs the real graph and calculator, with a deterministic planner. It is not a free language model. The offline planner accepts `calculate` or `calcola` followed by an arithmetic expression, and the exact topics `architecture`, `limits`, `delegation`. Other requests receive an honest unsupported response. The CLI always stays offline even if a provider key exists in the environment. The browser's Free demo remains a labeled scripted UI preview, not a backend invocation.",
+    "digest": "32d90a10b5db2876838204475658b9e595a8ce93f72a3092f1392e90b98e41e6"
+  },
+  {
+    "id": "a15c8d3aa629dec8",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Natural-language worker with live voice",
+    "text": "Retain your existing `.env` and add:",
+    "digest": "a15c8d3aa629dec8cc1571aa748c60407a3e1bd5cc6a92162977c4dd07f532cb"
+  },
+  {
+    "id": "1efb53ce48cab117",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Natural-language worker with live voice",
+    "text": "```dotenv\nVOICE_WORKER_MODE=openai\nVOICE_WORKER_MODEL=gpt-4.1-mini\nVOICE_WORKER_MAX_STEPS=4\nVOICE_DELEGATION_TIMEOUT_SECONDS=15\nVOICE_DELEGATION_RESULT_TOKENS=120\n```",
+    "digest": "1efb53ce48cab11763ae6958c457733375bdc05658fd40dd9b146fbd72a8d6ca"
+  },
+  {
+    "id": "c331234399fd476c",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Natural-language worker with live voice",
+    "text": "Set your personal `OPENAI_API_KEY` on the backend as for M1. Restart the backend and frontend with the existing commands. The text worker and live voice are separate billed model calls. Worker mode defaults to `offline`; enabling `openai` without a key fails configuration validation.",
+    "digest": "c331234399fd476cc10c2decf8e527bcee8eb7815d5f47b727e2e7c20c84dd06"
+  },
+  {
+    "id": "4d1519df22db8d01",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Natural-language worker with live voice",
+    "text": "Try “Calcola il totale di 120 e 80 euro e aggiungi il 22 percento” or “Spiegami i limiti di questa architettura”. The worker has a calculator and three local reference notes. It cannot browse, book trips, send messages, or inspect external data. The text model can choose and sequence tools, subject to the step budget. Results are passed as commentary, never appended as trusted instructions.",
+    "digest": "4d1519df22db8d0136d935f7df111f012eb562aeeb26c340dc26ddf82357e130"
+  },
+  {
+    "id": "50a4d4bc11208600",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Control and cancellation",
+    "text": "The event reader starts a background task and continues reading audio-related events and transcripts. A new delegation invalidates the old generation. Duplicate request IDs do not repeat work; at most 64 IDs are accepted per session. Global running worker tasks are capped at the session capacity, including cancellation cleanup. Busy requests receive a compact failure result, and excess lifetime delegation IDs set `request_limit` without dispatch.",
+    "digest": "50a4d4bc112086000af4658f8b7c848edd1847823434b8f0ff49c940872d5a08"
+  },
+  {
+    "id": "25ef8d2e042d2fc2",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Control and cancellation",
+    "text": "The browser requests cancellation on microphone energy onset (three 20 ms samples above threshold, rearmed after 300 ms of silence). This is a simple VAD heuristic: noise/echo can cause false positives, quiet speech can be missed, and background tabs may delay timers. Echo cancellation is requested from the browser. Backend user-transcript fragments starting at or after a delegation's provider timestamp also invalidate its work. Older transcript fragments do not cancel it. Use **Cancel task** for an explicit cancellation request. **Stop** closes the whole conversation.",
+    "digest": "25ef8d2e042d2fc282a851d9b832b4daf32333555312c7ac1c0e5a5dadb4c9eb"
+  },
+  {
+    "id": "427ed475a29f799e",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Control and cancellation",
+    "text": "Cancellation invalidates the generation before canceling tasks. Results from workers that return after cancellation are discarded. A result already sent to the voice provider cannot be withdrawn by this application; no cancellation scheme can undo a completed external action. M2 tools are intentionally read-only. Local sync tools are tiny bounded operations; their executor threads may finish after cancellation. Future slow tools must cooperate with cancellation and apply their own deadlines.",
+    "digest": "427ed475a29f799eca1e092c075f02ac89ce6b73f11ec4053d66ee9af2985103"
+  },
+  {
+    "id": "1156ec3b25b856cf",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Control and cancellation",
+    "text": "Timeout limits how long a worker result is awaited. It cancels the worker and sends a short failure message. Provider transmission has its own two-second deadline, so result delivery is outside the worker execution budget. Noncooperative worker extensions continue occupying capacity until they actually finish; shutdown waits at most one additional second for them. Heartbeats report the last delegation status every ten seconds; this is not a low-latency status stream.",
+    "digest": "1156ec3b25b856cf00273b48b60694d365c2abfdfd1f53561dd5df54617d4dba"
+  },
+  {
+    "id": "596bff0b781fe0f1",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Budgets",
+    "text": "| Resource | Limit | Reason |\n|---|---|---|\n| Worker model steps | 4 by default, configurable 1–12 | Stop model/tool loops |\n| Tools per model response | 1 | Keep execution and cancellation predictable |\n| Worker duration | 15 seconds, configurable | Keep slow work finite |\n| Delegated result | 120 o200k tokens by default, configurable 8–480 | Keep narration compact |\n| Wire commentary | 500 UTF-8 bytes | Conservative independent guard for Live's documented 500-token append cap |\n| Transcript context | 12 recent speaker segments, 2,048 o200k tokens | Bound retained context and prompt cost |\n| Goal | Latest user segment, 512 o200k tokens | Bound dispatch input |\n| Calculator | 160 characters, 40 AST nodes, finite results within ±1e12 | No code execution or expensive arithmetic |",
+    "digest": "596bff0b781fe0f1c28eeae4ca94c8080adbcde414b701bd4244092cac90a480"
+  },
+  {
+    "id": "b391417551ebb743",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Budgets",
+    "text": "Token clipping preserves valid Unicode and includes an ellipsis within the budget. The actual result must satisfy both token and byte budgets. o200k assets and their MIT license are bundled: first use of token counting works offline, without a tokenizer download. Transcript grouping is approximate, not a definitive turn detector. Corrections and incomplete transcripts can still require clarification. Failover history/replay remains M3.",
+    "digest": "b391417551ebb743b2790a9506757d616d344602eaab246f4602e0827b29d501"
+  },
+  {
+    "id": "6b342989f8bd9aa3",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Protocol and tests",
+    "text": "`docs/delegate_task.schema.json` is the application function schema. GPT-Live itself uses native client delegation; we do not send an invented tool schema to Live. Its event supplies an ID and timestamp, not a goal. The adapter saves the timestamp; the manager builds goal/context from bounded transcripts and maps the result to `session.commentary.append` with the original delegation ID.",
+    "digest": "6b342989f8bd9aa38a889a3faa59219f8567faad9735062c9b6267c11798c1d8"
+  },
+  {
+    "id": "ff62df7143a53cf8",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Protocol and tests",
+    "text": "The suite tests tool execution, unknown/unsafe requests, graph step limits, token/byte/Unicode bounds, timeout, worker failure redaction, ownership of the interrupt endpoint, duplicates, supersession, capacity, and suppression after interruption/close. Fake events validate orchestration; they cannot prove a voice model delegates appropriately.",
+    "digest": "ff62df7143a53cf8111888a0c2b5f7a325a6e2c29e03ba776c41ac183eb9cbab"
+  },
+  {
+    "id": "6a1bcd368b9a66d3",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Protocol and tests",
+    "text": "Live release gate: with a key, confirm ordinary greetings do not delegate; a calculation delegates once and is narrated correctly; speaking over ongoing work cancels it without a late result; explicit cancellation and Stop release resources; configure a short timeout to verify an honest failure message. Record actual model/browser results before tagging the full M2 release. Provider acceptance is not proof that audio was played.",
+    "digest": "6a1bcd368b9a66d3580bc33b6f708ebf55a108cd90ae0b4fb924491b463a7efd"
+  },
+  {
+    "id": "d620a9c4cd69b15c",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Protocol and tests",
+    "text": "Public sources: [GPT-Live client delegation](https://developers.openai.com/api/docs/guides/live-delegation), [Live transcripts](https://developers.openai.com/api/docs/guides/live-conversations), [LangGraph graph/tool loop](https://docs.langchain.com/oss/python/langgraph/quickstart), [OpenAI tiktoken](https://github.com/openai/tiktoken).",
+    "digest": "d620a9c4cd69b15c7fb0d992ef04ee349d2c3087625d8c8997653dc60783950f"
+  },
+  {
+    "id": "8b230aa7dbb8a26d",
+    "title": "M2 — delegated worker",
+    "path": "docs/m2.md",
+    "section": "Candidate verification",
+    "text": "Verified locally: 49 offline pytest tests, strict mypy, Ruff, uv/pnpm locked installs, both Python package builds, React/TypeScript build, three Vitest tests and three Playwright tests on Chromium 153. The text client can be constructed and closed without a network request. Paid model inference, real microphone interruption, Docker and cloud deployment have not been run for this candidate.",
+    "digest": "8b230aa7dbb8a26d01e92a48c7a4544db707ddd9eb1395ef38448ca99fac9310"
+  },
+  {
+    "id": "41dee071689a64f4",
+    "title": "M3 — Azure fallback candidate",
+    "path": "docs/m3.md",
+    "section": "M3 — Azure fallback candidate",
+    "text": "The optional Azure GA Realtime adapter negotiates SDP on the server, attaches one bounded\nsideband reader, maps function calls to the existing worker, and returns tool outputs.\nSet `VOICE_FALLBACK_ENABLED=true`, `VOICE_AZURE_ENDPOINT=https://RESOURCE.openai.azure.com`,\n`VOICE_AZURE_API_KEY`, `VOICE_AZURE_DEPLOYMENT` and `VOICE_AZURE_VOICE` on the backend.\nThe default remains GPT-Live with no fallback. Azure resources must already exist.",
+    "digest": "41dee071689a64f4a323b19567cb930d3ce29588b4e2691df5840c4139a9a500"
+  },
+  {
+    "id": "c8024474c65d82af",
+    "title": "M3 — Azure fallback candidate",
+    "path": "docs/m3.md",
+    "section": "M3 — Azure fallback candidate",
+    "text": "A provider stream failure retains the owned application session in `reconnecting` state.\nThe browser heartbeat detects this (up to ten seconds); media/data-channel failure also\ninitiates recovery. The browser closes the old peer and creates a new one. The authenticated\n`POST /api/sessions/{id}/reconnect` takes SDP plus the current `generation`. Under the session\nlock, the manager consumes the single attempt, cancels delegation, closes the old connection,\nand connects Azure. Duplicate/stale requests return 409. Unsupported fallback returns 501.\nThere is no automatic retry of creation POSTs. Timeout consumes the attempt and removes the\nsession. Existing lifetime, heartbeat and capacity limits remain in force.",
+    "digest": "c8024474c65d82af2683a05067e9218e572d841665e0451f6285856f721263a8"
+  },
+  {
+    "id": "619b9cc242b98fa4",
+    "title": "M3 — Azure fallback candidate",
+    "path": "docs/m3.md",
+    "section": "M3 — Azure fallback candidate",
+    "text": "Only sealed text segments are replayed, bounded to twelve entries and 2048 tokens.\nFor Live, a change of speaker seals the previous segment; this is an approximation, not a\nprovider guarantee of completion. The current unfinished segment is omitted. Azure uses\ncompleted transcripts. Tool calls, tool results and audio are never replayed. Replay is\nconversation data, never system instructions. A user may need to repeat the last phrase.\nAzure uses turn-based Realtime behavior; full-duplex Live behavior is not preserved.",
+    "digest": "619b9cc242b98fa40059f0eb40a99501e9a064de098ec3d040818b1159a3f1d6"
+  },
+  {
+    "id": "faedba43d01a9161",
+    "title": "M3 — Azure fallback candidate",
+    "path": "docs/m3.md",
+    "section": "M3 — Azure fallback candidate",
+    "text": "Cleanup reports failure if either provider's finalization was unconfirmed. Azure uses its\nGA call hangup endpoint. A lost creation response can still leave an unknown upstream call;\nno subsequent request can reliably identify that call for cleanup.",
+    "digest": "faedba43d01a9161d6096b3b8d867576010945c85f494c6a34e23a8594ad0d24"
+  },
+  {
+    "id": "59b534498d3b005c",
+    "title": "M3 — Azure fallback candidate",
+    "path": "docs/m3.md",
+    "section": "M3 — Azure fallback candidate",
+    "text": "Offline tests cover normalization, one-attempt concurrency, ownership, timeout, sealed replay\nand cleanup after attach failure. Real Azure voice, microphone interruption, natural-language\ndelegation and fallback latency remain live release gates. No stable milestone tag is implied.",
+    "digest": "59b534498d3b005c9d54f0e6e9566abb6808512a4c654a91c6fb49ab65fc5531"
+  },
+  {
+    "id": "de9c8630b900c0cd",
+    "title": "M3 — Azure fallback candidate",
+    "path": "docs/m3.md",
+    "section": "M3 — Azure fallback candidate",
+    "text": "Protocol references, checked 2026-09-20:\n- https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/realtime-audio-webrtc\n- https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/realtime",
+    "digest": "de9c8630b900c0cd082812ce8a0d7e12ab7455805cc39f5d6787f342b2106764"
+  },
+  {
+    "id": "47e6227ae5fd314b",
+    "title": "M5 — controlled invitation demo",
+    "path": "docs/m5.md",
+    "section": "M5 — controlled invitation demo",
+    "text": "Enable `VOICE_PUBLIC_DEMO=true` with `VOICE_ENVIRONMENT=production`, a single HTTPS\n`VOICE_ALLOWED_ORIGIN`, exact `VOICE_ALLOWED_HOSTS`, and `VOICE_INVITE_TOKENS` containing\na JSON object of stable pseudonymous user IDs to unique random tokens (at least 32 chars).\nGenerate each invitation locally with `python -c 'import secrets; print(secrets.token_urlsafe(32))'`.\nDistribute invitations privately. Each invitation is a bearer credential, not a verified\nhuman identity or an account login. Rotate/revoke by changing the mapping and restarting.\nKeep the same user ID when rotating so daily reservations are retained.",
+    "digest": "47e6227ae5fd314ba3a78f446714ba054596cd1455b3c7d088b0b112a9b38194"
+  },
+  {
+    "id": "9ddc2b372b095cb2",
+    "title": "M5 — controlled invitation demo",
+    "path": "docs/m5.md",
+    "section": "M5 — controlled invitation demo",
+    "text": "All session operations require both the user's invitation and the session ownership key.\nA different valid invitation cannot operate the session even if it knows its key.\nExisting local/shared-code setups continue to work when public demo mode is disabled.",
+    "digest": "9ddc2b372b095cb207b93b9e5079f9eb6aeb2abbf1ddb0848b3c17c97c9a34e9"
+  },
+  {
+    "id": "d7ede4c61021d646",
+    "title": "M5 — controlled invitation demo",
+    "path": "docs/m5.md",
+    "section": "Budgets",
+    "text": "SQLite records reservations before admitting a session. Only hashes of stable user IDs,\nUTC dates, counts and reserved seconds are stored. Tokens and transcripts are not stored.\nUse one API process with a durable writable volume at `VOICE_QUOTA_DATABASE`.\nDo not reset that volume when deploying or rolling back. A missing/read-only store fails\nstartup or admission; deleting the database deliberately resets budgets.",
+    "digest": "d7ede4c61021d646159e7fb18141635ea58b3c996be0ac182bd1595084a97b29"
+  },
+  {
+    "id": "db8c79baaea6eb82",
+    "title": "M5 — controlled invitation demo",
+    "path": "docs/m5.md",
+    "section": "Budgets",
+    "text": "Limits include concurrent sessions per invitation, sessions/day, per-user seconds/day,\nand global seconds/day. Each admission reserves the complete session TTL plus one second\nfor expiry sweep, doubled if Azure fallback is enabled. Reservations are not refunded,\neven if connection fails or the user leaves early. This conservatively bounds admission\nunder ambiguous provider responses and persists across restarts. Day rollover is UTC;\nactive sessions can cross midnight. This is a reservation ledger, not provider billing.",
+    "digest": "db8c79baaea6eb8242f15ff8c877b1d2595b2d1130e96da99aa31808bc19ba4f"
+  },
+  {
+    "id": "fe6d0c85ecd064fb",
+    "title": "M5 — controlled invitation demo",
+    "path": "docs/m5.md",
+    "section": "Budgets",
+    "text": "`VOICE_MAX_DELEGATIONS_PER_SESSION` bounds worker invocations, each already constrained by\nsteps, completion tokens and timeout. The session allowance also bounds daily worker calls.\nProvider pricing is not assumed. Remote cleanup failures or process crashes can cause\nprovider usage beyond local lifetime enforcement; configure provider-side budgets too.",
+    "digest": "fe6d0c85ecd064fb60160cbe13cda5275290d820e41982eab4b0c7ad615a36e5"
+  },
+  {
+    "id": "1a940b260774283a",
+    "title": "M5 — controlled invitation demo",
+    "path": "docs/m5.md",
+    "section": "Budgets",
+    "text": "`VOICE_DEMO_ENABLED=false` rejects new sessions with 503 after restart. Existing API close\nand heartbeat routes retain authorization. Do not expose this minimal single-process demo\nas a general multi-tenant production service. Add edge request-rate limits at the host.",
+    "digest": "1a940b260774283a1fc7b91a44aeaaccc1575578531741ea4b7df6d1de24420e"
+  },
+  {
+    "id": "9a0d537b51bd47df",
+    "title": "M5 — controlled invitation demo",
+    "path": "docs/m5.md",
+    "section": "Deployment and rollback",
+    "text": "Build an immutable image using `deployment/Dockerfile.backend`; run one worker behind HTTPS.\nMount persistent quota storage owned by UID 10001. Inject secrets through the hosting\nprovider's secret store, never frontend variables. `/healthz` verifies process health only.\nDo not send authorization headers, .env contents, SDP or transcripts to access logs; the\napplication's OTel spans intentionally exclude those values. Avoid debug proxy/body logging.",
+    "digest": "9a0d537b51bd47df43e6100a208dfa2e84fb6c790d607e90afb5fa230b761967"
+  },
+  {
+    "id": "d349d69048aa7285",
+    "title": "M5 — controlled invitation demo",
+    "path": "docs/m5.md",
+    "section": "Deployment and rollback",
+    "text": "Before public access, run identity isolation, quota exhaustion, close/expiry and rollback\nchecks on the actual host, then run real voice. Keep the prior image digest and deployment\nconfiguration. Roll back the image while retaining the quota database and stable user IDs;\nthe ledger schema must remain compatible. Set the admission switch off if investigating\nunexpected usage. Local container verification does not constitute a public deployment.",
+    "digest": "d349d69048aa72852ce82ca16570210071ec899cb3de00c8bca5be986946aa10"
+  },
+  {
+    "id": "8a3f5d27e502386b",
+    "title": "M5 — controlled invitation demo",
+    "path": "docs/m5.md",
+    "section": "Deployment and rollback",
+    "text": "Acceptance remains pending a chosen public host, HTTPS, live voice and a hosted rollback\nexercise. The repository now supplies the controls and automated tests, not a claim that\nan internet-facing demo has already been published.",
+    "digest": "8a3f5d27e502386b55c30140b3f8c4b14a59c08d5de0cb45ed11eda46aa6183a"
+  }
+]

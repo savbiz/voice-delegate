@@ -1,6 +1,7 @@
 """Validated browser-facing contracts, separate from provider wire formats."""
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from voice_delegate_agent.reference import Source
 
 
 class Offer(BaseModel):
@@ -45,6 +46,7 @@ class Status(BaseModel):
     delegation: str = "idle"
     generation: int = 0
     fallback_available: bool = False
+    sources: tuple[Source, ...] = ()
 
 
 class Closed(BaseModel):

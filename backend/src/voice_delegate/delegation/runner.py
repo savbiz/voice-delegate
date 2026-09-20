@@ -7,6 +7,7 @@ from time import monotonic
 
 from opentelemetry import trace
 from opentelemetry.context import Context
+from voice_delegate_agent.reference import GroundedAnswer, Source
 
 from voice_delegate.limits.tokens import truncate
 from voice_delegate.observability.metrics import Metrics
@@ -25,6 +26,7 @@ class DelegationState:
     seen: set[str] = field(default_factory=set)
     status: str = "idle"
     offset_ms: float = -1
+    sources: tuple[Source, ...] = ()
 
 
 class DelegationRunner:
@@ -37,6 +39,7 @@ class DelegationRunner:
         timeout: float = 15,
         budget: int = 120,
         capacity: int = 4,
+        request_limit: int = 64,
         tracer: trace.Tracer | None = None,
         metrics: Metrics | None = None,
     ) -> None:
@@ -45,12 +48,14 @@ class DelegationRunner:
         self.timeout = timeout
         self.budget = budget
         self.capacity = capacity
+        self.request_limit = request_limit
         self.tracer = tracer or trace.NoOpTracerProvider().get_tracer(__name__)
         self.work: set[asyncio.Task[str]] = set()
 
     def cancel(self, state: DelegationState) -> None:
         """Invalidate before canceling so a late return can never be narrated."""
         state.generation += 1
+        state.sources = ()
         if state.task is not None and not state.task.done():
             state.status = "cancelled"
             self.metrics.interruptions.add(1)
@@ -69,7 +74,7 @@ class DelegationRunner:
         if request_id in state.seen:
             return
         self.cancel(state)
-        if len(state.seen) >= 64:
+        if len(state.seen) >= self.request_limit:
             state.status = "request_limit"
             return
         state.seen.add(request_id)
@@ -130,6 +135,7 @@ class DelegationRunner:
                     )
                     if generation == state.generation:
                         state.status = status
+                        state.sources = result.sources if isinstance(result, GroundedAnswer) else ()
         except asyncio.CancelledError:
             if generation == state.generation:
                 state.status = "cancelled"

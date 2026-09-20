@@ -1,15 +1,21 @@
 """Local-demo HTTP routes with per-session ownership and origin validation."""
 
-from secrets import compare_digest
+from dataclasses import asdict
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from pydantic import BaseModel, Field
+from voice_delegate_agent.reference import search, source_by_id
 
 from voice_delegate.providers.models import UnsupportedCapability
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import Session
 
 from .schemas import Answer, Closed, Created, Offer, Reconnect, Status
+
+
+class ReferenceQuery(BaseModel):
+    query: str = Field(min_length=1, max_length=500)
 
 
 def build_router(manager: SessionManager) -> APIRouter:
@@ -22,32 +28,50 @@ def build_router(manager: SessionManager) -> APIRouter:
 
     router = APIRouter(prefix="/api", dependencies=[Depends(check_origin)])
 
-    async def authorize(request: Request) -> None:
-        expected = manager.settings.access_token.get_secret_value()
-        actual = request.headers.get("authorization", "").removeprefix("Bearer ")
-        if expected and (
-            not request.headers.get("authorization", "").startswith("Bearer ")
-            or not compare_digest(actual.encode(), expected.encode())
-        ):
-            raise HTTPException(401, "A valid demo access code is required")
+    async def authorize(request: Request) -> str:
+        return manager.admission.authenticate(request.headers.get("authorization", ""))
 
     @router.post("/config")
     async def configuration() -> dict[str, bool]:
         return {
-            "requires_access_code": bool(manager.settings.access_token.get_secret_value()),
+            "requires_access_code": bool(
+                manager.settings.invite_tokens or manager.settings.access_token.get_secret_value()
+            ),
             "voice_available": bool(manager.settings.openai_api_key.get_secret_value()),
         }
 
     async def owned(
         session_id: str,
-        _: Annotated[None, Depends(authorize)],
+        principal: Annotated[str, Depends(authorize)],
         x_session_key: Annotated[str, Header()] = "",
     ) -> Session:
-        return manager.get(session_id, x_session_key)
+        session = manager.get(session_id, x_session_key)
+        if session.principal != principal:
+            raise HTTPException(404, "Session not found")
+        return session
+
+    @router.post("/reference/search")
+    async def reference_search(
+        body: ReferenceQuery, _: Annotated[str, Depends(authorize)]
+    ) -> dict[str, object]:
+        sources = search(body.query)
+        return {
+            "sources": [asdict(source) for source in sources],
+            "status": "found" if sources else "No supporting documentation found.",
+        }
+
+    @router.post("/reference/{source_id}")
+    async def reference_source(
+        source_id: str, _: Annotated[str, Depends(authorize)]
+    ) -> dict[str, str]:
+        source = source_by_id(source_id)
+        if source is None:
+            raise HTTPException(404, "Source not found")
+        return asdict(source)
 
     @router.post("/sessions", status_code=201)
-    async def create(_: Annotated[None, Depends(authorize)]) -> Created:
-        session = manager.create()
+    async def create(principal: Annotated[str, Depends(authorize)]) -> Created:
+        session = manager.create(principal)
         return Created(
             id=session.id, key=session.key, ttl_seconds=manager.settings.session_ttl_seconds
         )
@@ -69,6 +93,7 @@ def build_router(manager: SessionManager) -> APIRouter:
             state=session.state,
             delegation=session.delegation.status,
             generation=session.generation,
+            sources=session.delegation.sources,
             fallback_available=manager.fallback is not None and not session.fallback_used,
         )
 

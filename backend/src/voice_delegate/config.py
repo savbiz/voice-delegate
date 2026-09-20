@@ -10,7 +10,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """Resource budgets and server-owned provider configuration."""
 
-    model_config = SettingsConfigDict(env_prefix="VOICE_", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="VOICE_", extra="ignore", hide_input_in_errors=True
+    )
     openai_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="OPENAI_API_KEY")
     azure_endpoint: str = ""
     azure_api_key: SecretStr = SecretStr("")
@@ -23,6 +25,15 @@ class Settings(BaseSettings):
     allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
     environment: str = "development"
     access_token: SecretStr = SecretStr("")
+    invite_tokens: dict[str, SecretStr] = Field(default_factory=dict, repr=False)
+    public_demo: bool = False
+    demo_enabled: bool = True
+    quota_database: str = ".local/quotas.sqlite3"
+    daily_sessions_per_user: int = Field(default=4, ge=1, le=100)
+    concurrent_sessions_per_user: int = Field(default=1, ge=1, le=10)
+    daily_voice_seconds_per_user: int = Field(default=1500, ge=1)
+    daily_voice_seconds_global: int = Field(default=6000, ge=1)
+    max_delegations_per_session: int = Field(default=8, ge=1, le=64)
     otel_enabled: bool = False
     otel_endpoint: str = ""
     otel_metrics_endpoint: str = ""
@@ -41,6 +52,17 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production(self) -> "Settings":
         """Require an explicit browser origin and access gate on public deployments."""
+        if len(self.invite_tokens) > 100:
+            raise ValueError("At most 100 named invitations are supported")
+        values = [token.get_secret_value() for token in self.invite_tokens.values()]
+        if any(not name or len(name) > 64 for name in self.invite_tokens):
+            raise ValueError("Invitation names must contain 1 to 64 characters")
+        if any(len(value) < 32 for value in values) or len(set(values)) != len(values):
+            raise ValueError("Invitations require unique random tokens of at least 32 characters")
+        if self.public_demo and (not values or self.quota_database == ":memory:"):
+            raise ValueError("Public demo requires named invitations and durable quota storage")
+        if self.public_demo and self.environment != "production":
+            raise ValueError("Public demo requires production configuration")
         if self.fallback_enabled:
             from urllib.parse import urlparse
 
@@ -62,7 +84,7 @@ class Settings(BaseSettings):
         if self.worker_mode == "openai" and not self.openai_api_key.get_secret_value():
             raise ValueError("VOICE_WORKER_MODE=openai requires OPENAI_API_KEY")
         if self.environment == "production":
-            if len(self.access_token.get_secret_value()) < 24:
+            if not self.invite_tokens and len(self.access_token.get_secret_value()) < 24:
                 raise ValueError("Production requires VOICE_ACCESS_TOKEN of at least 24 characters")
             if not self.allowed_origin.startswith("https://"):
                 raise ValueError("Production requires an HTTPS frontend origin")
