@@ -1,8 +1,8 @@
 /** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
-import "./style.css";
+export function mountLive(root: HTMLElement, accessCode: string): () => void {
 
 function element<T extends HTMLElement>(id: string): T {
-  const value = document.getElementById(id);
+  const value = root.querySelector<T>(`#${id}`);
   if (!value) throw new Error(`Missing element: ${id}`);
   return value as T;
 }
@@ -41,10 +41,11 @@ function release(): void {
 }
 
 async function request(path: string, owner?: Session, body?: unknown): Promise<unknown> {
-  const response = await fetch(`/api${path}`, {
+  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/api${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...(accessCode ? { Authorization: `Bearer ${accessCode}` } : {}),
       ...(owner ? { "X-Session-Key": owner.key } : {}),
     },
     body: JSON.stringify(body ?? {}),
@@ -141,8 +142,10 @@ async function gather(connection: RTCPeerConnection): Promise<void> {
   });
 }
 
-start.addEventListener("click", () => { void begin(); });
-stop.addEventListener("click", () => { void finish("Conversation ended."); });
+const onStart = () => { void begin(); };
+const onStop = () => { void finish("Conversation ended."); };
+start.addEventListener("click", onStart);
+stop.addEventListener("click", onStop);
 
 async function begin(): Promise<void> {
   const attempt = ++generation;
@@ -155,6 +158,9 @@ async function begin(): Promise<void> {
   turn = undefined;
   turnNumber = 0;
   try {
+    const config = await request("/config") as { voice_available: boolean };
+    if (attempt !== generation) return;
+    if (!config.voice_available) throw new Error("Set OPENAI_API_KEY on the backend to use live voice. Free demo works without a key.");
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     if (attempt !== generation) { stream.getTracks().forEach(track => track.stop()); return; }
     microphone = stream;
@@ -207,12 +213,20 @@ async function begin(): Promise<void> {
   }
 }
 
-window.addEventListener("pagehide", () => {
+const onPageHide = () => {
   if (session) {
-    void fetch(`/api/sessions/${session.id}/close`, {
-      method: "POST", keepalive: true, headers: { "X-Session-Key": session.key },
+    void fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/api/sessions/${session.id}/close`, {
+      method: "POST", keepalive: true, headers: { "X-Session-Key": session.key, ...(accessCode ? { Authorization: `Bearer ${accessCode}` } : {}) },
     }).catch(() => undefined);
   }
   generation += 1;
   release();
-});
+ };
+window.addEventListener("pagehide", onPageHide);
+return () => {
+  window.removeEventListener("pagehide", onPageHide);
+  start.removeEventListener("click", onStart);
+  stop.removeEventListener("click", onStop);
+  onPageHide();
+};
+}
