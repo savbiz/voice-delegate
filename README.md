@@ -2,7 +2,7 @@
 
 A small, clean-room reference architecture for real-time voice agents: GPT-Live handles the conversation over WebRTC while a separate LangGraph worker handles delegated reasoning and tools. FastAPI owns session lifetime and server-side control; provider contracts make transport differences explicit. The project is designed to make cancellation, resource budgets, and failure recovery understandable and testable. Working name; Apache-2.0. Copyright 2026 Savino Bizzoca.
 
-**Status: M1–M4 implementation candidate (`0.1.0.dev4`).** M2 is integrated; M3 adds optional Azure Realtime fallback with peer renegotiation; M4 adds turn tracing, metrics, a monitoring stack and offline evaluations. Live voice/Azure checks and running-stack validation remain release gates; no stable release is claimed.
+**Status: M1–M4 implementation candidate (`0.1.0.dev4`).** M2 is integrated; M3 adds optional Azure Realtime fallback with peer renegotiation; M4 adds turn tracing, metrics, a monitoring stack and offline evaluations. Live voice/Azure checks and measured latency remain release gates; no stable release is claimed.
 
 Guides: [M2 worker](docs/m2.md) · [M3 Azure fallback](docs/m3.md) · [M4 monitoring and evals](docs/m4.md).
 

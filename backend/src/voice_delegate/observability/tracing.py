@@ -19,7 +19,9 @@ def configure_tracing(settings: Settings) -> TracerProvider | None:
         if settings.otel_endpoint
         else ConsoleSpanExporter()
     )
-    provider.add_span_processor(BatchSpanProcessor(exporter, max_queue_size=256))
+    provider.add_span_processor(
+        BatchSpanProcessor(exporter, max_queue_size=256, max_export_batch_size=256)
+    )
     return provider
 
 

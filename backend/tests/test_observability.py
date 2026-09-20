@@ -55,3 +55,11 @@ async def test_turn_parents_delegation_and_exports_no_private_text() -> None:
 def test_disabled_metrics_never_construct_an_exporter() -> None:
     assert configure_metrics(Settings()) is None
     assert configure_metrics(Settings(otel_enabled=True)) is None
+
+
+def test_enabled_tracing_has_a_batch_that_fits_its_bounded_queue() -> None:
+    from voice_delegate.observability.tracing import configure_tracing
+
+    provider = configure_tracing(Settings(otel_enabled=True, otel_endpoint=""))
+    assert provider is not None
+    provider.shutdown()
