@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: voice-delegate-api
+    runtime: docker
+    dockerfilePath: ./deployment/Dockerfile.backend
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: VOICE_ENVIRONMENT
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: VOICE_ACCESS_TOKEN
+        sync: false
+      - key: VOICE_ALLOWED_ORIGIN
+        sync: false
+      - key: VOICE_ALLOWED_HOSTS
+        sync: false
