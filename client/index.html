@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>voice-delegate · M1</title>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">VOICE-DELEGATE / MILESTONE 01</p>
+      <h1>A conversation,<br />with room to think.</h1>
+      <p class="intro">Talk naturally. Interrupt when you need to. This milestone connects live
+        voice; delegated task execution arrives in M2.</p>
+      <section class="controls" aria-label="Conversation controls">
+        <button id="start">Start conversation</button>
+        <button id="stop" disabled>End</button>
+        <p id="status" role="status">Ready. Microphone access starts when you choose Start.</p>
+        <audio id="audio" controls autoplay></audio>
+      </section>
+      <div class="columns">
+        <section><h2>You</h2><p id="user" class="transcript">—</p></section>
+        <section><h2>Assistant</h2><p id="assistant" class="transcript">—</p></section>
+      </div>
+      <section>
+        <h2>Conversation timing</h2>
+        <p class="note">Transcript gap per estimated turn: first assistant fragment start minus
+          last user fragment end. Negative values indicate overlap. This is a proxy, not measured
+          audio playback latency. User fragments separated by 800 ms begin a new estimated turn.</p>
+        <ol id="timings" aria-label="Recent turn timing"></ol>
+      </section>
+      <footer>GPT-Live · WebRTC audio · FastAPI control · Apache-2.0</footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
