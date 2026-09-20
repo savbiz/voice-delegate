@@ -14,6 +14,8 @@ from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 from voice_delegate.config import Settings
 from voice_delegate.delegation.contracts import DelegationInput, Worker
 from voice_delegate.delegation.runner import DelegationRunner
+from voice_delegate.observability.metrics import Metrics
+from voice_delegate.observability.turns import observe
 from voice_delegate.providers.base import RealtimeProvider
 from voice_delegate.providers.models import (
     DelegationRequested,
@@ -49,7 +51,9 @@ class SessionManager:
         tracer: trace.Tracer | None = None,
         worker: Worker | None = None,
         fallback: RealtimeProvider | None = None,
+        metrics: Metrics | None = None,
     ) -> None:
+        self.metrics = metrics or Metrics()
         self.tracer = tracer or trace.NoOpTracerProvider().get_tracer(__name__)
         self.delegator = DelegationRunner(
             worker or LangGraphWorker(OfflinePlanner(), settings.worker_max_steps),
@@ -57,6 +61,7 @@ class SessionManager:
             budget=settings.delegation_result_tokens,
             capacity=settings.max_sessions,
             tracer=self.tracer,
+            metrics=self.metrics,
         )
         self.provider = provider
         self.fallback = fallback
@@ -99,8 +104,11 @@ class SessionManager:
             session.state = "connecting"
             try:
                 async with asyncio.timeout(self.settings.connect_timeout_seconds):
-                    with self.tracer.start_as_current_span(
-                        "provider.connect", record_exception=False
+                    with (
+                        self.metrics.operation("provider.connect"),
+                        self.tracer.start_as_current_span(
+                            "provider.connect", record_exception=False
+                        ),
                     ):
                         session.connection = await self.provider.connect(
                             config=self.config(), offer_sdp=offer_sdp
@@ -128,6 +136,7 @@ class SessionManager:
                 if isinstance(event, ProviderFailure):
                     break
                 if isinstance(event, Transcript):
+                    session.turn = observe(session.turn, event, self.tracer, self.metrics)
                     if (
                         not event.committed
                         and session.history.entries
@@ -157,6 +166,7 @@ class SessionManager:
                         ),
                         connection,
                         lambda: session.state == "connected",
+                        context=session.turn.context if session.turn else None,
                     )
         except ProviderError:
             logger.warning("Session provider stream failed")
@@ -173,6 +183,17 @@ class SessionManager:
                     await self.close(session)
 
     async def reconnect(self, session: Session, offer_sdp: str, generation: int) -> WebRTCAnswer:
+        with (
+            self.metrics.operation("provider.failover"),
+            self.tracer.start_as_current_span(
+                "provider.failover",
+                record_exception=False,
+                context=session.turn.context if session.turn else None,
+            ),
+        ):
+            return await self._reconnect(session, offer_sdp, generation)
+
+    async def _reconnect(self, session: Session, offer_sdp: str, generation: int) -> WebRTCAnswer:
         """Consume one fallback attempt; never retry an ambiguous billable POST."""
         async with session.lock:
             if self.fallback is None or not self.fallback.capabilities.text_replay:
@@ -207,6 +228,9 @@ class SessionManager:
                 session.watcher = asyncio.create_task(self._watch(session), name="fallback-events")
                 return session.connection.answer
             except BaseException:
+                if session.turn is not None:
+                    session.turn.span.end()
+                    session.turn = None
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
                 raise
@@ -229,6 +253,9 @@ class SessionManager:
                         await watcher
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
+                if session.turn is not None:
+                    session.turn.span.end()
+                    session.turn = None
             return session.finalized and session.previous_finalized
 
     async def expire(self) -> None:

@@ -12,6 +12,7 @@ from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner, OpenAIPl
 
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.limits.http import BodyLimitMiddleware
+from voice_delegate.observability.metrics import Metrics, configure_metrics
 from voice_delegate.observability.tracing import configure_tracing, get_tracer
 from voice_delegate.providers.azure import AzureRealtimeProvider
 from voice_delegate.providers.base import RealtimeProvider
@@ -32,6 +33,7 @@ def create_app(
         settings.openai_api_key.get_secret_value(), settings.close_timeout_seconds
     )
     telemetry = configure_tracing(settings)
+    meter_provider = configure_metrics(settings)
     planner = (
         OpenAIPlanner(settings.openai_api_key.get_secret_value(), settings.worker_model)
         if settings.worker_mode == "openai"
@@ -41,6 +43,7 @@ def create_app(
         provider,
         settings,
         tracer=get_tracer(telemetry),
+        metrics=Metrics(meter_provider),
         worker=LangGraphWorker(planner, settings.worker_max_steps),
         fallback=AzureRealtimeProvider(
             settings.azure_endpoint, settings.azure_api_key.get_secret_value()
@@ -61,10 +64,12 @@ def create_app(
             await manager.aclose()
             if isinstance(planner, OpenAIPlanner):
                 await planner.aclose()
+            if meter_provider is not None:
+                await asyncio.to_thread(meter_provider.shutdown)
             if telemetry is not None:
                 await asyncio.to_thread(telemetry.shutdown)
 
-    app = FastAPI(title="voice-delegate", version="0.1.0.dev3", lifespan=lifespan)
+    app = FastAPI(title="voice-delegate", version="0.1.0.dev4", lifespan=lifespan)
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 

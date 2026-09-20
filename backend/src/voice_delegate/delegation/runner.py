@@ -3,10 +3,13 @@
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from time import monotonic
 
 from opentelemetry import trace
+from opentelemetry.context import Context
 
 from voice_delegate.limits.tokens import truncate
+from voice_delegate.observability.metrics import Metrics
 from voice_delegate.providers.base import RealtimeConnection
 from voice_delegate.providers.models import Commentary, ProviderError
 
@@ -35,7 +38,9 @@ class DelegationRunner:
         budget: int = 120,
         capacity: int = 4,
         tracer: trace.Tracer | None = None,
+        metrics: Metrics | None = None,
     ) -> None:
+        self.metrics = metrics or Metrics()
         self.worker = worker
         self.timeout = timeout
         self.budget = budget
@@ -48,6 +53,7 @@ class DelegationRunner:
         state.generation += 1
         if state.task is not None and not state.task.done():
             state.status = "cancelled"
+            self.metrics.interruptions.add(1)
             state.task.cancel()
 
     def start(
@@ -57,6 +63,7 @@ class DelegationRunner:
         request: DelegationInput,
         connection: RealtimeConnection,
         is_connected: Callable[[], bool],
+        context: Context | None = None,
     ) -> None:
         """Dispatch without blocking the provider event reader; duplicates are ignored."""
         if request_id in state.seen:
@@ -69,7 +76,7 @@ class DelegationRunner:
         state.status = "running"
         generation = state.generation
         state.task = asyncio.create_task(
-            self._run(state, generation, request_id, request, connection, is_connected),
+            self._run(state, generation, request_id, request, connection, is_connected, context),
             name="delegated-task",
         )
 
@@ -86,10 +93,14 @@ class DelegationRunner:
         request: DelegationInput,
         connection: RealtimeConnection,
         is_connected: Callable[[], bool],
+        context: Context | None = None,
     ) -> None:
+        started = monotonic()
         child: asyncio.Task[str] | None = None
         try:
-            with self.tracer.start_as_current_span("delegate_task", record_exception=False):
+            with self.tracer.start_as_current_span(
+                "delegate_task", record_exception=False, context=context
+            ):
                 if len(self.work) >= self.capacity:
                     result, status = "Worker busy; task was not started.", "busy"
                 elif not request.goal.strip():
@@ -131,6 +142,15 @@ class DelegationRunner:
         except Exception:
             if generation == state.generation:
                 state.status = "failed"
+
+        finally:
+            self.metrics.operations.record(
+                monotonic() - started,
+                {
+                    "operation": "delegate_task",
+                    "outcome": state.status if generation == state.generation else "cancelled",
+                },
+            )
 
     async def aclose(self) -> None:
         """Cancel cooperative workers and bound shutdown if an extension misbehaves."""

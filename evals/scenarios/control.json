@@ -1,0 +1,5 @@
+[
+  {"name": "greeting_without_delegation", "text": "hello", "requests": [], "expected_results": 0},
+  {"name": "arithmetic_delegation", "text": "2 + 2", "requests": ["task-1"], "expected_results": 1},
+  {"name": "duplicate_delegation", "text": "2 + 2", "requests": ["task-1", "task-1"], "expected_results": 1}
+]

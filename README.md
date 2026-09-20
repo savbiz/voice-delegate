@@ -2,9 +2,9 @@
 
 A small, clean-room reference architecture for real-time voice agents: GPT-Live handles the conversation over WebRTC while a separate LangGraph worker handles delegated reasoning and tools. FastAPI owns session lifetime and server-side control; provider contracts make transport differences explicit. The project is designed to make cancellation, resource budgets, and failure recovery understandable and testable. Working name; Apache-2.0. Copyright 2026 Savino Bizzoca.
 
-**Status: M2 release candidate (`0.1.0.dev3`, tag `v0.1.0-m2-rc.1`).** Sessions, the React browser, a LangGraph worker, cancellation and bounded results are implemented. Offline verification passes; real microphone/paid-model validation remains the release gate. M3–M4 are roadmap items.
+**Status: M1–M4 implementation candidate (`0.1.0.dev4`).** M2 is integrated; M3 adds optional Azure Realtime fallback with peer renegotiation; M4 adds turn tracing, metrics, a monitoring stack and offline evaluations. Live voice/Azure checks and running-stack validation remain release gates; no stable release is claimed.
 
-New: [M2 usage, offline worker demo, cancellation and limits](docs/m2.md).
+Guides: [M2 worker](docs/m2.md) · [M3 Azure fallback](docs/m3.md) · [M4 monitoring and evals](docs/m4.md).
 
 ```mermaid
 flowchart TD
@@ -72,8 +72,8 @@ The capability-aware `/token` endpoint returns **501** for this adapter. Live's 
 
 - **One delegation entry point:** the conversation layer need not carry every tool schema or workflow. The worker can evolve and be tested independently. GPT-Live's native delegation maps into the same application boundary.
 - **Bounded buffers:** a slow consumer must not accumulate unlimited events or increasingly stale speech. M1 bounds application events and WebSocket buffers; the browser/provider own WebRTC audio buffers. There is no Python audio relay.
-- **Clamp history:** future reconnections and worker requests need relevant context within a known cost and latency budget. M2 retains bounded transcript context for worker requests; failover replay and its turn policy remain M3.
-- **Trace per turn:** a user-visible interaction should correlate provider activity, worker execution, and interruptions. M4 will add application-defined turn spans; full-duplex transcript fragments are not reliable turn boundaries on their own.
+- **Clamp history:** future reconnections and worker requests need relevant context within a known cost and latency budget. M2 retains bounded transcript context for worker requests; M3 replays bounded sealed text segments; see its documented heuristic limits.
+- **Trace per turn:** a user-visible interaction should correlate provider activity, worker execution, and interruptions. M4 adds application-defined turn spans; full-duplex transcript fragments are not reliable turn boundaries on their own.
 - **Fake provider for evals:** reproducible failure sequences and injected clocks make lifecycle behavior testable without credentials. Scripted tests verify orchestration, not a real model's delegation quality or network latency. Live model-quality and audio-latency measurements remain separate.
 
 ## Try the real worker offline
@@ -103,7 +103,7 @@ See [the live smoke-test checklist](docs/m1-verification.md). No API key, real m
 
 ## Timing and cleanup limitations
 
-The UI measures an **estimated transcript gap**, not audio TTFB or end-to-end playback latency. Transcript timestamps can overlap; negative values are retained. Turns are approximated by 800 ms gaps between user transcript fragments. Proper turn, provider, delegation, and failover metrics belong to M4.
+The UI measures an **estimated transcript gap**, not audio TTFB or end-to-end playback latency. Transcript timestamps can overlap; negative values are retained. Turns are approximated by 800 ms gaps between user transcript fragments. M4 exports separate turn, provider, delegation and failover metrics; see [observability](observability/README.md).
 
 The provider creation POST is never automatically retried: an ambiguous response can already have created a billable session. If the sideband fails after creation, the adapter attempts to recover it solely to close the session. If recovery fails, remote finalization cannot be guaranteed and is logged as unconfirmed. The public hangup reference describes SIP, so M1 does not assume it works for WebRTC. A process crash also cannot guarantee remote cleanup. A normal close waits for `session.closed` before releasing transports.
 
@@ -118,7 +118,7 @@ The provider creation POST is never automatically retried: an ambiguous response
 
 Future v0.2: multi-language mirroring, interruption-aware summaries, additional providers (including optional ElevenLabs).
 
-The Azure adapter will be assessed on its documented capabilities. A provider change establishes a new browser peer connection and replays bounded text; it does not transparently migrate audio or imply identical full-duplex behavior.
+The Azure adapter uses documented GA WebRTC and sideband capabilities. A provider change establishes a new browser peer connection and replays bounded text; it does not transparently migrate audio or imply identical full-duplex behavior.
 
 ## Public sources
 

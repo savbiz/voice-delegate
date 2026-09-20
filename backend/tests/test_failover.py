@@ -156,3 +156,62 @@ def test_fallback_rejects_non_azure_endpoint() -> None:
             azure_endpoint="http://localhost",
             azure_api_key=SecretStr("secret"),
         )
+
+
+async def test_azure_success_replays_text_returns_tool_result_and_hangs_up(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from collections.abc import AsyncIterator
+
+    from voice_delegate.providers.models import Commentary
+
+    class Socket:
+        def __init__(self) -> None:
+            self.sent: list[dict[str, Any]] = []
+            self.closed = False
+
+        async def send(self, payload: str) -> None:
+            self.sent.append(json.loads(payload))
+
+        async def close(self) -> None:
+            self.closed = True
+
+        async def __aiter__(self) -> AsyncIterator[str]:
+            await asyncio.Event().wait()
+            yield ""
+
+    socket = Socket()
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request.url.path)
+        assert request.headers["api-key"] == "secret"
+        if request.url.path.endswith("/hangup"):
+            return httpx.Response(200)
+        assert b"delegate_task" in request.content
+        return httpx.Response(201, text="v=0\r\n", headers={"Location": "/calls/rtc_test"})
+
+    provider = AzureRealtimeProvider(
+        "https://example.openai.azure.com",
+        "secret",
+        httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+
+    async def attach(call_id: str) -> Any:
+        assert call_id == "rtc_test"
+        return socket
+
+    monkeypatch.setattr(provider, "_attach", attach)
+    connection = await provider.connect(
+        config=SessionConfig("deployment", "marin", "trusted", (("user", "untrusted text"),)),
+        offer_sdp="v=0\r\n",
+    )
+    assert socket.sent[0]["item"]["role"] == "user"
+    assert socket.sent[0]["item"]["content"][0]["text"] == "untrusted text"
+    await connection.send(Commentary("task-1", "4"))
+    assert socket.sent[1]["item"]["type"] == "function_call_output"
+    assert socket.sent[2] == {"type": "response.create"}
+    assert await connection.aclose()
+    assert await connection.aclose()
+    assert socket.closed and len(calls) == 2
+    await provider.aclose()

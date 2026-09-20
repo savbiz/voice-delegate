@@ -1,13 +1,38 @@
-# OpenTelemetry
+# M4 observability
 
-M2 includes optional `provider.connect` spans for signaling setup and `delegate_task` spans for worker execution, with no SDP, transcript, session key or credential attributes. Export is disabled by default, including offline tests. Turn-level traces, provider/delegation metrics, Prometheus, and Grafana belong to M4; setup duration is not turn latency.
+Start the local stack with `docker compose -f observability/compose.yaml up -d`.
+Set these backend variables and restart the API:
 
-Set `VOICE_OTEL_ENABLED=true` to export traces to the console. For the optional local collector:
-
-```bash
-docker compose -f observability/compose.yaml up
+```dotenv
+VOICE_OTEL_ENABLED=true
+VOICE_OTEL_ENDPOINT=http://localhost:4318/v1/traces
+VOICE_OTEL_METRICS_ENDPOINT=http://localhost:4318/v1/metrics
 ```
 
-Then set `VOICE_OTEL_ENDPOINT=http://localhost:4318/v1/traces` in the backend environment and restart it. The collector prints received spans. Its port binds only to localhost; protect an external collector with transport authentication before remote use. Batch export uses a bounded queue and shuts down with the app.
+Grafana: http://localhost:3000 (anonymous viewer); Prometheus: http://localhost:9090.
+Provisioning loads the dashboard automatically. Traces go to collector logs; inspect with
+`docker compose -f observability/compose.yaml logs collector`. No trace-storage backend is
+included. Stop with `docker compose -f observability/compose.yaml down`.
+The example binds only loopback; data is ephemeral and metrics retention is 24 hours.
+Images are pinned reference versions, not a claim to latest security updates.
 
-Reference: [OpenTelemetry Python instrumentation](https://opentelemetry.io/docs/languages/python/instrumentation/).
+`conversation.turn` spans use transcript heuristics: a new user segment after a reply or
+an 800 ms transcript gap starts a turn. Provider transcript spans, delegation spans and
+failover spans share that parent. Turns end at the next turn, close or failed fallback.
+An idle turn can remain open until session expiry. No transcript, session IDs, SDP,
+credentials, provider request bodies or tool results are exported.
+
+Metrics use finite operation/outcome labels:
+- `voice_operation_duration_seconds`: provider setup, fallback and worker duration.
+- `voice_turn_transcript_wait_seconds`: first assistant transcript arrival minus first
+  user transcript arrival. This includes speech and transcription time; it is not audio TTFB.
+- `voice_interruptions_total`: worker tasks canceled while pending, including close/fallback.
+
+The browser's transcript gap remains a separate estimate based on provider timestamps.
+Signaling duration, transcript arrival and audio playback are different measures. Audio
+TTFB, playback onset and end-to-end acoustic latency require a live measurement harness;
+this project does not export invented values for them. Fake runs measure orchestration only.
+
+OTel is disabled by default. Tests inject in-memory exporters and do not use network services.
+Metrics export additionally requires `VOICE_OTEL_METRICS_ENDPOINT`; there is no public
+application metrics endpoint. Collector buffers and container memory are bounded.

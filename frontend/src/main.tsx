@@ -39,11 +39,11 @@ function App() {
   const [mode, setMode] = useState('demo');
   const [code, setCode] = useState('');
   return <main className="mx-auto max-w-4xl px-6 py-12">
-    <header className="mb-10"><span className="badge">OPEN REFERENCE · M2 PREVIEW</span><h1 className="mt-5 text-5xl font-semibold tracking-tight">voice-delegate<span className="text-emerald-400">.</span></h1><p className="mt-4 text-lg text-slate-400">A fast voice conversation. A separate worker for the heavy lifting.</p></header>
+    <header className="mb-10"><span className="badge">OPEN REFERENCE · M4 PREVIEW</span><h1 className="mt-5 text-5xl font-semibold tracking-tight">voice-delegate<span className="text-emerald-400">.</span></h1><p className="mt-4 text-lg text-slate-400">A fast voice conversation. A separate worker for the heavy lifting.</p></header>
     <nav className="actions" aria-label="Conversation mode"><button aria-pressed={mode === 'demo'} onClick={() => setMode('demo')}>Free demo</button><button aria-pressed={mode === 'live'} onClick={() => setMode('live')}>Live voice</button></nav>
     {mode === 'live' && <label className="block my-5">Deployment access code <input type="password" autoComplete="off" value={code} onChange={e => setCode(e.target.value)} placeholder="Only if configured on the server" /></label>}
     {mode === 'demo' ? <Demo /> : <Live code={code} />}
-    <footer className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-500">React 19 · FastAPI · WebRTC<br />M2: bounded LangGraph delegation and interruption cancellation.</footer>
+    <footer className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-500">React 19 · FastAPI · WebRTC<br />Bounded delegation · Azure recovery · Optional telemetry.</footer>
   </main>;
 }
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);

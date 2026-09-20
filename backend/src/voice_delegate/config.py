@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     access_token: SecretStr = SecretStr("")
     otel_enabled: bool = False
     otel_endpoint: str = ""
+    otel_metrics_endpoint: str = ""
     worker_mode: Literal["offline", "openai"] = "offline"
     worker_model: str = "gpt-4.1-mini"
     delegation_timeout_seconds: float = Field(default=15, gt=0, le=120)

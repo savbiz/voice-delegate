@@ -1685,7 +1685,7 @@ wheels = [
 
 [[package]]
 name = "voice-delegate"
-version = "0.1.0.dev3"
+version = "0.1.0.dev4"
 source = { editable = "backend" }
 dependencies = [
     { name = "fastapi" },
@@ -1720,7 +1720,7 @@ requires-dist = [
 
 [[package]]
 name = "voice-delegate-agent"
-version = "0.1.0.dev3"
+version = "0.1.0.dev4"
 source = { editable = "agent" }
 dependencies = [
     { name = "langchain-openai" },
@@ -1735,7 +1735,7 @@ requires-dist = [
 
 [[package]]
 name = "voice-delegate-workspace"
-version = "0.1.0.dev3"
+version = "0.1.0.dev4"
 source = { virtual = "." }
 dependencies = [
     { name = "voice-delegate" },

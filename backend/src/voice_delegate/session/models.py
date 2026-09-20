@@ -6,6 +6,7 @@ from typing import Literal
 
 from voice_delegate.delegation.history import History
 from voice_delegate.delegation.runner import DelegationState
+from voice_delegate.observability.turns import Turn
 from voice_delegate.providers.base import RealtimeConnection
 
 
@@ -24,6 +25,7 @@ class Session:
     watcher: asyncio.Task[None] | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     finalized: bool = False
+    turn: Turn | None = None
     generation: int = 0
     fallback_used: bool = False
     previous_finalized: bool = True

@@ -15,9 +15,12 @@ class History:
 
     def append(self, event: Transcript) -> None:
         """Retain a Unicode-safe suffix; never keep a full oversized wire fragment."""
-        event = Transcript(event.speaker, event.text[-8192:], event.start_ms, event.end_ms)
+        event = Transcript(
+            event.speaker, event.text[-8192:], event.start_ms, event.end_ms, event.committed
+        )
         if (
             self.entries
+            and not event.committed
             and self.entries[-1].speaker == event.speaker
             and (event.start_ms - self.entries[-1].end_ms <= 800)
         ):
