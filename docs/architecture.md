@@ -43,11 +43,12 @@ A single WebSocket reader receives lifecycle events even while close is waiting.
 
 ## API
 
-All `/api` routes require the configured exact Origin. Routes with `{id}` also require `X-Session-Key`.
+All `/api` routes require the configured exact Origin. Session routes also require the configured bearer access code; production startup requires a code of at least 24 characters. CORS allows only the explicit frontend origin. Routes with `{id}` also require `X-Session-Key`.
 
 | Method and path | Meaning |
 |---|---|
 | `GET /healthz` | Process health; no provider call |
+| `POST /api/config` | Report whether a demo access code is required |
 | `POST /api/sessions` | Reserve an application session; return ID, key, TTL |
 | `POST /api/sessions/{id}/offer` | JSON SDP offer; return SDP answer |
 | `POST /api/sessions/{id}/heartbeat` | Refresh browser liveness and return state |

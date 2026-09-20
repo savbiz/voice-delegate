@@ -2,7 +2,7 @@
 
 A small, clean-room reference architecture for real-time voice agents: GPT-Live handles the conversation over WebRTC while a separate worker will handle delegated reasoning and tools. FastAPI owns session lifetime and server-side control; provider contracts make transport differences explicit. The project is designed to make cancellation, resource budgets, and failure recovery understandable and testable. Working name; Apache-2.0. Copyright 2026 Savino Bizzoca.
 
-**Status: M1 implementation candidate (`0.1.0.dev1`).** The Python scaffold, GPT-Live adapter, lifecycle service, browser client, and offline CI are implemented. Real microphone/speaker verification is still required before tagging M1. M2–M4 remain roadmap items, not shipped features.
+**Status: M1 implementation candidate (`0.1.0.dev2`).** The Python scaffold, GPT-Live adapter, lifecycle service, browser client, and offline CI are implemented. Real microphone/speaker verification is still required before tagging M1. M2–M4 remain roadmap items, not shipped features.
 
 ```mermaid
 flowchart TD
@@ -15,24 +15,42 @@ flowchart TD
 
 **90-second demo GIF:** placeholder — record after the live M1 smoke test. Suggested sequence: connect, speak, interrupt, inspect timing, end; add delegation when M2 ships.
 
-## Quickstart
+## Quickstart — no API key required for the simulated demo
 
-Prerequisites: Python 3.12, uv, Node.js 24, and a personal OpenAI project key with GPT-Live access. From the unpacked archive:
+Prerequisites: Python 3.12, uv, Node.js 24 and pnpm 11.19.0. Open the extracted `voice-delegate/` folder containing `pyproject.toml` in PyCharm.
 
 ```bash
 cd voice-delegate
 uv sync --locked
 cp .env.example .env
-npm --prefix client ci
-npm --prefix client run build
-uv run uvicorn voice_delegate.api.app:create_app --factory --host 127.0.0.1 --port 8000
+pnpm --dir frontend install --frozen-lockfile
+pnpm --dir frontend dev
 ```
 
-Before the last command, edit `.env` locally and set `OPENAI_API_KEY`. Open **http://localhost:8000** and select **Start conversation**. Use that exact hostname to match `VOICE_ALLOWED_ORIGIN`. The API key stays on the server. Stop with **End**, then Ctrl+C to shut down the server.
+Open **http://localhost:5173** and press **Start demo**. This mode is free, scripted and silent: no API calls, microphone or generated speech. Simulated timings are labeled.
 
-Run from the repository root so FastAPI can serve `client/dist`. M1 is a **single-process local demo**: origin checks and random per-session keys are not a substitute for application login. Add authenticated user ownership, per-user rate limits, HTTPS, and a shared session strategy before public deployment. Do not use multiple Uvicorn workers with this in-memory registry.
+For live voice, set `OPENAI_API_KEY` in root `.env`, then in a second terminal from the repository root:
 
-If this was delivered as an archive, `voice-delegate.bundle` alongside the source directory contains the conventional commit history. To obtain a Git checkout, run `git clone voice-delegate.bundle voice-delegate-git` from the archive's parent directory. No GitHub remote has been configured.
+```bash
+uv run uvicorn voice_delegate.api.app:create_app --factory --reload --host 127.0.0.1 --port 8000
+```
+
+Select **Live voice** in the browser. Provider access and usage billing are required. Keys stay on the server. Use one backend worker; sessions are held in memory.
+
+See [PyCharm and local development](docs/local-development.md) and [GitHub, Vercel, Railway/Render deployment](deployment/README.md). The archive includes Git history; it has not been pushed to GitHub or deployed.
+
+## Repository
+
+| Directory | Responsibility |
+|---|---|
+| `frontend/` | React 19, TypeScript, Vite 8, Tailwind 4, Vitest, Playwright, pnpm |
+| `backend/src/voice_delegate/` | FastAPI, Pydantic, httpx, provider/session/limits modules |
+| `backend/tests/` | Offline pytest tests; uv, Ruff and strict mypy configured at root |
+| `agent/` | Reserved for LangGraph in M2; no premature dependency |
+| `observability/` | Optional OTel collector and tracing setup |
+| `realtime/` | WebRTC boundary documentation; browser controller lives in frontend |
+| `deployment/` | Backend Dockerfile and deployment guide |
+| `evals/`, `docs/` | Evaluation boundaries, architecture and ADRs |
 
 ## What M1 implements
 
@@ -62,8 +80,10 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy
 uv run pytest
-npm --prefix client run build
-uv build
+pnpm --dir frontend build
+pnpm --dir frontend test
+pnpm --dir frontend test:e2e
+uv build --package voice-delegate
 ```
 
 Pytest disables IP sockets; only local Unix sockets used by asyncio are allowed. HTTP tests use in-process ASGI and mock transports. Test fixtures contain invented identifiers and no recordings from private systems. Dependency installation needs internet; the tests themselves do not.
