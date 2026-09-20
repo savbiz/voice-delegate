@@ -100,3 +100,19 @@ async def test_deployment_gate_and_cors() -> None:
         assert (await client.post(f"/api/sessions/{payload['id']}/close")).status_code == 401
         client.headers["Authorization"] = "Bearer a-test-access-code-long-enough"
         assert (await client.post(f"/api/sessions/{payload['id']}/close")).status_code == 200
+
+
+async def test_interrupt_requires_ownership_and_reports_status() -> None:
+    app = create_app(Settings(), FakeProvider())
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://testserver",
+            headers={"Origin": "http://localhost:5173"},
+        ) as client:
+            created = (await client.post("/api/sessions")).json()
+            path = f"/api/sessions/{created['id']}"
+            assert (await client.post(path + "/interrupt")).status_code == 404
+            client.headers["X-Session-Key"] = created["key"]
+            assert (await client.post(path + "/interrupt")).json()["delegation"] == "idle"
+            await client.post(path + "/close")

@@ -101,7 +101,7 @@ async def test_canceled_setup_releases_capacity() -> None:
     assert session.state == "closed"
 
 
-async def test_m1_delegation_reports_unavailable_without_fake_success() -> None:
+async def test_delegation_without_transcript_requests_clarification() -> None:
     provider = FakeProvider()
     manager = SessionManager(provider, Settings())
     session = manager.create()
@@ -109,8 +109,10 @@ async def test_m1_delegation_reports_unavailable_without_fake_success() -> None:
     connection = provider.connections[0]
     connection.queue.put_nowait(DelegationRequested("task-1"))
     await asyncio.sleep(0)
+    assert session.delegation.task is not None
+    await session.delegation.task
     assert connection.commands[0].delegation_id == "task-1"
-    assert "No action was taken" in connection.commands[0].content
+    assert "repeat the task" in connection.commands[0].content
     await manager.aclose()
 
 

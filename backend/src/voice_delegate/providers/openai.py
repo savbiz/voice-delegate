@@ -56,6 +56,7 @@ class _WireEvent(BaseModel):
     end_ms: float = Field(default=0, ge=0, allow_inf_nan=False)
     delegation: _Delegation | None = None
     reason: str = "unknown"
+    offset_ms: float = Field(default=0, ge=0, allow_inf_nan=False)
 
 
 def normalize_event(raw: str | bytes) -> ProviderEvent | None:
@@ -69,7 +70,7 @@ def normalize_event(raw: str | bytes) -> ProviderEvent | None:
         case "error":
             return ProviderFailure()
         case "session.delegation.created" if event.delegation is not None:
-            return DelegationRequested(event.delegation.id)
+            return DelegationRequested(event.delegation.id, event.offset_ms)
         case "session.input_transcript.delta" | "session.output_transcript.delta":
             return Transcript(
                 "user" if event.type == "session.input_transcript.delta" else "assistant",
@@ -135,12 +136,12 @@ class OpenAILiveConnection:
                     await pending
 
     async def send(self, command: ProviderCommand) -> None:
-        """Send a bounded commentary update; M2 adds tokenizer-based budgeting."""
+        """Send worker commentary with a conservative provider wire budget."""
         if self._closed:
             raise ProviderError("Connection is closing")
-        # A conservative byte cap for M1's fixed English unavailable response.
+        # UTF-8 bytes conservatively upper-bound byte-level tokenizer output.
         if len(command.content.encode()) > 500:
-            raise ProviderError("M1 commentary byte budget exceeded")
+            raise ProviderError("Commentary wire budget exceeded")
         try:
             async with asyncio.timeout(2):
                 await self._socket.send(

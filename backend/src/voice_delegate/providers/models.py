@@ -61,6 +61,7 @@ class DelegationRequested:
     """A request identifier; the application supplies the task context."""
 
     delegation_id: str
+    offset_ms: float = 0
 
 
 @dataclass(frozen=True)

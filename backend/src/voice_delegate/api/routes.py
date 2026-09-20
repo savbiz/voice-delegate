@@ -60,11 +60,16 @@ def build_router(manager: SessionManager) -> APIRouter:
     @router.post("/sessions/{session_id}/heartbeat")
     async def heartbeat(session: Annotated[Session, Depends(owned)]) -> Status:
         manager.heartbeat(session)
-        return Status(state=session.state)
+        return Status(state=session.state, delegation=session.delegation.status)
 
     @router.post("/sessions/{session_id}/close")
     async def close(session: Annotated[Session, Depends(owned)]) -> Closed:
         return Closed(finalized=await manager.close(session))
+
+    @router.post("/sessions/{session_id}/interrupt")
+    async def interrupt(session: Annotated[Session, Depends(owned)]) -> dict[str, str]:
+        manager.delegator.cancel(session.delegation)
+        return {"delegation": session.delegation.status}
 
     @router.post("/sessions/{session_id}/token")
     async def token(session: Annotated[Session, Depends(owned)]) -> None:

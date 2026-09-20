@@ -36,6 +36,7 @@ class Status(BaseModel):
     """Transport status; browser session.started confirms actual voice readiness."""
 
     state: str
+    delegation: str = "idle"
 
 
 class Closed(BaseModel):
