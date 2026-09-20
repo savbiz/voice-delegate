@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     azure_deployment: str = "gpt-realtime"
     azure_voice: str = "marin"
     fallback_enabled: bool = False
+    voice_provider: Literal["live", "realtime", "azure"] = "live"
+    realtime_model: str = "gpt-realtime"
     model: str = "gpt-live-1"
     voice: str = "marin"
     allowed_origin: str = "http://localhost:5173"
@@ -37,6 +39,12 @@ class Settings(BaseSettings):
     otel_enabled: bool = False
     otel_endpoint: str = ""
     otel_metrics_endpoint: str = ""
+    instance_id: str = Field(default="", pattern=r"^[a-z0-9]{0,16}$")
+    worker_execution: Literal["local", "remote"] = "local"
+    worker_service_url: str = "http://worker:8001"
+    worker_service_token: SecretStr = SecretStr("")
+    worker_service_capacity: int = Field(default=4, ge=1, le=32)
+    worker_max_records: int = Field(default=128, ge=32, le=1024)
     worker_mode: Literal["offline", "openai"] = "offline"
     worker_model: str = "gpt-4.1-mini"
     delegation_timeout_seconds: float = Field(default=15, gt=0, le=120)
@@ -52,6 +60,25 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production(self) -> "Settings":
         """Require an explicit browser origin and access gate on public deployments."""
+        if self.instance_id and not self.public_demo:
+            raise ValueError(
+                "Multiple API instances require public-demo identity and quota controls"
+            )
+        if self.worker_execution == "remote":
+            from urllib.parse import urlparse
+
+            target = urlparse(self.worker_service_url)
+            if (
+                target.scheme not in {"http", "https"}
+                or not target.hostname
+                or target.username
+                or target.password
+                or target.query
+                or target.fragment
+            ):
+                raise ValueError("Worker URL must be an HTTP(S) service origin")
+            if len(self.worker_service_token.get_secret_value()) < 32:
+                raise ValueError("Remote worker requires a service token of at least 32 characters")
         if len(self.invite_tokens) > 100:
             raise ValueError("At most 100 named invitations are supported")
         values = [token.get_secret_value() for token in self.invite_tokens.values()]
@@ -63,7 +90,7 @@ class Settings(BaseSettings):
             raise ValueError("Public demo requires named invitations and durable quota storage")
         if self.public_demo and self.environment != "production":
             raise ValueError("Public demo requires production configuration")
-        if self.fallback_enabled:
+        if self.fallback_enabled or self.voice_provider == "azure":
             from urllib.parse import urlparse
 
             endpoint = urlparse(self.azure_endpoint)
@@ -81,6 +108,8 @@ class Settings(BaseSettings):
                 raise ValueError("Azure endpoint must be an HTTPS Azure OpenAI resource origin")
             if not self.azure_api_key.get_secret_value():
                 raise ValueError("Azure fallback requires VOICE_AZURE_API_KEY")
+        if self.fallback_enabled and self.voice_provider == "azure":
+            raise ValueError("Azure cannot be both primary and fallback")
         if self.worker_mode == "openai" and not self.openai_api_key.get_secret_value():
             raise ValueError("VOICE_WORKER_MODE=openai requires OPENAI_API_KEY")
         if self.environment == "production":

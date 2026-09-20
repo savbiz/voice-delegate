@@ -14,6 +14,12 @@ const stop = element<HTMLButtonElement>("stop");
 const status = element("status");
 const taskStatus = element("task-status");
 const cancelTask = element<HTMLButtonElement>("cancel-task");
+const preferences = element<HTMLFieldSetElement>("voice-preferences");
+const language = element<HTMLSelectElement>("language");
+const voiceMode = element<HTMLSelectElement>("voice-mode");
+const recap = element("recap");
+const mute = element<HTMLButtonElement>("mute-audio");
+const largeCaptions = element<HTMLButtonElement>("large-captions");
 const audio = element<HTMLAudioElement>("audio");
 const captions = { user: element("user"), assistant: element("assistant") };
 const sources = element("sources");
@@ -64,6 +70,7 @@ function release(): void {
   session = undefined;
   start.disabled = false;
   stop.disabled = true;
+  preferences.disabled = false;
 }
 
 async function request(path: string, owner?: Session, body?: unknown): Promise<unknown> {
@@ -174,6 +181,17 @@ async function gather(connection: RTCPeerConnection): Promise<void> {
   });
 }
 
+const onMute = () => {
+  audio.muted = !audio.muted;
+  mute.setAttribute("aria-pressed", String(audio.muted));
+  mute.textContent = audio.muted ? "Unmute assistant" : "Mute assistant";
+};
+const onLargeCaptions = () => {
+  const active = root.classList.toggle("large-captions");
+  largeCaptions.setAttribute("aria-pressed", String(active));
+};
+mute.addEventListener("click", onMute);
+largeCaptions.addEventListener("click", onLargeCaptions);
 const onStart = () => { void begin(); };
 const onStop = () => { void finish("Conversation ended."); };
 start.addEventListener("click", onStart);
@@ -211,6 +229,7 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
   const attempt = ++generation;
   start.disabled = true;
   stop.disabled = false;
+  preferences.disabled = true;
   status.textContent = "Requesting microphone…";
   captions.user.textContent = "—";
   captions.assistant.textContent = "—";
@@ -250,7 +269,7 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
     await gather(connection);
     if (attempt !== generation) return;
     status.textContent = "Connecting…";
-    const created = existing ?? await request("/sessions") as Session;
+    const created = existing ?? await request("/sessions", undefined, { language: language.value, mode: voiceMode.value }) as Session;
     if (attempt !== generation) {
       await request(`/sessions/${created.id}/close`, created);
       return;
@@ -266,8 +285,12 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
       if (attempt !== generation) return;
       void request(`/sessions/${created.id}/heartbeat`, created).then(result => {
         if (attempt === generation) {
-          const state = result as { delegation: string; state: string; sources?: Source[] };
+          const state = result as { delegation: string; state: string; sources?: Source[]; recap?: { latest_request: string; latest_reply: string; interrupted: boolean } };
           renderSources(state.sources ?? []);
+          if (state.recap) {
+            recap.textContent = `${state.recap.interrupted ? "Interrupted task. " : ""}Latest request: ${state.recap.latest_request || "—"}` +
+              (state.recap.latest_reply ? ` · Latest reply excerpt: ${state.recap.latest_reply}` : "");
+          }
           taskStatus.textContent = `Worker: ${state.delegation}`;
           if (state.state === "reconnecting") void recover("Provider connection lost.");
         }
@@ -302,6 +325,8 @@ return () => {
   start.removeEventListener("click", onStart);
   stop.removeEventListener("click", onStop);
   cancelTask.removeEventListener("click", onCancelTask);
+  mute.removeEventListener("click", onMute);
+  largeCaptions.removeEventListener("click", onLargeCaptions);
   onPageHide();
 };
 }

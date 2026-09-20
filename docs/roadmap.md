@@ -11,13 +11,16 @@ live voice quality, provider access, acoustic latency or production readiness.
 | M4 — Measurement, evals and v0.1 | OTel, metrics, Prometheus, Grafana, reproducible evals, docs, recorded demo | CI green, measured latency, live checks and demonstration | Implemented candidate; release evidence incomplete |
 | M5 — Controlled public demo | Verified deployment, authentication, per-user quotas, application spending limits, private logs, rollback | External users can try it with bounded consumption and protected credentials | Implemented candidate: personal invites, durable quotas, local container checks; hosted acceptance pending |
 | M6 — Complete use case | Read-only questions over public project documentation with source citations | Useful end-to-end workflow beyond calculator | Implemented: cited documentation search and worker tool; hosted/live narration acceptance pending |
-| M7 — Advanced voice experience | Multilingual behavior, mirroring, interruption-aware summaries, accessibility, additional providers | Multilingual and user-correction scenarios pass | Planned for v0.2 after v0.1 measurement |
-| M8 — Scaling | Multiple instances, session ownership, separate workers, backpressure, load tests | Recovery and isolation work across processes under load | Optional; implement only if actual deployment needs it |
+| M7 — Advanced voice experience | Multilingual behavior, mirroring, interruption-aware summaries, accessibility, additional providers | Multilingual and user-correction scenarios pass | Implemented candidate: language/mirror controls, interruption recap, accessibility and Realtime adapter; live language evaluation pending |
+| M8 — Scaling | Multiple instances, session ownership, separate workers, backpressure, load tests | Recovery and isolation work across processes under load | Implemented same-host reference: two APIs, separate bounded worker, shared leases, ownership routing and crash/load tests; hosted real-voice acceptance pending |
 
-Recommended order: finish the live M1–M4 release gates; implement M5 and M6; measure the
-result before M7; decide M8 from load evidence. Azure setup and the remaining live checks
-need not prevent offline implementation of M5/M6.
+All eight implementation milestones now have code and offline verification. Release acceptance
+still requires the listed live/hosted evidence. M8 deliberately targets multiple processes on
+one host; cross-host high availability is a further architectural change.
 
 See [Azure setup](azure-setup.md), [M3](m3.md), [M4](m4.md), and
 [observability](../observability/README.md). Stable tags require the acceptance evidence;
 implementation commits alone do not close a milestone.
+
+The [M7–M8 verification record](m7-m8-verification.md) records passing local checks and
+the successful Docker rerun, separately from the live and hosted acceptance still required.

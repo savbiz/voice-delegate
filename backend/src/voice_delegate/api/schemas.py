@@ -3,6 +3,8 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from voice_delegate_agent.reference import Source
 
+from voice_delegate.session.summary import Recap
+
 
 class Offer(BaseModel):
     """Only SDP is accepted; models and prompts are server-owned."""
@@ -47,6 +49,7 @@ class Status(BaseModel):
     generation: int = 0
     fallback_available: bool = False
     sources: tuple[Source, ...] = ()
+    recap: Recap = Field(default_factory=Recap)
 
 
 class Closed(BaseModel):

@@ -1,6 +1,6 @@
 [project]
 name = "voice-delegate"
-version = "0.1.0.dev5"
+version = "0.2.0.dev1"
 description = "Reference architecture for voice conversations with delegated workers"
 readme = "README.md"
 authors = [

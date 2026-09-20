@@ -1,8 +1,10 @@
 """Fail-closed invite authentication and daily capacity reservations, without secrets on disk."""
 
 import hashlib
+import logging
 import math
 import sqlite3
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from secrets import compare_digest
@@ -26,6 +28,10 @@ class Admission:
                 "(day TEXT, principal TEXT, sessions INTEGER, seconds INTEGER, "
                 "PRIMARY KEY(day, principal))"
             )
+            self.database.execute(
+                "CREATE TABLE IF NOT EXISTS leases "
+                "(session_id TEXT PRIMARY KEY, principal TEXT, expires REAL)"
+            )
             self.database.commit()
 
     def authenticate(self, authorization: str) -> str:
@@ -45,7 +51,7 @@ class Admission:
             raise SessionError(401, "A valid demo access code is required")
         return "local"
 
-    def reserve(self, principal: str) -> None:
+    def reserve(self, principal: str, session_id: str) -> None:
         if not self.settings.demo_enabled:
             raise SessionError(503, "New conversations are temporarily disabled")
         database = self.database
@@ -60,6 +66,17 @@ class Admission:
         try:
             database.execute("BEGIN IMMEDIATE")
             database.execute("DELETE FROM reservations WHERE day < ?", (day,))
+            now = time.time()
+            database.execute("DELETE FROM leases WHERE expires <= ?", (now,))
+            active = database.execute("SELECT COUNT(*) FROM leases").fetchone()[0]
+            personal = database.execute(
+                "SELECT COUNT(*) FROM leases WHERE principal=?", (identity,)
+            ).fetchone()[0]
+            if (
+                active >= self.settings.max_sessions
+                or personal >= self.settings.concurrent_sessions_per_user
+            ):
+                raise SessionError(429, "Shared session capacity reached")
             row = database.execute(
                 "SELECT sessions, seconds FROM reservations WHERE day=? AND principal=?",
                 (day, identity),
@@ -79,6 +96,18 @@ class Admission:
                 "DO UPDATE SET sessions=sessions+1, seconds=seconds+excluded.seconds",
                 (day, identity, seconds),
             )
+            database.execute(
+                "INSERT INTO leases VALUES (?, ?, ?)",
+                (
+                    session_id,
+                    identity,
+                    now
+                    + self.settings.session_ttl_seconds
+                    + self.settings.connect_timeout_seconds
+                    + self.settings.close_timeout_seconds
+                    + 3,
+                ),
+            )
             database.commit()
         except SessionError:
             database.rollback()
@@ -86,6 +115,16 @@ class Admission:
         except sqlite3.Error as exc:
             database.rollback()
             raise SessionError(503, "Demo allowance store unavailable") from exc
+
+    def release(self, session_id: str) -> None:
+        if self.database is not None:
+            try:
+                self.database.execute("DELETE FROM leases WHERE session_id=?", (session_id,))
+                self.database.commit()
+            except sqlite3.Error:
+                # Retain admission conservatively; the lease expires after its fixed lifetime.
+                self.database.rollback()
+                logging.getLogger(__name__).warning("Lease release unavailable; awaiting expiry")
 
     def close(self) -> None:
         if self.database is not None:

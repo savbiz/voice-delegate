@@ -12,3 +12,9 @@ h2 { color:#6ee7b7; font-weight:600; margin-bottom:.6rem; }
 .muted { color:#94a3b8; font-size:.85rem; }
 input { display:block; width:100%; padding:.7rem; border:1px solid #334155; border-radius:.5rem; margin-top:.5rem; }
 audio { margin:1rem 0; max-width:100%; }
+
+select { display:block; padding:.7rem; border:1px solid #64748b; border-radius:.5rem; margin:.5rem 0; background:#172338; }
+select:focus-visible, summary:focus-visible, a:focus-visible { outline:2px solid #6ee7b7; outline-offset:3px; }
+fieldset { border:1px solid #475569; border-radius:.7rem; padding:1rem; margin-top:1rem; }
+.large-captions #user, .large-captions #assistant { font-size:1.5rem; line-height:1.7; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior:auto !important; animation:none !important; transition:none !important; } }

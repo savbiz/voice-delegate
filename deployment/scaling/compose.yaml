@@ -1,0 +1,51 @@
+x-api: &api
+  image: voice-delegate:m8-candidate
+  build:
+    context: ../..
+    dockerfile: deployment/Dockerfile.backend
+  command: ["/app/.venv/bin/uvicorn", "voice_delegate.api.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]
+  volumes: ["quotas:/app/.local"]
+  environment: &environment
+    VOICE_ENVIRONMENT: production
+    VOICE_PUBLIC_DEMO: "true"
+    VOICE_ALLOWED_ORIGIN: ${VOICE_ALLOWED_ORIGIN:-https://demo.example}
+    VOICE_ALLOWED_HOSTS: '["localhost","127.0.0.1"]'
+    VOICE_INVITE_TOKENS: ${VOICE_INVITE_TOKENS:?Set personal invitations}
+    VOICE_MAX_SESSIONS: "8"
+    VOICE_DAILY_SESSIONS_PER_USER: ${VOICE_DAILY_SESSIONS_PER_USER:-4}
+    VOICE_DAILY_VOICE_SECONDS_PER_USER: ${VOICE_DAILY_VOICE_SECONDS_PER_USER:-1500}
+    VOICE_DAILY_VOICE_SECONDS_GLOBAL: ${VOICE_DAILY_VOICE_SECONDS_GLOBAL:-6000}
+    VOICE_WORKER_EXECUTION: remote
+    VOICE_WORKER_SERVICE_URL: http://worker:8001
+    VOICE_WORKER_SERVICE_TOKEN: ${VOICE_WORKER_SERVICE_TOKEN:?Set private worker token}
+    OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  depends_on: [worker]
+  mem_limit: 512m
+services:
+  api-a:
+    <<: *api
+    environment:
+      <<: *environment
+      VOICE_INSTANCE_ID: a
+  api-b:
+    <<: *api
+    environment:
+      <<: *environment
+      VOICE_INSTANCE_ID: b
+  worker:
+    image: voice-delegate:m8-candidate
+    command: ["/app/.venv/bin/uvicorn", "voice_delegate.scaling.worker_service:create_worker_app", "--factory", "--host", "0.0.0.0", "--port", "8001", "--workers", "1", "--no-access-log"]
+    environment:
+      VOICE_WORKER_SERVICE_TOKEN: ${VOICE_WORKER_SERVICE_TOKEN:?Set private worker token}
+      VOICE_WORKER_MODE: ${VOICE_WORKER_MODE:-offline}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      VOICE_WORKER_SERVICE_CAPACITY: "4"
+    mem_limit: 512m
+  gateway:
+    image: nginx:1.27.4-alpine
+    volumes: ["./nginx.conf:/etc/nginx/nginx.conf:ro"]
+    ports: ["127.0.0.1:18081:8080"]
+    depends_on: [api-a, api-b]
+    mem_limit: 128m
+volumes:
+  quotas:

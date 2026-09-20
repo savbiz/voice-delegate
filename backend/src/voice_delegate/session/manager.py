@@ -29,6 +29,7 @@ from voice_delegate.providers.models import (
 )
 
 from .models import Session, SessionError
+from .preferences import VoicePreferences
 
 logger = logging.getLogger(__name__)
 M2_INSTRUCTIONS = (
@@ -74,7 +75,9 @@ class SessionManager:
         self.sessions: dict[str, Session] = {}
         self._shutting_down = False
 
-    def create(self, principal: str = "local") -> Session:
+    def create(
+        self, principal: str = "local", preferences: VoicePreferences | None = None
+    ) -> Session:
         """Reserve capacity atomically before any billable provider request."""
         if self._shutting_down:
             raise SessionError(503, "Service shutting down")
@@ -86,10 +89,14 @@ class SessionManager:
             >= self.settings.concurrent_sessions_per_user
         ):
             raise SessionError(429, "A conversation is already active for this invitation")
-        self.admission.reserve(principal)
+        identity = (self.settings.instance_id + "-" if self.settings.instance_id else "") + str(
+            uuid4()
+        )
+        self.admission.reserve(principal, identity)
         now = self.clock()
-        session = Session(str(uuid4()), secrets.token_urlsafe(32), now, now)
+        session = Session(identity, secrets.token_urlsafe(32), now, now)
         session.principal = principal
+        session.preferences = preferences or VoicePreferences()
         self.sessions[session.id] = session
         return session
 
@@ -104,9 +111,22 @@ class SessionManager:
         """Refresh browser liveness; never extend the absolute session deadline."""
         session.last_heartbeat = self.clock()
 
-    def config(self) -> SessionConfig:
+    def config(self, session: Session | None = None) -> SessionConfig:
         """Build trusted provider configuration."""
-        return SessionConfig(self.settings.model, self.settings.voice, M2_INSTRUCTIONS)
+        preferences = session.preferences if session else VoicePreferences()
+        model = (
+            self.settings.azure_deployment
+            if self.settings.voice_provider == "azure"
+            else self.settings.realtime_model
+            if self.settings.voice_provider == "realtime"
+            else self.settings.model
+        )
+        voice = (
+            self.settings.azure_voice
+            if self.settings.voice_provider == "azure"
+            else self.settings.voice
+        )
+        return SessionConfig(model, voice, M2_INSTRUCTIONS + " " + preferences.instructions())
 
     async def connect(self, session: Session, offer_sdp: str) -> WebRTCAnswer:
         """Prevent duplicate offers from creating multiple billable calls."""
@@ -123,11 +143,12 @@ class SessionManager:
                         ),
                     ):
                         session.connection = await self.provider.connect(
-                            config=self.config(), offer_sdp=offer_sdp
+                            config=self.config(session), offer_sdp=offer_sdp
                         )
             except (ProviderError, TimeoutError, asyncio.CancelledError):
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
+                self.admission.release(session.id)
                 raise
             session.state = "connected"
             session.watcher = asyncio.create_task(self._watch(session), name="session-events")
@@ -157,6 +178,7 @@ class SessionManager:
                         # Live fragments have no final marker: seal the previous speaker segment.
                         session.committed_history.append(session.history.entries[-1])
                     session.history.append(event)
+                    session.recap.observe(event, session.history.goal())
                     if event.committed:
                         session.committed_history.append(event)
                     if (
@@ -164,8 +186,14 @@ class SessionManager:
                         and event.text.strip()
                         and (event.start_ms >= session.delegation.offset_ms)
                     ):
-                        self.delegator.cancel(session.delegation)
+                        if session.delegation.status == "running":
+                            self.interrupt(session)
+                        else:
+                            session.recap.resume()
                 if isinstance(event, DelegationRequested):
+                    if session.preferences.mode == "mirror":
+                        continue
+                    session.recap.resume()
                     if event.delegation_id in session.delegation.seen:
                         continue
                     session.delegation.offset_ms = event.offset_ms
@@ -193,6 +221,10 @@ class SessionManager:
                     session.state = "reconnecting"
                 else:
                     await self.close(session)
+
+    def interrupt(self, session: Session) -> None:
+        self.delegator.cancel(session.delegation)
+        session.recap.interrupt()
 
     async def reconnect(self, session: Session, offer_sdp: str, generation: int) -> WebRTCAnswer:
         with (
@@ -230,7 +262,7 @@ class SessionManager:
                     config = SessionConfig(
                         self.settings.azure_deployment,
                         self.settings.azure_voice,
-                        M2_INSTRUCTIONS,
+                        M2_INSTRUCTIONS + " " + session.preferences.instructions(),
                         tuple((e.speaker, e.text) for e in session.committed_history.entries),
                     )
                     session.connection = await self.fallback.connect(
@@ -245,6 +277,7 @@ class SessionManager:
                     session.turn = None
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
+                self.admission.release(session.id)
                 raise
 
     async def close(self, session: Session) -> bool:
@@ -265,6 +298,7 @@ class SessionManager:
                         await watcher
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
+                self.admission.release(session.id)
                 if session.turn is not None:
                     session.turn.span.end()
                     session.turn = None

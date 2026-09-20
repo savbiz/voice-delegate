@@ -14,7 +14,7 @@ from voice_delegate.observability.metrics import Metrics
 from voice_delegate.providers.base import RealtimeConnection
 from voice_delegate.providers.models import Commentary, ProviderError
 
-from .contracts import DelegationInput, Worker
+from .contracts import DelegationInput, Worker, WorkerBusy
 
 
 @dataclass
@@ -126,6 +126,8 @@ class DelegationRunner:
                     else:
                         try:
                             result, status = child.result(), "completed"
+                        except WorkerBusy:
+                            result, status = "Worker busy; task was not started.", "busy"
                         except Exception:
                             result, status = "Worker failed; task incomplete.", "failed"
                 if generation == state.generation and is_connected():

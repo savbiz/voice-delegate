@@ -18,6 +18,8 @@ from voice_delegate.providers.azure import AzureRealtimeProvider
 from voice_delegate.providers.base import RealtimeProvider
 from voice_delegate.providers.models import ProviderError, UnsupportedCapability
 from voice_delegate.providers.openai import OpenAILiveProvider
+from voice_delegate.providers.realtime import OpenAIRealtimeProvider
+from voice_delegate.scaling.remote import RemoteWorker
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
 
@@ -29,22 +31,35 @@ def create_app(
 ) -> FastAPI:
     """Build a single-process app; inject an offline provider in tests."""
     settings = settings or load_settings()
-    provider = provider or OpenAILiveProvider(
-        settings.openai_api_key.get_secret_value(), settings.close_timeout_seconds
-    )
+    if provider is None:
+        if settings.voice_provider == "azure":
+            provider = AzureRealtimeProvider(
+                settings.azure_endpoint, settings.azure_api_key.get_secret_value()
+            )
+        elif settings.voice_provider == "realtime":
+            provider = OpenAIRealtimeProvider(settings.openai_api_key.get_secret_value())
+        else:
+            provider = OpenAILiveProvider(
+                settings.openai_api_key.get_secret_value(), settings.close_timeout_seconds
+            )
     telemetry = configure_tracing(settings)
     meter_provider = configure_metrics(settings)
     planner = (
-        OpenAIPlanner(settings.openai_api_key.get_secret_value(), settings.worker_model)
-        if settings.worker_mode == "openai"
-        else OfflinePlanner()
+        None
+        if settings.worker_execution == "remote"
+        else (
+            OpenAIPlanner(settings.openai_api_key.get_secret_value(), settings.worker_model)
+            if settings.worker_mode == "openai"
+            else OfflinePlanner()
+        )
     )
+    remote = RemoteWorker(settings) if settings.worker_execution == "remote" else None
     manager = SessionManager(
         provider,
         settings,
         tracer=get_tracer(telemetry),
         metrics=Metrics(meter_provider),
-        worker=LangGraphWorker(planner, settings.worker_max_steps),
+        worker=remote or LangGraphWorker(planner or OfflinePlanner(), settings.worker_max_steps),
         fallback=AzureRealtimeProvider(
             settings.azure_endpoint, settings.azure_api_key.get_secret_value()
         )
@@ -62,6 +77,8 @@ def create_app(
             with suppress(asyncio.CancelledError):
                 await janitor
             await manager.aclose()
+            if remote is not None:
+                await remote.aclose()
             if isinstance(planner, OpenAIPlanner):
                 await planner.aclose()
             if meter_provider is not None:
@@ -69,7 +86,7 @@ def create_app(
             if telemetry is not None:
                 await asyncio.to_thread(telemetry.shutdown)
 
-    app = FastAPI(title="voice-delegate", version="0.1.0.dev5", lifespan=lifespan)
+    app = FastAPI(title="voice-delegate", version="0.2.0.dev1", lifespan=lifespan)
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 

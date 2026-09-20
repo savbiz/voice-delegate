@@ -21,6 +21,10 @@ DELEGATE_TOOL = {
 }
 
 
+class WorkerBusy(Exception):
+    """Worker capacity was exhausted before any job was started."""
+
+
 class Worker(Protocol):
     """Workers must cooperate with asyncio cancellation and avoid blocking I/O."""
 

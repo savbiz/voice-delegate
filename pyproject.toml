@@ -1,6 +1,6 @@
 [project]
 name = "voice-delegate-workspace"
-version = "0.1.0.dev5"
+version = "0.2.0.dev1"
 requires-python = ">=3.12"
 dependencies = ["voice-delegate"]
 

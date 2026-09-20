@@ -96,7 +96,7 @@ class AzureRealtimeConnection(OpenAILiveConnection):
                 )
                 await self._socket.send(json.dumps({"type": "response.create"}))
         except (TimeoutError, WebSocketException, OSError) as exc:
-            raise ProviderError("Azure command failed") from exc
+            raise ProviderError("Realtime command failed") from exc
 
     async def aclose(self) -> bool:
         async with self._close_lock:
@@ -122,6 +122,7 @@ class AzureRealtimeProvider:
     def __init__(self, endpoint: str, api_key: str, http: httpx.AsyncClient | None = None) -> None:
         self._endpoint = endpoint.rstrip("/") + "/openai/v1/realtime"
         self._key = api_key
+        self._headers = {"api-key": api_key}
         self._http = http or httpx.AsyncClient(timeout=15)
 
     async def issue_client_credential(self, config: SessionConfig) -> ClientCredential:
@@ -130,7 +131,7 @@ class AzureRealtimeProvider:
     async def _attach(self, call_id: str) -> ClientConnection:
         return await connect(
             self._endpoint.replace("https://", "wss://", 1) + "?call_id=" + quote(call_id, safe=""),
-            additional_headers={"api-key": self._key},
+            additional_headers=self._headers,
             max_queue=16,
             max_size=1048576,
             write_limit=32768,
@@ -143,7 +144,7 @@ class AzureRealtimeProvider:
             async with asyncio.timeout(5):
                 response = await self._http.post(
                     f"{self._endpoint}/calls/{quote(call_id, safe='')}/hangup",
-                    headers={"api-key": self._key},
+                    headers=self._headers,
                 )
                 response.raise_for_status()
                 return True
@@ -178,7 +179,7 @@ class AzureRealtimeProvider:
         try:
             response = await self._http.post(
                 self._endpoint + "/calls",
-                headers={"api-key": self._key},
+                headers=self._headers,
                 files={"sdp": (None, offer_sdp), "session": (None, json.dumps(session))},
             )
             response.raise_for_status()

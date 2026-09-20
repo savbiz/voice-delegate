@@ -9,6 +9,9 @@ from voice_delegate.delegation.runner import DelegationState
 from voice_delegate.observability.turns import Turn
 from voice_delegate.providers.base import RealtimeConnection
 
+from .preferences import VoicePreferences
+from .summary import Recap
+
 
 @dataclass
 class Session:
@@ -21,6 +24,8 @@ class Session:
     state: Literal["created", "connecting", "connected", "reconnecting", "closing", "closed"] = (
         "created"
     )
+    preferences: VoicePreferences = field(default_factory=VoicePreferences)
+    recap: Recap = field(default_factory=Recap)
     principal: str = field(default="local", repr=False)
     connection: RealtimeConnection | None = None
     watcher: asyncio.Task[None] | None = None

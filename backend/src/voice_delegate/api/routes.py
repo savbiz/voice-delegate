@@ -10,6 +10,7 @@ from voice_delegate_agent.reference import search, source_by_id
 from voice_delegate.providers.models import UnsupportedCapability
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import Session
+from voice_delegate.session.preferences import VoicePreferences
 
 from .schemas import Answer, Closed, Created, Offer, Reconnect, Status
 
@@ -37,7 +38,11 @@ def build_router(manager: SessionManager) -> APIRouter:
             "requires_access_code": bool(
                 manager.settings.invite_tokens or manager.settings.access_token.get_secret_value()
             ),
-            "voice_available": bool(manager.settings.openai_api_key.get_secret_value()),
+            "voice_available": bool(
+                manager.settings.azure_api_key.get_secret_value()
+                if manager.settings.voice_provider == "azure"
+                else manager.settings.openai_api_key.get_secret_value()
+            ),
         }
 
     async def owned(
@@ -70,8 +75,10 @@ def build_router(manager: SessionManager) -> APIRouter:
         return asdict(source)
 
     @router.post("/sessions", status_code=201)
-    async def create(principal: Annotated[str, Depends(authorize)]) -> Created:
-        session = manager.create(principal)
+    async def create(
+        principal: Annotated[str, Depends(authorize)], body: VoicePreferences | None = None
+    ) -> Created:
+        session = manager.create(principal, body)
         return Created(
             id=session.id, key=session.key, ttl_seconds=manager.settings.session_ttl_seconds
         )
@@ -94,6 +101,7 @@ def build_router(manager: SessionManager) -> APIRouter:
             delegation=session.delegation.status,
             generation=session.generation,
             sources=session.delegation.sources,
+            recap=session.recap,
             fallback_available=manager.fallback is not None and not session.fallback_used,
         )
 
@@ -103,7 +111,7 @@ def build_router(manager: SessionManager) -> APIRouter:
 
     @router.post("/sessions/{session_id}/interrupt")
     async def interrupt(session: Annotated[Session, Depends(owned)]) -> dict[str, str]:
-        manager.delegator.cancel(session.delegation)
+        manager.interrupt(session)
         return {"delegation": session.delegation.status}
 
     @router.post("/sessions/{session_id}/token")

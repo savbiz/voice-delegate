@@ -2,9 +2,9 @@
 
 A small, clean-room reference architecture for real-time voice agents: GPT-Live handles the conversation over WebRTC while a separate LangGraph worker handles delegated reasoning and tools. FastAPI owns session lifetime and server-side control; provider contracts make transport differences explicit. The project is designed to make cancellation, resource budgets, and failure recovery understandable and testable. Working name; Apache-2.0. Copyright 2026 Savino Bizzoca.
 
-**Status: M1–M6 implementation candidate (`0.1.0.dev5`).** M2 is integrated; M3 adds optional Azure Realtime fallback with peer renegotiation; M4 adds turn tracing, metrics, a monitoring stack and offline evaluations. Live voice/Azure checks and measured latency remain release gates; no stable release is claimed.
+**Status: M1–M8 implementation candidate (`0.2.0.dev1`).** M2 is integrated; M3 adds optional Azure Realtime fallback with peer renegotiation; M4 adds turn tracing, metrics, a monitoring stack and offline evaluations. Live voice/Azure checks and measured latency remain release gates; no stable release is claimed.
 
-New: [M5 controlled invitations and quotas](docs/m5.md) · [M6 documentation with sources](docs/m6.md).
+Guides: [M5 invitations and quotas](docs/m5.md) · [M6 documentation with sources](docs/m6.md) · [M7 voice experience](docs/m7.md) · [M8 scaling](docs/m8.md).
 
 Guides: [M2 worker](docs/m2.md) · [M3 Azure fallback](docs/m3.md) · [M4 monitoring and evals](docs/m4.md).
 
@@ -122,7 +122,7 @@ public demo, a complete use case, advanced voice UX and optional scaling.
 | 3 | M3: Azure Realtime adapter, renegotiation failover, clamped history | Capability checks and timed fallback scenarios; `v0.1.0-m3` |
 | 4 | M4: OTel, collector, Prometheus, Grafana dashboard, evals, docs | Reproducible offline suite + explicitly separate live validation; `v0.1.0` |
 
-Future v0.2: multi-language mirroring, interruption-aware summaries, additional providers (including optional ElevenLabs).
+The v0.2 candidate adds language/mirror preferences, an extractive interruption recap and OpenAI Realtime. M8 adds a same-host multi-process topology. ElevenLabs and cross-host high availability remain future extensions.
 
 The Azure adapter uses documented GA WebRTC and sideband capabilities. A provider change establishes a new browser peer connection and replays bounded text; it does not transparently migrate audio or imply identical full-duplex behavior.
 
