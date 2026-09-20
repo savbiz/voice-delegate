@@ -13,6 +13,34 @@ const start = element<HTMLButtonElement>("start");
 const stop = element<HTMLButtonElement>("stop");
 const status = element("status");
 const taskStatus = element("task-status");
+const recoveryHelp = element("recovery-help");
+const feedbackButton = element<HTMLButtonElement>("send-feedback");
+const feedbackCategory = element<HTMLSelectElement>("feedback-category");
+const feedbackStatus = element("feedback-status");
+let diagnosticId = crypto.randomUUID();
+let uiState = "ready";
+let reportBody: { diagnostic_id: string; category: string; state: string } | undefined;
+let reportSent = false;
+let reportPending = false;
+function showState(state: string, message: string, help: string): void {
+  uiState = state;
+  status.textContent = message;
+  recoveryHelp.textContent = help;
+}
+function showWorker(state: string): void {
+  const messages: Record<string, string> = {
+    idle: "Worker ready.", running: "Working on your request. You can interrupt by speaking.",
+    busy: "Worker busy. Your task was not started. Repeat your request later if you still need it.",
+    completed: "Task completed.", cancelled: "Task cancelled. You can give a new request.",
+    timeout: "The task took too long and was stopped. You can give a new request.",
+    failed: "The task failed. You can give a new request; nothing is retried automatically.",
+    request_limit: "This conversation has reached its task limit. Start a new conversation if your allowance permits.",
+    delivery_failed: "The worker result could not be delivered. Repeat your request if you still need it.",
+  };
+  taskStatus.textContent = messages[state] ?? "Waiting for worker status.";
+  cancelTask.disabled = state !== "running" || ending || recovering || !session;
+  if (!ending && !recovering && session) uiState = state === "running" ? "working" : state === "busy" ? "busy" : "connected";
+}
 const cancelTask = element<HTMLButtonElement>("cancel-task");
 const preferences = element<HTMLFieldSetElement>("voice-preferences");
 const language = element<HTMLSelectElement>("language");
@@ -71,6 +99,7 @@ function release(): void {
   start.disabled = false;
   stop.disabled = true;
   preferences.disabled = false;
+  cancelTask.disabled = true;
 }
 
 async function request(path: string, owner?: Session, body?: unknown): Promise<unknown> {
@@ -115,7 +144,10 @@ async function finish(message: string): Promise<void> {
     message += " Close was not confirmed; the server also enforces session expiry.";
   } finally {
     release();
-    status.textContent = message;
+    showState("ended", message, message === "Conversation ended."
+      ? "Select Start conversation when you want a new session."
+      : "Check your connection or access code, then select Start conversation to begin a new session. Previous tasks will not be replayed.");
+    showWorker("idle");
     ending = false;
   }
 }
@@ -125,17 +157,18 @@ function processEvent(raw: unknown): void {
   const event = raw as Record<string, unknown>;
   if (event.type === "session.started" || event.type === "session.created") {
     clearTimeout(startup);
-    status.textContent = "Connected. Speak naturally.";
+    showState("connected", "Connected. Speak naturally.", "Speak to give a request or interrupt. Select Stop to end the conversation.");
   } else if (event.type === "session.closed") {
     if (!ending) {
       generation += 1;
       release();
-      status.textContent = "Conversation ended. Provider finalization confirmed.";
+      showState("ended", "Conversation ended. Provider finalization confirmed.", "Select Start conversation when you want a new session.");
+      showWorker("idle");
     }
   } else if (event.type === "error") {
     void recover("The provider reported an error.");
   } else if (event.type === "session.delegation.created") {
-    taskStatus.textContent = "Worker running… You can interrupt by speaking.";
+    showWorker("running");
   }
   const speaker = ["session.input_transcript.delta", "conversation.item.input_audio_transcription.completed"].includes(String(event.type)) ? "user"
     : ["session.output_transcript.delta", "response.output_audio_transcript.delta"].includes(String(event.type)) ? "assistant" : undefined;
@@ -192,15 +225,16 @@ const onLargeCaptions = () => {
 };
 mute.addEventListener("click", onMute);
 largeCaptions.addEventListener("click", onLargeCaptions);
-const onStart = () => { void begin(); };
+const onStart = () => { if (!start.disabled && !ending && !recovering) void begin(); };
 const onStop = () => { void finish("Conversation ended."); };
 start.addEventListener("click", onStart);
 stop.addEventListener("click", onStop);
 const onCancelTask = () => {
   const owner = session;
+  cancelTask.disabled = true;
   if (owner) void request(`/sessions/${owner.id}/interrupt`, owner)
-    .then(() => { taskStatus.textContent = "Worker cancellation requested."; })
-    .catch(() => { taskStatus.textContent = "Cancellation not confirmed."; });
+    .then(() => { if (session === owner && !ending) taskStatus.textContent = "Worker cancellation requested. You can give a new request."; })
+    .catch(() => { if (session === owner && !ending) { taskStatus.textContent = "Cancellation not confirmed. Try Cancel task again or stop the conversation."; cancelTask.disabled = false; } });
 };
 cancelTask.addEventListener("click", onCancelTask);
 
@@ -218,19 +252,28 @@ async function recover(message: string): Promise<void> {
     release();
     session = owner;
     start.disabled = true;
-    status.textContent = "Reconnecting with Azure… The last unfinished phrase may need repeating.";
+    showState("recovering", "Reconnecting with Azure…", "Wait for connection confirmation, then repeat the unfinished phrase if needed.");
     await begin(owner, state.generation);
   } catch { await finish("Fallback failed."); }
   finally { recovering = false; }
 }
 
 async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
-  if (!existing) fallbackAttempted = false;
+  if (!existing) {
+    fallbackAttempted = false;
+    if (!reportPending) {
+      diagnosticId = crypto.randomUUID(); reportBody = undefined; reportSent = false;
+      feedbackCategory.disabled = false;
+      feedbackButton.disabled = !accessCode;
+      feedbackStatus.textContent = "Ready to send a report if something goes wrong.";
+    }
+  }
   const attempt = ++generation;
   start.disabled = true;
   stop.disabled = false;
   preferences.disabled = true;
-  status.textContent = "Requesting microphone…";
+  showState(existing ? "recovering" : "connecting", existing ? "Reconnecting with Azure…" : "Requesting microphone…", "Allow microphone access to continue. Select Stop to cancel.");
+  showWorker("idle");
   captions.user.textContent = "—";
   captions.assistant.textContent = "—";
   timings.replaceChildren();
@@ -268,7 +311,7 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
     await connection.setLocalDescription(await connection.createOffer());
     await gather(connection);
     if (attempt !== generation) return;
-    status.textContent = "Connecting…";
+    showState(existing ? "recovering" : "connecting", existing ? "Reconnecting with Azure…" : "Connecting…", "Please wait. Select Stop to cancel.");
     const created = existing ?? await request("/sessions", undefined, { language: language.value, mode: voiceMode.value }) as Session;
     if (attempt !== generation) {
       await request(`/sessions/${created.id}/close`, created);
@@ -291,7 +334,8 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
             recap.textContent = `${state.recap.interrupted ? "Interrupted task. " : ""}Latest request: ${state.recap.latest_request || "—"}` +
               (state.recap.latest_reply ? ` · Latest reply excerpt: ${state.recap.latest_reply}` : "");
           }
-          taskStatus.textContent = `Worker: ${state.delegation}`;
+          showWorker(state.delegation);
+          if (state.state === "closed" || state.state === "closing") void finish("Conversation ended.");
           if (state.state === "reconnecting") void recover("Provider connection lost.");
         }
       }).catch(() => {
@@ -310,6 +354,27 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
   }
 }
 
+const onFeedback = async () => {
+  if (reportPending || reportSent || !accessCode) return;
+  reportPending = true;
+  feedbackButton.disabled = true;
+  feedbackCategory.disabled = true;
+  reportBody ??= { diagnostic_id: diagnosticId, category: feedbackCategory.value, state: uiState };
+  feedbackStatus.textContent = "Sending report…";
+  try {
+    const result = await request("/feedback", undefined, reportBody) as { diagnostic_id: string };
+    reportSent = true;
+    feedbackStatus.textContent = `Report received. Diagnostic ID: ${result.diagnostic_id}. Retained for seven days.`;
+  } catch {
+    feedbackStatus.textContent = `Report not confirmed. Check your access code or try later (maximum five reports per day). Retrying uses the same diagnostic ID: ${diagnosticId}.`;
+  } finally {
+    reportPending = false;
+    feedbackButton.disabled = reportSent;
+  }
+};
+feedbackButton.disabled = !accessCode;
+feedbackButton.addEventListener("click", onFeedback);
+
 const onPageHide = () => {
   if (session) {
     void fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/api/sessions/${session.id}/close`, {
@@ -322,6 +387,7 @@ const onPageHide = () => {
 window.addEventListener("pagehide", onPageHide);
 return () => {
   window.removeEventListener("pagehide", onPageHide);
+  feedbackButton.removeEventListener("click", onFeedback);
   start.removeEventListener("click", onStart);
   stop.removeEventListener("click", onStop);
   cancelTask.removeEventListener("click", onCancelTask);

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     public_demo: bool = False
     demo_enabled: bool = True
     quota_database: str = ".local/quotas.sqlite3"
+    feedback_database: str = ".local/feedback.sqlite3"
     daily_sessions_per_user: int = Field(default=4, ge=1, le=100)
     concurrent_sessions_per_user: int = Field(default=1, ge=1, le=10)
     daily_voice_seconds_per_user: int = Field(default=1500, ge=1)

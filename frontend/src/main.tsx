@@ -19,7 +19,13 @@ function Live({ code }: { code: string }) {
     <div className="actions"><button id="start">Start conversation</button><button id="stop" disabled>Stop</button></div>
     <p id="status" role="status">Ready to connect</p>
     <p id="task-status" aria-live="polite">Worker: idle</p>
-    <button id="cancel-task">Cancel task</button>
+    <button id="cancel-task" disabled>Cancel task</button>
+    <p id="recovery-help">Start a conversation when you are ready.</p>
+    <section aria-label="Report a problem"><h2>Report a problem</h2>
+      <p>Send only a category, diagnostic ID, interface state, configured provider and app version. No audio, transcripts or message text. Reports expire after seven days. A pseudonymous identity is used to limit submissions.</p>
+      <label>Problem category <select id="feedback-category"><option value="wrong_answer">Wrong answer</option><option value="source">Unhelpful source</option><option value="audio">Audio problem</option><option value="connection">Connection problem</option><option value="other">Other problem</option></select></label>
+      <button id="send-feedback" disabled>Send report</button><p id="feedback-status" aria-live="polite">An invitation or access code is required to send feedback.</p>
+    </section>
     <section aria-label="Worker sources"><h2>Documentation sources</h2><div id="sources" /></section>
     <audio id="audio" controls autoPlay aria-label="Assistant audio" />
     <div className="grid gap-4 md:grid-cols-2"><section><h2>You</h2><p id="user">—</p></section><section><h2>Assistant</h2><p id="assistant">—</p></section></div>

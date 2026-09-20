@@ -1,6 +1,8 @@
 """FastAPI factory owning provider clients, session cleanup, and browser API access."""
 
 import asyncio
+import logging
+import sqlite3
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
 
@@ -11,6 +13,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner, OpenAIPlanner
 
 from voice_delegate.config import Settings, load_settings
+from voice_delegate.feedback import FeedbackStore
 from voice_delegate.limits.http import BodyLimitMiddleware
 from voice_delegate.observability.metrics import Metrics, configure_metrics
 from voice_delegate.observability.tracing import configure_tracing, get_tracer
@@ -54,6 +57,21 @@ def create_app(
         )
     )
     remote = RemoteWorker(settings) if settings.worker_execution == "remote" else None
+    feedback = (
+        FeedbackStore(settings.feedback_database)
+        if settings.invite_tokens or settings.access_token.get_secret_value()
+        else None
+    )
+
+    async def clean_feedback() -> None:
+        while True:
+            await asyncio.sleep(3600)
+            if feedback is not None:
+                try:
+                    feedback.purge()
+                except sqlite3.Error:
+                    logging.getLogger(__name__).warning("Feedback cleanup unavailable; retrying")
+
     manager = SessionManager(
         provider,
         settings,
@@ -70,10 +88,16 @@ def create_app(
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         janitor = asyncio.create_task(manager.sweep(), name="session-janitor")
+        feedback_janitor = asyncio.create_task(clean_feedback(), name="feedback-janitor")
         try:
             yield
         finally:
             janitor.cancel()
+            feedback_janitor.cancel()
+            with suppress(asyncio.CancelledError):
+                await feedback_janitor
+            if feedback is not None:
+                feedback.close()
             with suppress(asyncio.CancelledError):
                 await janitor
             await manager.aclose()
@@ -114,5 +138,5 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    app.include_router(build_router(manager))
+    app.include_router(build_router(manager, feedback))
     return app

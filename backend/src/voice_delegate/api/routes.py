@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from voice_delegate_agent.reference import search, source_by_id
 
+from voice_delegate.feedback import FeedbackInput, FeedbackStore
 from voice_delegate.providers.models import UnsupportedCapability
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import Session
@@ -19,7 +20,7 @@ class ReferenceQuery(BaseModel):
     query: str = Field(min_length=1, max_length=500)
 
 
-def build_router(manager: SessionManager) -> APIRouter:
+def build_router(manager: SessionManager, feedback: FeedbackStore | None = None) -> APIRouter:
     """Bind a router to one lifecycle-owned manager, avoiding untyped app state."""
 
     async def check_origin(request: Request, response: Response) -> None:
@@ -32,9 +33,18 @@ def build_router(manager: SessionManager) -> APIRouter:
     async def authorize(request: Request) -> str:
         return manager.admission.authenticate(request.headers.get("authorization", ""))
 
+    @router.post("/feedback", status_code=201)
+    async def submit_feedback(
+        body: FeedbackInput, principal: Annotated[str, Depends(authorize)]
+    ) -> dict[str, str]:
+        if feedback is None:
+            raise HTTPException(503, "Feedback requires a configured invitation or access code")
+        return {"diagnostic_id": feedback.submit(principal, body, manager.settings.voice_provider)}
+
     @router.post("/config")
     async def configuration() -> dict[str, bool]:
         return {
+            "feedback_available": feedback is not None,
             "requires_access_code": bool(
                 manager.settings.invite_tokens or manager.settings.access_token.get_secret_value()
             ),
