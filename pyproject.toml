@@ -21,6 +21,9 @@ dev = [
     "pytest-socket>=0.8.1",
     "ruff>=0.16.8",
 ]
+eval = [
+    "braintrust>=0.3,<1",
+]
 
 [tool.ruff]
 target-version = "py312"

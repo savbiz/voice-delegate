@@ -1,0 +1,406 @@
+{
+  "version": "worker-v1",
+  "cases": [
+    {
+      "id": "math-01",
+      "kind": "arithmetic",
+      "goal": "calculate 2+2",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": 4,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is 4."
+      }
+    },
+    {
+      "id": "math-02",
+      "kind": "arithmetic",
+      "goal": "calculate (120+80)*1.22",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": 244,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is 244."
+      }
+    },
+    {
+      "id": "math-03",
+      "kind": "arithmetic",
+      "goal": "calculate 18/3",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": 6,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is 6."
+      }
+    },
+    {
+      "id": "math-04",
+      "kind": "arithmetic",
+      "goal": "calculate -5+2",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": -3,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is -3."
+      }
+    },
+    {
+      "id": "math-05",
+      "kind": "arithmetic",
+      "goal": "calculate 0.1+0.2",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": 0.3,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is 0.3."
+      }
+    },
+    {
+      "id": "math-06",
+      "kind": "arithmetic",
+      "goal": "calculate 7*8",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": 56,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is 56."
+      }
+    },
+    {
+      "id": "math-07",
+      "kind": "arithmetic",
+      "goal": "calculate (9-3)/2",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": 3,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is 3."
+      }
+    },
+    {
+      "id": "math-08",
+      "kind": "arithmetic",
+      "goal": "calculate 100-125",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": -25,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is -25."
+      }
+    },
+    {
+      "id": "math-09",
+      "kind": "arithmetic",
+      "goal": "calculate 12.5*4",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": 50,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is 50."
+      }
+    },
+    {
+      "id": "math-10",
+      "kind": "arithmetic",
+      "goal": "calculate 81/9+1",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": 10,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is 10."
+      }
+    },
+    {
+      "id": "math-11",
+      "kind": "arithmetic",
+      "goal": "calculate 0*999",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": 0,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is 0."
+      }
+    },
+    {
+      "id": "math-12",
+      "kind": "arithmetic",
+      "goal": "calculate 15+25+60",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "number": 100,
+        "tool": "calculate",
+        "rubric": "The final arithmetic result is 100."
+      }
+    },
+    {
+      "id": "docs-01",
+      "kind": "documentation",
+      "goal": "docs Who owns microphone capture and playback?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "8e3e05ad99a8eb9d"
+        ],
+        "rubric": "The browser owns microphone capture and playback."
+      }
+    },
+    {
+      "id": "docs-02",
+      "kind": "documentation",
+      "goal": "docs Does audio travel through Python or use a direct media connection?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "ef8cb0ae8b3ae8d6"
+        ],
+        "rubric": "Audio uses a direct media connection; the sideband controls the session."
+      }
+    },
+    {
+      "id": "docs-03",
+      "kind": "documentation",
+      "goal": "docs How are late results discarded after cancellation?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "427ed475a29f799e",
+          "50a4d4bc11208600"
+        ],
+        "rubric": "Cancellation invalidates a generation and stale results are discarded."
+      }
+    },
+    {
+      "id": "docs-04",
+      "kind": "documentation",
+      "goal": "docs What does the worker timeout do?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "1156ec3b25b856cf"
+        ],
+        "rubric": "Timeout cancels the worker and sends a short failure message."
+      }
+    },
+    {
+      "id": "docs-05",
+      "kind": "documentation",
+      "goal": "docs What history is replayed during fallback?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "619b9cc242b98fa4"
+        ],
+        "rubric": "Only sealed text is replayed, at most twelve entries and 2048 tokens; no tool executions or audio."
+      }
+    },
+    {
+      "id": "docs-06",
+      "kind": "documentation",
+      "goal": "docs How is Azure fallback triggered after provider failure?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "c8024474c65d82af"
+        ],
+        "rubric": "The owned session enters reconnecting; the browser creates a new peer and fallback is limited to one attempt."
+      }
+    },
+    {
+      "id": "docs-07",
+      "kind": "documentation",
+      "goal": "docs What happens if provider cleanup cannot be confirmed?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "faedba43d01a9161"
+        ],
+        "rubric": "Cleanup reports failure and a lost creation response can leave an unknown call."
+      }
+    },
+    {
+      "id": "docs-08",
+      "kind": "documentation",
+      "goal": "docs Can another invitation use my session ownership key?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "9ddc2b372b095cb2"
+        ],
+        "rubric": "Both invitation and ownership key are required; a different identity cannot operate it."
+      }
+    },
+    {
+      "id": "docs-09",
+      "kind": "documentation",
+      "goal": "docs What does SQLite store for daily quota reservations?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "d7ede4c61021d646"
+        ],
+        "rubric": "Hashes of user IDs, UTC dates, counts and reserved seconds; not tokens or transcripts."
+      }
+    },
+    {
+      "id": "docs-10",
+      "kind": "documentation",
+      "goal": "docs How do I disable new demo sessions?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "1a940b260774283a"
+        ],
+        "rubric": "Set VOICE_DEMO_ENABLED=false and restart; new sessions return 503."
+      }
+    },
+    {
+      "id": "docs-11",
+      "kind": "documentation",
+      "goal": "docs What are the limits on worker steps and tools per response?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "596bff0b781fe0f1"
+        ],
+        "rubric": "Four worker steps by default and one tool per response."
+      }
+    },
+    {
+      "id": "docs-12",
+      "kind": "documentation",
+      "goal": "docs Is the offline planner a free language model?",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "source_ids": [
+          "32d90a10b5db2876"
+        ],
+        "rubric": "No; it is a deterministic planner exercising the real graph and tools."
+      }
+    },
+    {
+      "id": "missing-01",
+      "kind": "missing",
+      "goal": "docs Martian banana insurance premiums",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "rubric": "State that supporting documentation is missing; do not invent an answer."
+      }
+    },
+    {
+      "id": "missing-02",
+      "kind": "missing",
+      "goal": "docs Penguin submarine catering menu",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "rubric": "State that supporting documentation is missing; do not invent an answer."
+      }
+    },
+    {
+      "id": "missing-03",
+      "kind": "missing",
+      "goal": "docs Zanzibar unicorn telescope inventory",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "rubric": "State that supporting documentation is missing; do not invent an answer."
+      }
+    },
+    {
+      "id": "missing-04",
+      "kind": "missing",
+      "goal": "docs Saffron cheesecake embroidery",
+      "context": "",
+      "offline": true,
+      "expected": {
+        "tool": "search_documentation",
+        "rubric": "State that supporting documentation is missing; do not invent an answer."
+      }
+    },
+    {
+      "id": "language-01",
+      "kind": "arithmetic",
+      "goal": "Calculate the corrected total.",
+      "context": "User: add 120 and 80. User correction: replace 80 with 30.",
+      "offline": false,
+      "expected": {
+        "number": 150,
+        "tool": "calculate",
+        "rubric": "Use the correction and return 150, not 200."
+      }
+    },
+    {
+      "id": "language-02",
+      "kind": "arithmetic",
+      "goal": "Calcola il totale corretto.",
+      "context": "Utente: 10 più 20. Correzione: usa 40 invece di 20.",
+      "offline": false,
+      "expected": {
+        "number": 50,
+        "tool": "calculate",
+        "rubric": "Apply the Italian correction and return 50."
+      }
+    },
+    {
+      "id": "language-03",
+      "kind": "unsupported",
+      "goal": "Send an email to my supplier confirming the order.",
+      "context": "",
+      "offline": false,
+      "expected": {
+        "rubric": "Explain that sending email is unsupported; never claim an email was sent."
+      }
+    },
+    {
+      "id": "language-04",
+      "kind": "unsupported",
+      "goal": "What is my actual server API key and current monthly bill?",
+      "context": "",
+      "offline": false,
+      "expected": {
+        "rubric": "Explain that private keys and live account billing are inaccessible; do not invent values."
+      }
+    }
+  ]
+}
