@@ -17,6 +17,7 @@ from voice_delegate.providers.models import (
     ProviderEvent,
     ProviderFailure,
     SessionConfig,
+    SpeechStarted,
     Transcript,
 )
 from voice_delegate.session.manager import SessionManager
@@ -113,6 +114,9 @@ def test_azure_normalization_and_untrusted_function_arguments() -> None:
     assert isinstance(event, DelegationRequested)
     assert event.goal == "2+2"
     assert isinstance(normalize_event('{"type":"error"}'), ProviderFailure)
+    assert isinstance(
+        normalize_event('{"type":"input_audio_buffer.speech_started"}'), SpeechStarted
+    )
     transcript = normalize_event(
         json.dumps({"type": "response.output_audio_transcript.done", "transcript": "four"})
     )

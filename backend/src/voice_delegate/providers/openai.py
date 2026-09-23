@@ -183,7 +183,7 @@ class OpenAILiveConnection:
 class OpenAILiveProvider:
     """Create sessions with server credentials; never retry billable creation."""
 
-    capabilities = ProviderCapabilities()
+    capabilities = ProviderCapabilities(transcript_timing=True)
 
     def __init__(
         self, api_key: str, close_timeout: float = 5, http: httpx.AsyncClient | None = None

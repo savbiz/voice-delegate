@@ -21,6 +21,7 @@ from .models import (
     ProviderFailure,
     SessionConfig,
     SessionStarted,
+    SpeechStarted,
     Transcript,
     UnsupportedCapability,
     WebRTCAnswer,
@@ -58,6 +59,8 @@ def normalize_event(raw: str | bytes) -> ProviderEvent | None:
     event = WireEvent.model_validate_json(raw)
     if event.type == "session.created":
         return SessionStarted()
+    if event.type == "input_audio_buffer.speech_started":
+        return SpeechStarted()
     if event.type == "error":
         return ProviderFailure()
     if event.type == "response.function_call_arguments.done":
@@ -134,7 +137,9 @@ class RealtimeWebRTCProvider:
     the authentication headers and a display name used in error messages.
     """
 
-    capabilities = ProviderCapabilities(client_delegation=False, text_replay=True)
+    capabilities = ProviderCapabilities(
+        client_delegation=False, text_replay=True, transcript_timing=False
+    )
     name = "Realtime"
 
     def __init__(

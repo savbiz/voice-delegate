@@ -23,6 +23,7 @@ from voice_delegate.providers.models import (
     ProviderFailure,
     SessionClosed,
     SessionConfig,
+    SpeechStarted,
     Transcript,
     WebRTCAnswer,
 )
@@ -162,6 +163,8 @@ class SessionManager:
     async def _watch(self, session: Session) -> None:
         connection = session.connection
         assert connection is not None
+        provider = self.fallback if session.fallback_used else self.provider
+        assert provider is not None
         try:
             async for event in connection.events():
                 if connection is not session.connection:
@@ -173,6 +176,8 @@ class SessionManager:
                     continue
                 if isinstance(event, ProviderFailure):
                     break
+                if isinstance(event, SpeechStarted) and session.delegation.status == "running":
+                    self.interrupt(session)
                 if isinstance(event, Transcript):
                     session.turn = observe(session.turn, event, self.tracer, self.metrics)
                     if (
@@ -189,6 +194,7 @@ class SessionManager:
                     if (
                         event.speaker == "user"
                         and event.text.strip()
+                        and (event.start_ms > 0 or provider.capabilities.transcript_timing)
                         and (event.start_ms >= session.delegation.offset_ms)
                     ):
                         if session.delegation.status == "running":

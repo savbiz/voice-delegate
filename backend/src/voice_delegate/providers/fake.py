@@ -46,7 +46,7 @@ class FakeConnection:
 class FakeProvider:
     """An injectable provider for lifecycle and error-path tests."""
 
-    capabilities = ProviderCapabilities()
+    capabilities = ProviderCapabilities(transcript_timing=True)
 
     def __init__(self) -> None:
         self.connections: list[FakeConnection] = []

@@ -11,7 +11,12 @@ from voice_delegate.delegation.history import History
 from voice_delegate.delegation.runner import DelegationRunner, DelegationState
 from voice_delegate.limits.tokens import count_tokens, truncate
 from voice_delegate.providers.fake import FakeProvider
-from voice_delegate.providers.models import DelegationRequested, Transcript
+from voice_delegate.providers.models import (
+    DelegationRequested,
+    ProviderCapabilities,
+    SpeechStarted,
+    Transcript,
+)
 from voice_delegate.session.manager import SessionManager
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 from voice_delegate_agent.tools import calculate
@@ -222,4 +227,48 @@ async def test_old_transcript_fragment_does_not_cancel_current_delegation() -> N
     connection.queue.put_nowait(Transcript("user", " please", 100, 150))
     await eventually(lambda: session.history.goal().endswith("please"))
     assert session.delegation.status == "running"
+    await manager.aclose()
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+async def test_realtime_interrupts_on_speech_not_delayed_transcript(fallback: bool) -> None:
+    worker, realtime = WaitingWorker(), FakeProvider()
+    realtime.capabilities = ProviderCapabilities(text_replay=True, transcript_timing=False)
+    manager = SessionManager(
+        FakeProvider() if fallback else realtime,
+        Settings(),
+        worker=worker,
+        fallback=realtime if fallback else None,
+    )
+    session = manager.create()
+    await manager.connect(session, "v=0\r\n")
+    if fallback:
+        await manager.reconnect(session, "v=0\r\n", 0)
+    connection = realtime.connections[0]
+    connection.queue.put_nowait(DelegationRequested("task", goal="calculate 1+1"))
+    await worker.started.wait()
+    connection.queue.put_nowait(Transcript("user", "calculate 1+1", 0, 0, committed=True))
+    await eventually(lambda: bool(session.history.entries))
+    assert session.delegation.status == "running"
+    assert not worker.cancelled.is_set()
+    connection.queue.put_nowait(SpeechStarted())
+    await asyncio.wait_for(worker.cancelled.wait(), 1)
+    assert session.delegation.status == "cancelled"
+    assert not connection.commands
+    await manager.aclose()
+
+
+@pytest.mark.parametrize("timing,start_ms", [(True, 0), (False, 1)])
+async def test_real_transcript_timing_interrupts(timing: bool, start_ms: int) -> None:
+    worker, provider = WaitingWorker(), FakeProvider()
+    provider.capabilities = ProviderCapabilities(transcript_timing=timing)
+    manager = SessionManager(provider, Settings(), worker=worker)
+    session = manager.create()
+    await manager.connect(session, "v=0\r\n")
+    connection = provider.connections[0]
+    connection.queue.put_nowait(DelegationRequested("task", goal="calculate 1+1"))
+    await worker.started.wait()
+    connection.queue.put_nowait(Transcript("user", "stop", start_ms, start_ms))
+    await asyncio.wait_for(worker.cancelled.wait(), 1)
+    assert session.delegation.status == "cancelled"
     await manager.aclose()

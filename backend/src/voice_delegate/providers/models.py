@@ -20,6 +20,7 @@ class ProviderCapabilities:
     server_control: bool = True
     client_delegation: bool = True
     text_replay: bool = False
+    transcript_timing: bool = False
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,11 @@ class DelegationRequested:
 
 
 @dataclass(frozen=True)
+class SpeechStarted:
+    """The provider detected the beginning of user speech."""
+
+
+@dataclass(frozen=True)
 class SessionClosed:
     """Confirmed upstream finalization."""
 
@@ -88,7 +94,12 @@ class ProviderFailure:
 
 
 type ProviderEvent = (
-    Transcript | DelegationRequested | SessionClosed | SessionStarted | ProviderFailure
+    Transcript
+    | DelegationRequested
+    | SpeechStarted
+    | SessionClosed
+    | SessionStarted
+    | ProviderFailure
 )
 
 
