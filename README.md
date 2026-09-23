@@ -40,6 +40,9 @@ result that is no longer wanted. This project shows one way to avoid both:
   fallback provider and replays bounded text, never tool executions.
 - **Measured, not assumed.** OpenTelemetry spans per turn, provider time-to-first-byte,
   delegation latency and failover count; offline evals for scheduling and limits.
+- **Fake provider for evals.** Reproducible failure sequences and injected clocks make
+  lifecycle behaviour testable without credentials. Scripted tests verify orchestration;
+  live model-quality and audio-latency measurements remain separate.
 
 ## Status
 
@@ -107,14 +110,6 @@ See [PyCharm and local development](docs/local-development.md) and [GitHub, Verc
 GPT-Live uses client delegation. `delegate_task(goal, context)` is the **internal worker contract**, not a voice-model function schema. M2 starts an asynchronous worker and returns compact commentary. `VOICE_WORKER_MODE=offline` uses a scripted planner by default; set `openai` for natural-language tool selection. No web search or external actions are available.
 
 The capability-aware `/token` endpoint returns **501** for this adapter. Live's documented browser flow creates sessions using server credentials and SDP; this project does not invent a Live ephemeral credential API. The browser uses `/offer`. See [ADR 001](docs/decisions/001-live-client-delegation.md).
-
-## Why this design
-
-- **One delegation entry point:** the conversation layer need not carry every tool schema or workflow. The worker can evolve and be tested independently. GPT-Live's native delegation maps into the same application boundary.
-- **Bounded buffers:** a slow consumer must not accumulate unlimited events or increasingly stale speech. M1 bounds application events and WebSocket buffers; the browser/provider own WebRTC audio buffers. There is no Python audio relay.
-- **Clamp history:** future reconnections and worker requests need relevant context within a known cost and latency budget. M2 retains bounded transcript context for worker requests; M3 replays bounded sealed text segments; see its documented heuristic limits.
-- **Trace per turn:** a user-visible interaction should correlate provider activity, worker execution, and interruptions. M4 adds application-defined turn spans; full-duplex transcript fragments are not reliable turn boundaries on their own.
-- **Fake provider for evals:** reproducible failure sequences and injected clocks make lifecycle behavior testable without credentials. Scripted tests verify orchestration, not a real model's delegation quality or network latency. Live model-quality and audio-latency measurements remain separate.
 
 ## Try the real worker offline
 
