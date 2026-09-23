@@ -13,7 +13,7 @@ function Live({ code }: { code: string }) {
     <p className="notice">Live voice requires a server API key and incurs provider usage charges. Your microphone is requested only when you start.</p>
     <fieldset id="voice-preferences"><legend>Voice preferences (before starting)</legend>
       <label>Response language <select id="language" defaultValue="auto"><option value="auto">Follow the speaker</option><option value="it">Italiano</option><option value="en">English</option><option value="es">Español</option><option value="fr">Français</option><option value="de">Deutsch</option></select></label>
-      <label>Conversation style <select id="voice-mode" defaultValue="conversation"><option value="conversation">Assistant conversation</option><option value="mirror">Mirror / translate speech only</option></select></label>
+      <label>Conversation style <select id="voice-mode" defaultValue="conversation"><option value="conversation">Assistant conversation</option><option value="translate">Translation mode</option></select></label>
     </fieldset>
     <div className="actions"><button id="mute-audio" aria-pressed="false">Mute assistant</button><button id="large-captions" aria-pressed="false">Large captions</button></div>
     <div className="actions"><button id="start">Start conversation</button><button id="stop" disabled>Stop</button></div>

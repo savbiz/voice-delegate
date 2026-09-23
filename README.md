@@ -160,7 +160,7 @@ public demo, a complete use case, advanced voice UX and optional scaling.
 | 3 | M3: Azure Realtime adapter, renegotiation failover, clamped history | Capability checks and timed fallback scenarios; `v0.1.0-m3` |
 | 4 | M4: OTel, collector, Prometheus, Grafana dashboard, evals, docs | Reproducible offline suite + explicitly separate live validation; `v0.1.0` |
 
-The v0.2 candidate adds language/mirror preferences, an extractive interruption recap and OpenAI Realtime. M8 adds a same-host multi-process topology. ElevenLabs and cross-host high availability remain future extensions.
+The v0.2 candidate adds language/translate preferences, an extractive interruption recap and OpenAI Realtime. M8 adds a same-host multi-process topology. ElevenLabs and cross-host high availability remain future extensions.
 
 The Azure adapter uses documented GA WebRTC and sideband capabilities. A provider change establishes a new browser peer connection and replays bounded text; it does not transparently migrate audio or imply identical full-duplex behavior.
 

@@ -191,7 +191,7 @@ class SessionManager:
                         else:
                             session.recap.resume()
                 if isinstance(event, DelegationRequested):
-                    if session.preferences.mode == "mirror":
+                    if session.preferences.mode == "translate":
                         continue
                     session.recap.resume()
                     if event.delegation_id in session.delegation.seen:

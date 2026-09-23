@@ -23,8 +23,8 @@ from voice_delegate.session.summary import Recap
     "language,name",
     [("it", "Italian"), ("en", "English"), ("es", "Spanish"), ("fr", "French"), ("de", "German")],
 )
-async def test_language_and_mirror_preference(language: str, name: str) -> None:
-    preferences = VoicePreferences.model_validate({"language": language, "mode": "mirror"})
+async def test_language_and_translate_preference(language: str, name: str) -> None:
+    preferences = VoicePreferences.model_validate({"language": language, "mode": "translate"})
     manager = SessionManager(FakeProvider(), Settings())
     session = manager.create(preferences=preferences)
     assert name in manager.config(session).instructions
