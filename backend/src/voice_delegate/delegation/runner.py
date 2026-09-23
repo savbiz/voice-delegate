@@ -1,6 +1,7 @@
 """Own finite worker tasks and suppress results invalidated by interruption or close."""
 
 import asyncio
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from time import monotonic
@@ -15,6 +16,8 @@ from voice_delegate.providers.base import RealtimeConnection
 from voice_delegate.providers.models import Commentary, ProviderError
 
 from .contracts import DelegationInput, Worker, WorkerBusy
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -87,8 +90,8 @@ class DelegationRunner:
 
     def _finished(self, task: asyncio.Task[str]) -> None:
         self.work.discard(task)
-        if not task.cancelled():
-            task.exception()
+        if not task.cancelled() and (error := task.exception()) is not None:
+            logger.debug("Delegated worker failed", exc_info=error)
 
     async def _run(
         self,

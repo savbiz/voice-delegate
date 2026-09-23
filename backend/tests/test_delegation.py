@@ -155,7 +155,11 @@ async def test_interruption_and_close_never_narrate_late_result(interrupt: str) 
     await manager.aclose()
 
 
-async def test_failure_is_redacted_and_result_is_truncated() -> None:
+async def test_failure_is_redacted_and_result_is_truncated(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level("DEBUG", logger="voice_delegate.delegation.runner")
+
     class Worker:
         async def delegate_task(self, goal: str, context: str) -> str:
             if goal == "fail":
@@ -173,6 +177,8 @@ async def test_failure_is_redacted_and_result_is_truncated() -> None:
         runner.start(state, goal, DelegationInput(goal=goal), connection, lambda: True)
         assert state.task is not None
         await state.task
+    assert "Delegated worker failed" in caplog.text
+    assert "PRIVATE ERROR DETAIL" in caplog.text
     assert "PRIVATE" not in connection.commands[0].content
     assert state.status == "completed"
     assert count_tokens(connection.commands[-1].content) <= 16

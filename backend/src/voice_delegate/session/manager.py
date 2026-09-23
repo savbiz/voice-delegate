@@ -152,7 +152,13 @@ class SessionManager:
                 raise
             session.state = "connected"
             session.watcher = asyncio.create_task(self._watch(session), name="session-events")
+            session.watcher.add_done_callback(self._watch_finished)
             return session.connection.answer
+
+    @staticmethod
+    def _watch_finished(task: asyncio.Task[None]) -> None:
+        if not task.cancelled() and (error := task.exception()) is not None:
+            logger.error("Session watcher failed", exc_info=error)
 
     async def _watch(self, session: Session) -> None:
         connection = session.connection
@@ -270,6 +276,7 @@ class SessionManager:
                     )
                 session.state = "connected"
                 session.watcher = asyncio.create_task(self._watch(session), name="fallback-events")
+                session.watcher.add_done_callback(self._watch_finished)
                 return session.connection.answer
             except BaseException:
                 if session.turn is not None:

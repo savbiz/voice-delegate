@@ -1,12 +1,15 @@
 """Verify lifecycle, ownership, resource limits, and deterministic cleanup offline."""
 
 import asyncio
+from collections.abc import AsyncIterator
 
 import pytest
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate.providers.models import (
     DelegationRequested,
+    ProviderCapabilities,
+    ProviderEvent,
     ProviderFailure,
     SessionConfig,
 )
@@ -187,3 +190,40 @@ async def test_janitor_continues_after_unexpected_failure(
             await janitor
         await manager.aclose()
     assert "Session janitor failed" in caplog.text
+
+
+@pytest.mark.parametrize("fallback", [False, True])
+async def test_watcher_logs_unexpected_stream_failure(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, fallback: bool
+) -> None:
+    entered = asyncio.Event()
+    fail = asyncio.Event()
+
+    async def events(self: FakeConnection) -> AsyncIterator[ProviderEvent]:
+        entered.set()
+        await fail.wait()
+        raise RuntimeError("event reader exploded")
+        yield  # pragma: no cover
+
+    provider = FakeProvider()
+    provider.capabilities = ProviderCapabilities(text_replay=True)
+    manager = SessionManager(FakeProvider(), Settings(), fallback=provider)
+    session = manager.create()
+    if fallback:
+        await manager.connect(session, "v=0\r\n")
+        monkeypatch.setattr(FakeConnection, "events", events)
+        await manager.reconnect(session, "v=0\r\n", 0)
+    else:
+        monkeypatch.setattr(FakeConnection, "events", events)
+        await manager.connect(session, "v=0\r\n")
+    await entered.wait()
+    fail.set()
+    assert session.watcher is not None
+    with pytest.raises(RuntimeError, match="event reader exploded"):
+        await session.watcher
+    await asyncio.sleep(0)
+    assert "Session watcher failed" in caplog.text
+    assert "event reader exploded" in caplog.text
+    # The primary watcher may leave a session awaiting fallback.
+    session.watcher = None
+    await manager.aclose()
