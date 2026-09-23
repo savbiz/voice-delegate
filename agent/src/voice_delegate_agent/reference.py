@@ -41,28 +41,12 @@ def source_by_id(source_id: str) -> Source | None:
     return next((source for source in corpus() if source.id == source_id), None)
 
 
-STOP = set(
-    "the a an and or to of is are in on for how what does do this project it with "
-    "come cosa che il la le lo gli un una di del della per e è i si nel quali".split()
+STOP: set[str] = set(
+    json.loads(files("voice_delegate_agent").joinpath("data/stopwords.json").read_text())
 )
-ALIASES = {
-    "interruzione": "interruption",
-    "interruzioni": "interruptions",
-    "cancellazione": "cancellation",
-    "limiti": "limits",
-    "quote": "quotas",
-    "sessione": "session",
-    "sessioni": "sessions",
-    "cronologia": "history",
-    "voce": "voice",
-    "sicurezza": "authentication",
-    "fonti": "sources",
-    "scadenza": "timeout",
-    "delegazione": "delegation",
-    "architettura": "architecture",
-    "replayed": "replay",
-    "replays": "replay",
-}
+ALIASES: dict[str, str] = json.loads(
+    files("voice_delegate_agent").joinpath("data/aliases.json").read_text()
+)
 
 
 def terms(text: str) -> set[str]:

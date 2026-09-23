@@ -70,3 +70,15 @@ async def test_authenticated_search_and_inspect_source_without_voice() -> None:
             assert (await client.post(path, json={"query": "x" * 501})).status_code == 422
             assert not (await client.post(path, json={"query": "zzzzunfindable"})).json()["sources"]
             assert not provider.connections
+
+
+def test_demo_aliases_and_stop_words_preserve_retrieval() -> None:
+    from voice_delegate_agent.reference import terms
+
+    assert terms("come funziona la cronologia e le interruzioni") == {
+        "funziona",
+        "history",
+        "interruptions",
+    }
+    assert terms("history replays") == {"history", "replay"}
+    assert search("cronologia") == search("history")

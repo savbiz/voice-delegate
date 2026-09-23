@@ -50,12 +50,12 @@ class OfflinePlanner:
                 )
             return AIMessage(content=f"Offline worker result: {last.content}")
         text = str(last.content).split("\nContext:", 1)[0].removeprefix("Goal: ")
-        expression = re.sub(r"^(calculate|calcola)\s+", "", text.strip(), flags=re.I)
+        expression = re.sub(r"^calculate\s+", "", text.strip(), flags=re.I)
         if re.fullmatch(r"[\d\s.()+*/-]+", expression):
             name, arguments = "calculate", {"expression": expression}
         else:
             topic = text.strip().lower()
-            if topic.startswith(("docs ", "documentazione ")):
+            if topic.startswith("docs "):
                 name, arguments = "search_documentation", {"query": text.split(" ", 1)[1]}
                 return AIMessage(
                     content="", tool_calls=[{"name": name, "args": arguments, "id": "offline-docs"}]

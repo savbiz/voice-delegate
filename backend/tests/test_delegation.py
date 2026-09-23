@@ -272,3 +272,15 @@ async def test_real_transcript_timing_interrupts(timing: bool, start_ms: int) ->
     await asyncio.wait_for(worker.cancelled.wait(), 1)
     assert session.delegation.status == "cancelled"
     await manager.aclose()
+
+
+@pytest.mark.parametrize("goal", ["calcola 2+2", "documentazione limiti"])
+async def test_offline_planner_rejects_non_english_commands(goal: str) -> None:
+    result = await LangGraphWorker(OfflinePlanner()).delegate_task(goal, "")
+    assert "No action was taken" in result
+
+
+@pytest.mark.parametrize("goal", ["calculate 2+2", "docs limits"])
+async def test_offline_planner_keeps_english_commands(goal: str) -> None:
+    result = await LangGraphWorker(OfflinePlanner()).delegate_task(goal, "")
+    assert ("4" if goal.startswith("calculate") else "Documentation excerpt") in result

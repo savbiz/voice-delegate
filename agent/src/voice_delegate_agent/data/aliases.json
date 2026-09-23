@@ -1,0 +1,18 @@
+{
+  "interruzione": "interruption",
+  "interruzioni": "interruptions",
+  "cancellazione": "cancellation",
+  "limiti": "limits",
+  "quote": "quotas",
+  "sessione": "session",
+  "sessioni": "sessions",
+  "cronologia": "history",
+  "voce": "voice",
+  "sicurezza": "authentication",
+  "fonti": "sources",
+  "scadenza": "timeout",
+  "delegazione": "delegation",
+  "architettura": "architecture",
+  "replayed": "replay",
+  "replays": "replay"
+}
