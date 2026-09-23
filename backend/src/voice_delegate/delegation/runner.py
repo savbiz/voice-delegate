@@ -13,7 +13,7 @@ from voice_delegate_agent.reference import GroundedAnswer, Source
 from voice_delegate.limits.tokens import truncate
 from voice_delegate.observability.metrics import Metrics
 from voice_delegate.providers.base import RealtimeConnection
-from voice_delegate.providers.models import Commentary, ProviderError
+from voice_delegate.providers.models import COMMENTARY_MAX_BYTES, Commentary, ProviderError
 
 from .contracts import DelegationInput, Worker, WorkerBusy
 
@@ -136,7 +136,10 @@ class DelegationRunner:
                 if generation == state.generation and is_connected():
                     # 500 UTF-8 bytes also conservatively bound the provider's 500-token limit.
                     await connection.send(
-                        Commentary(request_id, truncate(result, self.budget, max_bytes=500))
+                        Commentary(
+                            request_id,
+                            truncate(result, self.budget, max_bytes=COMMENTARY_MAX_BYTES),
+                        )
                     )
                     if generation == state.generation:
                         state.status = status

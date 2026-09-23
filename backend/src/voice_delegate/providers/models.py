@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Literal
 
+COMMENTARY_MAX_BYTES = 500
+
 
 class ProviderError(Exception):
     """A sanitized provider failure suitable for application handling."""

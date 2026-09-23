@@ -12,6 +12,7 @@ from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import WebSocketException
 
 from .models import (
+    COMMENTARY_MAX_BYTES,
     ClientCredential,
     DelegationRequested,
     ProviderCapabilities,
@@ -94,7 +95,7 @@ class RealtimeWebRTCConnection(OpenAILiveConnection):
         super().__init__(answer, socket, 5)
 
     async def send(self, command: ProviderCommand) -> None:
-        if self._closed or len(command.content.encode()) > 500:
+        if self._closed or len(command.content.encode()) > COMMENTARY_MAX_BYTES:
             raise ProviderError("Connection closed or result budget exceeded")
         try:
             async with asyncio.timeout(2):

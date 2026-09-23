@@ -176,3 +176,30 @@ async def test_rejected_creation_does_not_retry_or_leak_response() -> None:
     assert "private upstream response" not in str(error.value)
     assert calls == 1
     await provider.aclose()
+
+
+@pytest.mark.parametrize("realtime", [False, True])
+async def test_commentary_wire_budget_counts_utf8_bytes(realtime: bool) -> None:
+    from voice_delegate.providers.realtime import OpenAIRealtimeProvider
+    from voice_delegate.providers.webrtc import RealtimeWebRTCConnection
+
+    socket = MemorySocket()
+    provider = OpenAIRealtimeProvider(
+        "test-key", httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200)))
+    )
+    connection = (
+        RealtimeWebRTCConnection(
+            WebRTCAnswer("id", "sdp"), cast(ClientConnection, socket), provider
+        )
+        if realtime
+        else OpenAILiveConnection(WebRTCAnswer("id", "sdp"), cast(ClientConnection, socket), 0.05)
+    )
+    try:
+        await connection.send(Commentary("task", "é" * 250))
+        sent = len(socket.sent)
+        with pytest.raises(ProviderError, match="budget"):
+            await connection.send(Commentary("task", "é" * 251))
+        assert len(socket.sent) == sent
+    finally:
+        await connection.aclose()
+        await provider.aclose()

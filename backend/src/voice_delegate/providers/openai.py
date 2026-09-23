@@ -14,6 +14,7 @@ from websockets.asyncio.client import ClientConnection, connect
 from websockets.exceptions import WebSocketException
 
 from .models import (
+    COMMENTARY_MAX_BYTES,
     ClientCredential,
     DelegationRequested,
     ProviderCapabilities,
@@ -142,7 +143,7 @@ class OpenAILiveConnection:
         if self._closed:
             raise ProviderError("Connection is closing")
         # UTF-8 bytes conservatively upper-bound byte-level tokenizer output.
-        if len(command.content.encode()) > 500:
+        if len(command.content.encode()) > COMMENTARY_MAX_BYTES:
             raise ProviderError("Commentary wire budget exceeded")
         try:
             async with asyncio.timeout(2):
