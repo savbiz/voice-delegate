@@ -22,9 +22,9 @@ Replace YOUR_USERNAME. No GitHub repository is created automatically by this arc
 
 ## 2. Frontend on Vercel
 
-Import the GitHub repository. Set **Root Directory = frontend**, framework Vite, install `pnpm install --frozen-lockfile`, build `pnpm build`, output `dist`, Node.js 24. `frontend/vercel.json` supplies build defaults. The simulated demo works immediately without a backend or API key.
+Import the GitHub repository. Set **Root Directory = frontend**, framework Vite, install `pnpm install --frozen-lockfile`, build `pnpm build`, output `dist`, Node.js 24. `frontend/vercel.json` supplies build defaults and a security-header template; render it with the deployment step below. The simulated demo works immediately without a backend or API key.
 
-Once the backend URL exists, set the **public** build variable `VITE_API_BASE_URL=https://YOUR_BACKEND_HOST` (no trailing slash), then redeploy. Never place OPENAI_API_KEY or VOICE_ACCESS_TOKEN in a VITE variable: Vite embeds them in public JavaScript.
+Disable automatic Git deployments while using the placeholder template; deploy with the rendered configuration below. Once the backend URL exists, set the **public** build variable `VITE_API_BASE_URL=https://YOUR_BACKEND_HOST` (no trailing slash), then redeploy. Never place OPENAI_API_KEY or VOICE_ACCESS_TOKEN in a VITE variable: Vite embeds them in public JavaScript.
 
 ## 3. Backend on Render OR Railway
 
@@ -143,3 +143,30 @@ access to the backend; the first address is used. Run Uvicorn with `--no-proxy-h
 (as the container does), so this setting exclusively controls forwarded-header trust.
 Invalid forwarded addresses fall back to the socket peer. Multi-process/global limits
 require an external shared limiter.
+
+
+## Frontend response headers
+
+`frontend/vercel.json` applies CSP, Permissions-Policy, Referrer-Policy and
+X-Content-Type-Options to every route. `${API_HOST}` is a deployment placeholder, read
+from the environment by `scripts/render_vercel.py`; supply only the backend hostname
+(for example `voice-api.onrender.com`), without scheme, port, path or trailing slash.
+Use the same host in the public `VITE_API_BASE_URL=https://voice-api.onrender.com` build
+variable. API_HOST is public configuration, never a provider credential.
+
+Vercel does not interpolate shell variables in static JSON. Generate the concrete config
+**before** invoking deployment; setting API_HOST only in the Vercel dashboard or running
+this renderer inside the build command does not substitute a deployment's header config.
+From the repository root:
+
+```bash
+API_HOST=voice-api.onrender.com python3 scripts/render_vercel.py
+cd frontend
+pnpm dlx vercel deploy --local-config .vercel/vercel.json --prod
+```
+
+The renderer rejects missing or malformed hosts and writes only the ignored generated
+file `frontend/.vercel/vercel.json`. Regenerate for each target environment. A CI deploy
+must run the same renderer before the Vercel CLI; do not deploy the placeholder template
+directly through Git integration. See [Vercel static configuration](https://vercel.com/docs/project-configuration/vercel-json)
+and [the local-config CLI option](https://vercel.com/docs/cli/global-options#local-config).
