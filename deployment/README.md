@@ -133,3 +133,13 @@ Each admission reserves `ceil(VOICE_SESSION_TTL_SECONDS + 1)` seconds, doubled w
 interruption do not refund daily reservations. Active leases are released on close or
 expire after the lifetime plus setup/close allowances. Text-worker token charges and
 hosting/storage charges are separate from the voice-second allowance.
+
+The API also limits each client IP to 20 HTTP requests/second with a burst of 100,
+before reading request bodies. Buckets are per process, capped at 10,000 active clients;
+new clients receive 429 while that table is full. Idle buckets expire after five seconds.
+Keep `VOICE_TRUST_PROXY=false` for direct access. Set it to `true` only behind an ingress
+that overwrites `X-Forwarded-For` with a trustworthy client address and prevents direct
+access to the backend; the first address is used. Run Uvicorn with `--no-proxy-headers`
+(as the container does), so this setting exclusively controls forwarded-header trust.
+Invalid forwarded addresses fall back to the socket peer. Multi-process/global limits
+require an external shared limiter.

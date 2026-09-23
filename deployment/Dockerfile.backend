@@ -9,4 +9,4 @@ COPY agent/ ./agent/
 RUN uv sync --locked --no-dev && useradd --uid 10001 --create-home app && mkdir /app/.local && chown app /app/.local
 USER app
 EXPOSE 8000
-CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn voice_delegate.api.app:create_app --factory --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
+CMD ["sh", "-c", "exec /app/.venv/bin/uvicorn voice_delegate.api.app:create_app --factory --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --no-proxy-headers"]

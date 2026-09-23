@@ -16,6 +16,7 @@ from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner, OpenAIPl
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.feedback import FeedbackStore
 from voice_delegate.limits.http import BodyLimitMiddleware
+from voice_delegate.limits.ratelimit import RateLimitMiddleware
 from voice_delegate.observability.metrics import Metrics, configure_metrics
 from voice_delegate.observability.tracing import configure_tracing, get_tracer
 from voice_delegate.providers.azure import AzureRealtimeProvider
@@ -122,6 +123,8 @@ def create_app(
 
     app = FastAPI(title="voice-delegate", version=version("voice-delegate"), lifespan=lifespan)
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
+    # Starlette wraps the last added middleware around earlier middleware.
+    app.add_middleware(RateLimitMiddleware, trust_proxy=settings.trust_proxy)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 
     app.add_middleware(

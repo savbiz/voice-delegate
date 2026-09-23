@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     voice: str = "marin"
     allowed_origin: str = "http://localhost:5173"
     allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
+    trust_proxy: bool = False
     environment: str = "development"
     access_token: SecretStr = SecretStr("")
     invite_tokens: dict[str, SecretStr] = Field(default_factory=dict, repr=False)
