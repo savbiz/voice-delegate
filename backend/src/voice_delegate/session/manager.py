@@ -5,7 +5,6 @@ import logging
 import secrets
 import time
 from collections.abc import Callable
-from contextlib import suppress
 from uuid import uuid4
 
 from opentelemetry import trace
@@ -256,10 +255,11 @@ class SessionManager:
             session.fallback_used = True
             session.generation += 1
             self.delegator.cancel(session.delegation)
+            # Set "reconnecting" first: the watcher's finally must not re-enter close()
+            # while this task holds session.lock, which would deadlock.
             if session.watcher is not None:
                 session.watcher.cancel()
-                with suppress(asyncio.CancelledError):
-                    await session.watcher
+                await asyncio.gather(session.watcher, return_exceptions=True)
             try:
                 async with asyncio.timeout(self.settings.connect_timeout_seconds):
                     if session.connection is not None:
@@ -298,11 +298,12 @@ class SessionManager:
                 if session.connection is not None:
                     session.finalized = await session.connection.aclose() or session.finalized
             finally:
+                # Set "closing" first: the watcher's finally must not re-enter close()
+                # while this task holds session.lock, which would deadlock.
                 watcher = session.watcher
                 if watcher is not None and watcher is not asyncio.current_task():
                     watcher.cancel()
-                    with suppress(asyncio.CancelledError):
-                        await watcher
+                    await asyncio.gather(watcher, return_exceptions=True)
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
                 self.admission.release(session.id)

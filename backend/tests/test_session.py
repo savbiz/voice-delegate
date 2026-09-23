@@ -224,6 +224,40 @@ async def test_watcher_logs_unexpected_stream_failure(
     await asyncio.sleep(0)
     assert "Session watcher failed" in caplog.text
     assert "event reader exploded" in caplog.text
-    # The primary watcher may leave a session awaiting fallback.
-    session.watcher = None
+    await manager.aclose()
+
+
+async def test_watcher_failure_during_close_does_not_deadlock(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    closing = asyncio.Event()
+    entered = asyncio.Event()
+
+    async def events(self: FakeConnection) -> AsyncIterator[ProviderEvent]:
+        entered.set()
+        await closing.wait()
+        raise RuntimeError("stream failed during close")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(FakeConnection, "events", events)
+    provider = FakeProvider()
+    manager = SessionManager(provider, Settings())
+    session = manager.create()
+    await manager.connect(session, "v=0\r\n")
+    await entered.wait()
+    watcher = session.watcher
+    assert watcher is not None
+
+    async def close_connection() -> bool:
+        assert session.state == "closing"
+        closing.set()
+        await asyncio.wait({watcher})
+        return True
+
+    monkeypatch.setattr(provider.connections[0], "aclose", close_connection)
+    assert await asyncio.wait_for(manager.close(session), 1)
+    assert watcher.done()
+    assert session.state == "closed" and not manager.sessions
+    assert not session.lock.locked()
+    assert "stream failed during close" in caplog.text
     await manager.aclose()
