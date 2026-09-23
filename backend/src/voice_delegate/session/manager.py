@@ -315,18 +315,29 @@ class SessionManager:
                 or now - s.last_heartbeat >= self.settings.heartbeat_timeout_seconds
             )
         ]
-        await asyncio.gather(*(self.close(s) for s in expired))
+        results = await asyncio.gather(*(self.close(s) for s in expired), return_exceptions=True)
+        for result in results:
+            if isinstance(result, BaseException):
+                logger.error("Session expiry cleanup failed", exc_info=result)
 
     async def sweep(self) -> None:
         """Run a cancellable janitor; expiry has at most one second granularity."""
         while True:
-            await asyncio.sleep(1)
-            await self.expire()
+            try:
+                await asyncio.sleep(1)
+                await self.expire()
+            except Exception:
+                logger.exception("Session janitor failed")
 
     async def aclose(self) -> None:
         """Drain all owned sessions before releasing the provider."""
         self._shutting_down = True
-        await asyncio.gather(*(self.close(s) for s in list(self.sessions.values())))
+        results = await asyncio.gather(
+            *(self.close(s) for s in list(self.sessions.values())), return_exceptions=True
+        )
+        for result in results:
+            if isinstance(result, BaseException):
+                logger.error("Session shutdown cleanup failed", exc_info=result)
         await self.delegator.aclose()
         await self.provider.aclose()
         self.admission.close()

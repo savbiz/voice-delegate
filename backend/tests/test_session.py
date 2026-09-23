@@ -134,3 +134,56 @@ async def test_shutdown_rejects_new_sessions() -> None:
     with pytest.raises(SessionError) as rejected:
         manager.create()
     assert rejected.value.status == 503
+
+
+@pytest.mark.parametrize("shutdown", [False, True])
+async def test_failed_close_does_not_stop_other_sessions(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, shutdown: bool
+) -> None:
+    now = [0.0]
+    provider = FakeProvider()
+    manager = SessionManager(provider, Settings(heartbeat_timeout_seconds=5), lambda: now[0])
+    first, later = manager.create(), manager.create()
+    await manager.connect(first, "v=0\r\n")
+    await manager.connect(later, "v=0\r\n")
+
+    async def fail() -> bool:
+        raise RuntimeError("cleanup failed")
+
+    monkeypatch.setattr(provider.connections[0], "aclose", fail)
+    now[0] = 6
+    if shutdown:
+        await manager.aclose()
+    else:
+        await manager.expire()
+        await manager.aclose()
+    assert first.state == later.state == "closed"
+    assert provider.connections[1].closed
+    assert not manager.sessions
+    assert "cleanup failed" in caplog.text
+
+
+async def test_janitor_continues_after_unexpected_failure(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    manager = SessionManager(FakeProvider(), Settings())
+    recovered = asyncio.Event()
+    attempts = 0
+
+    async def expire() -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("unexpected expiry failure")
+        recovered.set()
+
+    monkeypatch.setattr(manager, "expire", expire)
+    janitor = asyncio.create_task(manager.sweep())
+    try:
+        await asyncio.wait_for(recovered.wait(), 3)
+    finally:
+        janitor.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await janitor
+        await manager.aclose()
+    assert "Session janitor failed" in caplog.text
