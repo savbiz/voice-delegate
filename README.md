@@ -1,12 +1,20 @@
 # voice-delegate
 
-A small, clean-room reference architecture for real-time voice agents: GPT-Live handles the conversation over WebRTC while a separate LangGraph worker handles delegated reasoning and tools. FastAPI owns session lifetime and server-side control; provider contracts make transport differences explicit. The project is designed to make cancellation, resource budgets, and failure recovery understandable and testable. Working name; Apache-2.0. Copyright 2026 Savino Bizzoca.
+[![ci](https://github.com/savbiz/voice-delegate/actions/workflows/ci.yml/badge.svg)](https://github.com/savbiz/voice-delegate/actions/workflows/ci.yml)
+[![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**Status: M1–M8 implementation candidate (`0.2.0.dev1`).** M2 is integrated; M3 adds optional Azure Realtime fallback with peer renegotiation; M4 adds turn tracing, metrics, a monitoring stack and offline evaluations. Live voice/Azure checks and measured latency remain release gates; no stable release is claimed.
+**A reference architecture for real-time voice agents that stay responsive while doing real work.**
 
-Guides: [M5 invitations and quotas](docs/m5.md) · [M6 documentation with sources](docs/m6.md) · [M7 voice experience](docs/m7.md) · [M8 scaling](docs/m8.md).
+A speech-to-speech model (GPT-Live over WebRTC) owns the conversation. Anything slower than a
+sentence is handed to a separate LangGraph worker through a single `delegate_task` boundary, and
+narrated back when it completes. The user can interrupt at any time: an interrupted task can
+never be spoken late. Every buffer, queue and session has an explicit budget, and every turn is
+traced end to end.
 
-Guides: [M2 worker](docs/m2.md) · [M3 Azure fallback](docs/m3.md) · [M4 monitoring and evals](docs/m4.md).
+Built clean-room from public provider documentation. Apache-2.0, copyright 2026 Savino Bizzoca.
+
+<!-- TODO(v0.1.0): replace with docs/media/demo.gif recorded during the live smoke test:
+     connect, ask a question, delegate a calculation, interrupt mid-answer, inspect timings, end. -->
 
 ```mermaid
 flowchart TD
@@ -15,9 +23,39 @@ flowchart TD
     A <-->|Sideband control| V
     A -->|delegate_task| W[LangGraph worker]
     W -->|Compact result| A
-```
+``` 
 
-**90-second demo GIF:** placeholder — record after the live M1 smoke test. Suggested sequence: connect, speak, interrupt, inspect timing, end; include a delegated calculation and cancellation.
+## Why it exists
+
+Voice agents fail in two ways: they go quiet while a tool runs, or they keep talking over a
+result that is no longer wanted. This project shows one way to avoid both:
+
+- **One delegation entry point.** The voice model knows a single tool; the worker evolves and
+  is tested on its own.
+- **Interruption invalidates work.** A generation counter is bumped before cancellation, so a
+  late worker result is discarded rather than narrated.
+- **Bounded everything.** Sessions, buffers, history, worker steps and result size have limits
+  with a documented reason and a documented behaviour on exhaustion.
+- **Provider failover with clamped history.** A primary transport failure reconnects to a
+  fallback provider and replays bounded text, never tool executions.
+- **Measured, not assumed.** OpenTelemetry spans per turn, provider time-to-first-byte,
+  delegation latency and failover count; offline evals for scheduling and limits.
+
+## Status
+
+**v0.1.0 candidate.** M1–M4 (sessions, delegation, failover, observability) are implemented
+and pass the offline suite in CI. Live verification with a real provider, recorded demo and
+measured latency are the release gates and are tracked in [docs/roadmap.md](docs/roadmap.md).
+Later milestones (invitations and quotas, cited documentation search, multilingual controls,
+same-host scaling) are implemented candidates and documented separately.
+
+<!-- TODO(v0.1.0): fill from the live smoke test; keep p50/p95 and the exact model names.
+| Measurement | p50 | p95 | Notes |
+|---|---|---|---|
+| Provider time-to-first-byte |  |  | gpt-live-1, WebRTC, EU |
+| Delegated task end-to-end |  |  | offline planner / gpt-4.1-mini |
+| Failover to Azure |  |  | injected sideband failure |
+-->
 
 ## Quickstart — no API key required for the simulated demo
 
@@ -41,7 +79,7 @@ uv run uvicorn voice_delegate.api.app:create_app --factory --reload --host 127.0
 
 Select **Live voice** in the browser. Provider access and usage billing are required. Keys stay on the server. Use one backend worker; sessions are held in memory.
 
-See [PyCharm and local development](docs/local-development.md) and [GitHub, Vercel, Railway/Render deployment](deployment/README.md). The archive includes Git history; it has not been pushed to GitHub or deployed.
+See [PyCharm and local development](docs/local-development.md) and [GitHub, Vercel, Railway/Render deployment](deployment/README.md).
 
 ## Repository
 
