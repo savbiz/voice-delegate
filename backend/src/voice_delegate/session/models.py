@@ -1,4 +1,4 @@
-"""In-memory session state; each session belongs to one process in M1."""
+"""In-memory session state; each session belongs to one process."""
 
 import asyncio
 from dataclasses import dataclass, field

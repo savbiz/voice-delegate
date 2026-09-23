@@ -1,1 +1,1 @@
-"""M2 boundary for task dispatch and cancellation."""
+"""Worker boundary for task dispatch and cancellation."""

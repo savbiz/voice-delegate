@@ -32,7 +32,7 @@ from .models import Session, SessionError
 from .preferences import VoicePreferences
 
 logger = logging.getLogger(__name__)
-M2_INSTRUCTIONS = (
+VOICE_INSTRUCTIONS = (
     "You are a concise voice assistant. Speak naturally in the user's language. "
     "Handle greetings and simple conversation directly. Delegate arithmetic and requests about "
     "this project's architecture, limits or delegation to the backend worker. It has only a "
@@ -114,7 +114,7 @@ class SessionManager:
     def config(self, session: Session | None = None) -> SessionConfig:
         """Build trusted provider configuration."""
         preferences = session.preferences if session else VoicePreferences()
-        return self.provider.default_config(M2_INSTRUCTIONS + " " + preferences.instructions())
+        return self.provider.default_config(VOICE_INSTRUCTIONS + " " + preferences.instructions())
 
     async def connect(self, session: Session, offer_sdp: str) -> WebRTCAnswer:
         """Prevent duplicate offers from creating multiple billable calls."""
@@ -270,7 +270,7 @@ class SessionManager:
                         session.previous_finalized = await session.connection.aclose()
                     session.connection = None
                     config = self.fallback.default_config(
-                        M2_INSTRUCTIONS + " " + session.preferences.instructions(),
+                        VOICE_INSTRUCTIONS + " " + session.preferences.instructions(),
                         tuple((e.speaker, e.text) for e in session.committed_history.entries),
                     )
                     session.connection = await self.fallback.connect(
