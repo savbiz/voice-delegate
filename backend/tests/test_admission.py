@@ -128,3 +128,26 @@ async def test_delegation_allowance_prevents_additional_worker_calls() -> None:
     assert state.status == "request_limit"
     assert worker.calls == 1
     await runner.aclose()
+
+
+async def test_public_demo_environment_requires_invites_and_persists_quotas(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("VOICE_ENVIRONMENT", "production")
+    monkeypatch.setenv("VOICE_PUBLIC_DEMO", "true")
+    monkeypatch.setenv("VOICE_ALLOWED_ORIGIN", "https://demo.example")
+    monkeypatch.setenv("VOICE_QUOTA_DATABASE", str(tmp_path / "quotas.sqlite3"))
+    monkeypatch.setenv("VOICE_FEEDBACK_DATABASE", str(tmp_path / "feedback.sqlite3"))
+    monkeypatch.setenv("VOICE_INVITE_TOKENS", "{}")
+    with pytest.raises(ValueError, match="named invitations"):
+        Settings()
+    monkeypatch.setenv("VOICE_INVITE_TOKENS", '{"alice":"' + "a" * 32 + '"}')
+    manager = SessionManager(FakeProvider(), Settings())
+    await manager.close(manager.create("alice"))
+    await manager.aclose()
+    manager = SessionManager(FakeProvider(), Settings())
+    assert manager.admission.database is not None
+    assert manager.admission.database.execute(
+        "SELECT SUM(sessions) FROM reservations"
+    ).fetchone() == (1,)
+    await manager.aclose()

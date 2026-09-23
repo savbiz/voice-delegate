@@ -5,13 +5,23 @@ services:
     dockerfilePath: ./deployment/Dockerfile.backend
     dockerContext: .
     healthCheckPath: /healthz
+    disk:
+      name: voice-delegate-data
+      mountPath: /app/.local
+      sizeGB: 1
     envVars:
       - key: VOICE_ENVIRONMENT
         value: production
       - key: OPENAI_API_KEY
         sync: false
-      - key: VOICE_ACCESS_TOKEN
+      - key: VOICE_PUBLIC_DEMO
+        value: "true"
+      - key: VOICE_INVITE_TOKENS
         sync: false
+      - key: VOICE_QUOTA_DATABASE
+        value: /app/.local/quotas.sqlite3
+      - key: VOICE_FEEDBACK_DATABASE
+        value: /app/.local/feedback.sqlite3
       - key: VOICE_ALLOWED_ORIGIN
         sync: false
       - key: VOICE_ALLOWED_HOSTS
