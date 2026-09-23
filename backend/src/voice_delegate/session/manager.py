@@ -230,6 +230,13 @@ class SessionManager:
                 ):
                     self.delegator.cancel(session.delegation)
                     session.state = "reconnecting"
+                    try:
+                        session.previous_finalized = await connection.aclose()
+                    except Exception:
+                        session.previous_finalized = False
+                        logger.exception("Failed connection cleanup unconfirmed")
+                    finally:
+                        session.connection = None
                 else:
                     await self.close(session)
 
@@ -257,6 +264,7 @@ class SessionManager:
                 raise SessionError(409, "Stale or duplicate fallback attempt")
             if session.state not in {"connected", "reconnecting"}:
                 raise SessionError(409, "Session cannot reconnect")
+            already_reconnecting = session.state == "reconnecting"
             session.state = "reconnecting"
             session.fallback_used = True
             session.generation += 1
@@ -264,7 +272,9 @@ class SessionManager:
             # Set "reconnecting" first: the watcher's finally must not re-enter close()
             # while this task holds session.lock, which would deadlock.
             if session.watcher is not None:
-                session.watcher.cancel()
+                # A failed watcher is already closing its connection; let it finish.
+                if not already_reconnecting:
+                    session.watcher.cancel()
                 await asyncio.gather(session.watcher, return_exceptions=True)
             try:
                 async with asyncio.timeout(self.settings.connect_timeout_seconds):

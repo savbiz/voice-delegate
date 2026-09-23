@@ -51,6 +51,8 @@ async def test_failure_preserves_owner_and_replays_only_sealed_history() -> None
     assert session.watcher is not None
     await session.watcher
     assert session.state == "reconnecting"
+    assert primary.connections[0].closed
+    assert session.connection is None
     assert manager.get(session.id, session.key) is session
     await manager.reconnect(session, "v=0\r\n", 0)
     assert fallback.configs[0].history == (("user", "hello"),)
@@ -219,3 +221,36 @@ async def test_azure_success_replays_text_returns_tool_result_and_hangs_up(
     assert await connection.aclose()
     assert socket.closed and len(calls) == 2
     await provider.aclose()
+
+
+async def test_failed_connection_is_closed_before_browser_reconnects(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    primary, fallback = FakeProvider(), ReplayProvider()
+    manager = SessionManager(primary, Settings(), fallback=fallback)
+    session = manager.create()
+    await manager.connect(session, "v=0\r\n")
+    connection = primary.connections[0]
+    closing, release, closed = asyncio.Event(), asyncio.Event(), asyncio.Event()
+
+    async def close() -> bool:
+        closing.set()
+        await release.wait()
+        closed.set()
+        return False
+
+    monkeypatch.setattr(connection, "aclose", close)
+    connection.queue.put_nowait(ProviderFailure())
+    await asyncio.wait_for(closing.wait(), 1)
+    assert session.state == "reconnecting"
+    assert not fallback.connections
+    reconnect = asyncio.create_task(manager.reconnect(session, "v=0\r\n", 0))
+    await asyncio.sleep(0)
+    assert not reconnect.done() and not fallback.connections
+    release.set()
+    await asyncio.wait_for(reconnect, 1)
+    assert closed.is_set()
+    assert session.previous_finalized is False
+    assert session.connection is fallback.connections[0]
+    assert not await manager.close(session)
+    await manager.aclose()
