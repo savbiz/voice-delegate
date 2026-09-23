@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemM
 from langchain_openai import ChatOpenAI
 from langgraph.graph import START, StateGraph
 from langgraph.graph.message import add_messages
-from pydantic import SecretStr
+from pydantic import SecretStr, ValidationError
 
 from .reference import GroundedAnswer, source_by_id
 from .tools import TOOLS
@@ -125,7 +125,8 @@ class LangGraphWorker:
 
         async def execute(state: State) -> dict[str, object]:
             answer = state["messages"][-1]
-            assert isinstance(answer, AIMessage)
+            if not isinstance(answer, AIMessage):
+                raise ValueError("Tool execution requires an AIMessage")
             if len(answer.tool_calls) != 1:
                 return {
                     "messages": [
@@ -138,8 +139,10 @@ class LangGraphWorker:
                 result = (
                     await tool.ainvoke(call["args"]) if tool else "Unknown tool; no action taken."
                 )
-            except Exception:
+            except ValidationError:
                 result = "Tool input invalid; no action taken."
+            except Exception:
+                result = "Tool failed; no action taken."
             source_ids = state["source_ids"]
             if call["name"] == "search_documentation":
                 try:

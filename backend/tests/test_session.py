@@ -86,8 +86,10 @@ class SlowProvider(FakeProvider):
 async def test_setup_timeout_releases_capacity() -> None:
     manager = SessionManager(SlowProvider(), Settings(connect_timeout_seconds=0.01))
     session = manager.create()
-    with pytest.raises(TimeoutError):
+    with pytest.raises(SessionError, match="Provider connection timed out") as error:
         await manager.connect(session, "v=0\r\n")
+    assert error.value.status == 504
+    assert isinstance(error.value.__cause__, TimeoutError)
     assert not manager.sessions
     assert session.state == "closed"
 

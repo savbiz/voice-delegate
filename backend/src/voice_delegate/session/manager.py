@@ -133,10 +133,12 @@ class SessionManager:
                         session.connection = await self.provider.connect(
                             config=self.config(session), offer_sdp=offer_sdp
                         )
-            except (ProviderError, TimeoutError, asyncio.CancelledError):
+            except (ProviderError, TimeoutError, asyncio.CancelledError) as exc:
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
                 self.admission.release(session.id)
+                if isinstance(exc, TimeoutError):
+                    raise SessionError(504, "Provider connection timed out") from exc
                 raise
             session.state = "connected"
             session.watcher = asyncio.create_task(self._watch(session), name="session-events")
@@ -280,13 +282,15 @@ class SessionManager:
                 session.watcher = asyncio.create_task(self._watch(session), name="fallback-events")
                 session.watcher.add_done_callback(self._watch_finished)
                 return session.connection.answer
-            except BaseException:
+            except BaseException as exc:
                 if session.turn is not None:
                     session.turn.span.end()
                     session.turn = None
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
                 self.admission.release(session.id)
+                if isinstance(exc, TimeoutError):
+                    raise SessionError(504, "Provider connection timed out") from exc
                 raise
 
     async def close(self, session: Session) -> bool:

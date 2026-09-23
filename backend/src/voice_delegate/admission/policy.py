@@ -21,6 +21,7 @@ class Admission:
         self.database: sqlite3.Connection | None = None
         if settings.public_demo:
             Path(settings.quota_database).parent.mkdir(parents=True, exist_ok=True)
+            # SQLite calls are synchronous by design for the single-process demo.
             self.database = sqlite3.connect(settings.quota_database, timeout=2)
             self.database.execute("PRAGMA journal_mode=WAL")
             self.database.execute(

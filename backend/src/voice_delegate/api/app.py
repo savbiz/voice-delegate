@@ -5,6 +5,7 @@ import logging
 import sqlite3
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
+from importlib.metadata import version
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -69,6 +70,7 @@ def create_app(
         )
     )
     remote = RemoteWorker(settings) if settings.worker_execution == "remote" else None
+    # SQLite calls are synchronous by design for the single-process demo.
     feedback = (
         FeedbackStore(settings.feedback_database)
         if settings.invite_tokens or settings.access_token.get_secret_value()
@@ -118,7 +120,7 @@ def create_app(
             if telemetry is not None:
                 await asyncio.to_thread(telemetry.shutdown)
 
-    app = FastAPI(title="voice-delegate", version="0.2.0.dev1", lifespan=lifespan)
+    app = FastAPI(title="voice-delegate", version=version("voice-delegate"), lifespan=lifespan)
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 
@@ -137,10 +139,6 @@ def create_app(
     async def provider_error(request: Request, exc: ProviderError) -> JSONResponse:
         status = 501 if isinstance(exc, UnsupportedCapability) else 502
         return JSONResponse({"detail": str(exc)}, status_code=status)
-
-    @app.exception_handler(TimeoutError)
-    async def timeout_error(request: Request, exc: TimeoutError) -> JSONResponse:
-        return JSONResponse({"detail": "Provider connection timed out"}, status_code=504)
 
     @app.get("/healthz")
     async def health() -> dict[str, str]:

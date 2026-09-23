@@ -284,3 +284,53 @@ async def test_offline_planner_rejects_non_english_commands(goal: str) -> None:
 async def test_offline_planner_keeps_english_commands(goal: str) -> None:
     result = await LangGraphWorker(OfflinePlanner()).delegate_task(goal, "")
     assert ("4" if goal.startswith("calculate") else "Documentation excerpt") in result
+
+
+@pytest.mark.parametrize("failure", ["validation", "runtime", "value"])
+async def test_graph_distinguishes_invalid_input_from_tool_failure(
+    monkeypatch: pytest.MonkeyPatch, failure: str
+) -> None:
+    from langchain_core.messages import ToolMessage
+    from langchain_core.tools import tool
+    from voice_delegate_agent import graph
+
+    @tool
+    async def broken(value: int) -> str:
+        """A tool whose execution always fails."""
+        if failure == "value":
+            raise ValueError("private execution detail")
+        raise RuntimeError("private execution detail")
+
+    monkeypatch.setattr(graph, "TOOLS", [broken])
+
+    class Planner:
+        async def respond(self, messages: list[AnyMessage]) -> AIMessage:
+            if isinstance(messages[-1], ToolMessage):
+                return AIMessage(content=str(messages[-1].content))
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "broken",
+                        "args": {} if failure == "validation" else {"value": 1},
+                        "id": "failure",
+                    }
+                ],
+            )
+
+    result = await LangGraphWorker(Planner()).delegate_task("test", "")
+    assert result == (
+        "Tool input invalid; no action taken."
+        if failure == "validation"
+        else "Tool failed; no action taken."
+    )
+
+
+async def test_graph_rejects_non_ai_message_at_tool_execution() -> None:
+    from langchain_core.messages import HumanMessage
+
+    worker = LangGraphWorker(OfflinePlanner())
+    with pytest.raises(ValueError, match="Tool execution requires an AIMessage"):
+        await worker.graph.nodes["tools"].ainvoke(
+            {"messages": [HumanMessage(content="invalid")], "steps": 0, "source_ids": []}
+        )

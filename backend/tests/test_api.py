@@ -183,3 +183,56 @@ async def test_provider_configuration_uses_existing_settings(
                     assert response.status_code == 200
                     assert configs[-1].model == "custom-azure"
                     assert configs[-1].voice == "custom-azure-voice"
+
+
+async def test_app_version_comes_from_distribution_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from voice_delegate.api import app as app_module
+
+    def distribution_version(name: str) -> str:
+        assert name == "voice-delegate"
+        return "9.8.7"
+
+    monkeypatch.setattr(app_module, "version", distribution_version)
+    app = create_app(Settings(), FakeProvider())
+    async with app.router.lifespan_context(app):
+        assert app.version == "9.8.7"
+        assert app.openapi()["info"]["version"] == "9.8.7"
+
+
+async def test_connection_timeout_returns_504_without_global_timeout_handler(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import asyncio
+
+    from voice_delegate.providers.fake import FakeConnection
+    from voice_delegate.providers.models import SessionConfig
+    from voice_delegate.session.manager import SessionManager
+    from voice_delegate.session.models import Session
+
+    class Timeouts(FakeProvider):
+        async def connect(self, *, config: SessionConfig, offer_sdp: str) -> FakeConnection:
+            await asyncio.Event().wait()
+            raise AssertionError("unreachable")
+
+    def heartbeat(self: SessionManager, session: Session) -> None:
+        raise TimeoutError("unrelated heartbeat timeout")
+
+    monkeypatch.setattr(SessionManager, "heartbeat", heartbeat)
+
+    app = create_app(Settings(connect_timeout_seconds=0.01), Timeouts())
+    async with app.router.lifespan_context(app):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://testserver",
+            headers={"Origin": "http://localhost:5173"},
+        ) as client:
+            payload = (await client.post("/api/sessions")).json()
+            path = f"/api/sessions/{payload['id']}"
+            client.headers["X-Session-Key"] = payload["key"]
+            with pytest.raises(TimeoutError, match="unrelated heartbeat timeout"):
+                await client.post(path + "/heartbeat")
+            response = await client.post(path + "/offer", json={"sdp": "v=0\r\n"})
+            assert response.status_code == 504
+            assert response.json() == {"detail": "Provider connection timed out"}

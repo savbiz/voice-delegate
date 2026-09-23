@@ -85,8 +85,10 @@ async def test_reconnect_timeout_does_not_reset_lifetime_or_retry() -> None:
     session = manager.create()
     created = session.created_at
     await manager.connect(session, "v=0\r\n")
-    with pytest.raises(TimeoutError):
+    with pytest.raises(SessionError, match="Provider connection timed out") as error:
         await manager.reconnect(session, "v=0\r\n", 0)
+    assert error.value.status == 504
+    assert isinstance(error.value.__cause__, TimeoutError)
     assert session.created_at == created
     assert session.fallback_used
     assert not manager.sessions
