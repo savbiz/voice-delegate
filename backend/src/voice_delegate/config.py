@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     otel_metrics_endpoint: str = ""
     instance_id: str = Field(default="", pattern=r"^[a-z0-9]{0,16}$")
     worker_execution: Literal["local", "remote"] = "local"
+    # http:// worker URLs are only acceptable on the same host or a private network.
     worker_service_url: str = "http://worker:8001"
     worker_service_token: SecretStr = SecretStr("")
     worker_service_capacity: int = Field(default=4, ge=1, le=32)

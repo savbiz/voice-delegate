@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import logging
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
@@ -143,8 +144,11 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
 
     async def janitor() -> None:
         while True:
-            await asyncio.sleep(1)
-            jobs.sweep()
+            try:
+                await asyncio.sleep(1)
+                jobs.sweep()
+            except Exception:
+                logging.getLogger(__name__).exception("Worker janitor failed; retrying")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:

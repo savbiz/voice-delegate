@@ -176,3 +176,55 @@ async def test_remote_overload_is_reported_as_busy_without_retries() -> None:
     assert calls == ["POST", "DELETE"]
     await runner.aclose()
     await remote.aclose()
+
+
+async def test_remote_worker_polls_at_200ms(monkeypatch: pytest.MonkeyPatch) -> None:
+    delays: list[float] = []
+    polls = 0
+    methods: list[str] = []
+
+    async def sleep(delay: float) -> None:
+        delays.append(delay)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal polls
+        methods.append(request.method)
+        if request.method == "GET":
+            polls += 1
+            return httpx.Response(
+                200, json={"status": "completed" if polls == 3 else "running", "text": "done"}
+            )
+        return httpx.Response(200, json={"status": "running"})
+
+    monkeypatch.setattr("voice_delegate.scaling.remote.asyncio.sleep", sleep)
+    remote = RemoteWorker(
+        Settings(worker_service_url="http://worker"),
+        httpx.AsyncClient(transport=httpx.MockTransport(handler)),
+    )
+    assert await remote.delegate_task("test", "") == "done"
+    assert delays == [0.2, 0.2]
+    assert methods == ["POST", "GET", "GET", "GET", "DELETE"]
+    await remote.aclose()
+
+
+async def test_worker_janitor_recovers_after_sweep_failure(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from voice_delegate.scaling.worker_service import Jobs
+
+    attempts = 0
+    recovered = asyncio.Event()
+
+    def sweep(self: Jobs) -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("temporary sweep failure")
+        recovered.set()
+
+    monkeypatch.setattr(Jobs, "sweep", sweep)
+    app = create_worker_app(Settings(worker_service_token=SecretStr(TOKEN)))
+    async with app.router.lifespan_context(app):
+        await asyncio.wait_for(recovered.wait(), 3)
+    assert attempts >= 2
+    assert "Worker janitor failed; retrying" in caplog.text

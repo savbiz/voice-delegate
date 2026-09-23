@@ -51,7 +51,7 @@ class RemoteWorker:
                     return GroundedAnswer(result.text, sources) if sources else result.text
                 if result.status != "running":
                     raise RuntimeError("Remote worker did not complete")
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.2)
         finally:
             # Tombstone even after ambiguous POST failures; never resubmit this task.
             with suppress(httpx.HTTPError, TimeoutError):
