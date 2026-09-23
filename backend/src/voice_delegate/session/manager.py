@@ -231,8 +231,9 @@ class SessionManager:
                     await self.close(session)
 
     def interrupt(self, session: Session) -> None:
+        if session.delegation.status == "running":
+            session.recap.interrupt()
         self.delegator.cancel(session.delegation)
-        session.recap.interrupt()
 
     async def reconnect(self, session: Session, offer_sdp: str, generation: int) -> WebRTCAnswer:
         with (

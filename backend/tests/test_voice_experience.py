@@ -84,3 +84,15 @@ async def test_realtime_uses_fixed_openai_origin_and_bearer_auth(
         "/v1/realtime/calls/rtc_test/hangup",
     ]
     await provider.aclose()
+
+
+@pytest.mark.parametrize("status", ["idle", "completed", "cancelled", "failed", "running"])
+async def test_interrupt_marks_recap_only_for_running_delegation(status: str) -> None:
+    manager = SessionManager(FakeProvider(), Settings())
+    session = manager.create()
+    session.recap.observe(Transcript("assistant", "Previous answer", 1, 2), "A request")
+    session.delegation.status = status
+    manager.interrupt(session)
+    assert session.recap.interrupted is (status == "running")
+    assert session.recap.latest_reply == ("" if status == "running" else "Previous answer")
+    await manager.aclose()
