@@ -46,10 +46,18 @@ class FakeConnection:
 class FakeProvider:
     """An injectable provider for lifecycle and error-path tests."""
 
+    model = "fake"
+    voice = "marin"
     capabilities = ProviderCapabilities(transcript_timing=True)
 
     def __init__(self) -> None:
         self.connections: list[FakeConnection] = []
+
+    def default_config(
+        self, instructions: str, history: tuple[tuple[str, str], ...] = ()
+    ) -> SessionConfig:
+        """Build startup configuration using this provider's model and voice."""
+        return SessionConfig(self.model, self.voice, instructions, history)
 
     async def connect(self, *, config: SessionConfig, offer_sdp: str) -> FakeConnection:
         """Create an independently controllable fake connection."""

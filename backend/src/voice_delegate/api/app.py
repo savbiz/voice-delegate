@@ -36,15 +36,27 @@ def create_app(
     settings = settings or load_settings()
     if provider is None:
         if settings.voice_provider == "azure":
-            provider = AzureRealtimeProvider(
+            azure = AzureRealtimeProvider(
                 settings.azure_endpoint, settings.azure_api_key.get_secret_value()
             )
+            azure.model, azure.voice = settings.azure_deployment, settings.azure_voice
+            provider = azure
         elif settings.voice_provider == "realtime":
-            provider = OpenAIRealtimeProvider(settings.openai_api_key.get_secret_value())
+            realtime = OpenAIRealtimeProvider(settings.openai_api_key.get_secret_value())
+            realtime.model, realtime.voice = settings.realtime_model, settings.voice
+            provider = realtime
         else:
-            provider = OpenAILiveProvider(
+            live = OpenAILiveProvider(
                 settings.openai_api_key.get_secret_value(), settings.close_timeout_seconds
             )
+            live.model, live.voice = settings.model, settings.voice
+            provider = live
+    fallback = None
+    if settings.fallback_enabled:
+        fallback = AzureRealtimeProvider(
+            settings.azure_endpoint, settings.azure_api_key.get_secret_value()
+        )
+        fallback.model, fallback.voice = settings.azure_deployment, settings.azure_voice
     telemetry = configure_tracing(settings)
     meter_provider = configure_metrics(settings)
     planner = (
@@ -78,11 +90,7 @@ def create_app(
         tracer=get_tracer(telemetry),
         metrics=Metrics(meter_provider),
         worker=remote or LangGraphWorker(planner or OfflinePlanner(), settings.worker_max_steps),
-        fallback=AzureRealtimeProvider(
-            settings.azure_endpoint, settings.azure_api_key.get_secret_value()
-        )
-        if settings.fallback_enabled
-        else None,
+        fallback=fallback,
     )
 
     @asynccontextmanager

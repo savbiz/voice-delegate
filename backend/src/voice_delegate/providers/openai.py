@@ -183,6 +183,8 @@ class OpenAILiveConnection:
 class OpenAILiveProvider:
     """Create sessions with server credentials; never retry billable creation."""
 
+    model = "gpt-live-1"
+    voice = "marin"
     capabilities = ProviderCapabilities(transcript_timing=True)
 
     def __init__(
@@ -191,6 +193,12 @@ class OpenAILiveProvider:
         self._api_key = api_key
         self._close_timeout = close_timeout
         self._http = http or httpx.AsyncClient(timeout=15)
+
+    def default_config(
+        self, instructions: str, history: tuple[tuple[str, str], ...] = ()
+    ) -> SessionConfig:
+        """Build startup configuration using this provider's model and voice."""
+        return SessionConfig(self.model, self.voice, instructions, history)
 
     async def issue_client_credential(self, config: SessionConfig) -> ClientCredential:
         """Live's documented WebRTC path uses server-mediated SDP creation."""

@@ -114,19 +114,7 @@ class SessionManager:
     def config(self, session: Session | None = None) -> SessionConfig:
         """Build trusted provider configuration."""
         preferences = session.preferences if session else VoicePreferences()
-        model = (
-            self.settings.azure_deployment
-            if self.settings.voice_provider == "azure"
-            else self.settings.realtime_model
-            if self.settings.voice_provider == "realtime"
-            else self.settings.model
-        )
-        voice = (
-            self.settings.azure_voice
-            if self.settings.voice_provider == "azure"
-            else self.settings.voice
-        )
-        return SessionConfig(model, voice, M2_INSTRUCTIONS + " " + preferences.instructions())
+        return self.provider.default_config(M2_INSTRUCTIONS + " " + preferences.instructions())
 
     async def connect(self, session: Session, offer_sdp: str) -> WebRTCAnswer:
         """Prevent duplicate offers from creating multiple billable calls."""
@@ -281,9 +269,7 @@ class SessionManager:
                     if session.connection is not None:
                         session.previous_finalized = await session.connection.aclose()
                     session.connection = None
-                    config = SessionConfig(
-                        self.settings.azure_deployment,
-                        self.settings.azure_voice,
+                    config = self.fallback.default_config(
                         M2_INSTRUCTIONS + " " + session.preferences.instructions(),
                         tuple((e.speaker, e.text) for e in session.committed_history.entries),
                     )

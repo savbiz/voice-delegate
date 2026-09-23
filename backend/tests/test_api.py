@@ -1,6 +1,7 @@
 """Exercise the HTTP boundary in-process with real sockets disabled."""
 
 import httpx
+import pytest
 from voice_delegate.api.app import create_app
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeProvider
@@ -116,3 +117,69 @@ async def test_interrupt_requires_ownership_and_reports_status() -> None:
             client.headers["X-Session-Key"] = created["key"]
             assert (await client.post(path + "/interrupt")).json()["delegation"] == "idle"
             await client.post(path + "/close")
+
+
+async def test_provider_configuration_uses_existing_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from typing import Literal
+
+    from pydantic import SecretStr
+    from voice_delegate.providers.azure import AzureRealtimeProvider
+    from voice_delegate.providers.fake import FakeConnection
+    from voice_delegate.providers.models import SessionConfig
+    from voice_delegate.providers.openai import OpenAILiveProvider
+    from voice_delegate.providers.realtime import OpenAIRealtimeProvider
+    from voice_delegate.providers.webrtc import RealtimeWebRTCProvider
+
+    configs: list[SessionConfig] = []
+
+    async def connect(
+        self: OpenAILiveProvider | RealtimeWebRTCProvider,
+        *,
+        config: SessionConfig,
+        offer_sdp: str,
+    ) -> FakeConnection:
+        configs.append(config)
+        return FakeConnection()
+
+    for cls in (OpenAILiveProvider, OpenAIRealtimeProvider, AzureRealtimeProvider):
+        monkeypatch.setattr(cls, "connect", connect)
+    kinds: tuple[Literal["live", "realtime", "azure"], ...] = ("live", "realtime", "azure")
+    for kind in kinds:
+        app = create_app(
+            Settings(
+                voice_provider=kind,
+                model="custom-live",
+                realtime_model="custom-realtime",
+                voice="custom-voice",
+                azure_deployment="custom-azure",
+                azure_voice="custom-azure-voice",
+                azure_endpoint="https://example.openai.azure.com",
+                azure_api_key=SecretStr("key"),
+                fallback_enabled=kind != "azure",
+            )
+        )
+        async with app.router.lifespan_context(app):
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app),
+                base_url="http://testserver",
+                headers={"Origin": "http://localhost:5173"},
+            ) as client:
+                payload = (await client.post("/api/sessions")).json()
+                path = f"/api/sessions/{payload['id']}"
+                client.headers["X-Session-Key"] = payload["key"]
+                assert (
+                    await client.post(path + "/offer", json={"sdp": "v=0\r\n"})
+                ).status_code == 200
+                assert configs[-1].model == f"custom-{kind}"
+                assert configs[-1].voice == (
+                    "custom-azure-voice" if kind == "azure" else "custom-voice"
+                )
+                if kind != "azure":
+                    response = await client.post(
+                        path + "/reconnect", json={"sdp": "v=0\r\n", "generation": 0}
+                    )
+                    assert response.status_code == 200
+                    assert configs[-1].model == "custom-azure"
+                    assert configs[-1].voice == "custom-azure-voice"

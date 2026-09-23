@@ -38,6 +38,8 @@ class ReplayProvider(FakeProvider):
 
 async def test_failure_preserves_owner_and_replays_only_sealed_history() -> None:
     primary, fallback = FakeProvider(), ReplayProvider()
+    primary.model, fallback.model = "primary-model", "fallback-model"
+    primary.voice, fallback.voice = "primary-voice", "fallback-voice"
     manager = SessionManager(primary, Settings(), fallback=fallback)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
@@ -56,6 +58,8 @@ async def test_failure_preserves_owner_and_replays_only_sealed_history() -> None
     assert manager.get(session.id, session.key) is session
     await manager.reconnect(session, "v=0\r\n", 0)
     assert fallback.configs[0].history == (("user", "hello"),)
+    assert fallback.configs[0].model == "fallback-model"
+    assert fallback.configs[0].voice == "fallback-voice"
     assert primary.connections[0].closed
     assert session.generation == 1
     with pytest.raises(SessionError) as duplicate:

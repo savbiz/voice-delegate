@@ -137,6 +137,8 @@ class RealtimeWebRTCProvider:
     the authentication headers and a display name used in error messages.
     """
 
+    model = "gpt-realtime"
+    voice = "marin"
     capabilities = ProviderCapabilities(
         client_delegation=False, text_replay=True, transcript_timing=False
     )
@@ -148,6 +150,12 @@ class RealtimeWebRTCProvider:
         self._endpoint = endpoint.rstrip("/")
         self._headers = dict(headers)
         self._http = http or httpx.AsyncClient(timeout=15)
+
+    def default_config(
+        self, instructions: str, history: tuple[tuple[str, str], ...] = ()
+    ) -> SessionConfig:
+        """Build startup configuration using this provider's model and voice."""
+        return SessionConfig(self.model, self.voice, instructions, history)
 
     async def issue_client_credential(self, config: SessionConfig) -> ClientCredential:
         raise UnsupportedCapability("Use server-mediated SDP to retain lifecycle ownership")
