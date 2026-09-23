@@ -115,3 +115,16 @@ Reviewed public documentation on 2026-09-20:
 - [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
 
 Application limits and ownership rules are first-principles design choices, not upstream service guarantees.
+
+
+## Speech interruption authority
+
+Provider-side speech detection is authoritative for interruption. The browser's local
+energy detector is a latency optimisation, not a replacement for provider events.
+It analyses the remote audio element's `srcObject` with the same onset detector at a
+higher threshold. While unmuted remote playback has measurable speech energy, local
+speech-onset interrupts are suppressed to avoid loudspeaker echo cancelling work.
+Local detection rearms after 300 ms of remote silence and requires a fresh onset.
+Paused, muted and silent remote audio do not indefinitely block local detection.
+Provider speech-start events can still interrupt during remote playback; headphones and
+real-device testing remain necessary to assess acoustic behaviour.

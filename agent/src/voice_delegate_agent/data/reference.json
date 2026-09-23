@@ -120,6 +120,14 @@
     "digest": "f1d07dc69d0239150195d501d34a13d46d689bf063d2c0c1d9b59f8c0d3f59b2"
   },
   {
+    "id": "8e90758fce0d0248",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Speech interruption authority",
+    "text": "Provider-side speech detection is authoritative for interruption. The browser's local\nenergy detector is a latency optimisation, not a replacement for provider events.\nIt analyses the remote audio element's `srcObject` with the same onset detector at a\nhigher threshold. While unmuted remote playback has measurable speech energy, local\nspeech-onset interrupts are suppressed to avoid loudspeaker echo cancelling work.\nLocal detection rearms after 300 ms of remote silence and requires a fresh onset.\nPaused, muted and silent remote audio do not indefinitely block local detection.\nProvider speech-start events can still interrupt during remote playback; headphones and\nreal-device testing remain necessary to assess acoustic behaviour.",
+    "digest": "8e90758fce0d0248002ba74dce9c893a5c834f2121dc1a1ce295a1ac1b22fb26"
+  },
+  {
     "id": "10125724e5837f47",
     "title": "M2 — delegated worker",
     "path": "docs/milestones/m2.md",

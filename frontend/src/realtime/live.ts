@@ -322,8 +322,8 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
       stopVad = watchSpeech(stream, () => {
         if (attempt !== generation) return;
         void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
-      });
-    } catch { /* Transcript events still cancel work if local audio analysis is unavailable. */ }
+      }, audio);
+    } catch { /* Provider-side speech detection remains authoritative without local analysis. */ }
     heartbeat = setInterval(() => {
       if (attempt !== generation) return;
       void request(`/sessions/${created.id}/heartbeat`, created).then(result => {
