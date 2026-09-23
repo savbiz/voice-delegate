@@ -55,7 +55,7 @@ Hosting plans, sleep policies and quotas change: check the platform dashboards b
 
 ## M2 worker settings
 
-The Dockerfile includes both uv workspace packages (`backend/` and `agent/`). Keep the build context at the repository root. For natural-language work, add `VOICE_WORKER_MODE=openai` and `VOICE_WORKER_MODEL=gpt-4.1-mini` to backend service variables, with the existing project API key. This adds text-model usage charges. Leaving worker mode at its default `offline` uses a scripted planner. Worker configuration never belongs in Vercel's public build variables. See [M2](../docs/m2.md).
+The Dockerfile includes both uv workspace packages (`backend/` and `agent/`). Keep the build context at the repository root. For natural-language work, add `VOICE_WORKER_MODE=openai` and `VOICE_WORKER_MODEL=gpt-4.1-mini` to backend service variables, with the existing project API key. This adds text-model usage charges. Leaving worker mode at its default `offline` uses a scripted planner. Worker configuration never belongs in Vercel's public build variables. See [M2](../docs/milestones/m2.md).
 
 ## Local container check
 
@@ -72,12 +72,12 @@ Public references: [Vercel Vite](https://vercel.com/docs/frameworks/frontend/vit
 
 ## M5 controlled public demo
 
-Use [M5 configuration and rollback](../docs/m5.md) before opening access to other users.
+Use [M5 configuration and rollback](../docs/milestones/m5.md) before opening access to other users.
 Personal invitation tokens replace a shared code in public-demo mode. Mount durable quota
 storage at `/app/.local` owned by UID 10001, and keep one API worker. Reuse that volume across
 image replacement and rollback. Admission reserves the full session allowance up front;
 there are no refunds on failed creation. Local Docker checks cover authentication and
 quota persistence after restart, not the availability of a publicly hosted deployment.
 
-The [M6 documentation workflow](../docs/m6.md) is bundled with the agent and available
+The [M6 documentation workflow](../docs/milestones/m6.md) is bundled with the agent and available
 through the Documentation tab without a paid model call.

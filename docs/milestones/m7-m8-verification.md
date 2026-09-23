@@ -46,7 +46,7 @@ provenance. Real provider and hosted acceptance remain separate gates below.
 Before a stable release, collect real microphone/speaker evidence, interruption and
 multilingual listening results, Azure fallback evidence, and representative provider
 latency. Verify the chosen HTTPS deployment, invitation isolation, spending controls
-and rollback, then run hosted CI and record the demonstration. See [roadmap](roadmap.md),
+and rollback, then run hosted CI and record the demonstration. See [roadmap](../roadmap.md),
 [M7](m7.md) and [M8](m8.md) for the precise scope and remaining gates.
 
 No M9 is required by this roadmap. Further features should follow demonstrated user needs;

@@ -6,7 +6,12 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES = ["docs/architecture.md", "docs/m2.md", "docs/m3.md", "docs/m5.md"]
+FILES = [
+    "docs/architecture.md",
+    "docs/milestones/m2.md",
+    "docs/milestones/m3.md",
+    "docs/milestones/m5.md",
+]
 entries = []
 for name in FILES:
     text = (ROOT / name).read_text()

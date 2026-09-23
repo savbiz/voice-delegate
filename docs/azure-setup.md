@@ -23,7 +23,7 @@ VOICE_AZURE_VOICE=marin
 ```
 
 5. Restart FastAPI. Test primary voice first, then the controlled recovery scenario in
-   [M3](m3.md). Setting the variables does not itself verify a real Azure call.
+   [M3](milestones/m3.md). Setting the variables does not itself verify a real Azure call.
 
 `VOICE_AZURE_DEPLOYMENT` is the deployment name you created; it need not equal the model
 name. Keep keys in the backend `.env`, never in `VITE_*` variables or committed files.

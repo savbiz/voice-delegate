@@ -122,7 +122,7 @@ The capability-aware `/token` endpoint returns **501** for this adapter. Live's 
 uv run python -m voice_delegate.delegation.demo "calculate (120 + 80) * 1.22"
 ```
 
-This executes the LangGraph graph and calculator without any API call and returns 244. See [M2](docs/m2.md) for enabling the paid text model and testing interruption.
+This executes the LangGraph graph and calculator without any API call and returns 244. See [M2](docs/milestones/m2.md) for enabling the paid text model and testing interruption.
 
 ## Verification
 
@@ -131,6 +131,7 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy
 uv run pytest
+python3 scripts/check_links.py
 pnpm --dir frontend build
 pnpm --dir frontend test
 pnpm --dir frontend test:e2e
@@ -139,7 +140,7 @@ uv build --all-packages
 
 Pytest disables IP sockets; only local Unix sockets used by asyncio are allowed. HTTP tests use in-process ASGI and mock transports. Test fixtures contain invented identifiers and no recordings from private systems. Dependency installation needs internet; the tests themselves do not.
 
-See [the live smoke-test checklist](docs/m1-verification.md). No API key, real microphone test, paid provider call, or hosted GitHub Actions run was used to validate this candidate.
+See [the live smoke-test checklist](docs/milestones/m1-verification.md). No API key, real microphone test, paid provider call, or hosted GitHub Actions run was used to validate this candidate.
 
 ## Timing and cleanup limitations
 

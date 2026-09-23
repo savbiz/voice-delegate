@@ -33,7 +33,7 @@ sequenceDiagram
     end
 ```
 
-M2 dispatches delegation to a LangGraph worker in the background. Bounded transcripts provide goal/context. Results return through commentary; interruptions invalidate the active generation before cancellation. See [M2](m2.md) and [ADR 005](decisions/005-bounded-delegation.md).
+M2 dispatches delegation to a LangGraph worker in the background. Bounded transcripts provide goal/context. Results return through commentary; interruptions invalidate the active generation before cancellation. See [M2](milestones/m2.md) and [ADR 005](decisions/005-bounded-delegation.md).
 
 ```mermaid
 sequenceDiagram

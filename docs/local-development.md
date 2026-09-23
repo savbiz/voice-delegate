@@ -50,6 +50,6 @@ If your environment already provides Chromium, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/
 
 ## Upgrade from the M1 archive
 
-Extract the M2 archive into a **new directory**. Open its `voice-delegate/` folder in PyCharm and copy your existing untracked `.env` into it. Run `uv sync --locked` and `pnpm --dir frontend install --frozen-lockfile`, then restart both servers. Do not replace a working .env with .env.example. New M2 settings have safe offline defaults. See [M2](m2.md) for enabling the text model.
+Extract the M2 archive into a **new directory**. Open its `voice-delegate/` folder in PyCharm and copy your existing untracked `.env` into it. Run `uv sync --locked` and `pnpm --dir frontend install --frozen-lockfile`, then restart both servers. Do not replace a working .env with .env.example. New M2 settings have safe offline defaults. See [M2](milestones/m2.md) for enabling the text model.
 
 If you want to keep your existing Git checkout, first commit or stash your edits. From that checkout, fetch the extracted repository with `git fetch /absolute/path/to/new/voice-delegate main` and then `git merge --ff-only FETCH_HEAD`. If your history diverged, this deliberately stops without discarding edits; merge/rebase your local commits before proceeding. Fetch candidate tags separately with `git fetch /absolute/path/to/new/voice-delegate tag v0.1.0-m2-rc.1`.
