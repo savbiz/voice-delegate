@@ -10,7 +10,7 @@ from voice_delegate.delegation.contracts import DelegationInput
 from voice_delegate.delegation.runner import DelegationRunner, DelegationState
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
-from voice_delegate_agent.reference import GroundedAnswer, corpus, search, source_by_id
+from voice_delegate_agent.reference import WorkerResult, corpus, search, source_by_id
 
 
 def test_bundled_sources_match_reviewed_project_files() -> None:
@@ -31,8 +31,8 @@ def test_bundled_sources_match_reviewed_project_files() -> None:
 async def test_documentation_worker_preserves_citations_outside_spoken_budget() -> None:
     worker = LangGraphWorker(OfflinePlanner())
     answer = await worker.delegate_task("docs fallback history", "")
-    assert isinstance(answer, GroundedAnswer) and answer.sources
-    assert "[1]" in answer
+    assert isinstance(answer, WorkerResult) and answer.sources
+    assert "[1]" in answer.text
     runner = DelegationRunner(worker, budget=16)
     state = DelegationState()
     connection = FakeConnection()
@@ -42,10 +42,24 @@ async def test_documentation_worker_preserves_citations_outside_spoken_budget() 
     assert state.task is not None
     await state.task
     assert state.status == "completed" and state.sources
+    assert state.sources == answer.sources
+    assert connection.commands[0].content != answer.text
     assert len(connection.commands[0].content.encode()) <= 500
     runner.cancel(state)
     assert not state.sources
     await runner.aclose()
+
+
+def test_worker_result_equality_includes_sources() -> None:
+    from dataclasses import FrozenInstanceError
+
+    import pytest
+
+    first, second = corpus()[:2]
+    result = WorkerResult("same text", (first,))
+    assert result != WorkerResult("same text", (second,))
+    with pytest.raises(FrozenInstanceError):
+        result.text = "changed"  # type: ignore[misc]
 
 
 async def test_authenticated_search_and_inspect_source_without_voice() -> None:

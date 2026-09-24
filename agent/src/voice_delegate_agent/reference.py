@@ -5,7 +5,6 @@ import re
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib.resources import files
-from typing import Self
 
 from langchain_core.tools import tool
 
@@ -20,15 +19,12 @@ class Source:
     digest: str
 
 
-class GroundedAnswer(str):
-    """Text remains compatible with worker contracts; citations travel out of band."""
+@dataclass(frozen=True)
+class WorkerResult:
+    """Worker text and immutable evidence are separate parts of the result."""
 
-    sources: tuple[Source, ...]
-
-    def __new__(cls, text: str, sources: tuple[Source, ...]) -> Self:
-        answer = super().__new__(cls, text)
-        answer.sources = sources
-        return answer
+    text: str
+    sources: tuple[Source, ...] = ()
 
 
 @lru_cache(maxsize=1)

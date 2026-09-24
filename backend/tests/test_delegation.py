@@ -19,6 +19,7 @@ from voice_delegate.providers.models import (
 )
 from voice_delegate.session.manager import SessionManager
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
+from voice_delegate_agent.reference import WorkerResult
 from voice_delegate_agent.tools import calculate
 
 
@@ -53,9 +54,9 @@ async def test_calculator_rejects_code_and_unbounded_operations(expression: str)
 
 async def test_real_graph_uses_local_tool_without_network() -> None:
     worker = LangGraphWorker(OfflinePlanner())
-    assert "244" in await worker.delegate_task("calculate (120 + 80) * 1.22", "")
-    assert "WebRTC" in await worker.delegate_task("architecture", "")
-    assert "No action" in await worker.delegate_task("Book a flight", "")
+    assert "244" in (await worker.delegate_task("calculate (120 + 80) * 1.22", "")).text
+    assert "WebRTC" in (await worker.delegate_task("architecture", "")).text
+    assert "No action" in (await worker.delegate_task("Book a flight", "")).text
 
 
 async def test_graph_loop_is_finite() -> None:
@@ -73,7 +74,7 @@ async def test_graph_loop_is_finite() -> None:
             )
 
     worker = LangGraphWorker(LoopPlanner(), max_steps=2)
-    assert "step limit" in await worker.delegate_task("Keep going", "")
+    assert "step limit" in (await worker.delegate_task("Keep going", "")).text
 
 
 def test_history_merges_fragments_and_clamps_memory() -> None:
@@ -110,15 +111,15 @@ class WaitingWorker:
         self.started = asyncio.Event()
         self.cancelled = asyncio.Event()
 
-    async def delegate_task(self, goal: str, context: str) -> str:
+    async def delegate_task(self, goal: str, context: str) -> WorkerResult:
         self.started.set()
         try:
             await asyncio.Event().wait()
         except asyncio.CancelledError:
             self.cancelled.set()
             # Simulate an extension that returns a stale result despite cancellation.
-            return "STALE RESULT"
-        return "unreachable"
+            return WorkerResult("STALE RESULT")
+        return WorkerResult("unreachable")
 
 
 async def test_timeout_cancels_worker_and_reports_failure() -> None:
@@ -166,10 +167,10 @@ async def test_failure_is_redacted_and_result_is_truncated(
     caplog.set_level("DEBUG", logger="voice_delegate.delegation.runner")
 
     class Worker:
-        async def delegate_task(self, goal: str, context: str) -> str:
+        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
             if goal == "fail":
                 raise RuntimeError("PRIVATE ERROR DETAIL")
-            return "日本語🙂 " * 1000
+            return WorkerResult("日本語🙂 " * 1000)
 
     provider = FakeProvider()
     manager = SessionManager(provider, Settings(), worker=Worker())
@@ -277,13 +278,13 @@ async def test_real_transcript_timing_interrupts(timing: bool, start_ms: int) ->
 @pytest.mark.parametrize("goal", ["calcola 2+2", "documentazione limiti"])
 async def test_offline_planner_rejects_non_english_commands(goal: str) -> None:
     result = await LangGraphWorker(OfflinePlanner()).delegate_task(goal, "")
-    assert "No action was taken" in result
+    assert "No action was taken" in result.text
 
 
 @pytest.mark.parametrize("goal", ["calculate 2+2", "docs limits"])
 async def test_offline_planner_keeps_english_commands(goal: str) -> None:
     result = await LangGraphWorker(OfflinePlanner()).delegate_task(goal, "")
-    assert ("4" if goal.startswith("calculate") else "Documentation excerpt") in result
+    assert ("4" if goal.startswith("calculate") else "Documentation excerpt") in result.text
 
 
 @pytest.mark.parametrize("failure", ["validation", "runtime", "value"])
@@ -319,7 +320,7 @@ async def test_graph_distinguishes_invalid_input_from_tool_failure(
             )
 
     result = await LangGraphWorker(Planner()).delegate_task("test", "")
-    assert result == (
+    assert result.text == (
         "Tool input invalid; no action taken."
         if failure == "validation"
         else "Tool failed; no action taken."

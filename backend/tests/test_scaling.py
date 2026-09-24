@@ -14,6 +14,7 @@ from voice_delegate.scaling.remote import RemoteWorker
 from voice_delegate.scaling.worker_service import create_worker_app
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
+from voice_delegate_agent.reference import WorkerResult
 
 TOKEN = "test-worker-token-32-characters-long"
 
@@ -69,10 +70,10 @@ async def test_worker_backpressure_duplicates_and_cancellation_tombstones() -> N
         calls = 0
         gate = asyncio.Event()
 
-        async def delegate_task(self, goal: str, context: str) -> str:
+        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
             self.calls += 1
             await self.gate.wait()
-            return "done"
+            return WorkerResult("done")
 
     worker = Slow()
     settings = Settings(worker_service_token=SecretStr(TOKEN), worker_service_capacity=2)
@@ -107,7 +108,7 @@ async def test_worker_backpressure_duplicates_and_cancellation_tombstones() -> N
 
 
 async def test_remote_worker_executes_graph_and_carries_sources() -> None:
-    from voice_delegate_agent.reference import GroundedAnswer
+    from voice_delegate_agent.reference import WorkerResult
 
     settings = Settings(
         worker_service_token=SecretStr(TOKEN),
@@ -119,7 +120,7 @@ async def test_remote_worker_executes_graph_and_carries_sources() -> None:
         client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app))
         remote = RemoteWorker(settings, client)
         result = await remote.delegate_task("docs fallback history", "")
-        assert isinstance(result, GroundedAnswer) and result.sources
+        assert isinstance(result, WorkerResult) and result.sources
         await remote.aclose()
 
 
@@ -128,13 +129,13 @@ async def test_remote_cancellation_cancels_server_job() -> None:
         entered = asyncio.Event()
         cancelled = asyncio.Event()
 
-        async def delegate_task(self, goal: str, context: str) -> str:
+        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
             self.entered.set()
             try:
                 await asyncio.Event().wait()
             finally:
                 self.cancelled.set()
-            return "unreachable"
+            return WorkerResult("unreachable")
 
     worker = Slow()
     settings = Settings(worker_service_token=SecretStr(TOKEN), worker_service_url="http://worker")
@@ -201,7 +202,7 @@ async def test_remote_worker_polls_at_200ms(monkeypatch: pytest.MonkeyPatch) -> 
         Settings(worker_service_url="http://worker"),
         httpx.AsyncClient(transport=httpx.MockTransport(handler)),
     )
-    assert await remote.delegate_task("test", "") == "done"
+    assert (await remote.delegate_task("test", "")).text == "done"
     assert delays == [0.2, 0.2]
     assert methods == ["POST", "GET", "GET", "GET", "DELETE"]
     await remote.aclose()

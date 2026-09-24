@@ -8,7 +8,7 @@ from time import monotonic
 
 from opentelemetry import trace
 from opentelemetry.context import Context
-from voice_delegate_agent.reference import GroundedAnswer, Source
+from voice_delegate_agent.reference import Source, WorkerResult
 
 from voice_delegate.limits.tokens import truncate
 from voice_delegate.observability.metrics import Metrics
@@ -53,7 +53,7 @@ class DelegationRunner:
         self.capacity = capacity
         self.request_limit = request_limit
         self.tracer = tracer or trace.NoOpTracerProvider().get_tracer(__name__)
-        self.work: set[asyncio.Task[str]] = set()
+        self.work: set[asyncio.Task[WorkerResult]] = set()
 
     def cancel(self, state: DelegationState) -> None:
         """Invalidate before canceling so a late return can never be narrated."""
@@ -88,7 +88,7 @@ class DelegationRunner:
             name="delegated-task",
         )
 
-    def _finished(self, task: asyncio.Task[str]) -> None:
+    def _finished(self, task: asyncio.Task[WorkerResult]) -> None:
         self.work.discard(task)
         if not task.cancelled() and (error := task.exception()) is not None:
             logger.debug("Delegated worker failed", exc_info=error)
@@ -104,16 +104,16 @@ class DelegationRunner:
         context: Context | None = None,
     ) -> None:
         started = monotonic()
-        child: asyncio.Task[str] | None = None
+        child: asyncio.Task[WorkerResult] | None = None
         try:
             with self.tracer.start_as_current_span(
                 "delegate_task", record_exception=False, context=context
             ):
                 if len(self.work) >= self.capacity:
-                    result, status = "Worker busy; task was not started.", "busy"
+                    result, status = WorkerResult("Worker busy; task was not started."), "busy"
                 elif not request.goal.strip():
                     result, status = (
-                        "Please repeat the task; no usable transcript is available.",
+                        WorkerResult("Please repeat the task; no usable transcript is available."),
                         "failed",
                     )
                 else:
@@ -125,25 +125,34 @@ class DelegationRunner:
                     done, _ = await asyncio.wait({child}, timeout=self.timeout)
                     if not done:
                         child.cancel()
-                        result, status = "Worker timed out; task incomplete.", "timeout"
+                        result, status = (
+                            WorkerResult("Worker timed out; task incomplete."),
+                            "timeout",
+                        )
                     else:
                         try:
                             result, status = child.result(), "completed"
                         except WorkerBusy:
-                            result, status = "Worker busy; task was not started.", "busy"
+                            result, status = (
+                                WorkerResult("Worker busy; task was not started."),
+                                "busy",
+                            )
                         except Exception:
-                            result, status = "Worker failed; task incomplete.", "failed"
+                            result, status = (
+                                WorkerResult("Worker failed; task incomplete."),
+                                "failed",
+                            )
                 if generation == state.generation and is_connected():
                     # 500 UTF-8 bytes also conservatively bound the provider's 500-token limit.
                     await connection.send(
                         Commentary(
                             request_id,
-                            truncate(result, self.budget, max_bytes=COMMENTARY_MAX_BYTES),
+                            truncate(result.text, self.budget, max_bytes=COMMENTARY_MAX_BYTES),
                         )
                     )
                     if generation == state.generation:
                         state.status = status
-                        state.sources = result.sources if isinstance(result, GroundedAnswer) else ()
+                        state.sources = result.sources
         except asyncio.CancelledError:
             if generation == state.generation:
                 state.status = "cancelled"

@@ -3,6 +3,7 @@
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
+from voice_delegate_agent.reference import WorkerResult
 
 
 class DelegationInput(BaseModel):
@@ -28,6 +29,6 @@ class WorkerBusy(Exception):
 class Worker(Protocol):
     """Workers must cooperate with asyncio cancellation and avoid blocking I/O."""
 
-    async def delegate_task(self, goal: str, context: str) -> str:
+    async def delegate_task(self, goal: str, context: str) -> WorkerResult:
         """Return compact factual text; never change live session instructions."""
         ...

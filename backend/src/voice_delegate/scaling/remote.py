@@ -6,7 +6,7 @@ from contextlib import suppress
 from uuid import uuid4
 
 import httpx
-from voice_delegate_agent.reference import GroundedAnswer, source_by_id
+from voice_delegate_agent.reference import WorkerResult, source_by_id
 
 from voice_delegate.config import Settings
 from voice_delegate.delegation.contracts import WorkerBusy
@@ -23,7 +23,7 @@ class RemoteWorker:
             "Authorization": "Bearer " + settings.worker_service_token.get_secret_value()
         }
 
-    async def delegate_task(self, goal: str, context: str) -> str:
+    async def delegate_task(self, goal: str, context: str) -> WorkerResult:
         key = str(uuid4())
         url = f"{self.base}/jobs/{key}"
         try:
@@ -48,7 +48,7 @@ class RemoteWorker:
                     sources = tuple(
                         s for key in result.source_ids if (s := source_by_id(key)) is not None
                     )
-                    return GroundedAnswer(result.text, sources) if sources else result.text
+                    return WorkerResult(result.text, sources)
                 if result.status != "running":
                     raise RuntimeError("Remote worker did not complete")
                 await asyncio.sleep(0.2)

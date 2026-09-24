@@ -22,7 +22,7 @@ from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from voice_delegate.limits.tokens import count_tokens, truncate
 from voice_delegate_agent.graph import INSTRUCTIONS, LangGraphWorker, OfflinePlanner, OpenAIPlanner
-from voice_delegate_agent.reference import GroundedAnswer, corpus, source_by_id
+from voice_delegate_agent.reference import corpus, source_by_id
 
 ROOT = Path(__file__).resolve().parents[1]
 DATASET = ROOT / "evals/data/worker-v1.json"
@@ -178,8 +178,8 @@ async def run_cases(
                     answer = await LangGraphWorker(observer, 4).delegate_task(
                         case["goal"], case["context"]
                     )
-                text = truncate(str(answer), 120, max_bytes=500)
-                ids = [s.id for s in answer.sources] if isinstance(answer, GroundedAnswer) else []
+                text = truncate(answer.text, 120, max_bytes=500)
+                ids = [s.id for s in answer.sources]
                 if "task incomplete" in text.lower():
                     status = "incomplete"
             except Exception as exc:

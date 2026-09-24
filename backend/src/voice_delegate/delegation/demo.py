@@ -13,7 +13,7 @@ async def run(goal: str) -> str:
     """Execute local read-only tools within the same default time/output budgets."""
     async with asyncio.timeout(15):
         result = await LangGraphWorker(OfflinePlanner()).delegate_task(goal[:8192], "")
-    return truncate(result, 120, max_bytes=500)
+    return truncate(result.text, 120, max_bytes=500)
 
 
 def main() -> None:

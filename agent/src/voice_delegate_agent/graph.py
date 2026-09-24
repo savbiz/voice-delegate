@@ -10,7 +10,7 @@ from langgraph.graph import START, StateGraph
 from langgraph.graph.message import add_messages
 from pydantic import SecretStr, ValidationError
 
-from .reference import GroundedAnswer, source_by_id
+from .reference import WorkerResult, source_by_id
 from .tools import TOOLS
 
 INSTRUCTIONS = (
@@ -178,7 +178,7 @@ class LangGraphWorker:
         builder.add_conditional_edges("tools", after_tool)
         self.graph = builder.compile()
 
-    async def delegate_task(self, goal: str, context: str) -> str:
+    async def delegate_task(self, goal: str, context: str) -> WorkerResult:
         """Process a bounded request without retaining transcript state."""
         result = await self.graph.ainvoke(
             {
@@ -202,4 +202,4 @@ class LangGraphWorker:
             for source_id in result["source_ids"]
             if (source := source_by_id(source_id)) is not None
         )
-        return GroundedAnswer(answer, sources) if sources else answer
+        return WorkerResult(answer, sources)

@@ -10,6 +10,7 @@ from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeProvider
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
+from voice_delegate_agent.reference import WorkerResult
 
 
 def public_settings(path: Path, **overrides: object) -> Settings:
@@ -113,9 +114,9 @@ async def test_delegation_allowance_prevents_additional_worker_calls() -> None:
     class Worker:
         calls = 0
 
-        async def delegate_task(self, goal: str, context: str) -> str:
+        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
             self.calls += 1
-            return "done"
+            return WorkerResult("done")
 
     worker = Worker()
     runner = DelegationRunner(worker, request_limit=1)

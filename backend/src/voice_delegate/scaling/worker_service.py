@@ -13,7 +13,6 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner, OpenAIPlanner
-from voice_delegate_agent.reference import GroundedAnswer
 
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.delegation.contracts import Worker
@@ -104,12 +103,10 @@ class Jobs:
             ):
                 result = await self.worker.delegate_task(body.goal, body.context)
             if job.status != "cancelled":
-                job.text = truncate(result, self.settings.delegation_result_tokens, max_bytes=500)
-                job.source_ids = (
-                    tuple(s.id for s in result.sources)
-                    if isinstance(result, GroundedAnswer)
-                    else ()
+                job.text = truncate(
+                    result.text, self.settings.delegation_result_tokens, max_bytes=500
                 )
+                job.source_ids = tuple(s.id for s in result.sources)
                 job.status = "completed"
         except asyncio.CancelledError:
             job.status = "cancelled"
