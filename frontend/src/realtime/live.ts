@@ -32,8 +32,16 @@ let attemptId = 0;
 let ending = false;
 let recovering = false;
 let fallbackAttempted = false;
+let heartbeatFailures = 0;
+let lastDelegation = "idle";
 
-function renderSources(items: Source[]): void { store.update({ sources: items.slice(0, 3) }); }
+function renderSources(items: Source[]): void {
+  const next = items.slice(0, 3);
+  const previous = store.getSnapshot().sources;
+  if (next.length !== previous.length || next.some((source, index) => source.id !== previous[index]?.id)) {
+    store.update({ sources: next });
+  }
+}
 
 function release(): void {
   stopVad?.();
@@ -51,18 +59,18 @@ function release(): void {
   store.update({ active: false, cancelPending: true });
 }
 
-async function request(path: string, owner?: Session, body?: unknown): Promise<unknown> {
+function requestOptions(owner?: Session, body?: unknown, timeout = 35000): RequestInit {
   const accessCode = getAccessCode();
-  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/api${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  return {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json',
       ...(accessCode ? { Authorization: `Bearer ${accessCode}` } : {}),
-      ...(owner ? { "X-Session-Key": owner.key } : {}),
-    },
-    body: JSON.stringify(body ?? {}),
-    signal: AbortSignal.timeout(35000),
-  });
+      ...(owner ? { 'X-Session-Key': owner.key } : {}) },
+    body: JSON.stringify(body ?? {}), signal: AbortSignal.timeout(timeout),
+  };
+}
+async function request<T>(path: string, owner?: Session, body?: unknown, timeout = 35000): Promise<T> {
+  const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/api${path}`, requestOptions(owner, body, timeout));
   if (!response.ok) {
     const messages: Record<number, string> = {
       401: "Your invitation is missing, invalid or revoked.",
@@ -77,34 +85,27 @@ async function request(path: string, owner?: Session, body?: unknown): Promise<u
 async function finish(message: string): Promise<void> {
   if (ending) return;
   ending = true;
-  store.update({ ending: true });
-  attemptId += 1;
-  clearInterval(heartbeat);
-  clearTimeout(startup);
-  store.update({ status: "Closing conversation…" });
+  const closedAttempt = ++attemptId;
   const owner = session;
-  // Stop recording immediately, keeping the transport alive for final events.
-  microphone?.getTracks().forEach(track => { track.enabled = false; });
-  try {
-    if (owner) {
-      const result = await request(`/sessions/${owner.id}/close`, owner) as { finalized: boolean };
-      if (!result.finalized) message += " Provider finalization unconfirmed.";
-    }
-  } catch {
-    message += " Close was not confirmed; the server also enforces session expiry.";
-  } finally {
-    release();
-    showState("ended", message, message === "Conversation ended."
-      ? "Select Start conversation when you want a new session."
-      : "Check your connection or access code, then select Start conversation to begin a new session. Previous tasks will not be replayed.");
-    showWorker("idle");
-    ending = false;
-    store.update({ ending: false });
+  release();
+  showState('ended', message, message === 'Conversation ended.'
+    ? 'Select Start conversation when you want a new session.'
+    : 'Check your connection or access code, then select Start conversation to begin a new session. Previous tasks will not be replayed.');
+  showWorker('idle');
+  ending = false;
+  store.update({ ending: false });
+  if (owner) {
+    void request<{ finalized: boolean }>(`/sessions/${owner.id}/close`, owner, undefined, 5000)
+      .then(result => {
+        if (closedAttempt === attemptId && !result.finalized) store.update({ status: message + ' Provider finalization unconfirmed.' });
+      }).catch(() => {
+        if (closedAttempt === attemptId) store.update({ status: message + ' Close was not confirmed; the server also enforces session expiry.' });
+      });
   }
 }
 
 function receiveEvent(raw: unknown): void {
-  const result = processEvent(store.getSnapshot(), raw);
+  const result = processEvent(store.getSnapshot(), raw, performance.now());
   store.update(result.state);
   if (result.effect === 'started') clearTimeout(startup);
   if (result.effect === 'closed' && !ending) {
@@ -146,7 +147,7 @@ async function recover(message: string): Promise<void> {
   recovering = true;
   store.update({ recovering: true });
   try {
-    const state = await request(`/sessions/${owner.id}/heartbeat`, owner) as { generation: number; fallback_available: boolean };
+    const state = await request<{ generation: number; fallback_available: boolean }>(`/sessions/${owner.id}/heartbeat`, owner, undefined, 8000);
     if (ending || session !== owner) return;
     if (!state.fallback_available) { await finish(message); return; }
     fallbackAttempted = true;
@@ -163,6 +164,7 @@ async function recover(message: string): Promise<void> {
 async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
   if (!existing) {
     fallbackAttempted = false;
+    store.update({ captions: { user: "", assistant: "" }, timings: [], sources: [] });
     if (!reportPending) {
       diagnosticId = crypto.randomUUID(); reportBody = undefined; reportSent = false;
       store.update({ reportSent: false, reportLocked: false, feedbackStatus: "Ready to send a report if something goes wrong." });
@@ -172,9 +174,10 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
   store.update({ active: true });
   showState(existing ? "recovering" : "connecting", existing ? "Reconnecting with Azure…" : "Requesting microphone…", "Allow microphone access to continue. Select Stop to cancel.");
   showWorker("idle");
-  store.update({ captions: { user: "", assistant: "" }, timings: [], sources: [] });
+  heartbeatFailures = 0;
+  lastDelegation = "idle";
   try {
-    const config = await request("/config") as { voice_available: boolean };
+    const config = await request<{ voice_available: boolean }>("/config");
     if (attempt !== attemptId) return;
     if (!config.voice_available) throw new Error("Set OPENAI_API_KEY on the backend to use live voice. Free demo works without a key.");
     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
@@ -205,7 +208,7 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
     await gather(connection);
     if (attempt !== attemptId) return;
     showState(existing ? "recovering" : "connecting", existing ? "Reconnecting with Azure…" : "Connecting…", "Please wait. Select Stop to cancel.");
-    const created = existing ?? await request("/sessions", undefined, getPreferences()) as Session;
+    const created = existing ?? await request<Session>("/sessions", undefined, getPreferences());
     if (attempt !== attemptId) {
       await request(`/sessions/${created.id}/close`, created);
       return;
@@ -213,15 +216,16 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
     session = created;
     try {
       stopVad = watchSpeech(stream, () => {
-        if (attempt !== attemptId) return;
+        if (attempt !== attemptId || lastDelegation !== "running") return;
         void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
       }, audio);
     } catch { /* Provider-side speech detection remains authoritative without local analysis. */ }
     heartbeat = setInterval(() => {
       if (attempt !== attemptId) return;
-      void request(`/sessions/${created.id}/heartbeat`, created).then(result => {
+      void request<{ delegation: string; state: string; sources?: Source[]; recap?: { latest_request: string; latest_reply: string; interrupted: boolean } }>(`/sessions/${created.id}/heartbeat`, created, undefined, 8000).then(state => {
         if (attempt === attemptId) {
-          const state = result as { delegation: string; state: string; sources?: Source[]; recap?: { latest_request: string; latest_reply: string; interrupted: boolean } };
+          heartbeatFailures = 0;
+          lastDelegation = state.delegation;
           renderSources(state.sources ?? []);
           if (state.recap) {
             const recap = `${state.recap.interrupted ? "Interrupted task. " : ""}Latest request: ${state.recap.latest_request || "—"}` +
@@ -233,12 +237,12 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
           if (state.state === "reconnecting") showState("recovering", "Provider connection lost.", "Waiting for transport recovery. You can select Stop.");
         }
       }).catch(() => {
-        if (attempt === attemptId) void finish("Server connection lost or session expired.");
+        if (attempt === attemptId && ++heartbeatFailures >= 3) void finish("Server connection lost or session expired.");
       });
     }, 10000);
     startup = setTimeout(() => { void finish("Voice startup timed out."); }, 40000);
-    const result = await request(`/sessions/${created.id}/${existing ? "reconnect" : "offer"}`, created,
-      { sdp: connection.localDescription?.sdp, ...(existing ? { generation: serverGeneration } : {}) }) as { sdp: string };
+    const result = await request<{ sdp: string }>(`/sessions/${created.id}/${existing ? "reconnect" : "offer"}`, created,
+      { sdp: connection.localDescription?.sdp, ...(existing ? { generation: serverGeneration } : {}) });
     if (attempt !== attemptId) return;
     await connection.setRemoteDescription({ type: "answer", sdp: result.sdp });
   } catch (error) {
@@ -255,7 +259,7 @@ const onFeedback = async (category: string) => {
   reportBody ??= { diagnostic_id: diagnosticId, category, state: store.getSnapshot().phase };
   store.update({ feedbackStatus: "Sending report…" });
   try {
-    const result = await request("/feedback", undefined, reportBody) as { diagnostic_id: string };
+    const result = await request<{ diagnostic_id: string }>("/feedback", undefined, reportBody);
     reportSent = true;
     store.update({ reportSent: true, feedbackStatus: `Report received. Diagnostic ID: ${result.diagnostic_id}. Retained for seven days.` });
   } catch {
@@ -267,10 +271,9 @@ const onFeedback = async (category: string) => {
 };
 
 const onPageHide = () => {
-  const accessCode = getAccessCode();
   if (session) {
     void fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/api/sessions/${session.id}/close`, {
-      method: "POST", keepalive: true, headers: { "X-Session-Key": session.key, ...(accessCode ? { Authorization: `Bearer ${accessCode}` } : {}) },
+      ...requestOptions(session, undefined, 5000), keepalive: true,
     }).catch(() => undefined);
   }
   attemptId += 1;

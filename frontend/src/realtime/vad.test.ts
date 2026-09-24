@@ -1,6 +1,6 @@
 /** Check onset hysteresis without microphones or browser audio devices. */
-import { expect, test } from 'vitest';
-import { LocalInterruptGate, SpeechGate } from './vad';
+import { expect, test, vi } from 'vitest';
+import { LocalInterruptGate, SpeechGate, watchSpeech } from './vad';
 test('cancels once per speech onset and rearms after silence', () => {
   const gate = new SpeechGate();
   expect(gate.update(0.1)).toBe(false);
@@ -41,4 +41,18 @@ test('renewed remote speech extends the silence guard', () => {
   for (let now = 420; now < 700; now += 20) expect(gate.update(0.1, 0, now)).toBe(false);
   gate.update(0.1, 0, 700); gate.update(0.1, 0, 720);
   expect(gate.update(0.1, 0, 740)).toBe(true);
+});
+
+
+test('speech analysis setup closes its context when initialization fails', () => {
+  const close = vi.fn(async () => undefined);
+  class BrokenContext {
+    close = close;
+    createMediaStreamSource() { throw new Error('no audio source'); }
+  }
+  vi.stubGlobal('AudioContext', BrokenContext);
+  try {
+    expect(() => watchSpeech({} as MediaStream, () => undefined)).toThrow('no audio source');
+    expect(close).toHaveBeenCalledOnce();
+  } finally { vi.unstubAllGlobals(); }
 });

@@ -2,7 +2,10 @@
 import type { Source } from '../reference';
 
 export type Phase = 'ready' | 'connecting' | 'connected' | 'working' | 'busy' | 'recovering' | 'ended';
-export type TurnTiming = { id: number; end: number; reply?: number };
+export type TranscriptDelta = {
+  speaker: 'user' | 'assistant'; delta: string; start_ms?: number; end_ms?: number;
+};
+export type TurnTiming = { id: number; end: number; reply?: number; receivedEnd: number; estimated: boolean };
 export type LiveState = {
   phase: Phase; status: string; help: string; worker: string; workerMessage: string;
   active: boolean; ending: boolean; recovering: boolean; cancelPending: boolean;
@@ -34,20 +37,27 @@ export function workerState(state: LiveState, worker: string): LiveState {
     workerMessage: workerMessages[worker] ?? 'Waiting for worker status.' };
 }
 export function updateTurnTiming(
-  timings: TurnTiming[], speaker: 'user' | 'assistant', start: number, end: number,
+  timings: TurnTiming[], speaker: 'user' | 'assistant', start?: number, end?: number, receivedAt = 0,
 ): TurnTiming[] {
-  if (!Number.isFinite(start) || !Number.isFinite(end)) return timings;
+  const timed = typeof start === 'number' && typeof end === 'number' && Number.isFinite(start) && Number.isFinite(end);
   const latest = timings[0];
   if (speaker === 'user') {
-    if (!latest || start - latest.end > 800) {
-      return [{ id: (latest?.id ?? 0) + 1, end }, ...timings].slice(0, 20);
+    const gap = timed && latest && !latest.estimated ? start - latest.end : receivedAt - (latest?.receivedEnd ?? 0);
+    if (!latest || gap > 800) {
+      return [{ id: (latest?.id ?? 0) + 1, end: timed ? end : receivedAt,
+        receivedEnd: receivedAt, estimated: !timed }, ...timings].slice(0, 20);
     }
-    return [{ ...latest, end: Math.max(latest.end, end) }, ...timings.slice(1)];
+    const estimated = latest.estimated || !timed;
+    return [{ ...latest, estimated, receivedEnd: receivedAt,
+      end: estimated ? receivedAt : Math.max(latest.end, end) }, ...timings.slice(1)];
   }
-  return latest && latest.reply === undefined
-    ? [{ ...latest, reply: start }, ...timings.slice(1)] : timings;
+  if (!latest || latest.reply !== undefined) return timings;
+  const estimated = latest.estimated || !timed;
+  return [{ ...latest, estimated, end: estimated ? latest.receivedEnd : latest.end,
+    reply: estimated ? receivedAt : start }, ...timings.slice(1)];
 }
-export function processEvent(state: LiveState, raw: unknown): {
+
+export function processEvent(state: LiveState, raw: unknown, receivedAt = 0): {
   state: LiveState; effect?: 'started' | 'closed';
 } {
   if (typeof raw !== 'object' || raw === null) return { state };
@@ -65,8 +75,10 @@ export function processEvent(state: LiveState, raw: unknown): {
     ? 'user' : ['session.output_transcript.delta', 'response.output_audio_transcript.delta'].includes(String(event.type)) ? 'assistant' : undefined;
   const delta = event.type === 'conversation.item.input_audio_transcription.completed' ? event.transcript : event.delta;
   if (!speaker || typeof delta !== 'string') return { state };
-  const timings = typeof event.start_ms === 'number' && typeof event.end_ms === 'number'
-    ? updateTurnTiming(state.timings, speaker, event.start_ms, event.end_ms) : state.timings;
+  const transcript: TranscriptDelta = { speaker, delta,
+    ...(typeof event.start_ms === 'number' ? { start_ms: event.start_ms } : {}),
+    ...(typeof event.end_ms === 'number' ? { end_ms: event.end_ms } : {}) };
+  const timings = updateTurnTiming(state.timings, transcript.speaker, transcript.start_ms, transcript.end_ms, receivedAt);
   return { state: { ...state, timings, captions: { ...state.captions,
     [speaker]: (state.captions[speaker] + delta).slice(-6000) } } };
 }

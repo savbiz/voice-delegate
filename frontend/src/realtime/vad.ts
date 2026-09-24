@@ -35,6 +35,7 @@ export function watchSpeech(
   stream: MediaStream, onset: () => void, remoteAudio?: HTMLAudioElement,
 ): () => void {
   const context = new AudioContext();
+  try {
   const source = context.createMediaStreamSource(stream);
   const analyser = context.createAnalyser();
   const remoteAnalyser = context.createAnalyser();
@@ -76,6 +77,10 @@ export function watchSpeech(
     remoteSource?.disconnect();
     analyser.disconnect();
     remoteAnalyser.disconnect();
-    void context.close();
+    void context.close().catch(() => undefined);
   };
+  } catch (error) {
+    void context.close().catch(() => undefined);
+    throw error;
+  }
 }

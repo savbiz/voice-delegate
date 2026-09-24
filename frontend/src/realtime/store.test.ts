@@ -35,10 +35,10 @@ test('turn timing merges fragments, preserves overlap and bounds history', () =>
   let timings = updateTurnTiming([], 'user', 0, 100);
   timings = updateTurnTiming(timings, 'user', 100, 200);
   timings = updateTurnTiming(timings, 'assistant', 150, 300);
-  expect(timings).toEqual([{ id: 1, end: 200, reply: 150 }]);
+  expect(timings).toEqual([{ id: 1, end: 200, reply: 150, receivedEnd: 0, estimated: false }]);
   const unchanged = updateTurnTiming(timings, 'assistant', 200, 400);
   expect(unchanged).toBe(timings);
-  expect(updateTurnTiming(timings, 'user', Infinity, 0)).toBe(timings);
+  expect(updateTurnTiming(timings, 'user', Infinity, 0)[0]?.estimated).toBe(true);
   for (let id = 2; id <= 25; id++) timings = updateTurnTiming(timings, 'user', id * 1000, id * 1000 + 100);
   expect(timings).toHaveLength(20);
   expect(timings[0]?.id).toBe(25);
@@ -58,4 +58,14 @@ test('store snapshots are stable between updates and unsubscribe releases listen
   unsubscribe();
   store.update({ status: 'later status' });
   expect(listener).toHaveBeenCalledOnce();
+});
+
+
+test('missing provider timing uses receipt timestamps without mixing clock origins', () => {
+  let state = processEvent(initialLiveState(), { type: 'session.input_transcript.delta', delta: 'hello', start_ms: 100, end_ms: 200 }, 5000).state;
+  state = processEvent(state, { type: 'response.output_audio_transcript.delta', delta: 'hi' }, 5200).state;
+  expect(state.timings[0]).toMatchObject({ end: 5000, reply: 5200, estimated: true });
+  const input = processEvent(initialLiveState(), { type: 'conversation.item.input_audio_transcription.completed', transcript: 'hello' }, 6000).state;
+  const reply = processEvent(input, { type: 'response.output_audio_transcript.delta', delta: 'hi' }, 6300).state;
+  expect(reply.timings[0]).toMatchObject({ end: 6000, reply: 6300, estimated: true });
 });

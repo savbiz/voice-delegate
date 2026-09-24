@@ -51,7 +51,7 @@ function Live({ code }: { code: string }) {
     <audio id="audio" ref={audio} muted={muted} controls autoPlay aria-label="Assistant audio" />
     <div className="grid gap-4 md:grid-cols-2"><section><h2>You</h2><p id="user">{state.captions.user || '—'}</p></section><section><h2>Assistant</h2><p id="assistant">{state.captions.assistant || '—'}</p></section></div>
     <section><h2>Conversation recap</h2><p className="muted">Extracts from transcripts; interruption does not mean completion.</p><p id="recap" aria-live="polite">{state.recap}</p></section>
-    <section><h2>Turn timing</h2><p className="muted">Transcript timestamp gap: a proxy, not measured audio latency. May be negative during overlap.</p><ol id="timings">{state.timings.map(turn => <li key={turn.id}>Turn {turn.id}: {turn.reply === undefined ? 'waiting for assistant transcript' : `${Math.round(turn.reply - turn.end)} ms transcript gap`}</li>)}</ol></section>
+    <section><h2>Turn timing</h2><p className="muted">Transcript timestamp gap: a proxy, not measured audio latency. May be negative during overlap.</p><ol id="timings">{state.timings.map(turn => <li key={turn.id}>Turn {turn.id}: {turn.reply === undefined ? 'waiting for assistant transcript' : `${Math.round(turn.reply - turn.end)} ms ${turn.estimated ? "client-side estimate" : "transcript gap"}`}</li>)}</ol></section>
   </div>;
 }
 function Demo() {
