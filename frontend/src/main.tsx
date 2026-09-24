@@ -8,7 +8,9 @@ import { Reference } from './reference';
 
 function Live({ code }: { code: string }) {
   const root = useRef<HTMLDivElement>(null);
-  useEffect(() => root.current ? mountLive(root.current, code) : undefined, [code]);
+  const codeRef = useRef(code);
+  codeRef.current = code;
+  useEffect(() => root.current ? mountLive(root.current, () => codeRef.current) : undefined, []);
   return <div ref={root}>
     <p className="notice">Live voice requires a server API key and incurs provider usage charges. Your microphone is requested only when you start.</p>
     <fieldset id="voice-preferences"><legend>Voice preferences (before starting)</legend>
@@ -24,7 +26,7 @@ function Live({ code }: { code: string }) {
     <section aria-label="Report a problem"><h2>Report a problem</h2>
       <p>Send only a category, diagnostic ID, interface state, configured provider and app version. No audio, transcripts or message text. Reports expire after seven days. A pseudonymous identity is used to limit submissions.</p>
       <label>Problem category <select id="feedback-category"><option value="wrong_answer">Wrong answer</option><option value="source">Unhelpful source</option><option value="audio">Audio problem</option><option value="connection">Connection problem</option><option value="other">Other problem</option></select></label>
-      <button id="send-feedback" disabled>Send report</button><p id="feedback-status" aria-live="polite">An invitation or access code is required to send feedback.</p>
+      <button id="send-feedback" disabled={!code}>Send report</button><p id="feedback-status" aria-live="polite">An invitation or access code is required to send feedback.</p>
     </section>
     <section aria-label="Worker sources"><h2>Documentation sources</h2><div id="sources" /></section>
     <audio id="audio" controls autoPlay aria-label="Assistant audio" />

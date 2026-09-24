@@ -3,7 +3,7 @@ import type { Source } from "../reference";
 import { watchSpeech } from "./vad";
 import { shouldRecover } from "./recovery";
 
-export function mountLive(root: HTMLElement, accessCode: string): () => void {
+export function mountLive(root: HTMLElement, getAccessCode: () => string): () => void {
 
 function element<T extends HTMLElement>(id: string): T {
   const value = root.querySelector<T>(`#${id}`);
@@ -104,6 +104,7 @@ function release(): void {
 }
 
 async function request(path: string, owner?: Session, body?: unknown): Promise<unknown> {
+  const accessCode = getAccessCode();
   const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/api${path}`, {
     method: "POST",
     headers: {
@@ -265,7 +266,7 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
     if (!reportPending) {
       diagnosticId = crypto.randomUUID(); reportBody = undefined; reportSent = false;
       feedbackCategory.disabled = false;
-      feedbackButton.disabled = !accessCode;
+      feedbackButton.disabled = !getAccessCode();
       feedbackStatus.textContent = "Ready to send a report if something goes wrong.";
     }
   }
@@ -356,7 +357,7 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
 }
 
 const onFeedback = async () => {
-  if (reportPending || reportSent || !accessCode) return;
+  if (reportPending || reportSent || !getAccessCode()) return;
   reportPending = true;
   feedbackButton.disabled = true;
   feedbackCategory.disabled = true;
@@ -373,10 +374,11 @@ const onFeedback = async () => {
     feedbackButton.disabled = reportSent;
   }
 };
-feedbackButton.disabled = !accessCode;
+feedbackButton.disabled = !getAccessCode();
 feedbackButton.addEventListener("click", onFeedback);
 
 const onPageHide = () => {
+  const accessCode = getAccessCode();
   if (session) {
     void fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/api/sessions/${session.id}/close`, {
       method: "POST", keepalive: true, headers: { "X-Session-Key": session.key, ...(accessCode ? { Authorization: `Bearer ${accessCode}` } : {}) },
@@ -384,7 +386,9 @@ const onPageHide = () => {
   }
   generation += 1;
   release();
+  showState("ended", "Conversation ended.", "Select Start conversation to begin a new session.");
  };
+showState("ready", "Ready to connect", "Start a conversation when you are ready.");
 window.addEventListener("pagehide", onPageHide);
 return () => {
   window.removeEventListener("pagehide", onPageHide);

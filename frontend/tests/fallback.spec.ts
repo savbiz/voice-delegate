@@ -44,6 +44,9 @@ test('media failure replaces the peer once and closes the owned session', async 
   await page.getByRole('button', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.getByRole('status')).toContainText('Connected.');
+  await page.getByLabel('Personal invitation code').fill('updated-invitation');
+  await expect(page.getByRole('status')).toContainText('Connected.');
+  expect(calls.filter(path => path.endsWith('/close'))).toHaveLength(0);
   const failPeer = () => page.evaluate(() => {
     const peers = (window as unknown as { __peers: (EventTarget & { connectionState: string })[] }).__peers;
     const peer = peers[peers.length - 1];
