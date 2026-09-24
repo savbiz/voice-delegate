@@ -6,16 +6,19 @@ test('cancels once per speech onset and rearms after silence', () => {
   expect(gate.update(0.1)).toBe(false);
   expect(gate.update(0.1)).toBe(false);
   expect(gate.update(0.1)).toBe(true);
-  for (let i=0; i<20; i++) expect(gate.update(0.1)).toBe(false);
-  for (let i=0; i<15; i++) expect(gate.update(0)).toBe(false);
-  gate.update(0.1); gate.update(0.1);
+  for (let i = 0; i < 20; i++) expect(gate.update(0.1)).toBe(false);
+  for (let i = 0; i < 15; i++) expect(gate.update(0)).toBe(false);
+  gate.update(0.1);
+  gate.update(0.1);
   expect(gate.update(0.1)).toBe(true);
 });
 test('isolated noise spikes never trigger', () => {
   const gate = new SpeechGate();
-  for (let i=0; i<20; i++) { expect(gate.update(0.1)).toBe(false); expect(gate.update(0)).toBe(false); }
+  for (let i = 0; i < 20; i++) {
+    expect(gate.update(0.1)).toBe(false);
+    expect(gate.update(0)).toBe(false);
+  }
 });
-
 
 test('remote speech suppresses echo and rearms after 300 ms of silence', () => {
   const gate = new LocalInterruptGate();
@@ -39,20 +42,24 @@ test('renewed remote speech extends the silence guard', () => {
   for (let now = 120; now <= 240; now += 20) expect(gate.update(0.1, 0, now)).toBe(false);
   for (let now = 260; now <= 400; now += 20) expect(gate.update(0.1, 0.1, now)).toBe(false);
   for (let now = 420; now < 700; now += 20) expect(gate.update(0.1, 0, now)).toBe(false);
-  gate.update(0.1, 0, 700); gate.update(0.1, 0, 720);
+  gate.update(0.1, 0, 700);
+  gate.update(0.1, 0, 720);
   expect(gate.update(0.1, 0, 740)).toBe(true);
 });
-
 
 test('speech analysis setup closes its context when initialization fails', () => {
   const close = vi.fn(async () => undefined);
   class BrokenContext {
     close = close;
-    createMediaStreamSource() { throw new Error('no audio source'); }
+    createMediaStreamSource() {
+      throw new Error('no audio source');
+    }
   }
   vi.stubGlobal('AudioContext', BrokenContext);
   try {
     expect(() => watchSpeech({} as MediaStream, () => undefined)).toThrow('no audio source');
     expect(close).toHaveBeenCalledOnce();
-  } finally { vi.unstubAllGlobals(); }
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

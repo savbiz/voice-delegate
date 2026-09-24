@@ -13,7 +13,10 @@ test('provider errors update display without requesting recovery', () => {
 });
 
 test('transcripts remain bounded and input events are not mutated', () => {
-  const event = Object.freeze({ type: 'conversation.item.input_audio_transcription.completed', transcript: 'x'.repeat(7000) });
+  const event = Object.freeze({
+    type: 'conversation.item.input_audio_transcription.completed',
+    transcript: 'x'.repeat(7000),
+  });
   const initial = initialLiveState();
   const result = processEvent(initial, event).state;
   expect(result.captions.user).toHaveLength(6000);
@@ -24,7 +27,11 @@ test('transcripts remain bounded and input events are not mutated', () => {
 });
 
 test('delegation updates worker display and preserves captions', () => {
-  const state = { ...initialLiveState(), active: true, captions: { user: 'question', assistant: '' } };
+  const state = {
+    ...initialLiveState(),
+    active: true,
+    captions: { user: 'question', assistant: '' },
+  };
   const next = processEvent(state, { type: 'session.delegation.created' }).state;
   expect(next.phase).toBe('working');
   expect(next.worker).toBe('running');
@@ -39,7 +46,8 @@ test('turn timing merges fragments, preserves overlap and bounds history', () =>
   const unchanged = updateTurnTiming(timings, 'assistant', 200, 400);
   expect(unchanged).toBe(timings);
   expect(updateTurnTiming(timings, 'user', Infinity, 0)[0]?.estimated).toBe(true);
-  for (let id = 2; id <= 25; id++) timings = updateTurnTiming(timings, 'user', id * 1000, id * 1000 + 100);
+  for (let id = 2; id <= 25; id++)
+    timings = updateTurnTiming(timings, 'user', id * 1000, id * 1000 + 100);
   expect(timings).toHaveLength(20);
   expect(timings[0]?.id).toBe(25);
   expect(timings.at(-1)?.id).toBe(6);
@@ -60,12 +68,27 @@ test('store snapshots are stable between updates and unsubscribe releases listen
   expect(listener).toHaveBeenCalledOnce();
 });
 
-
 test('missing provider timing uses receipt timestamps without mixing clock origins', () => {
-  let state = processEvent(initialLiveState(), { type: 'session.input_transcript.delta', delta: 'hello', start_ms: 100, end_ms: 200 }, 5000).state;
-  state = processEvent(state, { type: 'response.output_audio_transcript.delta', delta: 'hi' }, 5200).state;
+  let state = processEvent(
+    initialLiveState(),
+    { type: 'session.input_transcript.delta', delta: 'hello', start_ms: 100, end_ms: 200 },
+    5000,
+  ).state;
+  state = processEvent(
+    state,
+    { type: 'response.output_audio_transcript.delta', delta: 'hi' },
+    5200,
+  ).state;
   expect(state.timings[0]).toMatchObject({ end: 5000, reply: 5200, estimated: true });
-  const input = processEvent(initialLiveState(), { type: 'conversation.item.input_audio_transcription.completed', transcript: 'hello' }, 6000).state;
-  const reply = processEvent(input, { type: 'response.output_audio_transcript.delta', delta: 'hi' }, 6300).state;
+  const input = processEvent(
+    initialLiveState(),
+    { type: 'conversation.item.input_audio_transcription.completed', transcript: 'hello' },
+    6000,
+  ).state;
+  const reply = processEvent(
+    input,
+    { type: 'response.output_audio_transcript.delta', delta: 'hi' },
+    6300,
+  ).state;
   expect(reply.timings[0]).toMatchObject({ end: 6000, reply: 6300, estimated: true });
 });

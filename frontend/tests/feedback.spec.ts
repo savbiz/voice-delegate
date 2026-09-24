@@ -3,11 +3,16 @@ import { expect, test } from '@playwright/test';
 
 test('feedback retries the same bounded report and prevents duplicate clicks', async ({ page }) => {
   const bodies: unknown[] = [];
-  await page.route('**/api/feedback', route => {
+  const authorization: (string | undefined)[] = [];
+  await page.route('**/api/feedback', (route) => {
     const body = route.request().postDataJSON();
     bodies.push(body);
-    expect(route.request().headers().authorization).toBe('Bearer invitation');
-    return route.fulfill(bodies.length === 1 ? { status: 503, json: {} } : { status: 201, json: { diagnostic_id: body.diagnostic_id } });
+    authorization.push(route.request().headers().authorization);
+    return route.fulfill(
+      bodies.length === 1
+        ? { status: 503, json: {} }
+        : { status: 201, json: { diagnostic_id: body.diagnostic_id } },
+    );
   });
   await page.goto('/');
   await page.getByRole('button', { name: 'Live voice', exact: true }).click();
@@ -20,7 +25,12 @@ test('feedback retries the same bounded report and prevents duplicate clicks', a
   await page.getByRole('button', { name: 'Send report' }).click();
   await expect(page.locator('#feedback-status')).toContainText('Report received. Diagnostic ID:');
   await expect(page.getByRole('button', { name: 'Send report' })).toBeDisabled();
+  expect(authorization).toEqual(['Bearer invitation', 'Bearer invitation']);
   expect(bodies).toHaveLength(2);
   expect(bodies[0]).toEqual(bodies[1]);
-  expect(bodies[0]).toEqual({ diagnostic_id: expect.any(String), category: 'audio', state: 'ready' });
+  expect(bodies[0]).toEqual({
+    diagnostic_id: expect.any(String),
+    category: 'audio',
+    state: 'ready',
+  });
 });
