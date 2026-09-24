@@ -1,6 +1,7 @@
 /** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
 import type { Source } from "../reference";
 import { watchSpeech } from "./vad";
+import { shouldRecover } from "./recovery";
 
 export function mountLive(root: HTMLElement, accessCode: string): () => void {
 
@@ -166,7 +167,7 @@ function processEvent(raw: unknown): void {
       showWorker("idle");
     }
   } else if (event.type === "error") {
-    void recover("The provider reported an error.");
+    showState(uiState, "The provider reported an error.", "You can continue speaking or stop the conversation.");
   } else if (event.type === "session.delegation.created") {
     showWorker("running");
   }
@@ -296,7 +297,7 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
       void audio.play().catch(() => { status.textContent = "Press Play below to hear the assistant."; });
     });
     connection.addEventListener("connectionstatechange", () => {
-      if (attempt === generation && connection.connectionState === "failed") {
+      if (attempt === generation && shouldRecover("connectionstatechange", connection.connectionState)) {
         void recover("Media connection failed.");
       }
     });
@@ -306,7 +307,7 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
       try { processEvent(JSON.parse(message.data)); } catch { void finish("Invalid provider event."); }
     });
     channel.addEventListener("close", () => {
-      if (attempt === generation) void recover("Event connection closed.");
+      if (attempt === generation && shouldRecover("data-channel-close")) void recover("Event connection closed.");
     });
     await connection.setLocalDescription(await connection.createOffer());
     await gather(connection);
@@ -336,7 +337,7 @@ async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
           }
           showWorker(state.delegation);
           if (state.state === "closed" || state.state === "closing") void finish("Conversation ended.");
-          if (state.state === "reconnecting") void recover("Provider connection lost.");
+          if (state.state === "reconnecting") showState("recovering", "Provider connection lost.", "Waiting for transport recovery. You can select Stop.");
         }
       }).catch(() => {
         if (attempt === generation) void finish("Server connection lost or session expired.");
