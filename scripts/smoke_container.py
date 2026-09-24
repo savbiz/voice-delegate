@@ -1,4 +1,4 @@
-"""Test an already-built local M6 image without provider keys or paid calls."""
+"""Test an already-built local backend image without provider keys or paid calls."""
 
 import json
 import secrets
@@ -7,7 +7,7 @@ import time
 
 import httpx
 
-name = "voice-delegate-m5-check-" + secrets.token_hex(3)
+name = "voice-delegate-check-" + secrets.token_hex(3)
 token = secrets.token_urlsafe(32)
 env = {
     "VOICE_PUBLIC_DEMO": "true",
@@ -20,7 +20,7 @@ env = {
 args = ["docker", "run", "-d", "--name", name, "-p", "127.0.0.1:18080:8000"]
 for key, value in env.items():
     args += ["-e", key + "=" + value]
-args += ["voice-delegate:m6-candidate"]
+args += ["voice-delegate:ci"]
 subprocess.run(args, check=True, capture_output=True)
 try:
     with httpx.Client(base_url="http://127.0.0.1:18080", timeout=2) as c:

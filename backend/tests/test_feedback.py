@@ -1,6 +1,7 @@
 """Feedback isolation, content exclusion, retry safety and bounded retention."""
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from uuid import uuid4
 
@@ -78,7 +79,7 @@ async def test_feedback_api_auth_schema_and_private_storage(
         assert result.json() == {"diagnostic_id": body["diagnostic_id"]}
         assert (await client.post("/api/feedback", json=body)).json() == result.json()
         assert (await client.get("/api/feedback")).status_code == 405
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db:
         rows = db.execute("SELECT * FROM feedback").fetchall()
         assert len(rows) == 1
         assert all(text not in str(rows) for text in (secret, "alice", "private"))
