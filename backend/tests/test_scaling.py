@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from conftest import BlockingWorker
 from pydantic import SecretStr
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeProvider
@@ -65,17 +66,12 @@ async def test_crashed_owner_lease_expires_without_refunding_usage(tmp_path: Pat
     await a.aclose()
 
 
-async def test_worker_backpressure_duplicates_and_cancellation_tombstones() -> None:
-    class Slow:
-        calls = 0
-        gate = asyncio.Event()
+async def test_worker_backpressure_duplicates_and_cancellation_tombstones(
+    blocking_worker: BlockingWorker,
+) -> None:
 
-        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
-            self.calls += 1
-            await self.gate.wait()
-            return WorkerResult("done")
-
-    worker = Slow()
+    worker = blocking_worker
+    worker.return_on_cancel = False
     settings = Settings(worker_service_token=SecretStr(TOKEN), worker_service_capacity=2)
     app = create_worker_app(settings, worker)
     async with app.router.lifespan_context(app):
@@ -108,7 +104,6 @@ async def test_worker_backpressure_duplicates_and_cancellation_tombstones() -> N
 
 
 async def test_remote_worker_executes_graph_and_carries_sources() -> None:
-    from voice_delegate_agent.reference import WorkerResult
 
     settings = Settings(
         worker_service_token=SecretStr(TOKEN),
@@ -124,26 +119,16 @@ async def test_remote_worker_executes_graph_and_carries_sources() -> None:
         await remote.aclose()
 
 
-async def test_remote_cancellation_cancels_server_job() -> None:
-    class Slow:
-        entered = asyncio.Event()
-        cancelled = asyncio.Event()
+async def test_remote_cancellation_cancels_server_job(blocking_worker: BlockingWorker) -> None:
 
-        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
-            self.entered.set()
-            try:
-                await asyncio.Event().wait()
-            finally:
-                self.cancelled.set()
-            return WorkerResult("unreachable")
-
-    worker = Slow()
+    worker = blocking_worker
+    worker.return_on_cancel = False
     settings = Settings(worker_service_token=SecretStr(TOKEN), worker_service_url="http://worker")
     app = create_worker_app(settings, worker)
     async with app.router.lifespan_context(app):
         remote = RemoteWorker(settings, httpx.AsyncClient(transport=httpx.ASGITransport(app=app)))
         task = asyncio.create_task(remote.delegate_task("wait", ""))
-        await worker.entered.wait()
+        await worker.started.wait()
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task

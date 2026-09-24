@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator
 
 import pytest
+from conftest import BlockingProvider
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate.providers.models import (
@@ -11,7 +12,6 @@ from voice_delegate.providers.models import (
     ProviderCapabilities,
     ProviderEvent,
     ProviderFailure,
-    SessionConfig,
 )
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
@@ -75,16 +75,10 @@ async def test_abandoned_unconnected_session_expires() -> None:
     assert not manager.sessions
 
 
-class SlowProvider(FakeProvider):
-    """Hold setup until canceled by the application timeout."""
-
-    async def connect(self, *, config: SessionConfig, offer_sdp: str) -> FakeConnection:
-        await asyncio.Event().wait()
-        raise AssertionError("unreachable")
-
-
-async def test_setup_timeout_releases_capacity() -> None:
-    manager = SessionManager(SlowProvider(), Settings(connect_timeout_seconds=0.01))
+async def test_setup_timeout_releases_capacity(
+    blocking_provider: BlockingProvider,
+) -> None:
+    manager = SessionManager(blocking_provider, Settings(connect_timeout_seconds=0.01))
     session = manager.create()
     with pytest.raises(SessionError, match="Provider connection timed out") as error:
         await manager.connect(session, "v=0\r\n")
@@ -94,8 +88,10 @@ async def test_setup_timeout_releases_capacity() -> None:
     assert session.state == "closed"
 
 
-async def test_canceled_setup_releases_capacity() -> None:
-    manager = SessionManager(SlowProvider(), Settings())
+async def test_canceled_setup_releases_capacity(
+    blocking_provider: BlockingProvider,
+) -> None:
+    manager = SessionManager(blocking_provider, Settings())
     session = manager.create()
     setup = asyncio.create_task(manager.connect(session, "v=0\r\n"))
     await asyncio.sleep(0)

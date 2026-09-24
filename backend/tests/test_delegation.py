@@ -1,9 +1,9 @@
 """Exercise real LangGraph tools and cancellation races with all IP sockets disabled."""
 
 import asyncio
-from collections.abc import Callable
 
 import pytest
+from conftest import BlockingWorker, eventually
 from langchain_core.messages import AIMessage, AnyMessage
 from voice_delegate.config import Settings
 from voice_delegate.delegation.contracts import DELEGATE_TOOL, DelegationInput
@@ -21,13 +21,6 @@ from voice_delegate.session.manager import SessionManager
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 from voice_delegate_agent.reference import WorkerResult
 from voice_delegate_agent.tools import calculate
-
-
-async def eventually(predicate: Callable[[], bool]) -> None:
-    async with asyncio.timeout(2):
-        # Observe side effects in the fake transport, which has no notification primitive.
-        while not predicate():  # noqa: ASYNC110
-            await asyncio.sleep(0)
 
 
 @pytest.mark.parametrize("text", ["ciao " * 200, "日本語🙂 " * 200, "<|endoftext|>" * 100])
@@ -106,25 +99,11 @@ async def test_delegation_result_and_duplicate_are_delivered_once() -> None:
     await manager.aclose()
 
 
-class WaitingWorker:
-    def __init__(self) -> None:
-        self.started = asyncio.Event()
-        self.cancelled = asyncio.Event()
-
-    async def delegate_task(self, goal: str, context: str) -> WorkerResult:
-        self.started.set()
-        try:
-            await asyncio.Event().wait()
-        except asyncio.CancelledError:
-            self.cancelled.set()
-            # Simulate an extension that returns a stale result despite cancellation.
-            return WorkerResult("STALE RESULT")
-        return WorkerResult("unreachable")
-
-
-async def test_timeout_cancels_worker_and_reports_failure() -> None:
+async def test_timeout_cancels_worker_and_reports_failure(
+    blocking_worker: BlockingWorker,
+) -> None:
     provider = FakeProvider()
-    worker = WaitingWorker()
+    worker = blocking_worker
     manager = SessionManager(provider, Settings(delegation_timeout_seconds=0.01), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
@@ -139,8 +118,10 @@ async def test_timeout_cancels_worker_and_reports_failure() -> None:
 
 
 @pytest.mark.parametrize("interrupt", ["transcript", "explicit", "close"])
-async def test_interruption_and_close_never_narrate_late_result(interrupt: str) -> None:
-    provider, worker = FakeProvider(), WaitingWorker()
+async def test_interruption_and_close_never_narrate_late_result(
+    blocking_worker: BlockingWorker, interrupt: str
+) -> None:
+    provider, worker = FakeProvider(), blocking_worker
     manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
@@ -192,8 +173,10 @@ async def test_failure_is_redacted_and_result_is_truncated(
     await manager.aclose()
 
 
-async def test_capacity_and_latest_task_supersedes_old_result() -> None:
-    worker, provider = WaitingWorker(), FakeProvider()
+async def test_capacity_and_latest_task_supersedes_old_result(
+    blocking_worker: BlockingWorker,
+) -> None:
+    worker, provider = blocking_worker, FakeProvider()
     manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
@@ -216,8 +199,10 @@ async def test_capacity_and_latest_task_supersedes_old_result() -> None:
     await manager.aclose()
 
 
-async def test_old_transcript_fragment_does_not_cancel_current_delegation() -> None:
-    worker, provider = WaitingWorker(), FakeProvider()
+async def test_old_transcript_fragment_does_not_cancel_current_delegation(
+    blocking_worker: BlockingWorker,
+) -> None:
+    worker, provider = blocking_worker, FakeProvider()
     manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
@@ -232,8 +217,10 @@ async def test_old_transcript_fragment_does_not_cancel_current_delegation() -> N
 
 
 @pytest.mark.parametrize("fallback", [False, True])
-async def test_realtime_interrupts_on_speech_not_delayed_transcript(fallback: bool) -> None:
-    worker, realtime = WaitingWorker(), FakeProvider()
+async def test_realtime_interrupts_on_speech_not_delayed_transcript(
+    blocking_worker: BlockingWorker, fallback: bool
+) -> None:
+    worker, realtime = blocking_worker, FakeProvider()
     realtime.capabilities = ProviderCapabilities(text_replay=True, transcript_timing=False)
     manager = SessionManager(
         FakeProvider() if fallback else realtime,
@@ -260,8 +247,10 @@ async def test_realtime_interrupts_on_speech_not_delayed_transcript(fallback: bo
 
 
 @pytest.mark.parametrize("timing,start_ms", [(True, 0), (False, 1)])
-async def test_real_transcript_timing_interrupts(timing: bool, start_ms: int) -> None:
-    worker, provider = WaitingWorker(), FakeProvider()
+async def test_real_transcript_timing_interrupts(
+    blocking_worker: BlockingWorker, timing: bool, start_ms: int
+) -> None:
+    worker, provider = blocking_worker, FakeProvider()
     provider.capabilities = ProviderCapabilities(transcript_timing=timing)
     manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()

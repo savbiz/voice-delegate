@@ -19,6 +19,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-socket>=0.8.1",
+    "pytest-timeout>=2.4.0",
     "ruff>=0.16.8",
 ]
 eval = [
@@ -40,4 +41,6 @@ files = ["backend/src", "backend/tests", "agent/src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["backend/tests", "evals"]
-addopts = "--disable-socket --allow-unix-socket -ra"
+addopts = "--disable-socket --allow-unix-socket --strict-markers --strict-config -ra"
+timeout = 30
+filterwarnings = ["error"]

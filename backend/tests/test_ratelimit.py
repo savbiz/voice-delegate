@@ -4,6 +4,7 @@ from typing import cast
 
 import httpx
 import pytest
+from conftest import ASGIClientFactory
 from starlette.responses import Response
 from starlette.types import Receive, Scope, Send
 from voice_delegate.api.app import create_app
@@ -64,19 +65,18 @@ async def test_invalid_forwarded_header_falls_back_to_peer() -> None:
         assert (await client.get("/", headers={"X-Forwarded-For": "bad"})).status_code == 429
 
 
-async def test_rate_limit_runs_before_body_limit() -> None:
+async def test_rate_limit_runs_before_body_limit(
+    asgi_client: ASGIClientFactory,
+) -> None:
     app = create_app(Settings(max_body_bytes=1024), FakeProvider())
     # Freeze the clock so the test does not depend on execution speed.
     for middleware in app.user_middleware:
         if cast(object, middleware.cls) is RateLimitMiddleware:
             middleware.kwargs["clock"] = lambda: 0
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app), base_url="http://testserver"
-        ) as client:
-            for _ in range(100):
-                assert (await client.get("/healthz")).status_code == 200
-            assert (await client.post("/api/sessions", content=b"x" * 1025)).status_code == 429
+    async with asgi_client(app) as client:
+        for _ in range(100):
+            assert (await client.get("/healthz")).status_code == 200
+        assert (await client.post("/api/sessions", content=b"x" * 1025)).status_code == 429
 
 
 def test_bucket_storage_is_bounded_without_evicting_active_limits() -> None:

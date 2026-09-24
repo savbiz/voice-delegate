@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from conftest import ASGIClientFactory
 from pydantic import SecretStr
 from voice_delegate.api.app import create_app
 from voice_delegate.config import Settings
@@ -54,30 +55,29 @@ def test_feedback_retry_isolation_limits_and_retention(
     store.close()
 
 
-async def test_feedback_api_auth_schema_and_private_storage(tmp_path: Path) -> None:
+async def test_feedback_api_auth_schema_and_private_storage(
+    asgi_client: ASGIClientFactory, tmp_path: Path
+) -> None:
     path = str(tmp_path / "feedback.sqlite3")
     secret = "private-invitation-never-stored-123456"
     settings = Settings(feedback_database=path, invite_tokens={"alice": SecretStr(secret)})
     app = create_app(settings, FakeProvider())
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(
-            transport=httpx.ASGITransport(app=app), base_url="http://testserver"
-        ) as client:
-            body = report().model_dump(mode="json")
-            assert (await client.post("/api/feedback", json=body)).status_code == 403
-            client.headers["Origin"] = settings.allowed_origin
-            assert (await client.post("/api/feedback", json=body)).status_code == 401
-            client.headers["Authorization"] = "Bearer " + secret
-            for field in ("transcript", "audio", "message", "provider", "session_key"):
-                assert (
-                    await client.post("/api/feedback", json={**body, field: "private"})
-                ).status_code == 422
-            result = await client.post("/api/feedback", json=body)
-            assert result.status_code == 201
-            assert result.headers["Cache-Control"] == "no-store"
-            assert result.json() == {"diagnostic_id": body["diagnostic_id"]}
-            assert (await client.post("/api/feedback", json=body)).json() == result.json()
-            assert (await client.get("/api/feedback")).status_code == 405
+    async with asgi_client(app) as client:
+        body = report().model_dump(mode="json")
+        assert (await client.post("/api/feedback", json=body)).status_code == 403
+        client.headers["Origin"] = settings.allowed_origin
+        assert (await client.post("/api/feedback", json=body)).status_code == 401
+        client.headers["Authorization"] = "Bearer " + secret
+        for field in ("transcript", "audio", "message", "provider", "session_key"):
+            assert (
+                await client.post("/api/feedback", json={**body, field: "private"})
+            ).status_code == 422
+        result = await client.post("/api/feedback", json=body)
+        assert result.status_code == 201
+        assert result.headers["Cache-Control"] == "no-store"
+        assert result.json() == {"diagnostic_id": body["diagnostic_id"]}
+        assert (await client.post("/api/feedback", json=body)).json() == result.json()
+        assert (await client.get("/api/feedback")).status_code == 405
     with sqlite3.connect(path) as db:
         rows = db.execute("SELECT * FROM feedback").fetchall()
         assert len(rows) == 1
