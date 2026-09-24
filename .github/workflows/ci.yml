@@ -16,6 +16,7 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run mypy
       - run: uv run pytest
+      - run: python scripts/build_reference.py --check
       - run: uv build --all-packages
       - uses: pnpm/action-setup@v6.1.0
         with:

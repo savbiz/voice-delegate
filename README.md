@@ -46,7 +46,7 @@ result that is no longer wanted. This project shows one way to avoid both:
 
 ## Status
 
-**v0.1.0 candidate.** M1–M4 (sessions, delegation, failover, observability) are implemented
+**v0.1.0 candidate.** Sessions, delegation, failover and observability are implemented
 and pass the offline suite in CI. Live verification with a real provider, recorded demo and
 measured latency are the release gates and are tracked in [docs/roadmap.md](docs/roadmap.md).
 Later milestones (invitations and quotas, cited documentation search, multilingual controls,
@@ -145,8 +145,8 @@ The provider creation POST is never automatically retried: an ambiguous response
 
 ## Roadmap and release gates
 
-The full plan includes **M1–M8**: see [scope, acceptance and status](docs/roadmap.md).
-The table below covers the original v0.1 milestones; M5–M8 extend it with a controlled
+The full plan covers voice sessions through same-host scaling: see [scope, acceptance and status](docs/roadmap.md).
+The table below covers the original v0.1 milestones; later features extend it with a controlled
 public demo, a complete use case, advanced voice UX and optional scaling.
 
 | Week | Milestone | Release gate |

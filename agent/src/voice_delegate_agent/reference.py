@@ -57,8 +57,6 @@ def search(query: str) -> tuple[Source, ...]:
     if not query.strip() or len(query) > 500:
         return ()
     words = terms(query)
-    if "history" in words:
-        words.update({"replay", "sealed"})
     ranked = []
     for source in corpus():
         body = terms(source.text)

@@ -2,9 +2,15 @@
 
 ## Boundaries
 
-The browser owns microphone capture, WebRTC playback, and display-only captions. FastAPI owns admission, session capability keys, time budgets, and server credentials. The session manager owns exactly one provider connection per application session and is the sole executor of delegation requests. The provider adapter translates public wire events into typed application events. M2 runs a LangGraph worker behind `delegate_task(goal, context)`.
+The browser owns microphone capture, WebRTC playback, and display-only captions. FastAPI owns
+admission, session capability keys, time budgets, and server credentials. The session manager
+owns exactly one provider connection per application session and is the sole executor of
+delegation requests. The provider adapter translates public wire events into typed application
+events. The application runs a LangGraph worker behind `delegate_task(goal, context)`.
 
-Keeping audio on a direct media connection avoids an application audio hop. A sideband provides server-side authority without routing the microphone through Python. Backend results enter as commentary, separate from trusted instructions.
+Keeping audio on a direct media connection avoids an application audio hop. A sideband provides
+server-side authority without routing the microphone through Python. Backend results enter as
+commentary, separate from trusted instructions.
 
 ```mermaid
 sequenceDiagram
@@ -128,3 +134,47 @@ Local detection rearms after 300 ms of remote silence and requires a fresh onset
 Paused, muted and silent remote audio do not indefinitely block local detection.
 Provider speech-start events can still interrupt during remote playback; headphones and
 real-device testing remain necessary to assess acoustic behaviour.
+
+## Worker, fallback and admission contracts
+
+Cancellation invalidates the generation before cancelling tasks. Results from workers
+that return after cancellation are discarded. A result already sent to the voice provider
+cannot be withdrawn, and cancellation cannot undo a completed external action.
+
+Timeout limits how long a worker result is awaited. It cancels the worker and sends a
+short failure message. Provider transmission has its own two-second deadline, outside
+the worker execution budget. Noncooperative workers occupy capacity until they finish.
+
+Only sealed text segments are replayed during fallback, bounded to twelve entries and
+2048 tokens. For Live, a speaker change seals the preceding segment; the unfinished
+segment is omitted. Realtime uses completed transcripts. Tool calls, tool results and
+audio are never replayed. History is conversation data, never system instructions.
+
+A provider stream failure retains the owned session in the reconnecting state and closes
+the failed connection immediately. Browser transport failure starts recovery with a new
+peer. An authenticated reconnect request consumes one fallback attempt under the session
+lock. Azure fallback preserves lifetime and admission limits; stale requests return 409.
+
+Cleanup reports failure if either provider's finalization was unconfirmed. A lost creation
+response can leave an unknown upstream call; no subsequent request can reliably identify
+that call for cleanup. Creation requests are never automatically retried.
+
+All session operations require both the user's invitation and the session ownership key.
+A different valid invitation cannot operate the session even if it knows its key.
+Shared-code setups remain available for private testing when public demo mode is disabled.
+
+SQLite records daily quota reservations before admitting a session. Only hashes of stable
+user IDs, UTC dates, counts and reserved seconds are stored, never tokens or transcripts.
+The single API process needs durable writable quota storage across deployment and rollback.
+
+Set `VOICE_DEMO_ENABLED=false` and restart to disable new demo sessions with status 503.
+Existing close and heartbeat routes retain authorization. Provider-side spend controls
+remain necessary because crashes and remote cleanup failures can outlive local deadlines.
+
+The worker allows four model steps by default and one tool per model response.
+Configurable step and duration budgets stop unbounded loops, while token and byte limits
+keep delegated results compact enough for narration.
+
+The offline planner is deterministic, not a free language model. It exercises the real
+LangGraph graph and read-only tools with English commands, without provider calls.
+Natural-language planning requires the separately configured paid text model.

@@ -1,5 +1,5 @@
 {
-  "version": "worker-v1",
+  "version": "worker-v2",
   "cases": [
     {
       "id": "math-01",
@@ -154,7 +154,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "8e3e05ad99a8eb9d"
+          "4c84eddd371969c3"
         ],
         "rubric": "The browser owns microphone capture and playback."
       }
@@ -168,7 +168,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "ef8cb0ae8b3ae8d6"
+          "a290f1daf6c23283"
         ],
         "rubric": "Audio uses a direct media connection; the sideband controls the session."
       }
@@ -182,8 +182,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "0cf61e883dc695ad",
-          "c00beee2030f5db0"
+          "73c1bb66c92780dc"
         ],
         "rubric": "Cancellation invalidates a generation and stale results are discarded."
       }
@@ -197,7 +196,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "f5a0f81edf6e155f"
+          "1bab2d16876212c3"
         ],
         "rubric": "Timeout cancels the worker and sends a short failure message."
       }
@@ -211,7 +210,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "4540ae624554f4a5"
+          "5e89815d340db149"
         ],
         "rubric": "Only sealed text is replayed, at most twelve entries and 2048 tokens; no tool executions or audio."
       }
@@ -225,7 +224,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "7f4d05667c07eb53"
+          "0ba854d978400f8f"
         ],
         "rubric": "The owned session enters reconnecting; the browser creates a new peer and fallback is limited to one attempt."
       }
@@ -239,7 +238,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "67c94afd3c6c33e6"
+          "b48844ce2c657537"
         ],
         "rubric": "Cleanup reports failure and a lost creation response can leave an unknown call."
       }
@@ -253,7 +252,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "a351aeb442b58f10"
+          "aa8e1fa4bcb9ab23"
         ],
         "rubric": "Both invitation and ownership key are required; a different identity cannot operate it."
       }
@@ -267,7 +266,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "bfeee0c169607cd4"
+          "1e2d7689f6dd0559"
         ],
         "rubric": "Hashes of user IDs, UTC dates, counts and reserved seconds; not tokens or transcripts."
       }
@@ -281,7 +280,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "294b4b31ad2200d4"
+          "90a59bfa9babcf7a"
         ],
         "rubric": "Set VOICE_DEMO_ENABLED=false and restart; new sessions return 503."
       }
@@ -295,7 +294,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "3ce87cf3f7849657"
+          "7371cf0925a00a1b"
         ],
         "rubric": "Four worker steps by default and one tool per response."
       }
@@ -309,7 +308,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "3f38746fe5bc60b7"
+          "fd3ebd44d09bb660"
         ],
         "rubric": "No; it is a deterministic planner exercising the real graph and tools."
       }

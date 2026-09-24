@@ -18,7 +18,7 @@ scripted fixture timings. No live p50/p95 benchmark has been collected for this 
 
 ## Worker quality and Braintrust experiments
 
-The versioned `data/worker-v1.json` contains 32 synthetic cases: 12 arithmetic,
+The versioned `data/worker-v2.json` contains 32 synthetic cases: 12 arithmetic,
 12 documentation questions with manually selected expected source IDs, four missing-evidence
 queries and four live-only correction/unsupported-request cases. It contains no user sessions.
 The remaining cases exercise the actual graph and tools with the scripted offline planner.
