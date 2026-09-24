@@ -51,14 +51,14 @@ def excerpts(path: Path, root: Path) -> list[dict[str, str]]:
         ):
             digest = hashlib.sha256(f"{name}\n{section}\n{chunk}".encode()).hexdigest()
             entries.append(
-                dict(
-                    id=digest[:16],
-                    title=title,
-                    path=name,
-                    section=section,
-                    text=chunk,
-                    digest=digest,
-                )
+                {
+                    "id": digest[:16],
+                    "title": title,
+                    "path": name,
+                    "section": section,
+                    "text": chunk,
+                    "digest": digest,
+                }
             )
 
     for line in lines:
@@ -106,7 +106,8 @@ def main() -> None:
     rendered = build(ROOT)
     if args.check:
         if not args.output.exists() or args.output.read_text() != rendered:
-            raise SystemExit("Documentation snapshot has drifted; run scripts/build_reference.py")
+            message = "Documentation snapshot has drifted; run scripts/build_reference.py"
+            raise SystemExit(message)
         print("Documentation snapshot is current.")
     else:
         args.output.write_text(rendered)

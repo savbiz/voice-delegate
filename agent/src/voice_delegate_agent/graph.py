@@ -1,5 +1,6 @@
 """A bounded model/tool loop with interchangeable offline and OpenAI planners."""
 
+import contextlib
 import json
 import re
 from html import escape, unescape
@@ -90,9 +91,10 @@ class OpenAIPlanner:
 
     async def respond(self, messages: list[AnyMessage]) -> AIMessage:
         """Call the bound text model; cancellation propagates through await."""
-        answer = await self.model.ainvoke(messages)
+        answer: object = await self.model.ainvoke(messages)
         if not isinstance(answer, AIMessage):
-            raise ValueError("Unexpected worker response")
+            message = "Unexpected worker response"
+            raise ValueError(message)  # noqa: TRY004 - explicit worker boundary contract
         return answer
 
     async def aclose(self) -> None:
@@ -128,7 +130,8 @@ class LangGraphWorker:
         async def execute(state: State) -> dict[str, object]:
             answer = state["messages"][-1]
             if not isinstance(answer, AIMessage):
-                raise ValueError("Tool execution requires an AIMessage")
+                message = "Tool execution requires an AIMessage"
+                raise ValueError(message)  # noqa: TRY004 - explicit worker boundary contract
             if len(answer.tool_calls) != 1:
                 return {
                     "messages": [
@@ -147,7 +150,7 @@ class LangGraphWorker:
                 result = "Tool failed; no action taken."
             source_ids = state["source_ids"]
             if call["name"] == "search_documentation":
-                try:
+                with contextlib.suppress(ValueError, KeyError, TypeError):
                     source_ids = list(
                         dict.fromkeys(
                             source_ids
@@ -158,8 +161,6 @@ class LangGraphWorker:
                             ]
                         )
                     )[:3]
-                except (ValueError, KeyError, TypeError):
-                    pass
             return {
                 "messages": [ToolMessage(content=str(result)[:2000], tool_call_id=call["id"])],
                 "source_ids": source_ids,

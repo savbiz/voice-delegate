@@ -101,7 +101,7 @@ async def test_reconnecting_session_expires_without_browser_request(fake_clock: 
     await manager.aclose()
 
 
-@pytest.mark.parametrize("configured,status", [(False, 501), (True, 409)])
+@pytest.mark.parametrize(("configured", "status"), [(False, 501), (True, 409)])
 async def test_reconnect_rejects_missing_fallback_or_created_session(
     configured: bool, status: int
 ) -> None:

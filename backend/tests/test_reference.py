@@ -31,7 +31,7 @@ def test_bundled_sources_match_reviewed_project_files() -> None:
 async def test_documentation_worker_preserves_citations_outside_spoken_budget() -> None:
     worker = LangGraphWorker(OfflinePlanner())
     answer = await worker.delegate_task("docs fallback history", "")
-    assert isinstance(answer, WorkerResult) and answer.sources
+    assert answer.sources
     assert "[1]" in answer.text
     runner = DelegationRunner(worker, budget=16)
     state = DelegationState()
@@ -67,23 +67,25 @@ async def test_authenticated_search_and_inspect_source_without_voice() -> None:
 
     provider = FakeProvider()
     app = create_app(Settings(access_token=SecretStr("test-access")), provider)
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
             base_url="http://testserver",
             headers={"Origin": "http://localhost:5173"},
-        ) as client:
-            path = "/api/reference/search"
-            assert (await client.post(path, json={"query": "fallback"})).status_code == 401
-            client.headers["Authorization"] = "Bearer test-access"
-            response = await client.post(path, json={"query": "fallback history"})
-            assert response.status_code == 200
-            first = response.json()["sources"][0]
-            detail = await client.post("/api/reference/" + first["id"])
-            assert detail.json() == first
-            assert (await client.post(path, json={"query": "x" * 501})).status_code == 422
-            assert not (await client.post(path, json={"query": "zzzzunfindable"})).json()["sources"]
-            assert not provider.connections
+        ) as client,
+    ):
+        path = "/api/reference/search"
+        assert (await client.post(path, json={"query": "fallback"})).status_code == 401
+        client.headers["Authorization"] = "Bearer test-access"
+        response = await client.post(path, json={"query": "fallback history"})
+        assert response.status_code == 200
+        first = response.json()["sources"][0]
+        detail = await client.post("/api/reference/" + first["id"])
+        assert detail.json() == first
+        assert (await client.post(path, json={"query": "x" * 501})).status_code == 422
+        assert not (await client.post(path, json={"query": "zzzzunfindable"})).json()["sources"]
+        assert not provider.connections
 
 
 def test_demo_aliases_and_stop_words_preserve_retrieval() -> None:

@@ -15,7 +15,6 @@ from voice_delegate.scaling.remote import RemoteWorker
 from voice_delegate.scaling.worker_service import create_worker_app
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
-from voice_delegate_agent.reference import WorkerResult
 
 TOKEN = "test-worker-token-32-characters-long"
 
@@ -77,33 +76,32 @@ async def test_worker_backpressure_duplicates_and_cancellation_tombstones(
     worker.return_on_cancel = False
     settings = Settings(worker_service_token=SecretStr(TOKEN), worker_service_capacity=2)
     app = create_worker_app(settings, worker)
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://worker"
-        ) as client:
-            body = {"request_id": str(uuid4()), "goal": "work", "deadline": time.time() + 30}
-            assert (await client.post("/jobs", json=body)).status_code == 401
-            client.headers["Authorization"] = "Bearer " + TOKEN
-            assert (await client.post("/jobs", json=body)).status_code == 202
-            assert (await client.post("/jobs", json=body)).status_code == 202
-            results = await asyncio.gather(
-                *(
-                    client.post("/jobs", json={**body, "request_id": str(uuid4())})
-                    for _ in range(20)
-                )
-            )
-            assert sum(r.status_code == 202 for r in results) == 1
-            assert sum(r.status_code == 429 for r in results) == 19
-            await eventually(lambda: worker.calls == 2)
-            assert worker.calls == 2
-            assert (await client.delete("/jobs/" + str(body["request_id"]))).status_code == 200
-            assert (await client.post("/jobs", json=body)).json()["status"] == "cancelled"
-            unknown = str(uuid4())
-            await client.delete("/jobs/" + unknown)
-            assert (await client.post("/jobs", json={**body, "request_id": unknown})).json()[
-                "status"
-            ] == "cancelled"
-            worker.gate.set()
+        ) as client,
+    ):
+        body = {"request_id": str(uuid4()), "goal": "work", "deadline": time.time() + 30}
+        assert (await client.post("/jobs", json=body)).status_code == 401
+        client.headers["Authorization"] = "Bearer " + TOKEN
+        assert (await client.post("/jobs", json=body)).status_code == 202
+        assert (await client.post("/jobs", json=body)).status_code == 202
+        results = await asyncio.gather(
+            *(client.post("/jobs", json={**body, "request_id": str(uuid4())}) for _ in range(20))
+        )
+        assert sum(r.status_code == 202 for r in results) == 1
+        assert sum(r.status_code == 429 for r in results) == 19
+        await eventually(lambda: worker.calls == 2)
+        assert worker.calls == 2
+        assert (await client.delete("/jobs/" + str(body["request_id"]))).status_code == 200
+        assert (await client.post("/jobs", json=body)).json()["status"] == "cancelled"
+        unknown = str(uuid4())
+        await client.delete("/jobs/" + unknown)
+        assert (await client.post("/jobs", json={**body, "request_id": unknown})).json()[
+            "status"
+        ] == "cancelled"
+        worker.gate.set()
 
 
 async def test_remote_worker_executes_graph_and_carries_sources() -> None:
@@ -118,7 +116,7 @@ async def test_remote_worker_executes_graph_and_carries_sources() -> None:
         client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app))
         remote = RemoteWorker(settings, client)
         result = await remote.delegate_task("docs fallback history", "")
-        assert isinstance(result, WorkerResult) and result.sources
+        assert result.sources
         await remote.aclose()
 
 

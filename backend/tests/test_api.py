@@ -52,19 +52,21 @@ async def test_body_limit_and_host_check() -> None:
 async def test_lifespan_closes_active_session() -> None:
     provider = FakeProvider()
     app = create_app(Settings(), provider)
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
             base_url="http://testserver",
             headers={"Origin": "http://localhost:5173"},
-        ) as client:
-            payload = (await client.post("/api/sessions")).json()
-            response = await client.post(
-                f"/api/sessions/{payload['id']}/offer",
-                headers={"X-Session-Key": payload["key"]},
-                json={"sdp": "v=0\r\n"},
-            )
-            assert response.status_code == 200
+        ) as client,
+    ):
+        payload = (await client.post("/api/sessions")).json()
+        response = await client.post(
+            f"/api/sessions/{payload['id']}/offer",
+            headers={"X-Session-Key": payload["key"]},
+            json={"sdp": "v=0\r\n"},
+        )
+        assert response.status_code == 200
     assert provider.connections[0].closed
 
 
@@ -105,18 +107,20 @@ async def test_deployment_gate_and_cors() -> None:
 
 async def test_interrupt_requires_ownership_and_reports_status() -> None:
     app = create_app(Settings(), FakeProvider())
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
             base_url="http://testserver",
             headers={"Origin": "http://localhost:5173"},
-        ) as client:
-            created = (await client.post("/api/sessions")).json()
-            path = f"/api/sessions/{created['id']}"
-            assert (await client.post(path + "/interrupt")).status_code == 404
-            client.headers["X-Session-Key"] = created["key"]
-            assert (await client.post(path + "/interrupt")).json()["delegation"] == "idle"
-            await client.post(path + "/close")
+        ) as client,
+    ):
+        created = (await client.post("/api/sessions")).json()
+        path = f"/api/sessions/{created['id']}"
+        assert (await client.post(path + "/interrupt")).status_code == 404
+        client.headers["X-Session-Key"] = created["key"]
+        assert (await client.post(path + "/interrupt")).json()["delegation"] == "idle"
+        await client.post(path + "/close")
 
 
 async def test_provider_configuration_uses_existing_settings(
@@ -160,29 +164,29 @@ async def test_provider_configuration_uses_existing_settings(
                 fallback_enabled=kind != "azure",
             )
         )
-        async with app.router.lifespan_context(app):
-            async with httpx.AsyncClient(
+        async with (
+            app.router.lifespan_context(app),
+            httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=app),
                 base_url="http://testserver",
                 headers={"Origin": "http://localhost:5173"},
-            ) as client:
-                payload = (await client.post("/api/sessions")).json()
-                path = f"/api/sessions/{payload['id']}"
-                client.headers["X-Session-Key"] = payload["key"]
-                assert (
-                    await client.post(path + "/offer", json={"sdp": "v=0\r\n"})
-                ).status_code == 200
-                assert configs[-1].model == f"custom-{kind}"
-                assert configs[-1].voice == (
-                    "custom-azure-voice" if kind == "azure" else "custom-voice"
+            ) as client,
+        ):
+            payload = (await client.post("/api/sessions")).json()
+            path = f"/api/sessions/{payload['id']}"
+            client.headers["X-Session-Key"] = payload["key"]
+            assert (await client.post(path + "/offer", json={"sdp": "v=0\r\n"})).status_code == 200
+            assert configs[-1].model == f"custom-{kind}"
+            assert configs[-1].voice == (
+                "custom-azure-voice" if kind == "azure" else "custom-voice"
+            )
+            if kind != "azure":
+                response = await client.post(
+                    path + "/reconnect", json={"sdp": "v=0\r\n", "generation": 0}
                 )
-                if kind != "azure":
-                    response = await client.post(
-                        path + "/reconnect", json={"sdp": "v=0\r\n", "generation": 0}
-                    )
-                    assert response.status_code == 200
-                    assert configs[-1].model == "custom-azure"
-                    assert configs[-1].voice == "custom-azure-voice"
+                assert response.status_code == 200
+                assert configs[-1].model == "custom-azure"
+                assert configs[-1].voice == "custom-azure-voice"
 
 
 async def test_app_version_comes_from_distribution_metadata(
@@ -222,17 +226,19 @@ async def test_connection_timeout_returns_504_without_global_timeout_handler(
     monkeypatch.setattr(SessionManager, "heartbeat", heartbeat)
 
     app = create_app(Settings(connect_timeout_seconds=0.01), Timeouts())
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
             base_url="http://testserver",
             headers={"Origin": "http://localhost:5173"},
-        ) as client:
-            payload = (await client.post("/api/sessions")).json()
-            path = f"/api/sessions/{payload['id']}"
-            client.headers["X-Session-Key"] = payload["key"]
-            with pytest.raises(TimeoutError, match="unrelated heartbeat timeout"):
-                await client.post(path + "/heartbeat")
-            response = await client.post(path + "/offer", json={"sdp": "v=0\r\n"})
-            assert response.status_code == 504
-            assert response.json() == {"detail": "Provider connection timed out"}
+        ) as client,
+    ):
+        payload = (await client.post("/api/sessions")).json()
+        path = f"/api/sessions/{payload['id']}"
+        client.headers["X-Session-Key"] = payload["key"]
+        with pytest.raises(TimeoutError, match="unrelated heartbeat timeout"):
+            await client.post(path + "/heartbeat")
+        response = await client.post(path + "/offer", json={"sdp": "v=0\r\n"})
+        assert response.status_code == 504
+        assert response.json() == {"detail": "Provider connection timed out"}

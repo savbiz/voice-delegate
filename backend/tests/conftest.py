@@ -29,11 +29,13 @@ class ASGIClientFactory(Protocol):
 def asgi_client() -> ASGIClientFactory:
     @asynccontextmanager
     async def client(app: FastAPI) -> AsyncIterator[httpx.AsyncClient]:
-        async with app.router.lifespan_context(app):
-            async with httpx.AsyncClient(
+        async with (
+            app.router.lifespan_context(app),
+            httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=app), base_url="http://testserver"
-            ) as transport:
-                yield transport
+            ) as transport,
+        ):
+            yield transport
 
     return client
 

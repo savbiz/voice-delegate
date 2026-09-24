@@ -128,7 +128,8 @@ class Jobs:
 def create_worker_app(settings: Settings | None = None, worker: Worker | None = None) -> FastAPI:
     settings = settings or load_settings()
     if len(settings.worker_service_token.get_secret_value()) < 32:
-        raise ValueError("Private worker service requires a token of at least 32 characters")
+        message = "Private worker service requires a token of at least 32 characters"
+        raise ValueError(message)
     planner = None
     if worker is None:
         planner = (
@@ -148,7 +149,7 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
                 logging.getLogger(__name__).exception("Worker janitor failed; retrying")
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         sweep = asyncio.create_task(janitor())
         try:
             yield

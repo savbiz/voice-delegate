@@ -3,12 +3,12 @@
 import asyncio
 import json
 from collections.abc import AsyncIterator
-from typing import cast
 
 import httpx
 import pytest
 from conftest import eventually
 from pydantic import ValidationError
+from voice_delegate.providers.base import SidebandSocket
 from voice_delegate.providers.models import (
     Commentary,
     DelegationRequested,
@@ -22,7 +22,6 @@ from voice_delegate.providers.openai import (
     OpenAILiveProvider,
     normalize_event,
 )
-from websockets.asyncio.client import ClientConnection
 
 
 def test_transcripts_preserve_fragments_and_timing() -> None:
@@ -85,9 +84,7 @@ class MemorySocket:
 
 async def test_graceful_close_and_idempotency() -> None:
     socket = MemorySocket()
-    connection = OpenAILiveConnection(
-        WebRTCAnswer("id", "sdp"), cast(ClientConnection, socket), 0.05
-    )
+    connection = OpenAILiveConnection(WebRTCAnswer("id", "sdp"), socket, 0.05)
     await connection.send(Commentary("task", "No action was taken."))
     assert json.loads(socket.sent[0])["delegation_id"] == "task"
     assert await connection.aclose()
@@ -98,18 +95,14 @@ async def test_graceful_close_and_idempotency() -> None:
 
 async def test_missing_final_event_is_not_reported_as_confirmed() -> None:
     socket = MemorySocket(finalize=False)
-    connection = OpenAILiveConnection(
-        WebRTCAnswer("id", "sdp"), cast(ClientConnection, socket), 0.01
-    )
+    connection = OpenAILiveConnection(WebRTCAnswer("id", "sdp"), socket, 0.01)
     assert not await connection.aclose()
     assert socket.closed
 
 
 async def test_event_queue_overflow_fails_instead_of_growing() -> None:
     socket = MemorySocket(finalize=False)
-    connection = OpenAILiveConnection(
-        WebRTCAnswer("id", "sdp"), cast(ClientConnection, socket), 0.01
-    )
+    connection = OpenAILiveConnection(WebRTCAnswer("id", "sdp"), socket, 0.01)
     for _ in range(65):
         socket.incoming.put_nowait('{"type":"session.started"}')
     await eventually(socket.incoming.empty)
@@ -127,9 +120,9 @@ class FixtureProvider(OpenAILiveProvider):
         self.socket = socket
         self.attached_id = ""
 
-    async def _attach(self, session_id: str) -> ClientConnection:
+    async def _attach(self, session_id: str) -> SidebandSocket:
         self.attached_id = session_id
-        return cast(ClientConnection, self.socket)
+        return self.socket
 
 
 @pytest.mark.parametrize("cancelled", [False, True])
@@ -143,7 +136,7 @@ async def test_partial_initialization_recovers_only_to_close(cancelled: bool) ->
     class FailedAttachProvider(FixtureProvider):
         attempts = 0
 
-        async def _attach(self, session_id: str) -> ClientConnection:
+        async def _attach(self, session_id: str) -> SidebandSocket:
             self.attempts += 1
             if self.attempts == 1:
                 if cancelled:
@@ -220,11 +213,9 @@ async def test_commentary_wire_budget_counts_utf8_bytes(realtime: bool) -> None:
         "test-key", httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200)))
     )
     connection = (
-        RealtimeWebRTCConnection(
-            WebRTCAnswer("id", "sdp"), cast(ClientConnection, socket), provider
-        )
+        RealtimeWebRTCConnection(WebRTCAnswer("id", "sdp"), socket, provider)
         if realtime
-        else OpenAILiveConnection(WebRTCAnswer("id", "sdp"), cast(ClientConnection, socket), 0.05)
+        else OpenAILiveConnection(WebRTCAnswer("id", "sdp"), socket, 0.05)
     )
     try:
         await connection.send(Commentary("task", "é" * 250))

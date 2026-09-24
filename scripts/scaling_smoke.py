@@ -28,7 +28,8 @@ async def exercise(
                 pass
             await asyncio.sleep(0.25)
         else:
-            raise RuntimeError("Scaling stack not ready")
+            message = "Scaling stack not ready"
+            raise RuntimeError(message)
 
         def headers(user: str, owner: dict[str, str] | None = None) -> dict[str, str]:
             return {
@@ -73,14 +74,16 @@ async def exercise(
                         timings.append(time.perf_counter() - started)
                         break
                 else:
-                    raise RuntimeError("Worker failed to settle within load-test budget")
+                    message = "Worker failed to settle within load-test budget"
+                    raise RuntimeError(message)
                 assert (
                     await client.post(path + "/close", headers=headers(user, owner))
                 ).status_code == 200
 
             await asyncio.gather(*(run(u, o) for u, o in zip(users, owners, strict=True)))
             await asyncio.sleep(2)
-        assert instances == {"a", "b"} and outcomes.get("completed", 0) > 0
+        assert instances == {"a", "b"}
+        assert outcomes.get("completed", 0) > 0
 
         # A crash cannot move an existing WebRTC connection. Verify failure isolation and restart.
         crash_owners = []
@@ -92,7 +95,7 @@ async def exercise(
         b = next((u, o) for u, o in crash_owners if o["id"].startswith("b-"))
         await asyncio.to_thread(
             subprocess.run,
-            compose + ["kill", "-s", "SIGKILL", "api-a"],
+            [*compose, "kill", "-s", "SIGKILL", "api-a"],
             check=True,
             capture_output=True,
             env=process_env,
@@ -105,7 +108,7 @@ async def exercise(
         ).status_code == 200
         await asyncio.to_thread(
             subprocess.run,
-            compose + ["start", "api-a"],
+            [*compose, "start", "api-a"],
             check=True,
             capture_output=True,
             env=process_env,
@@ -161,10 +164,10 @@ def main() -> None:
         k: v for k, v in os.environ.items() if not k.startswith("VOICE_") and k != "OPENAI_API_KEY"
     }
     try:
-        subprocess.run(compose + ["up", "-d"], check=True, env=process_env)
+        subprocess.run([*compose, "up", "-d"], check=True, env=process_env)
         print(json.dumps(asyncio.run(exercise(compose, tokens, process_env)), indent=2))
     finally:
-        subprocess.run(compose + ["down", "-v"], check=True, env=process_env)
+        subprocess.run([*compose, "down", "-v"], check=True, env=process_env)
         Path(path).unlink(missing_ok=True)
 
 

@@ -97,7 +97,7 @@ def create_app(
     )
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         janitor = asyncio.create_task(manager.sweep(), name="session-janitor")
         feedback_janitor = asyncio.create_task(clean_feedback(), name="feedback-janitor")
         try:
@@ -135,11 +135,11 @@ def create_app(
     )
 
     @app.exception_handler(SessionError)
-    async def session_error(request: Request, exc: SessionError) -> JSONResponse:
+    async def session_error(_request: Request, exc: SessionError) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=exc.status)
 
     @app.exception_handler(ProviderError)
-    async def provider_error(request: Request, exc: ProviderError) -> JSONResponse:
+    async def provider_error(_request: Request, exc: ProviderError) -> JSONResponse:
         status = 501 if isinstance(exc, UnsupportedCapability) else 502
         return JSONResponse({"detail": str(exc)}, status_code=status)
 

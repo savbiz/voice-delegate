@@ -17,7 +17,8 @@ class Offer(BaseModel):
     def validate_sdp(cls, value: str) -> str:
         """Reject obviously invalid input before a billable request."""
         if not value.startswith("v=0") or "\n" not in value:
-            raise ValueError("Expected an SDP offer")
+            message = "Expected an SDP offer"
+            raise ValueError(message)
         return value
 
 

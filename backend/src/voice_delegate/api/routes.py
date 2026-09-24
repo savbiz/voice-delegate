@@ -125,7 +125,8 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
         return {"delegation": session.delegation.status}
 
     @router.post("/sessions/{session_id}/token")
-    async def token(session: Annotated[Session, Depends(owned)]) -> None:
-        raise UnsupportedCapability("GPT-Live uses /offer; ephemeral credentials are unsupported")
+    async def token(_session: Annotated[Session, Depends(owned)]) -> None:
+        message = "GPT-Live uses /offer; ephemeral credentials are unsupported"
+        raise UnsupportedCapability(message)
 
     return router

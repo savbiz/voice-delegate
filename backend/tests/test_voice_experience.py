@@ -1,11 +1,10 @@
 """Language configuration and correction state; real pronunciation is a live gate."""
 
-from typing import Any
-
 import httpx
 import pytest
 from conftest import eventually
 from voice_delegate.config import Settings
+from voice_delegate.providers.base import SidebandSocket
 from voice_delegate.providers.fake import FakeProvider
 from voice_delegate.providers.models import (
     DelegationRequested,
@@ -20,7 +19,7 @@ from voice_delegate.session.summary import Recap
 
 
 @pytest.mark.parametrize(
-    "language,name",
+    ("language", "name"),
     [("it", "Italian"), ("en", "English"), ("es", "Spanish"), ("fr", "French"), ("de", "German")],
 )
 async def test_language_and_translate_preference(language: str, name: str) -> None:
@@ -48,14 +47,12 @@ def test_interrupted_recap_discards_old_answer_and_accepts_correction() -> None:
     assert recap.latest_request == "no, calculate 3+3"
     recap.resume()
     recap.observe(Transcript("assistant", "six", 41, 50), "no, calculate 3+3")
-    assert str(recap.latest_reply) == "six" and not recap.interrupted
+    assert str(recap.latest_reply) == "six" and not bool(recap.interrupted)
     recap.observe(Transcript("user", "x" * 4000, 51, 60), "x" * 4000)
     assert len(recap.latest_request.encode()) <= 600
 
 
-async def test_realtime_uses_fixed_openai_origin_and_bearer_auth(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_realtime_uses_fixed_openai_origin_and_bearer_auth() -> None:
     requests: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -67,14 +64,13 @@ async def test_realtime_uses_fixed_openai_origin_and_bearer_auth(
             return httpx.Response(200)
         return httpx.Response(201, text="v=0\r\n", headers={"Location": "/calls/rtc_test"})
 
-    provider = OpenAIRealtimeProvider(
+    class FixtureProvider(OpenAIRealtimeProvider):
+        async def _attach(self, call_id: str) -> SidebandSocket:
+            raise OSError("socket unavailable")
+
+    provider = FixtureProvider(
         "test-key", httpx.AsyncClient(transport=httpx.MockTransport(handler))
     )
-
-    async def fail(call_id: str) -> Any:
-        raise OSError("socket unavailable")
-
-    monkeypatch.setattr(provider, "_attach", fail)
     with pytest.raises(ProviderError, match="OpenAI Realtime connection failed"):
         await provider.connect(
             config=SessionConfig("gpt-realtime", "marin", "test"), offer_sdp="v=0\r\n"

@@ -8,9 +8,10 @@ from urllib.parse import quote, urlparse
 
 import httpx
 from pydantic import BaseModel, Field, ValidationError
-from websockets.asyncio.client import ClientConnection, connect
+from websockets.asyncio.client import connect
 from websockets.exceptions import WebSocketException
 
+from .base import SidebandSocket
 from .models import (
     COMMENTARY_MAX_BYTES,
     ClientCredential,
@@ -30,6 +31,22 @@ from .models import (
 from .openai import OpenAILiveConnection
 
 CALL_ID = re.compile(r"[A-Za-z0-9_-]{1,256}")
+
+
+def call_identity(response: httpx.Response, provider: str) -> str:
+    candidate: str = urlparse(response.headers.get("location", "")).path.rsplit("/", 1)[-1]
+    if not CALL_ID.fullmatch(candidate):
+        message = f"{provider} returned an invalid call identity; cleanup unconfirmed"
+        raise ProviderError(message)
+    return candidate
+
+
+def validate_answer(response: httpx.Response, provider: str) -> None:
+    if not response.text.startswith("v=0") or len(response.content) > 65536:
+        message = f"{provider} returned an invalid SDP answer"
+        raise ProviderError(message)
+
+
 DELEGATE_TASK_TOOL = {
     "type": "function",
     "name": "delegate_task",
@@ -89,14 +106,15 @@ class RealtimeWebRTCConnection(OpenAILiveConnection):
     normalize = staticmethod(normalize_event)
 
     def __init__(
-        self, answer: WebRTCAnswer, socket: ClientConnection, provider: "RealtimeWebRTCProvider"
+        self, answer: WebRTCAnswer, socket: SidebandSocket, provider: "RealtimeWebRTCProvider"
     ) -> None:
         self._provider = provider
         super().__init__(answer, socket, 5)
 
     async def send(self, command: ProviderCommand) -> None:
         if self._closed or len(command.content.encode()) > COMMENTARY_MAX_BYTES:
-            raise ProviderError("Connection closed or result budget exceeded")
+            message = "Connection closed or result budget exceeded"
+            raise ProviderError(message)
         try:
             async with asyncio.timeout(2):
                 await self._socket.send(
@@ -113,7 +131,8 @@ class RealtimeWebRTCConnection(OpenAILiveConnection):
                 )
                 await self._socket.send(json.dumps({"type": "response.create"}))
         except (TimeoutError, WebSocketException, OSError) as exc:
-            raise ProviderError("Realtime command failed") from exc
+            message = "Realtime command failed"
+            raise ProviderError(message) from exc
 
     async def aclose(self) -> bool:
         async with self._close_lock:
@@ -158,10 +177,11 @@ class RealtimeWebRTCProvider:
         """Build startup configuration using this provider's model and voice."""
         return SessionConfig(self.model, self.voice, instructions, history)
 
-    async def issue_client_credential(self, config: SessionConfig) -> ClientCredential:
-        raise UnsupportedCapability("Use server-mediated SDP to retain lifecycle ownership")
+    async def issue_client_credential(self, config: SessionConfig) -> ClientCredential:  # noqa: ARG002 - provider contract
+        message = "Use server-mediated SDP to retain lifecycle ownership"
+        raise UnsupportedCapability(message)
 
-    async def _attach(self, call_id: str) -> ClientConnection:
+    async def _attach(self, call_id: str) -> SidebandSocket:
         return await connect(
             self._endpoint.replace("https://", "wss://", 1) + "?call_id=" + quote(call_id, safe=""),
             additional_headers=self._headers,
@@ -198,7 +218,7 @@ class RealtimeWebRTCProvider:
 
     async def connect(self, *, config: SessionConfig, offer_sdp: str) -> RealtimeWebRTCConnection:
         call_id = ""
-        socket: ClientConnection | None = None
+        socket: SidebandSocket | None = None
         try:
             session = json.dumps(self._session(config))
             response = await self._http.post(
@@ -207,14 +227,8 @@ class RealtimeWebRTCProvider:
                 files={"sdp": (None, offer_sdp), "session": (None, session)},
             )
             response.raise_for_status()
-            candidate = urlparse(response.headers.get("location", "")).path.rsplit("/", 1)[-1]
-            if not CALL_ID.fullmatch(candidate):
-                raise ProviderError(
-                    f"{self.name} returned an invalid call identity; cleanup unconfirmed"
-                )
-            call_id = candidate
-            if not response.text.startswith("v=0") or len(response.content) > 65536:
-                raise ProviderError(f"{self.name} returned an invalid SDP answer")
+            call_id = call_identity(response, self.name)
+            validate_answer(response, self.name)
             socket = await self._attach(call_id)
             async with asyncio.timeout(5):
                 for role, content in config.history:
@@ -251,9 +265,8 @@ class RealtimeWebRTCProvider:
                 await self.hangup(call_id)
             if isinstance(exc, asyncio.CancelledError):
                 raise
-            raise ProviderError(
-                f"{self.name} connection failed; check server configuration"
-            ) from exc
+            message = f"{self.name} connection failed; check server configuration"
+            raise ProviderError(message) from exc
 
     async def aclose(self) -> None:
         await self._http.aclose()

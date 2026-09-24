@@ -10,6 +10,7 @@ from conftest import eventually
 from pydantic import SecretStr
 from voice_delegate.config import Settings
 from voice_delegate.providers.azure import AzureRealtimeProvider, normalize_event
+from voice_delegate.providers.base import SidebandSocket
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate.providers.models import (
     DelegationRequested,
@@ -132,7 +133,7 @@ def test_azure_normalization_and_untrusted_function_arguments() -> None:
     assert isinstance(transcript, Transcript) and transcript.committed
 
 
-async def test_azure_attach_failure_hangs_up_without_retry(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_azure_attach_failure_hangs_up_without_retry() -> None:
     requests: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -141,16 +142,15 @@ async def test_azure_attach_failure_hangs_up_without_retry(monkeypatch: pytest.M
             return httpx.Response(200)
         return httpx.Response(201, text="v=0\r\n", headers={"Location": "/calls/rtc_1"})
 
-    provider = AzureRealtimeProvider(
+    class FixtureProvider(AzureRealtimeProvider):
+        async def _attach(self, call_id: str) -> SidebandSocket:
+            raise OSError("private detail")
+
+    provider = FixtureProvider(
         "https://example.openai.azure.com",
         "secret",
         httpx.AsyncClient(transport=httpx.MockTransport(handler)),
     )
-
-    async def broken(*args: Any, **kwargs: Any) -> Any:
-        raise OSError("private detail")
-
-    monkeypatch.setattr(provider, "_attach", broken)
     with pytest.raises(ProviderError, match="Azure connection failed"):
         await provider.connect(
             config=SessionConfig("deployment", "marin", "instructions"), offer_sdp="v=0\r\n"
@@ -171,9 +171,7 @@ def test_fallback_rejects_non_azure_endpoint() -> None:
         )
 
 
-async def test_azure_success_replays_text_returns_tool_result_and_hangs_up(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+async def test_azure_success_replays_text_returns_tool_result_and_hangs_up() -> None:
     from collections.abc import AsyncIterator
 
     from voice_delegate.providers.models import Commentary
@@ -183,8 +181,8 @@ async def test_azure_success_replays_text_returns_tool_result_and_hangs_up(
             self.sent: list[dict[str, Any]] = []
             self.closed = False
 
-        async def send(self, payload: str) -> None:
-            self.sent.append(json.loads(payload))
+        async def send(self, message: str) -> None:
+            self.sent.append(json.loads(message))
 
         async def close(self) -> None:
             self.closed = True
@@ -204,17 +202,16 @@ async def test_azure_success_replays_text_returns_tool_result_and_hangs_up(
         assert b"delegate_task" in request.content
         return httpx.Response(201, text="v=0\r\n", headers={"Location": "/calls/rtc_test"})
 
-    provider = AzureRealtimeProvider(
+    class FixtureProvider(AzureRealtimeProvider):
+        async def _attach(self, call_id: str) -> SidebandSocket:
+            assert call_id == "rtc_test"
+            return socket
+
+    provider = FixtureProvider(
         "https://example.openai.azure.com",
         "secret",
         httpx.AsyncClient(transport=httpx.MockTransport(handler)),
     )
-
-    async def attach(call_id: str) -> Any:
-        assert call_id == "rtc_test"
-        return socket
-
-    monkeypatch.setattr(provider, "_attach", attach)
     connection = await provider.connect(
         config=SessionConfig("deployment", "marin", "trusted", (("user", "untrusted text"),)),
         offer_sdp="v=0\r\n",

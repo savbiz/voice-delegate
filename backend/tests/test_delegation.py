@@ -263,7 +263,7 @@ async def test_realtime_interrupts_on_speech_not_delayed_transcript(
     await manager.aclose()
 
 
-@pytest.mark.parametrize("timing,start_ms", [(True, 0), (False, 1)])
+@pytest.mark.parametrize(("timing", "start_ms"), [(True, 0), (False, 1)])
 async def test_real_transcript_timing_interrupts(
     blocking_worker: BlockingWorker, timing: bool, start_ms: int
 ) -> None:

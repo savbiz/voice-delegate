@@ -68,57 +68,68 @@ class Admission:
             2 if self.settings.fallback_enabled else 1
         )
         try:
-            database.execute("BEGIN IMMEDIATE")
-            database.execute("DELETE FROM reservations WHERE day < ?", (day,))
-            database.execute("DELETE FROM leases WHERE expires <= ?", (now,))
-            active = database.execute("SELECT COUNT(*) FROM leases").fetchone()[0]
-            personal = database.execute(
-                "SELECT COUNT(*) FROM leases WHERE principal=?", (identity,)
-            ).fetchone()[0]
-            if (
-                active >= self.settings.max_sessions
-                or personal >= self.settings.concurrent_sessions_per_user
-            ):
-                raise SessionError(429, "Shared session capacity reached")
-            row = database.execute(
-                "SELECT sessions, seconds FROM reservations WHERE day=? AND principal=?",
-                (day, identity),
-            ).fetchone()
-            sessions, used = row or (0, 0)
-            total = database.execute(
-                "SELECT COALESCE(SUM(seconds), 0) FROM reservations WHERE day=?", (day,)
-            ).fetchone()[0]
-            if (
-                sessions >= self.settings.daily_sessions_per_user
-                or used + seconds > self.settings.daily_voice_seconds_per_user
-                or total + seconds > self.settings.daily_voice_seconds_global
-            ):
-                raise SessionError(429, "Daily demo allowance exhausted; try again tomorrow (UTC)")
-            database.execute(
-                "INSERT INTO reservations VALUES (?, ?, 1, ?) ON CONFLICT(day, principal) "
-                "DO UPDATE SET sessions=sessions+1, seconds=seconds+excluded.seconds",
-                (day, identity, seconds),
-            )
-            database.execute(
-                "INSERT INTO leases VALUES (?, ?, ?)",
-                (
-                    session_id,
-                    identity,
-                    # TTL + setup + graceful close + sweep/transport cleanup margin.
-                    now
-                    + self.settings.session_ttl_seconds
-                    + self.settings.connect_timeout_seconds
-                    + self.settings.close_timeout_seconds
-                    + 3,
-                ),
-            )
-            database.commit()
+            self._reserve(database, day, identity, seconds, now, session_id)
         except SessionError:
             database.rollback()
             raise
         except sqlite3.Error as exc:
             database.rollback()
             raise SessionError(503, "Demo allowance store unavailable") from exc
+
+    def _reserve(
+        self,
+        database: sqlite3.Connection,
+        day: str,
+        identity: str,
+        seconds: int,
+        now: float,
+        session_id: str,
+    ) -> None:
+        database.execute("BEGIN IMMEDIATE")
+        database.execute("DELETE FROM reservations WHERE day < ?", (day,))
+        database.execute("DELETE FROM leases WHERE expires <= ?", (now,))
+        active = database.execute("SELECT COUNT(*) FROM leases").fetchone()[0]
+        personal = database.execute(
+            "SELECT COUNT(*) FROM leases WHERE principal=?", (identity,)
+        ).fetchone()[0]
+        if (
+            active >= self.settings.max_sessions
+            or personal >= self.settings.concurrent_sessions_per_user
+        ):
+            raise SessionError(429, "Shared session capacity reached")
+        row = database.execute(
+            "SELECT sessions, seconds FROM reservations WHERE day=? AND principal=?",
+            (day, identity),
+        ).fetchone()
+        sessions, used = row or (0, 0)
+        total = database.execute(
+            "SELECT COALESCE(SUM(seconds), 0) FROM reservations WHERE day=?", (day,)
+        ).fetchone()[0]
+        if (
+            sessions >= self.settings.daily_sessions_per_user
+            or used + seconds > self.settings.daily_voice_seconds_per_user
+            or total + seconds > self.settings.daily_voice_seconds_global
+        ):
+            raise SessionError(429, "Daily demo allowance exhausted; try again tomorrow (UTC)")
+        database.execute(
+            "INSERT INTO reservations VALUES (?, ?, 1, ?) ON CONFLICT(day, principal) "
+            "DO UPDATE SET sessions=sessions+1, seconds=seconds+excluded.seconds",
+            (day, identity, seconds),
+        )
+        database.execute(
+            "INSERT INTO leases VALUES (?, ?, ?)",
+            (
+                session_id,
+                identity,
+                # TTL + setup + graceful close + sweep/transport cleanup margin.
+                now
+                + self.settings.session_ttl_seconds
+                + self.settings.connect_timeout_seconds
+                + self.settings.close_timeout_seconds
+                + 3,
+            ),
+        )
+        database.commit()
 
     def release(self, session_id: str) -> None:
         if self.database is not None:

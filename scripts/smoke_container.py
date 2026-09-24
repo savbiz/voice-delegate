@@ -33,14 +33,16 @@ try:
                 except httpx.HTTPError:
                     pass
                 time.sleep(0.2)
-            raise RuntimeError("container not ready")
+            message = "container not ready"
+            raise RuntimeError(message)
 
         ready()
         c.headers["Origin"] = "https://demo.example"
         assert c.post("/api/sessions").status_code == 401
         c.headers["Authorization"] = "Bearer " + token
         reference = c.post("/api/reference/search", json={"query": "fallback history"})
-        assert reference.status_code == 200 and reference.json()["sources"]
+        assert reference.status_code == 200
+        assert reference.json()["sources"]
         r = c.post("/api/sessions")
         assert r.status_code == 201, r.text
         owner = r.json()

@@ -5,7 +5,7 @@ requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 readme = "README.md"
-dependencies = ["langgraph>=1.2.2", "langchain-openai>=1.6.2"]
+dependencies = ["langgraph>=1.2.2,<2", "langchain-openai>=1.6.2,<2"]
 [build-system]
 requires = ["uv_build>=0.12.15,<0.13"]
 build-backend = "uv_build"

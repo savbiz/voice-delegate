@@ -29,7 +29,8 @@ class RateLimitMiddleware:
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         if rate <= 0 or burst < 1 or max_clients < 1:
-            raise ValueError("Rate limiter budgets must be positive")
+            message = "Rate limiter budgets must be positive"
+            raise ValueError(message)
         self.app = app
         self.trust_proxy = trust_proxy
         self.rate = rate

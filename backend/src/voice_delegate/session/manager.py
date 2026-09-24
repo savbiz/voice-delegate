@@ -283,7 +283,6 @@ class SessionManager:
                 session.state = "connected"
                 session.watcher = asyncio.create_task(self._watch(session), name="fallback-events")
                 session.watcher.add_done_callback(self._watch_finished)
-                return session.connection.answer
             except BaseException as exc:
                 if session.turn is not None:
                     session.turn.span.end()
@@ -294,6 +293,8 @@ class SessionManager:
                 if isinstance(exc, TimeoutError):
                     raise SessionError(504, "Provider connection timed out") from exc
                 raise
+            else:
+                return session.connection.answer
 
     async def close(self, session: Session) -> bool:
         """Idempotently close upstream before canceling the event consumer."""

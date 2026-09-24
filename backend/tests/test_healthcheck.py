@@ -7,7 +7,7 @@ import pytest
 from voice_delegate import healthcheck
 
 
-@pytest.mark.parametrize("status,expected", [(200, 0), (503, 1)])
+@pytest.mark.parametrize(("status", "expected"), [(200, 0), (503, 1)])
 def test_healthcheck_uses_local_port_and_allowed_host(
     monkeypatch: pytest.MonkeyPatch, status: int, expected: int
 ) -> None:

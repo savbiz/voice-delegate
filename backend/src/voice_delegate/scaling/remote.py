@@ -38,7 +38,8 @@ class RemoteWorker:
                 },
             )
             if response.status_code == 429:
-                raise WorkerBusy("Worker capacity reached")
+                message = "Worker capacity reached"
+                raise WorkerBusy(message)
             response.raise_for_status()
             while True:
                 response = await self.http.get(url, headers=self.headers)
@@ -50,7 +51,8 @@ class RemoteWorker:
                     )
                     return WorkerResult(result.text, sources)
                 if result.status != "running":
-                    raise RuntimeError("Remote worker did not complete")
+                    message = "Remote worker did not complete"
+                    raise RuntimeError(message)
                 await asyncio.sleep(0.2)
         finally:
             # Tombstone even after ambiguous POST failures; never resubmit this task.

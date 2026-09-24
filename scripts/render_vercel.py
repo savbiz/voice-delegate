@@ -12,11 +12,13 @@ LABEL = r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
 
 def render(host: str) -> str:
     if len(host) > 253 or not re.fullmatch(rf"{LABEL}(?:\.{LABEL})*", host):
-        raise ValueError("API_HOST must be a hostname without scheme, port or path")
+        message = "API_HOST must be a hostname without scheme, port or path"
+        raise ValueError(message)
     template = (ROOT / "frontend/vercel.json").read_text()
     rendered = template.replace("${API_HOST}", host.lower())
     if "${" in rendered:
-        raise ValueError("Unresolved deployment placeholder")
+        message = "Unresolved deployment placeholder"
+        raise ValueError(message)
     return json.dumps(json.loads(rendered), indent=2) + "\n"
 
 

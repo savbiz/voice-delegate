@@ -208,7 +208,7 @@ async def test_watcher_logs_unexpected_stream_failure(
         entered.set()
         await fail.wait()
         raise RuntimeError("event reader exploded")
-        yield  # pragma: no cover
+        yield  # type: ignore[unreachable]  # async-generator fixture; pragma: no cover
 
     provider = FakeProvider()
     provider.capabilities = ProviderCapabilities(text_replay=True)
@@ -242,7 +242,7 @@ async def test_watcher_failure_during_close_does_not_deadlock(
         entered.set()
         await closing.wait()
         raise RuntimeError("stream failed during close")
-        yield  # pragma: no cover
+        yield  # type: ignore[unreachable]  # async-generator fixture; pragma: no cover
 
     monkeypatch.setattr(FakeConnection, "events", events)
     provider = FakeProvider()

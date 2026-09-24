@@ -5,7 +5,7 @@ from starlette.types import Message, Receive, Scope, Send
 from voice_delegate.limits.http import BodyLimitMiddleware
 
 
-@pytest.mark.parametrize("limit,expected", [(6, 200), (5, 413)])
+@pytest.mark.parametrize(("limit", "expected"), [(6, 200), (5, 413)])
 async def test_chunked_body_is_bounded_and_replayed_once(limit: int, expected: int) -> None:
     incoming: list[Message] = [
         {"type": "http.request", "body": b"abc", "more_body": True},

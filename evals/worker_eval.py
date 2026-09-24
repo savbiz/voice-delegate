@@ -42,6 +42,13 @@ class JudgeScore(BaseModel):
     groundedness: float = Field(ge=0, le=1, allow_inf_nan=False)
 
 
+def judge_scores(parsed: object) -> dict[str, float]:
+    if not isinstance(parsed, JudgeScore):
+        message = "Invalid judge result"
+        raise ValueError(message)  # noqa: TRY004 - malformed response is a value error
+    return {"judge_" + key: value for key, value in parsed.model_dump().items()}
+
+
 @dataclass
 class Budget:
     maximum: int
@@ -51,7 +58,8 @@ class Budget:
 
     def take(self) -> None:
         if self.calls >= self.maximum:
-            raise RuntimeError("Model call budget exhausted")
+            message = "Model call budget exhausted"
+            raise RuntimeError(message)
         self.calls += 1
 
     def usage(self, response: AIMessage) -> None:
@@ -233,10 +241,7 @@ async def run_cases(
                         ]
                     )
                     budget.usage(judged["raw"])
-                    parsed = judged["parsed"]
-                    if not isinstance(parsed, JudgeScore):
-                        raise ValueError("Invalid judge result")
-                    scores.update({"judge_" + k: v for k, v in parsed.model_dump().items()})
+                    scores.update(judge_scores(judged["parsed"]))
                     judge_status = "completed"
                 except Exception as exc:
                     judge_status = type(exc).__name__
@@ -386,9 +391,8 @@ def main() -> None:
         try:
             print(upload(report, cases, args.project))
         except Exception as exc:
-            raise SystemExit(
-                f"Braintrust upload failed ({type(exc).__name__}); local report preserved"
-            ) from None
+            message = f"Braintrust upload failed ({type(exc).__name__}); local report preserved"
+            raise SystemExit(message) from None
     if report["summary"]["failed"] or report["summary"]["judge_failures"]:
         raise SystemExit(1)
 

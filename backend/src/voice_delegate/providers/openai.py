@@ -10,9 +10,10 @@ from uuid import uuid4
 
 import httpx
 from pydantic import BaseModel, Field, ValidationError
-from websockets.asyncio.client import ClientConnection, connect
+from websockets.asyncio.client import connect
 from websockets.exceptions import WebSocketException
 
+from .base import SidebandSocket
 from .models import (
     COMMENTARY_MAX_BYTES,
     ClientCredential,
@@ -85,9 +86,7 @@ def normalize_event(raw: str | bytes) -> ProviderEvent | None:
 class OpenAILiveConnection:
     """Own one sideband reader, a bounded event queue, and graceful finalization."""
 
-    def __init__(
-        self, answer: WebRTCAnswer, socket: ClientConnection, close_timeout: float
-    ) -> None:
+    def __init__(self, answer: WebRTCAnswer, socket: SidebandSocket, close_timeout: float) -> None:
         self.answer = answer
         self._socket = socket
         self._close_timeout = close_timeout
@@ -124,7 +123,8 @@ class OpenAILiveConnection:
                 continue
             if self._reader.done():
                 if self._failed:
-                    raise ProviderError("Provider event stream ended unexpectedly")
+                    message = "Provider event stream ended unexpectedly"
+                    raise ProviderError(message)
                 return
             pending = asyncio.create_task(self._queue.get())
             try:
@@ -141,10 +141,12 @@ class OpenAILiveConnection:
     async def send(self, command: ProviderCommand) -> None:
         """Send worker commentary with a conservative provider wire budget."""
         if self._closed:
-            raise ProviderError("Connection is closing")
+            message = "Connection is closing"
+            raise ProviderError(message)
         # UTF-8 bytes conservatively upper-bound byte-level tokenizer output.
         if len(command.content.encode()) > COMMENTARY_MAX_BYTES:
-            raise ProviderError("Commentary wire budget exceeded")
+            message = "Commentary wire budget exceeded"
+            raise ProviderError(message)
         try:
             async with asyncio.timeout(2):
                 await self._socket.send(
@@ -158,7 +160,8 @@ class OpenAILiveConnection:
                     )
                 )
         except (TimeoutError, WebSocketException, OSError) as exc:
-            raise ProviderError("Provider command failed") from exc
+            message = "Provider command failed"
+            raise ProviderError(message) from exc
 
     async def aclose(self) -> bool:
         """Keep the receiver alive until finalization or a bounded deadline."""
@@ -201,11 +204,12 @@ class OpenAILiveProvider:
         """Build startup configuration using this provider's model and voice."""
         return SessionConfig(self.model, self.voice, instructions, history)
 
-    async def issue_client_credential(self, config: SessionConfig) -> ClientCredential:
+    async def issue_client_credential(self, config: SessionConfig) -> ClientCredential:  # noqa: ARG002 - provider contract
         """Live's documented WebRTC path uses server-mediated SDP creation."""
-        raise UnsupportedCapability("GPT-Live uses the SDP endpoint; no ephemeral token adapter")
+        message = "GPT-Live uses the SDP endpoint; no ephemeral token adapter"
+        raise UnsupportedCapability(message)
 
-    async def _attach(self, session_id: str) -> ClientConnection:
+    async def _attach(self, session_id: str) -> SidebandSocket:
         return await connect(
             f"wss://api.openai.com/v1/live/sessions/{quote(session_id, safe='')}/attach",
             additional_headers={"Authorization": f"Bearer {self._api_key}"},
@@ -219,7 +223,8 @@ class OpenAILiveProvider:
     async def connect(self, *, config: SessionConfig, offer_sdp: str) -> OpenAILiveConnection:
         """Exchange JSON SDP and attach before returning the browser's answer."""
         if not self._api_key:
-            raise ProviderError("Set OPENAI_API_KEY on the server")
+            message = "Set OPENAI_API_KEY on the server"
+            raise ProviderError(message)
         answer: WebRTCAnswer | None = None
         try:
             response = await self._http.post(
@@ -257,12 +262,13 @@ class OpenAILiveProvider:
                         abandoned = OpenAILiveConnection(answer, socket, self._close_timeout)
                         await abandoned.aclose()
                 except (TimeoutError, WebSocketException, OSError):
-                    logger.error("Could not recover sideband for cleanup; finalization unconfirmed")
+                    logger.exception(
+                        "Could not recover sideband for cleanup; finalization unconfirmed"
+                    )
             if isinstance(exc, asyncio.CancelledError):
                 raise
-            raise ProviderError(
-                "GPT-Live connection failed; check account access and configuration"
-            ) from exc
+            message = "GPT-Live connection failed; check account access and configuration"
+            raise ProviderError(message) from exc
 
     async def aclose(self) -> None:
         """Release the shared HTTP client after session shutdown."""

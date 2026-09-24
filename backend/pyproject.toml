@@ -16,12 +16,12 @@ dependencies = [
     "opentelemetry-api>=1.44.0",
     "opentelemetry-exporter-otlp-proto-http>=1.44.0",
     "opentelemetry-sdk>=1.44.0",
-    "pydantic>=2.13.5",
+    "pydantic>=2.13.5,<3",
     "pydantic-settings>=2.15.0",
     "python-dotenv>=1.2.3",
     "tiktoken>=0.14.0",
     "uvicorn[standard]>=0.53.0",
-    "websockets>=17.1",
+    "websockets>=17.1,<18",
 ]
 
 [build-system]
