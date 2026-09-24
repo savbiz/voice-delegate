@@ -1,39 +1,57 @@
 /** React shell separating a free scripted demo from the live WebRTC lifecycle. */
-import { StrictMode, useEffect, useRef, useState } from 'react';
+import { StrictMode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
-import { mountLive } from './realtime/live';
+import { createLiveSession } from './realtime/live';
+import type { LiveController } from './realtime/live';
+import { createLiveStore } from './realtime/store';
 import { scenario, visibleScenario } from './demo';
 import './style.css';
 import { Reference } from './reference';
 import { version } from '../package.json';
 
 function Live({ code }: { code: string }) {
-  const root = useRef<HTMLDivElement>(null);
+  const [store] = useState(createLiveStore);
+  const storeRef = useRef(store);
+  const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const audio = useRef<HTMLAudioElement>(null);
+  const controller = useRef<LiveController | null>(null);
   const codeRef = useRef(code);
   codeRef.current = code;
-  useEffect(() => root.current ? mountLive(root.current, () => codeRef.current) : undefined, []);
-  return <div ref={root}>
+  const [language, setLanguage] = useState('auto');
+  const [voiceMode, setVoiceMode] = useState('conversation');
+  const preferences = useRef({ language, mode: voiceMode });
+  preferences.current = { language, mode: voiceMode };
+  const [muted, setMuted] = useState(false);
+  const [largeCaptions, setLargeCaptions] = useState(false);
+  const [category, setCategory] = useState('wrong_answer');
+  useEffect(() => {
+    if (!audio.current) return;
+    const session = createLiveSession(storeRef.current, audio.current, () => codeRef.current, () => preferences.current);
+    controller.current = session;
+    return () => { session.dispose(); controller.current = null; };
+  }, []);
+  return <div className={largeCaptions ? 'large-captions' : undefined}>
     <p className="notice">Live voice requires a server API key and incurs provider usage charges. Your microphone is requested only when you start.</p>
-    <fieldset id="voice-preferences"><legend>Voice preferences (before starting)</legend>
-      <label>Response language <select id="language" defaultValue="auto"><option value="auto">Follow the speaker</option><option value="it">Italiano</option><option value="en">English</option><option value="es">Español</option><option value="fr">Français</option><option value="de">Deutsch</option></select></label>
-      <label>Conversation style <select id="voice-mode" defaultValue="conversation"><option value="conversation">Assistant conversation</option><option value="translate">Translation mode</option></select></label>
+    <fieldset id="voice-preferences" disabled={state.active}><legend>Voice preferences (before starting)</legend>
+      <label>Response language <select id="language" value={language} onChange={e => setLanguage(e.target.value)}><option value="auto">Follow the speaker</option><option value="it">Italiano</option><option value="en">English</option><option value="es">Español</option><option value="fr">Français</option><option value="de">Deutsch</option></select></label>
+      <label>Conversation style <select id="voice-mode" value={voiceMode} onChange={e => setVoiceMode(e.target.value)}><option value="conversation">Assistant conversation</option><option value="translate">Translation mode</option></select></label>
     </fieldset>
-    <div className="actions"><button id="mute-audio" aria-pressed="false">Mute assistant</button><button id="large-captions" aria-pressed="false">Large captions</button></div>
-    <div className="actions"><button id="start">Start conversation</button><button id="stop" disabled>Stop</button></div>
-    <p id="status" role="status">Ready to connect</p>
-    <p id="task-status" aria-live="polite">Worker: idle</p>
-    <button id="cancel-task" disabled>Cancel task</button>
-    <p id="recovery-help">Start a conversation when you are ready.</p>
+    <div className="actions"><button id="mute-audio" aria-pressed={muted} onClick={() => setMuted(value => !value)}>{muted ? 'Unmute assistant' : 'Mute assistant'}</button><button id="large-captions" aria-pressed={largeCaptions} onClick={() => setLargeCaptions(value => !value)}>Large captions</button></div>
+    <div className="actions"><button id="start" disabled={state.active || state.ending || state.recovering} onClick={() => controller.current?.start()}>Start conversation</button><button id="stop" disabled={!state.active || state.ending} onClick={() => controller.current?.stop()}>Stop</button></div>
+    <p id="status" role="status">{state.status}</p>
+    <p id="task-status" aria-live="polite">{state.workerMessage}</p>
+    <button id="cancel-task" disabled={state.worker !== 'running' || !state.active || state.ending || state.recovering || state.cancelPending} onClick={() => controller.current?.cancel()}>Cancel task</button>
+    <p id="recovery-help">{state.help}</p>
     <section aria-label="Report a problem"><h2>Report a problem</h2>
       <p>Send only a category, diagnostic ID, interface state, configured provider and app version. No audio, transcripts or message text. Reports expire after seven days. A pseudonymous identity is used to limit submissions.</p>
-      <label>Problem category <select id="feedback-category"><option value="wrong_answer">Wrong answer</option><option value="source">Unhelpful source</option><option value="audio">Audio problem</option><option value="connection">Connection problem</option><option value="other">Other problem</option></select></label>
-      <button id="send-feedback" disabled={!code}>Send report</button><p id="feedback-status" aria-live="polite">An invitation or access code is required to send feedback.</p>
+      <label>Problem category <select id="feedback-category" value={category} onChange={e => setCategory(e.target.value)} disabled={state.reportLocked}><option value="wrong_answer">Wrong answer</option><option value="source">Unhelpful source</option><option value="audio">Audio problem</option><option value="connection">Connection problem</option><option value="other">Other problem</option></select></label>
+      <button id="send-feedback" disabled={!code || state.reportPending || state.reportSent} onClick={() => { void controller.current?.feedback(category); }}>Send report</button><p id="feedback-status" aria-live="polite">{state.feedbackStatus}</p>
     </section>
-    <section aria-label="Worker sources"><h2>Documentation sources</h2><div id="sources" /></section>
-    <audio id="audio" controls autoPlay aria-label="Assistant audio" />
-    <div className="grid gap-4 md:grid-cols-2"><section><h2>You</h2><p id="user">—</p></section><section><h2>Assistant</h2><p id="assistant">—</p></section></div>
-    <section><h2>Conversation recap</h2><p className="muted">Extracts from transcripts; interruption does not mean completion.</p><p id="recap" aria-live="polite">No conversation yet.</p></section>
-    <section><h2>Turn timing</h2><p className="muted">Transcript timestamp gap: a proxy, not measured audio latency. May be negative during overlap.</p><ol id="timings" /></section>
+    <section aria-label="Worker sources"><h2>Documentation sources</h2><div id="sources">{state.sources.map((source, index) => <details key={source.id}><summary>[{index + 1}] {source.title} — {source.section}</summary><blockquote>{source.text}</blockquote><small>{source.path} · Snapshot {source.id}</small></details>)}</div></section>
+    <audio id="audio" ref={audio} muted={muted} controls autoPlay aria-label="Assistant audio" />
+    <div className="grid gap-4 md:grid-cols-2"><section><h2>You</h2><p id="user">{state.captions.user || '—'}</p></section><section><h2>Assistant</h2><p id="assistant">{state.captions.assistant || '—'}</p></section></div>
+    <section><h2>Conversation recap</h2><p className="muted">Extracts from transcripts; interruption does not mean completion.</p><p id="recap" aria-live="polite">{state.recap}</p></section>
+    <section><h2>Turn timing</h2><p className="muted">Transcript timestamp gap: a proxy, not measured audio latency. May be negative during overlap.</p><ol id="timings">{state.timings.map(turn => <li key={turn.id}>Turn {turn.id}: {turn.reply === undefined ? 'waiting for assistant transcript' : `${Math.round(turn.reply - turn.end)} ms transcript gap`}</li>)}</ol></section>
   </div>;
 }
 function Demo() {

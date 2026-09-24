@@ -1,0 +1,61 @@
+import { expect, test, vi } from 'vitest';
+import { createLiveStore, initialLiveState, processEvent, updateTurnTiming } from './store';
+
+test('provider errors update display without requesting recovery', () => {
+  const state = { ...initialLiveState(), active: true };
+  const connected = processEvent(state, { type: 'session.started' });
+  expect(connected.effect).toBe('started');
+  const failed = processEvent(connected.state, { type: 'error' });
+  expect(failed.effect).toBeUndefined();
+  expect(failed.state.phase).toBe('connected');
+  expect(failed.state.status).toBe('The provider reported an error.');
+  expect(processEvent(state, { type: 'session.closed' }).effect).toBe('closed');
+});
+
+test('transcripts remain bounded and input events are not mutated', () => {
+  const event = Object.freeze({ type: 'conversation.item.input_audio_transcription.completed', transcript: 'x'.repeat(7000) });
+  const initial = initialLiveState();
+  const result = processEvent(initial, event).state;
+  expect(result.captions.user).toHaveLength(6000);
+  expect(initial.captions.user).toBe('');
+  expect(event).not.toHaveProperty('delta');
+  expect(processEvent(initial, null).state).toBe(initial);
+  expect(processEvent(initial, { type: 'unrecognized' }).state).toBe(initial);
+});
+
+test('delegation updates worker display and preserves captions', () => {
+  const state = { ...initialLiveState(), active: true, captions: { user: 'question', assistant: '' } };
+  const next = processEvent(state, { type: 'session.delegation.created' }).state;
+  expect(next.phase).toBe('working');
+  expect(next.worker).toBe('running');
+  expect(next.captions).toBe(state.captions);
+});
+
+test('turn timing merges fragments, preserves overlap and bounds history', () => {
+  let timings = updateTurnTiming([], 'user', 0, 100);
+  timings = updateTurnTiming(timings, 'user', 100, 200);
+  timings = updateTurnTiming(timings, 'assistant', 150, 300);
+  expect(timings).toEqual([{ id: 1, end: 200, reply: 150 }]);
+  const unchanged = updateTurnTiming(timings, 'assistant', 200, 400);
+  expect(unchanged).toBe(timings);
+  expect(updateTurnTiming(timings, 'user', Infinity, 0)).toBe(timings);
+  for (let id = 2; id <= 25; id++) timings = updateTurnTiming(timings, 'user', id * 1000, id * 1000 + 100);
+  expect(timings).toHaveLength(20);
+  expect(timings[0]?.id).toBe(25);
+  expect(timings.at(-1)?.id).toBe(6);
+});
+
+test('store snapshots are stable between updates and unsubscribe releases listeners', () => {
+  const store = createLiveStore();
+  const original = store.getSnapshot();
+  const listener = vi.fn();
+  const unsubscribe = store.subscribe(listener);
+  expect(store.getSnapshot()).toBe(original);
+  store.update({ status: 'new status' });
+  expect(listener).toHaveBeenCalledOnce();
+  expect(original.status).toBe('Ready to connect');
+  expect(store.getSnapshot().status).toBe('new status');
+  unsubscribe();
+  store.update({ status: 'later status' });
+  expect(listener).toHaveBeenCalledOnce();
+});
