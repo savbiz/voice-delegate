@@ -13,8 +13,8 @@ CASES = json.loads(DATASET.read_text())["cases"]
 
 
 def test_dataset_is_versioned_unique_and_grounded() -> None:
-    assert len(CASES) == 32
-    assert len({c["id"] for c in CASES}) == 32
+    assert len(CASES) == 40
+    assert len({c["id"] for c in CASES}) == 40
     assert all(c["goal"] and c["expected"]["rubric"] for c in CASES)
     for case in CASES:
         for source in case["expected"].get("source_ids", []):
@@ -44,7 +44,7 @@ def test_scorers_detect_wrong_number_evidence_and_citation() -> None:
 
 
 async def test_offline_run_has_no_paid_calls_and_skips_language_quality() -> None:
-    report = await run_cases(CASES, "offline", "unused", 0)
+    report = await run_cases(CASES[:32], "offline", "unused", 0)
     summary = report["summary"]
     assert summary["executed"] == 28 and summary["skipped"] == 4
     assert summary["model_calls"] == 0

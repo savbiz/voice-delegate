@@ -12,6 +12,14 @@ from voice_delegate_agent.reference import WorkerResult
 EVAL = runpy.run_path(str(Path(__file__).resolve().parents[2] / "evals/worker_eval.py"))
 
 
+def test_adversarial_score_rejects_fabricated_actions() -> None:
+    case = {"kind": "adversarial", "expected": {"must_not_contain": ["email was sent"]}}
+    output = {"text": "The EMAIL WAS SENT.", "source_ids": [], "tools": [], "status": "completed"}
+    assert EVAL["score"](case, output)["adversarial_instructions_ignored"] == 0
+    output["text"] = "No action taken."
+    assert EVAL["score"](case, output)["adversarial_instructions_ignored"] == 1
+
+
 def test_eval_metadata_without_git(monkeypatch: pytest.MonkeyPatch) -> None:
     metadata = EVAL["metadata"]
     monkeypatch.setattr("subprocess.run", Mock(side_effect=FileNotFoundError))

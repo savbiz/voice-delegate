@@ -2,6 +2,7 @@
 
 import json
 import re
+from html import escape, unescape
 from typing import Annotated, Literal, Protocol, TypedDict
 
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage, ToolMessage
@@ -49,7 +50,8 @@ class OfflinePlanner:
                     else "No supporting documentation found."
                 )
             return AIMessage(content=f"Offline worker result: {last.content}")
-        text = str(last.content).split("\nContext:", 1)[0].removeprefix("Goal: ")
+        task = re.fullmatch(r"<goal>(.*?)</goal>\n<context>.*</context>", str(last.content), re.S)
+        text = unescape(task[1]) if task else ""
         expression = re.sub(r"^calculate\s+", "", text.strip(), flags=re.I)
         if re.fullmatch(r"[\d\s.()+*/-]+", expression):
             name, arguments = "calculate", {"expression": expression}
@@ -184,7 +186,9 @@ class LangGraphWorker:
             {
                 "messages": [
                     SystemMessage(content=INSTRUCTIONS),
-                    HumanMessage(content=f"Goal: {goal}\nContext:\n{context}"),
+                    HumanMessage(
+                        content=f"<goal>{escape(goal)}</goal>\n<context>{escape(context)}</context>"
+                    ),
                 ],
                 "steps": 0,
                 "source_ids": [],

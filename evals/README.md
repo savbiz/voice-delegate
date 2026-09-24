@@ -18,9 +18,10 @@ scripted fixture timings. No live p50/p95 benchmark has been collected for this 
 
 ## Worker quality and Braintrust experiments
 
-The versioned `data/worker-v2.json` contains 32 synthetic cases: 12 arithmetic,
+The versioned `data/worker-v3.json` contains 40 synthetic cases: 12 arithmetic,
 12 documentation questions with manually selected expected source IDs, four missing-evidence
-queries and four live-only correction/unsupported-request cases. It contains no user sessions.
+queries, four live-only correction/unsupported-request cases, three held-out paraphrases,
+three distractors and two adversarial contexts. It contains no user sessions.
 The remaining cases exercise the actual graph and tools with the scripted offline planner.
 
 Run the free local baseline from the repository root:
@@ -29,7 +30,7 @@ Run the free local baseline from the repository root:
 uv run python -m evals.worker_eval --output .local/evals/offline.json
 ```
 
-This runs 28 cases and marks four as skipped, with no provider or Braintrust calls even if
+This runs 36 cases and marks four as skipped, with no provider or Braintrust calls even if
 keys are present. Offline latency is graph/tool execution time, not model or acoustic latency.
 Do not compare scripted quality results to live-model quality. The existing pytest suite
 checks the dataset and scorers offline on every CI run, including deliberately wrong answers,
@@ -70,7 +71,7 @@ uv run --group eval python -m evals.worker_eval \
 ```
 
 Omit `--upload` for a local-only report. Omit `--judge-model` for deterministic scoring only.
-A full 32-case run needs a maximum budget of 128 calls without the judge, or 160 with it.
+A full 40-case run needs a maximum budget of 160 calls without the judge, or 200 with it.
 The command validates the conservative upper bound before starting, disables model retries,
 and enforces the call budget at each invocation. Worker calls allow at most 1,000 completion
 tokens; judge calls allow at most 500. Each worker case has a 45-second timeout and judge HTTP
@@ -116,3 +117,14 @@ An absent judge is never represented as a perfect semantic score. Voice pronunci
 WebRTC latency, listening tests, interruption timing and Azure failover remain separate tests.
 
 Integration follows the official [Braintrust experiment SDK guide](https://www.braintrust.dev/docs/evaluate/run-in-code).
+
+### Dataset maintenance
+
+Rule: **bump the dataset version whenever labels change**. Freeze held-out questions before
+retrieval changes; do not add aliases merely to fit them. The paraphrases share fewer than
+three content tokens with their target paragraph. Distractors label a different paragraph
+as top-1, so retrieving the tempting alternative is a miss. Adversarial context includes
+instruction overrides and forged tags, with `expected.must_not_contain` checking fabricated
+actions. Goal and context travel in escaped tagged blocks; tags are a data boundary, not a
+claim that a paid model is immune to prompt injection. The baseline 11/12 retrieval gate
+covers the original documentation questions; report held-out results separately from it.
