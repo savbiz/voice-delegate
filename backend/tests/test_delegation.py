@@ -191,9 +191,26 @@ async def test_capacity_and_latest_task_supersedes_old_result(
     await second.task
     assert second.status == "busy"
     assert "not started" in connection.commands[0].content
+    runner.cancel(first)
+    assert first.task is not None
+    await asyncio.gather(first.task, return_exceptions=True)
+    await runner.aclose()
+    # A separate two-slot runner lets replacement execute during old-task cancellation.
+    worker = BlockingWorker()
+    runner = DelegationRunner(worker, capacity=2)
+    first = DelegationState()
+    runner.start(first, "old", request, connection, lambda: True)
+    await worker.started.wait()
+    worker.started.clear()
     runner.start(first, "replacement", request, connection, lambda: True)
+    await worker.started.wait()
+    worker.gate.set()
     assert first.task is not None
     await first.task
+    assert first.status == "completed"
+    assert connection.commands[-1].delegation_id == "replacement"
+    assert connection.commands[-1].content == "done"
+    assert worker.calls == 2
     assert all(command.delegation_id != "old" for command in connection.commands)
     await runner.aclose()
     await manager.aclose()

@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 import pytest
+from conftest import eventually
 from pydantic import SecretStr
 from voice_delegate.config import Settings
 from voice_delegate.providers.azure import AzureRealtimeProvider, normalize_event
@@ -251,7 +252,7 @@ async def test_failed_connection_is_closed_before_browser_reconnects(
     assert session.state == "reconnecting"
     assert not fallback.connections
     reconnect = asyncio.create_task(manager.reconnect(session, "v=0\r\n", 0))
-    await asyncio.sleep(0)
+    await eventually(lambda: session.fallback_used)
     assert not reconnect.done() and not fallback.connections
     release.set()
     await asyncio.wait_for(reconnect, 1)

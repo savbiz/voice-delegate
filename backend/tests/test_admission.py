@@ -1,9 +1,10 @@
 """Public-demo admission must survive restarts and enforce identity before provider work."""
 
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from conftest import ASGIClientFactory, PublicSettingsFactory
+from conftest import ASGIClientFactory, FakeClock, PublicSettingsFactory
 from pydantic import SecretStr
 from voice_delegate.api.app import create_app
 from voice_delegate.config import Settings
@@ -14,17 +15,17 @@ from voice_delegate_agent.reference import WorkerResult
 
 
 async def test_quotas_persist_across_restart_and_global_budget(
-    public_settings: PublicSettingsFactory, tmp_path: Path
+    public_settings: PublicSettingsFactory, tmp_path: Path, fake_clock: FakeClock
 ) -> None:
     settings = public_settings(tmp_path)
-    manager = SessionManager(FakeProvider(), settings)
+    manager = SessionManager(FakeProvider(), settings, clock=fake_clock)
     first = manager.create("alice")
     with pytest.raises(SessionError) as concurrent:
         manager.create("alice")
     assert concurrent.value.status == 429
     await manager.close(first)
     await manager.aclose()
-    manager = SessionManager(FakeProvider(), settings)
+    manager = SessionManager(FakeProvider(), settings, clock=fake_clock)
     await manager.close(manager.create("alice"))
     with pytest.raises(SessionError) as daily:
         manager.create("alice")
@@ -60,6 +61,27 @@ async def test_kill_switch_prevents_admission_before_provider_work() -> None:
         manager.create()
     assert rejected.value.status == 503
     assert not provider.connections
+    await manager.aclose()
+
+
+async def test_quota_day_rolls_over_using_injected_clock(
+    public_settings: PublicSettingsFactory, tmp_path: Path, fake_clock: FakeClock
+) -> None:
+    fake_clock.now = datetime(2026, 9, 24, 23, 59, 59, tzinfo=UTC).timestamp()
+    manager = SessionManager(
+        FakeProvider(), public_settings(tmp_path, daily_sessions_per_user=1), clock=fake_clock
+    )
+    await manager.close(manager.create("alice"))
+    with pytest.raises(SessionError, match="Daily demo allowance"):
+        manager.create("alice")
+    fake_clock.advance(2)
+    await manager.close(manager.create("alice"))
+    database = manager.admission.database
+    assert database is not None
+    # Ten seconds of voice plus one sweep second are reserved, even after early close.
+    assert database.execute("SELECT day, sessions, seconds FROM reservations").fetchall() == [
+        ("2026-09-25", 1, 11)
+    ]
     await manager.aclose()
 
 

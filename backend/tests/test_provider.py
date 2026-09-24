@@ -7,6 +7,7 @@ from typing import cast
 
 import httpx
 import pytest
+from conftest import eventually
 from pydantic import ValidationError
 from voice_delegate.providers.models import (
     Commentary,
@@ -111,7 +112,7 @@ async def test_event_queue_overflow_fails_instead_of_growing() -> None:
     )
     for _ in range(65):
         socket.incoming.put_nowait('{"type":"session.started"}')
-    await asyncio.sleep(0)
+    await eventually(socket.incoming.empty)
     with pytest.raises(ProviderError):
         async for _event in connection.events():
             pass

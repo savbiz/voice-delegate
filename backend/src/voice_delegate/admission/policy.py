@@ -5,6 +5,7 @@ import logging
 import math
 import sqlite3
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from secrets import compare_digest
@@ -16,8 +17,9 @@ from voice_delegate.session.models import SessionError
 class Admission:
     """Persist conservative full-session reservations; never refund ambiguous provider usage."""
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, clock: Callable[[], float] = time.time) -> None:
         self.settings = settings
+        self.clock = clock
         self.database: sqlite3.Connection | None = None
         if settings.public_demo:
             Path(settings.quota_database).parent.mkdir(parents=True, exist_ok=True)
@@ -58,7 +60,8 @@ class Admission:
         database = self.database
         if database is None:
             return
-        day = datetime.now(UTC).date().isoformat()
+        now = self.clock()
+        day = datetime.fromtimestamp(now, UTC).date().isoformat()
         identity = hashlib.sha256(principal.encode()).hexdigest()
         # Reserve both providers for a whole TTL, including one-second janitor granularity.
         seconds = math.ceil(self.settings.session_ttl_seconds + 1) * (
@@ -67,7 +70,6 @@ class Admission:
         try:
             database.execute("BEGIN IMMEDIATE")
             database.execute("DELETE FROM reservations WHERE day < ?", (day,))
-            now = time.time()
             database.execute("DELETE FROM leases WHERE expires <= ?", (now,))
             active = database.execute("SELECT COUNT(*) FROM leases").fetchone()[0]
             personal = database.execute(
@@ -102,6 +104,7 @@ class Admission:
                 (
                     session_id,
                     identity,
+                    # TTL + setup + graceful close + sweep/transport cleanup margin.
                     now
                     + self.settings.session_ttl_seconds
                     + self.settings.connect_timeout_seconds

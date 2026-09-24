@@ -3,6 +3,7 @@
 import asyncio
 
 import pytest
+from conftest import eventually
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import HistogramDataPoint, InMemoryMetricReader
 from opentelemetry.sdk.trace import TracerProvider
@@ -30,11 +31,11 @@ async def test_turn_parents_delegation_and_exports_no_private_text() -> None:
     connection = provider.connections[0]
     connection.queue.put_nowait(Transcript("user", "private transcript", 0, 100))
     connection.queue.put_nowait(DelegationRequested("private-call"))
-    await asyncio.sleep(0)
+    await eventually(lambda: session.delegation.task is not None)
     assert session.delegation.task is not None
     await session.delegation.task
     connection.queue.put_nowait(Transcript("assistant", "private answer", 200, 300))
-    await asyncio.sleep(0)
+    await eventually(lambda: session.turn is not None and session.turn.replied)
     await manager.aclose()
     exported = spans.get_finished_spans()
     turn = next(span for span in exported if span.name == "conversation.turn")

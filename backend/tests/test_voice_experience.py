@@ -1,10 +1,10 @@
 """Language configuration and correction state; real pronunciation is a live gate."""
 
-import asyncio
 from typing import Any
 
 import httpx
 import pytest
+from conftest import eventually
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeProvider
 from voice_delegate.providers.models import (
@@ -32,7 +32,7 @@ async def test_language_and_translate_preference(language: str, name: str) -> No
     await manager.connect(session, "v=0\r\n")
     assert isinstance(manager.provider, FakeProvider)
     manager.provider.connections[0].queue.put_nowait(DelegationRequested("forbidden"))
-    await asyncio.sleep(0)
+    await eventually(manager.provider.connections[0].queue.empty)
     assert session.delegation.task is None
     await manager.aclose()
 

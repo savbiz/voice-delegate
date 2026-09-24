@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator
 
 import pytest
-from conftest import BlockingProvider
+from conftest import BlockingProvider, FakeClock, eventually
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate.providers.models import (
@@ -50,27 +50,31 @@ async def test_duplicate_offers_create_only_one_upstream_call() -> None:
     await manager.aclose()
 
 
-async def test_absolute_deadline_survives_heartbeats() -> None:
-    now = [0.0]
+async def test_absolute_deadline_survives_heartbeats(
+    fake_clock: FakeClock,
+) -> None:
+    fake_clock.now = 0.0
     provider = FakeProvider()
     manager = SessionManager(
-        provider, Settings(session_ttl_seconds=10, heartbeat_timeout_seconds=5), lambda: now[0]
+        provider, Settings(session_ttl_seconds=10, heartbeat_timeout_seconds=5), fake_clock
     )
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
-    now[0] = 9
+    fake_clock.now = 9
     manager.heartbeat(session)
-    now[0] = 10
+    fake_clock.now = 10
     await manager.expire()
     assert provider.connections[0].closed
     assert not manager.sessions
 
 
-async def test_abandoned_unconnected_session_expires() -> None:
-    now = [0.0]
-    manager = SessionManager(FakeProvider(), Settings(heartbeat_timeout_seconds=5), lambda: now[0])
+async def test_abandoned_unconnected_session_expires(
+    fake_clock: FakeClock,
+) -> None:
+    fake_clock.now = 0.0
+    manager = SessionManager(FakeProvider(), Settings(heartbeat_timeout_seconds=5), fake_clock)
     manager.create()
-    now[0] = 6
+    fake_clock.now = 6
     await manager.expire()
     assert not manager.sessions
 
@@ -94,7 +98,7 @@ async def test_canceled_setup_releases_capacity(
     manager = SessionManager(blocking_provider, Settings())
     session = manager.create()
     setup = asyncio.create_task(manager.connect(session, "v=0\r\n"))
-    await asyncio.sleep(0)
+    await blocking_provider.started.wait()
     setup.cancel()
     with pytest.raises(asyncio.CancelledError):
         await setup
@@ -109,7 +113,7 @@ async def test_delegation_without_transcript_requests_clarification() -> None:
     await manager.connect(session, "v=0\r\n")
     connection = provider.connections[0]
     connection.queue.put_nowait(DelegationRequested("task-1"))
-    await asyncio.sleep(0)
+    await eventually(lambda: session.delegation.task is not None)
     assert session.delegation.task is not None
     await session.delegation.task
     assert connection.commands[0].delegation_id == "task-1"
@@ -139,11 +143,14 @@ async def test_shutdown_rejects_new_sessions() -> None:
 
 @pytest.mark.parametrize("shutdown", [False, True])
 async def test_failed_close_does_not_stop_other_sessions(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, shutdown: bool
+    fake_clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    shutdown: bool,
 ) -> None:
-    now = [0.0]
+    fake_clock.now = 0.0
     provider = FakeProvider()
-    manager = SessionManager(provider, Settings(heartbeat_timeout_seconds=5), lambda: now[0])
+    manager = SessionManager(provider, Settings(heartbeat_timeout_seconds=5), fake_clock)
     first, later = manager.create(), manager.create()
     await manager.connect(first, "v=0\r\n")
     await manager.connect(later, "v=0\r\n")
@@ -152,7 +159,7 @@ async def test_failed_close_does_not_stop_other_sessions(
         raise RuntimeError("cleanup failed")
 
     monkeypatch.setattr(provider.connections[0], "aclose", fail)
-    now[0] = 6
+    fake_clock.now = 6
     if shutdown:
         await manager.aclose()
     else:
@@ -219,7 +226,7 @@ async def test_watcher_logs_unexpected_stream_failure(
     assert session.watcher is not None
     with pytest.raises(RuntimeError, match="event reader exploded"):
         await session.watcher
-    await asyncio.sleep(0)
+    await eventually(lambda: "Session watcher failed" in caplog.text)
     assert "Session watcher failed" in caplog.text
     assert "event reader exploded" in caplog.text
     await manager.aclose()

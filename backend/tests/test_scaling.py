@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
-from conftest import BlockingWorker
+from conftest import BlockingWorker, FakeClock, eventually
 from pydantic import SecretStr
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeProvider
@@ -32,9 +32,11 @@ def shared(path: Path, instance: str) -> Settings:
     )
 
 
-async def test_two_instances_share_concurrency_and_ownership(tmp_path: Path) -> None:
-    a = SessionManager(FakeProvider(), shared(tmp_path, "a"))
-    b = SessionManager(FakeProvider(), shared(tmp_path, "b"))
+async def test_two_instances_share_concurrency_and_ownership(
+    tmp_path: Path, fake_clock: FakeClock
+) -> None:
+    a = SessionManager(FakeProvider(), shared(tmp_path, "a"), clock=fake_clock)
+    b = SessionManager(FakeProvider(), shared(tmp_path, "b"), clock=fake_clock)
     session = a.create("alice")
     assert session.id.startswith("a-")
     with pytest.raises(SessionError) as full:
@@ -51,14 +53,15 @@ async def test_two_instances_share_concurrency_and_ownership(tmp_path: Path) -> 
     await b.aclose()
 
 
-async def test_crashed_owner_lease_expires_without_refunding_usage(tmp_path: Path) -> None:
-    a = SessionManager(FakeProvider(), shared(tmp_path, "a"))
+async def test_crashed_owner_lease_expires_without_refunding_usage(
+    tmp_path: Path, fake_clock: FakeClock
+) -> None:
+    a = SessionManager(FakeProvider(), shared(tmp_path, "a"), clock=fake_clock)
     original = a.create("alice")
     db = a.admission.database
     assert db is not None
-    db.execute("UPDATE leases SET expires=0")
-    db.commit()
-    b = SessionManager(FakeProvider(), shared(tmp_path, "b"))
+    fake_clock.advance(329)  # 300 TTL + 20 setup + 5 close + 3 cleanup, then expiry.
+    b = SessionManager(FakeProvider(), shared(tmp_path, "b"), clock=fake_clock)
     recovered = b.create("alice")
     assert db.execute("SELECT SUM(sessions) FROM reservations").fetchone()[0] == 2
     assert recovered.id != original.id
@@ -91,7 +94,7 @@ async def test_worker_backpressure_duplicates_and_cancellation_tombstones(
             )
             assert sum(r.status_code == 202 for r in results) == 1
             assert sum(r.status_code == 429 for r in results) == 19
-            await asyncio.sleep(0)
+            await eventually(lambda: worker.calls == 2)
             assert worker.calls == 2
             assert (await client.delete("/jobs/" + str(body["request_id"]))).status_code == 200
             assert (await client.post("/jobs", json=body)).json()["status"] == "cancelled"
