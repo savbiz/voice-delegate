@@ -7,6 +7,8 @@ x-api: &api
   volumes: ["quotas:/app/.local"]
   environment: &environment
     VOICE_ENVIRONMENT: production
+    # Only the gateway is exposed; it replaces untrusted forwarding headers.
+    VOICE_TRUST_PROXY: "true"
     VOICE_PUBLIC_DEMO: "true"
     VOICE_ALLOWED_ORIGIN: ${VOICE_ALLOWED_ORIGIN:-https://demo.example}
     VOICE_ALLOWED_HOSTS: '["localhost","127.0.0.1"]'

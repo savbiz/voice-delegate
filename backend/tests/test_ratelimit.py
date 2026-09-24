@@ -88,3 +88,17 @@ def test_bucket_storage_is_bounded_without_evicting_active_limits() -> None:
     now[0] = 1
     assert limiter.allow("second")
     assert len(limiter.buckets) == 1
+
+
+@pytest.mark.parametrize("trust", [False, True])
+async def test_app_wires_proxy_trust(trust: bool, asgi_client: ASGIClientFactory) -> None:
+    app = create_app(Settings(trust_proxy=trust), FakeProvider())
+    for middleware in app.user_middleware:
+        if cast(object, middleware.cls) is RateLimitMiddleware:
+            middleware.kwargs.update(clock=lambda: 0, burst=1)
+    async with asgi_client(app) as client:
+        assert (
+            await client.get("/healthz", headers={"X-Forwarded-For": "192.0.2.1"})
+        ).status_code == 200
+        response = await client.get("/healthz", headers={"X-Forwarded-For": "192.0.2.2"})
+        assert response.status_code == (200 if trust else 429)
