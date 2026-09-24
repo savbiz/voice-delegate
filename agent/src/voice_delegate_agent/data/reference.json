@@ -1,11 +1,11 @@
 [
   {
-    "id": "70d067e1b51ff697",
+    "id": "c2f9755098654ceb",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "voice-delegate",
-    "text": "A speech-to-speech model (GPT-Live over WebRTC) owns the conversation. Anything slower than a\nsentence is handed to a separate LangGraph worker through a single `delegate_task` boundary, and\nnarrated back when it completes. The user can interrupt at any time: an interrupted task can\nnever be spoken late. Every buffer, queue and session has an explicit budget, and every turn is\ntraced end to end.",
-    "digest": "70d067e1b51ff69730fabf3eab06d359baa2472fa7264cb493be979fa211027d"
+    "text": "A speech-to-speech model (GPT-Live over WebRTC) owns the conversation. Anything slower than a\nsentence is handed to a separate LangGraph worker through a single `delegate_task` boundary, and\nnarrated back when it completes. The user can interrupt at any time: an interrupted task is never narrated\nafter the interruption is registered. Every buffer, queue and session has an explicit budget, and every turn is\ntraced end to end.",
+    "digest": "c2f9755098654ceb80c369a22e21bad1be4c116bc9cf1d5aa6d2f39c7995d2a0"
   },
   {
     "id": "56c718c0e05495e8",
@@ -32,12 +32,12 @@
     "digest": "4bf5315dc199e173aa91b59722c9bce7e2f455f2973fd4aa0c0e81cac37a8aa5"
   },
   {
-    "id": "c0d0fcc48323d21b",
+    "id": "881461ab5ba8c26a",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Why it exists",
-    "text": "- **Bounded everything.** Sessions, buffers, history, worker steps and result size have limits\n  with a documented reason and a documented behaviour on exhaustion.",
-    "digest": "c0d0fcc48323d21b63e02bba8c966106b6287822e1b14a1ce9ff0bbbaa787508"
+    "text": "- **Bounded everything the backend owns.** Sessions, buffers, history, worker steps and result size have limits\n  with a documented reason and a documented behaviour on exhaustion.",
+    "digest": "881461ab5ba8c26a47eee9db882d97d374412b0c0032f5a019b85682b88af2f9"
   },
   {
     "id": "df138923e7ad0a2e",
@@ -64,12 +64,20 @@
     "digest": "ed4f29c5620a4cd43a52dba604f4a468d09bf0d34431a0abde661c6f917edf56"
   },
   {
-    "id": "47124da211e0b295",
+    "id": "9f981b6247fde72a",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status",
-    "text": "**v0.1.0 candidate.** Sessions, delegation, failover and observability are implemented\nand pass the offline suite in CI. Live verification with a real provider, recorded demo and\nmeasured latency are the release gates and are tracked in [docs/roadmap.md](docs/roadmap.md).\nLater milestones (invitations and quotas, cited documentation search, multilingual controls,\nsame-host scaling) are implemented candidates and documented separately.",
-    "digest": "47124da211e0b2956e6ddb77217a39b2b9244dc118f478e516f690f8b89bbfeb"
+    "text": "**0.2.0.dev1 is a development reference with sessions, delegation, recovery, observability,\ninvitations, cited search and same-host scaling implemented; live voice, Azure and hosted\nacceptance remain pending as tracked in the [roadmap](docs/roadmap.md).**",
+    "digest": "9f981b6247fde72af794e6174ccdec6ed6325a2360d4ccf733ebb0cd2bc3520a"
+  },
+  {
+    "id": "fe627ad243889855",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Verification",
+    "text": "See [the live smoke-test checklist](docs/milestones/m1-verification.md). CI runs on hosted GitHub Actions, and paid text-worker evaluations are recorded in\n[the evaluation verification record](docs/milestones/m9-evals-verification.md); live voice\nand Azure calls have not yet been verified.",
+    "digest": "fe627ad2438898552b957d5cb95cd97cf2adb700c135c89f9959dc7d023fa767"
   },
   {
     "id": "9f5908c3906f1134",

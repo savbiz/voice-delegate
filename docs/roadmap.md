@@ -1,6 +1,6 @@
 # Roadmap M1–M9
 
-Implementation and release acceptance are separate. Passing offline tests is not proof of
+Version 0.2.0.dev1 is a development reference; implementation and release acceptance are separate. Passing offline tests is not proof of
 live voice quality, provider access, acoustic latency or production readiness.
 
 | Milestone | Scope | Acceptance | Current status |
@@ -13,7 +13,7 @@ live voice quality, provider access, acoustic latency or production readiness.
 | M6 — Complete use case | Read-only questions over public project documentation with source citations | Useful end-to-end workflow beyond calculator | Implemented: cited documentation search and worker tool; hosted/live narration acceptance pending |
 | M7 — Advanced voice experience | Multilingual behavior, translation, interruption-aware summaries, accessibility, additional providers | Multilingual and user-correction scenarios pass | Implemented candidate: language/translate controls, interruption recap, accessibility and Realtime adapter; live language evaluation pending |
 | M8 — Scaling | Multiple instances, session ownership, separate workers, backpressure, load tests | Recovery and isolation work across processes under load | Implemented same-host reference: two APIs, separate bounded worker, shared leases, ownership routing and crash/load tests; hosted real-voice acceptance pending |
-| M9 — Measured quality and feedback | Versioned task evaluations, clear recovery states, minimal diagnostic feedback | Regression reports, verified recovery UX and bounded feedback from a private pilot | Recovery UX, feedback and 32-case worker eval runner implemented; Braintrust upload verification, accessibility audit and pilot pending; see [M9](milestones/m9.md) |
+| M9 — Measured quality and feedback | Versioned task evaluations, clear recovery states, minimal diagnostic feedback | Regression reports, verified recovery UX and bounded feedback from a private pilot | Recovery UX, feedback and 40-case worker eval runner implemented; Braintrust upload verification, accessibility audit and pilot pending; see [M9](milestones/m9.md) |
 
 The first eight implementation milestones now have code and offline verification. Release acceptance
 still requires the listed live/hosted evidence. M8 deliberately targets multiple processes on

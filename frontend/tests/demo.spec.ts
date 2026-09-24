@@ -1,9 +1,11 @@
 /** Exercise free playback, cancellation, and the live-mode boundary without a key. */
 import { expect, test } from '@playwright/test';
+import manifest from '../package.json' with { type: 'json' };
 test('demo completes without backend requests', async ({ page }) => {
   const api: string[] = [];
   page.on('request', request => { if (request.url().includes('/api/')) api.push(request.url()); });
   await page.goto('/');
+  await expect(page.getByText(`OPEN REFERENCE · ${manifest.version}`)).toBeVisible();
   await page.getByRole('button', { name: 'Start demo', exact: true }).click();
   await expect(page.getByText('310 ms · simulated')).toBeVisible();
   expect(api).toEqual([]);

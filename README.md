@@ -7,8 +7,8 @@
 
 A speech-to-speech model (GPT-Live over WebRTC) owns the conversation. Anything slower than a
 sentence is handed to a separate LangGraph worker through a single `delegate_task` boundary, and
-narrated back when it completes. The user can interrupt at any time: an interrupted task can
-never be spoken late. Every buffer, queue and session has an explicit budget, and every turn is
+narrated back when it completes. The user can interrupt at any time: an interrupted task is never narrated
+after the interruption is registered. Every buffer, queue and session has an explicit budget, and every turn is
 traced end to end.
 
 Built clean-room from public provider documentation. Apache-2.0, copyright 2026 Savino Bizzoca.
@@ -34,7 +34,7 @@ result that is no longer wanted. This project shows one way to avoid both:
   is tested on its own.
 - **Interruption invalidates work.** A generation counter is bumped before cancellation, so a
   late worker result is discarded rather than narrated.
-- **Bounded everything.** Sessions, buffers, history, worker steps and result size have limits
+- **Bounded everything the backend owns.** Sessions, buffers, history, worker steps and result size have limits
   with a documented reason and a documented behaviour on exhaustion.
 - **Provider failover with clamped history.** A primary transport failure reconnects to a
   fallback provider and replays bounded text, never tool executions.
@@ -46,11 +46,9 @@ result that is no longer wanted. This project shows one way to avoid both:
 
 ## Status
 
-**v0.1.0 candidate.** Sessions, delegation, failover and observability are implemented
-and pass the offline suite in CI. Live verification with a real provider, recorded demo and
-measured latency are the release gates and are tracked in [docs/roadmap.md](docs/roadmap.md).
-Later milestones (invitations and quotas, cited documentation search, multilingual controls,
-same-host scaling) are implemented candidates and documented separately.
+**0.2.0.dev1 is a development reference with sessions, delegation, recovery, observability,
+invitations, cited search and same-host scaling implemented; live voice, Azure and hosted
+acceptance remain pending as tracked in the [roadmap](docs/roadmap.md).**
 
 <!-- TODO(v0.1.0): fill from the live smoke test; keep p50/p95 and the exact model names.
 | Measurement | p50 | p95 | Notes |
@@ -135,7 +133,9 @@ uv build --all-packages
 
 Pytest disables IP sockets; only local Unix sockets used by asyncio are allowed. HTTP tests use in-process ASGI and mock transports. Test fixtures contain invented identifiers and no recordings from private systems. Dependency installation needs internet; the tests themselves do not.
 
-See [the live smoke-test checklist](docs/milestones/m1-verification.md). No API key, real microphone test, paid provider call, or hosted GitHub Actions run was used to validate this candidate.
+See [the live smoke-test checklist](docs/milestones/m1-verification.md). CI runs on hosted GitHub Actions, and paid text-worker evaluations are recorded in
+[the evaluation verification record](docs/milestones/m9-evals-verification.md); live voice
+and Azure calls have not yet been verified.
 
 ## Timing and cleanup limitations
 
@@ -149,12 +149,12 @@ The full plan covers voice sessions through same-host scaling: see [scope, accep
 The table below covers the original v0.1 milestones; later features extend it with a controlled
 public demo, a complete use case, advanced voice UX and optional scaling.
 
-| Week | Milestone | Release gate |
-|---|---|---|
-| 1 | M1: GPT-Live sessions, provider contract, browser | Offline checks + real voice, interruption, and cleanup smoke test; then `v0.1.0-m1` |
-| 2 | M2: LangGraph worker, internal delegation, token budget, cancellation | Offline worker tests + live delegated response; `v0.1.0-m2` |
-| 3 | M3: Azure Realtime adapter, renegotiation failover, clamped history | Capability checks and timed fallback scenarios; `v0.1.0-m3` |
-| 4 | M4: OTel, collector, Prometheus, Grafana dashboard, evals, docs | Reproducible offline suite + explicitly separate live validation; `v0.1.0` |
+| Milestone | Release gate |
+|---|---|
+| M1: GPT-Live sessions, provider contract, browser | Offline checks + real voice, interruption, and cleanup smoke test; then `v0.1.0-m1` |
+| M2: LangGraph worker, internal delegation, token budget, cancellation | Offline worker tests + live delegated response; `v0.1.0-m2` |
+| M3: Azure Realtime adapter, renegotiation failover, clamped history | Capability checks and timed fallback scenarios; `v0.1.0-m3` |
+| M4: OTel, collector, Prometheus, Grafana dashboard, evals, docs | Reproducible offline suite + explicitly separate live validation; `v0.1.0` |
 
 The v0.2 candidate adds language/translate preferences, an extractive interruption recap and OpenAI Realtime. M8 adds a same-host multi-process topology. ElevenLabs and cross-host high availability remain future extensions.
 
