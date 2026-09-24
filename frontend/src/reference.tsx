@@ -18,6 +18,8 @@ export function Reference({ code }: { code: string }) {
   useEffect(
     () => () => {
       pending.current?.abort();
+      setStatus('Search cancelled. Try again when ready.');
+      setBusy(false);
     },
     [code],
   );
@@ -49,6 +51,8 @@ export function Reference({ code }: { code: string }) {
         );
       const data = (await response.json()) as { sources: Source[] };
       if (controller.signal.aborted) return;
+      if (!Array.isArray(data.sources))
+        throw new Error('Documentation search returned invalid results.');
       setSources(data.sources);
       setStatus(
         data.sources.length
@@ -57,7 +61,13 @@ export function Reference({ code }: { code: string }) {
       );
     } catch (error) {
       if (!controller.signal.aborted)
-        setStatus(error instanceof Error ? error.message : 'Search failed.');
+        setStatus(
+          error instanceof Error && error.name === 'TimeoutError'
+            ? 'Documentation search took too long. Please try again.'
+            : error instanceof Error
+              ? error.message
+              : 'Search failed.',
+        );
     } finally {
       if (pending.current === controller) setBusy(false);
     }

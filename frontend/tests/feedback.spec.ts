@@ -15,7 +15,7 @@ test('feedback retries the same bounded report and prevents duplicate clicks', a
     );
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Send report' })).toBeDisabled();
   await page.getByLabel('Personal invitation code').fill('invitation');
   await page.getByLabel('Problem category').selectOption('audio');

@@ -20,14 +20,14 @@ test('stopping cancels further playback', async ({ page }) => {
   await page.getByRole('button', { name: 'Stop demo', exact: true }).click();
   await page.clock.fastForward(5000);
   await expect(page.getByText('240 ms · simulated')).not.toBeVisible();
-  await page.getByRole('button', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Start conversation' })).toBeVisible();
 });
 
 test('live mode without a server key explains how to proceed', async ({ page }) => {
   await page.route('**/api/config', (route) => route.fulfill({ json: { voice_available: false } }));
   await page.goto('/');
-  await page.getByRole('button', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.getByRole('status')).toContainText('Set OPENAI_API_KEY on the backend');
   await expect(page.getByRole('button', { name: 'Start conversation' })).toBeEnabled();
@@ -37,7 +37,7 @@ test('voice preferences and accessible playback controls work before connecting'
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
   await page.getByLabel('Response language').selectOption('it');
   await page.getByLabel('Conversation style').selectOption('translate');
   await page.getByRole('button', { name: 'Mute assistant', exact: true }).click();
@@ -52,4 +52,17 @@ test('voice preferences and accessible playback controls work before connecting'
   );
   await page.getByLabel('Response language').focus();
   await expect(page.getByLabel('Response language')).toBeFocused();
+});
+
+test('mode tabs support keyboard selection and expose their panel', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Free demo' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'Live voice' })).toBeFocused();
+  await expect(page.getByRole('tab', { name: 'Live voice' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'tab-live');
+  await expect(page.locator('#recap')).toHaveAttribute('aria-live', 'off');
 });

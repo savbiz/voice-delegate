@@ -178,7 +178,7 @@ function Live({ code }: { code: string }) {
       <section>
         <h2>Conversation recap</h2>
         <p className="muted">Extracts from transcripts; interruption does not mean completion.</p>
-        <p id="recap" aria-live="polite">
+        <p id="recap" aria-live="off">
           {state.recap}
         </p>
       </section>
@@ -256,7 +256,7 @@ function Demo() {
   );
 }
 function App() {
-  const [mode, setMode] = useState('demo');
+  const [mode, setMode] = useState<'demo' | 'live' | 'reference'>('demo');
   const [code, setCode] = useState('');
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
@@ -269,37 +269,60 @@ function App() {
           A fast voice conversation. A separate worker for the heavy lifting.
         </p>
       </header>
-      <nav className="actions" aria-label="Conversation mode">
-        <button aria-pressed={mode === 'demo'} onClick={() => setMode('demo')}>
-          Free demo
-        </button>
-        <button aria-pressed={mode === 'live'} onClick={() => setMode('live')}>
-          Live voice
-        </button>
-        <button aria-pressed={mode === 'reference'} onClick={() => setMode('reference')}>
-          Documentation
-        </button>
+      <nav className="actions" role="tablist" aria-label="Conversation mode">
+        {(['demo', 'live', 'reference'] as const).map((tab, index, tabs) => (
+          <button
+            key={tab}
+            role="tab"
+            id={`tab-${tab}`}
+            aria-controls="mode-panel"
+            aria-selected={mode === tab}
+            tabIndex={mode === tab ? 0 : -1}
+            onClick={() => setMode(tab)}
+            onKeyDown={(event) => {
+              const next =
+                event.key === 'ArrowRight'
+                  ? tabs[(index + 1) % tabs.length]
+                  : event.key === 'ArrowLeft'
+                    ? tabs[(index + tabs.length - 1) % tabs.length]
+                    : event.key === 'Home'
+                      ? tabs[0]
+                      : event.key === 'End'
+                        ? tabs.at(-1)
+                        : undefined;
+              if (next) {
+                event.preventDefault();
+                setMode(next);
+                document.getElementById(`tab-${next}`)?.focus();
+              }
+            }}
+          >
+            {tab === 'demo' ? 'Free demo' : tab === 'live' ? 'Live voice' : 'Documentation'}
+          </button>
+        ))}
       </nav>
-      {mode !== 'demo' && (
-        <label className="block my-5">
-          Personal invitation code{' '}
-          <input
-            type="password"
-            autoComplete="off"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Only if configured on the server"
-          />
-        </label>
-      )}
-      {mode === 'demo' ? (
-        <Demo />
-      ) : mode === 'reference' ? (
-        <Reference code={code} />
-      ) : (
-        <Live code={code} />
-      )}
-      <footer className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-500">
+      <div id="mode-panel" role="tabpanel" aria-labelledby={`tab-${mode}`}>
+        {mode !== 'demo' && (
+          <label className="block my-5">
+            Personal invitation code{' '}
+            <input
+              type="password"
+              autoComplete="off"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Only if configured on the server"
+            />
+          </label>
+        )}
+        {mode === 'demo' ? (
+          <Demo />
+        ) : mode === 'reference' ? (
+          <Reference code={code} />
+        ) : (
+          <Live code={code} />
+        )}
+      </div>
+      <footer className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-400">
         React 19 · FastAPI · WebRTC
         <br />
         Bounded delegation · Azure recovery · Optional telemetry.

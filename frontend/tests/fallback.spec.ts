@@ -26,7 +26,7 @@ test('media failure replaces the peer once and closes the owned session', async 
     });
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.getByRole('status')).toContainText('Connected.');
   await page.getByLabel('Personal invitation code').fill('updated-invitation');
@@ -65,7 +65,7 @@ test('busy work and failed recovery explain manual actions without replay', asyn
     });
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.getByRole('status')).toContainText('Connected.');
   await page.clock.fastForward(10000);

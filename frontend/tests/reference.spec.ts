@@ -22,7 +22,7 @@ test('documentation search shows source evidence without starting voice', async 
     });
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Documentation', exact: true }).click();
+  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
   await page.getByLabel('Project question').fill('fallback history');
   await page.getByRole('button', { name: 'Search documentation' }).click();
   await expect(page.getByRole('status')).toContainText('1 source excerpts found');
@@ -36,7 +36,42 @@ test('documentation search shows source evidence without starting voice', async 
 test('missing evidence is explicit', async ({ page }) => {
   await page.route('**/api/reference/search', (route) => route.fulfill({ json: { sources: [] } }));
   await page.goto('/');
-  await page.getByRole('button', { name: 'Documentation', exact: true }).click();
+  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
   await page.getByRole('button', { name: 'Search documentation' }).click();
   await expect(page.getByRole('status')).toContainText('No supporting documentation found');
+});
+
+test('invalid search results produce a friendly error', async ({ page }) => {
+  await page.route('**/api/reference/search', (route) => route.fulfill({ json: { sources: {} } }));
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  await page.getByRole('button', { name: 'Search documentation' }).click();
+  await expect(page.getByRole('status')).toContainText('returned invalid results');
+});
+
+test('timeout is friendly and changing the invitation resets an aborted search', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch;
+    let calls = 0;
+    window.fetch = (input, init) => {
+      if (!String(input).endsWith('/api/reference/search')) return originalFetch(input, init);
+      if (++calls === 1) return Promise.reject(new DOMException('Expired', 'TimeoutError'));
+      return new Promise((_, reject) =>
+        init?.signal?.addEventListener('abort', () =>
+          reject(new DOMException('Aborted', 'AbortError')),
+        ),
+      );
+    };
+  });
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  await page.getByRole('button', { name: 'Search documentation' }).click();
+  await expect(page.getByRole('status')).toContainText('took too long. Please try again');
+  await page.getByRole('button', { name: 'Search documentation' }).click();
+  await expect(page.getByRole('status')).toHaveText('Searching…');
+  await page.getByLabel('Personal invitation code').fill('new-code');
+  await expect(page.getByRole('status')).toContainText('Search cancelled');
+  await expect(page.getByRole('button', { name: 'Search documentation' })).toBeEnabled();
 });
