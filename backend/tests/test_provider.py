@@ -132,6 +132,37 @@ class FixtureProvider(OpenAILiveProvider):
         return cast(ClientConnection, self.socket)
 
 
+@pytest.mark.parametrize("cancelled", [False, True])
+async def test_partial_initialization_recovers_only_to_close(cancelled: bool) -> None:
+    calls: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(201, json={"session": {"id": "partial"}, "transport": {"sdp": "sdp"}})
+
+    class FailedAttachProvider(FixtureProvider):
+        attempts = 0
+
+        async def _attach(self, session_id: str) -> ClientConnection:
+            self.attempts += 1
+            if self.attempts == 1:
+                if cancelled:
+                    raise asyncio.CancelledError
+                raise OSError("attach failed")
+            return await super()._attach(session_id)
+
+    socket = MemorySocket()
+    provider = FailedAttachProvider(
+        httpx.AsyncClient(transport=httpx.MockTransport(respond)), socket
+    )
+    with pytest.raises(asyncio.CancelledError if cancelled else ProviderError):
+        await provider.connect(config=provider.default_config(""), offer_sdp="sdp")
+    assert len(calls) == 1 and provider.attempts == 2
+    assert socket.closed
+    assert any(json.loads(message)["type"] == "session.close" for message in socket.sent)
+    await provider.aclose()
+
+
 async def test_creation_uses_live_json_and_client_delegation() -> None:
     requests: list[httpx.Request] = []
 
