@@ -23,6 +23,12 @@ An idle turn can remain open until session expiry. No transcript, session IDs, S
 credentials, provider request bodies or tool results are exported.
 
 Metrics use finite operation/outcome labels:
+
+Operation outcomes are `success`, `error`, and `cancelled`. The names below are
+post-collector Prometheus names, rather than the dotted OpenTelemetry instrument names.
+Both duration histograms use explicit second boundaries:
+`0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 30, 60, 120`.
+
 - `voice_operation_duration_seconds`: provider setup, fallback and worker duration.
 - `voice_turn_transcript_wait_seconds`: first assistant transcript arrival minus first
   user transcript arrival. This includes speech and transcription time; it is not audio TTFB.

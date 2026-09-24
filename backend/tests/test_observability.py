@@ -2,8 +2,9 @@
 
 import asyncio
 
+import pytest
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+from opentelemetry.sdk.metrics.export import HistogramDataPoint, InMemoryMetricReader
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -55,6 +56,46 @@ async def test_turn_parents_delegation_and_exports_no_private_text() -> None:
 def test_disabled_metrics_never_construct_an_exporter() -> None:
     assert configure_metrics(Settings()) is None
     assert configure_metrics(Settings(otel_enabled=True)) is None
+
+
+def test_histograms_use_seconds_and_distinguish_cancellation() -> None:
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader])
+    metrics = Metrics(provider)
+    try:
+        with pytest.raises(asyncio.CancelledError), metrics.operation("cancel"):
+            raise asyncio.CancelledError
+        with pytest.raises(ValueError), metrics.operation("fail"):
+            raise ValueError("failure")
+        metrics.turn_gap.record(0.2)
+        data = reader.get_metrics_data()
+        assert data is not None
+        histograms = [m for r in data.resource_metrics for s in r.scope_metrics for m in s.metrics]
+        for metric in histograms:
+            for point in metric.data.data_points:
+                assert isinstance(point, HistogramDataPoint)
+                assert point.explicit_bounds == (
+                    0.05,
+                    0.1,
+                    0.25,
+                    0.5,
+                    1,
+                    2,
+                    3,
+                    5,
+                    10,
+                    20,
+                    30,
+                    60,
+                    120,
+                )
+        operations = next(m for m in histograms if m.name == "voice.operation.duration")
+        assert {p.attributes["outcome"] for p in operations.data.data_points if p.attributes} == {
+            "cancelled",
+            "error",
+        }
+    finally:
+        provider.shutdown()
 
 
 def test_enabled_tracing_has_a_batch_that_fits_its_bounded_queue() -> None:
