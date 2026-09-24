@@ -94,3 +94,23 @@ async def test_feedback_disabled_without_auth() -> None:
         assert (
             await client.post("/api/feedback", json=report().model_dump(mode="json"))
         ).status_code == 503
+
+
+async def test_feedback_and_app_use_distribution_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def distribution_version(name: str) -> str:
+        assert name == "voice-delegate"
+        return "9.8.7"
+
+    monkeypatch.setattr("voice_delegate.api.app.version", distribution_version)
+    monkeypatch.setattr("voice_delegate.feedback.version", distribution_version)
+    app = create_app(Settings(), FakeProvider())
+    async with app.router.lifespan_context(app):
+        store = FeedbackStore(str(tmp_path / "feedback.sqlite3"))
+        try:
+            store.submit("alice", report(), "live")
+            assert store.db.execute("SELECT version FROM feedback").fetchone() == (app.version,)
+            assert app.version == "9.8.7"
+        finally:
+            store.close()

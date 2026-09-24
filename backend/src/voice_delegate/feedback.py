@@ -3,6 +3,7 @@
 import hashlib
 import sqlite3
 import time
+from importlib.metadata import version
 from pathlib import Path
 from typing import Literal
 from uuid import UUID
@@ -25,6 +26,7 @@ class FeedbackStore:
     retention_seconds = 7 * 86400
 
     def __init__(self, path: str, capacity: int = 10000) -> None:
+        self.version = version("voice-delegate")
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(path, timeout=2)
         if path != ":memory:":
@@ -71,7 +73,7 @@ class FeedbackStore:
                     raise SessionError(503, "Feedback temporarily unavailable")
                 self.db.execute(
                     "INSERT INTO feedback VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (report_id, identity, body.category, body.state, provider, "0.2.0.dev1", now),
+                    (report_id, identity, body.category, body.state, provider, self.version, now),
                 )
             self.db.commit()
             return report_id
