@@ -49,9 +49,11 @@ async def test_offline_run_has_no_paid_calls_and_skips_language_quality() -> Non
     assert summary["executed"] == 28 and summary["skipped"] == 4
     assert summary["model_calls"] == 0
     assert summary["scores"]["numeric_result"] == 1
-    assert summary["scores"]["valid_source_ids"] == 1
-    assert summary["scores"]["no_sources"] == 1
-    # Do not require perfect retrieval: the report must surface real misses, not hide them.
+    assert summary["plumbing"]["valid_source_ids"] == 1
+    assert summary["plumbing"]["no_sources"] == 1
+    assert summary["scores"]["expected_evidence_retrieved"] >= 11 / 12
+    assert set(summary["scores"]) == {"numeric_result", "expected_evidence_retrieved"}
+    assert report["metadata"]["n_trials"] == 1
     assert summary["score_counts"]["expected_evidence_retrieved"] == 12
     assert "judge_correctness" not in summary["scores"]
 

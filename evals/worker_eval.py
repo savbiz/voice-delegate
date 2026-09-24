@@ -114,24 +114,30 @@ def score(case: dict[str, Any], output: dict[str, Any]) -> dict[str, float]:
 
 
 def metadata(mode: str, model: str, judge: str | None) -> dict[str, Any]:
-    commit = subprocess.run(
-        ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=False
-    ).stdout.strip()
-    dirty = subprocess.run(
-        ["git", "status", "--porcelain", "--untracked-files=no"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    ).stdout.strip()
+    commit: str | None = None
+    dirty: str | None = None
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True, check=False
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout.strip()
+    except OSError:
+        pass
     return {
         "dataset": "worker-v2",
         "dataset_sha256": hashlib.sha256(DATASET.read_bytes()).hexdigest(),
         "corpus_sha256": hashlib.sha256("".join(s.digest for s in corpus()).encode()).hexdigest(),
         "prompt_sha256": hashlib.sha256(INSTRUCTIONS.encode()).hexdigest(),
         "judge_prompt_sha256": hashlib.sha256(JUDGE_PROMPT.encode()).hexdigest() if judge else None,
-        "commit": commit,
-        "tracked_changes": bool(dirty),
+        "commit": commit or None,
+        "tracked_changes": bool(dirty) if dirty is not None else None,
+        "n_trials": 1,
         "mode": mode,
         "model": model,
         "judge_model": judge,
@@ -152,6 +158,7 @@ async def run_cases(
     judge = (
         ChatOpenAI(
             model=judge_model,
+            temperature=0,
             api_key=SecretStr(os.environ["OPENAI_API_KEY"]),
             max_retries=0,
             timeout=20,
@@ -186,7 +193,12 @@ async def run_cases(
                 status = type(exc).__name__  # Do not log exception messages or provider bodies.
             elapsed = time.perf_counter() - started
             output = {"text": text, "source_ids": ids, "tools": observer.tools, "status": status}
-            scores = score(case, output)
+            signals = score(case, output)
+            quality_names = {"numeric_result", "expected_evidence_retrieved"}
+            scores = {key: value for key, value in signals.items() if key in quality_names}
+            plumbing = {key: value for key, value in signals.items() if key not in quality_names}
+            if judge is not None:
+                scores.update({"judge_" + key: 0.0 for key in JudgeScore.model_fields})
             judge_status = "not_requested"
             if judge is not None and status == "completed":
                 try:
@@ -227,6 +239,7 @@ async def run_cases(
                     "status": status,
                     "output": output,
                     "scores": scores,
+                    "plumbing": plumbing,
                     "judge_status": judge_status,
                     "worker_seconds": elapsed,
                     "model_calls": budget.calls - calls_before,
@@ -245,6 +258,11 @@ async def run_cases(
     averages = {
         k: statistics.mean(r["scores"][k] for r in executed if k in r["scores"]) for k in names
     }
+    plumbing_names = sorted({k for r in executed for k in r["plumbing"]})
+    plumbing_averages = {
+        k: statistics.mean(r["plumbing"][k] for r in executed if k in r["plumbing"])
+        for k in plumbing_names
+    }
     times = sorted(r["worker_seconds"] for r in executed)
     return {
         "metadata": metadata(mode, model if paid else "scripted-offline", judge_model),
@@ -258,6 +276,7 @@ async def run_cases(
                 r["judge_status"] not in {"completed", "not_requested"} for r in executed
             ),
             "scores": averages,
+            "plumbing": plumbing_averages,
             "score_counts": {k: sum(k in r["scores"] for r in executed) for k in names},
             "p50_worker_seconds": statistics.median(times) if times else None,
             "p95_worker_seconds": times[math.ceil(0.95 * len(times)) - 1] if times else None,
@@ -292,6 +311,7 @@ def upload(report: dict[str, Any], cases: list[dict[str, Any]], project: str) ->
             scores=row.get("scores", {}),
             metadata={
                 "case_id": row["id"],
+                "plumbing": row.get("plumbing", {}),
                 "status": row["status"],
                 "judge_status": row.get("judge_status"),
                 "worker_seconds": row.get("worker_seconds"),

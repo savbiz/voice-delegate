@@ -86,6 +86,17 @@ quality threshold is imposed before collecting and reviewing a live baseline.
 
 ### What scores mean
 
+Offline `scores` contains only `numeric_result` and `expected_evidence_retrieved`.
+The separate `plumbing` section reports completion, bounded output, tool selection,
+source/citation validity and missing-evidence signalling; these are control checks,
+not model quality. CI requires retrieval of expected evidence on at least 11 of the
+12 baseline documentation questions.
+
+Each report records `n_trials=1`: repeat runs explicitly to measure variability.
+The optional judge uses temperature zero. Judge averages include every executed case;
+failed workers and failed judge calls contribute zero, while skipped cases are excluded.
+When git is unavailable, `commit` and tracked-change status are null.
+
 - `numeric_result`: last numeric value in the answer matches the expected result; a formatting
   heuristic, not a general mathematical proof or language-quality judge.
 - `tool_selection`: expected tool was requested, not proof that every action was necessary.
