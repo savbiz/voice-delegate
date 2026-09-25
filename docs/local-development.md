@@ -28,7 +28,7 @@ pnpm --dir frontend dev
 
 Open **http://localhost:5173** (use localhost, matching the allowed origin). The free simulated demo works even without the Python server. It requests no microphone and plays no generated speech. Live voice needs `OPENAI_API_KEY` in root `.env`, GPT-Live access, and billed provider usage. Restart Python after changing settings. A ChatGPT subscription does not supply a project API key.
 
-The access-code field accepts a configured personal invitation, or a shared `VOICE_ACCESS_TOKEN` for private testing. Enter that gate value, never an OpenAI key. It stays in browser memory. Editing it updates credentials for subsequent requests without tearing down an active session; switching modes releases the current voice session.
+The access-code field accepts a configured personal invitation, or a shared `VOICE_ACCESS_TOKEN` for private testing. Enter that gate value, never an OpenAI key. It stays in browser memory. Editing it updates credentials for new sessions and standalone requests; an active session keeps its original invitation until close; switching modes releases the current voice session.
 
 ## Checks
 

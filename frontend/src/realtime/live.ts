@@ -22,7 +22,7 @@ export function createLiveSession(
   function showWorker(worker: string): void {
     store.update(workerState(store.getSnapshot(), worker));
   }
-  type Session = { id: string; key: string };
+  type Session = { id: string; key: string; accessCode: string };
   let stopVad: (() => void) | undefined;
   let peer: RTCPeerConnection | undefined;
   let microphone: MediaStream | undefined;
@@ -64,8 +64,12 @@ export function createLiveSession(
     store.update({ active: false, cancelPending: true });
   }
 
-  function requestOptions(owner?: Session, body?: unknown, timeout = 35000): RequestInit {
-    const accessCode = getAccessCode();
+  function requestOptions(
+    owner?: Session,
+    body?: unknown,
+    timeout = 35000,
+    accessCode = owner?.accessCode ?? getAccessCode(),
+  ): RequestInit {
     return {
       method: 'POST',
       headers: {
@@ -82,10 +86,11 @@ export function createLiveSession(
     owner?: Session,
     body?: unknown,
     timeout = 35000,
+    accessCode?: string,
   ): Promise<T> {
     const response = await fetch(
       `${import.meta.env.VITE_API_BASE_URL ?? ''}/api${path}`,
-      requestOptions(owner, body, timeout),
+      requestOptions(owner, body, timeout, accessCode),
     );
     if (!response.ok) {
       const messages: Record<number, string> = {
@@ -248,6 +253,7 @@ export function createLiveSession(
         });
       }
     }
+    const accessCode = existing?.accessCode ?? getAccessCode();
     const attempt = ++attemptId;
     store.update({ active: true });
     showState(
@@ -317,8 +323,16 @@ export function createLiveSession(
         existing ? 'Reconnecting with Azure…' : 'Connecting…',
         'Please wait. Select Stop to cancel.',
       );
-      const created =
-        existing ?? (await request<Session>('/sessions', undefined, getPreferences()));
+      const created = existing ?? {
+        ...(await request<{ id: string; key: string }>(
+          '/sessions',
+          undefined,
+          getPreferences(),
+          35000,
+          accessCode,
+        )),
+        accessCode,
+      };
       if (attempt !== attemptId) {
         await request(`/sessions/${created.id}/close`, created);
         return;

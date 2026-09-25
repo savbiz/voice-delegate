@@ -93,15 +93,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
-async function start() {
+async function start(getCode = () => 'invite') {
   const store = createLiveStore();
   const audio = { srcObject: null } as HTMLAudioElement;
-  controller = createLiveSession(
-    store,
-    audio,
-    () => 'invite',
-    () => ({ language: 'auto', mode: 'conversation' }),
-  );
+  controller = createLiveSession(store, audio, getCode, () => ({
+    language: 'auto',
+    mode: 'conversation',
+  }));
   controller.start();
   await vi.waitFor(() => expect(store.getSnapshot().status).toContain('Connected'));
   return store;
@@ -191,4 +189,25 @@ test('pagehide uses the same authorization, content type and JSON body as a norm
   expect(closed?.init.body).toBe('{}');
   expect(closed?.init.keepalive).toBe(true);
   expect(stopTrack).toHaveBeenCalledOnce();
+});
+
+test('session credentials stay fixed while a new session uses the edited invitation', async () => {
+  let code = 'original';
+  await start(() => code);
+  code = 'edited';
+  await vi.advanceTimersByTimeAsync(10000);
+  controller?.cancel();
+  window.dispatchEvent(new Event('pagehide'));
+  const owned = requests.filter((request) => request.path.includes('/sessions/session/'));
+  expect(owned.some((request) => request.path.endsWith('/heartbeat'))).toBe(true);
+  expect(owned.some((request) => request.path.endsWith('/interrupt'))).toBe(true);
+  expect(owned.some((request) => request.path.endsWith('/close'))).toBe(true);
+  for (const request of owned)
+    expect(new Headers(request.init.headers).get('Authorization')).toBe('Bearer original');
+  controller?.start();
+  await vi.waitFor(() =>
+    expect(requests.filter((request) => request.path.endsWith('/sessions'))).toHaveLength(2),
+  );
+  const created = requests.filter((request) => request.path.endsWith('/sessions')).at(-1);
+  expect(new Headers(created?.init.headers).get('Authorization')).toBe('Bearer edited');
 });
