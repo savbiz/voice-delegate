@@ -18,6 +18,7 @@ from .models import (
     DelegationRequested,
     ProviderCapabilities,
     ProviderCommand,
+    ProviderCommandError,
     ProviderError,
     ProviderEvent,
     ProviderFailure,
@@ -28,7 +29,7 @@ from .models import (
     UnsupportedCapability,
     WebRTCAnswer,
 )
-from .openai import OpenAILiveConnection
+from .openai import OpenAILiveConnection, WireError
 
 CALL_ID = re.compile(r"[A-Za-z0-9_-]{1,256}")
 
@@ -62,6 +63,7 @@ DELEGATE_TASK_TOOL = {
 
 class WireEvent(BaseModel):
     type: str
+    error: WireError | None = None
     delta: str = Field(default="", max_length=65536)
     transcript: str = Field(default="", max_length=65536)
     name: str = ""
@@ -80,6 +82,8 @@ def normalize_event(raw: str | bytes) -> ProviderEvent | None:
     if event.type == "input_audio_buffer.speech_started":
         return SpeechStarted()
     if event.type == "error":
+        if event.error is not None and event.error.type == "invalid_request_error":
+            return ProviderCommandError()
         return ProviderFailure()
     if event.type == "response.function_call_arguments.done":
         if event.name != "delegate_task" or not event.call_id:

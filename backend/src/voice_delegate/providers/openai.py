@@ -20,6 +20,7 @@ from .models import (
     DelegationRequested,
     ProviderCapabilities,
     ProviderCommand,
+    ProviderCommandError,
     ProviderError,
     ProviderEvent,
     ProviderFailure,
@@ -51,8 +52,15 @@ class _Delegation(BaseModel):
     id: str = Field(max_length=256)
 
 
+class WireError(BaseModel):
+    """Read only the category; never retain provider messages or reflected input."""
+
+    type: str = ""
+
+
 class _WireEvent(BaseModel):
     type: str
+    error: WireError | None = None
     delta: str = Field(default="", max_length=1048576)
     start_ms: float = Field(default=0, ge=0, allow_inf_nan=False)
     end_ms: float = Field(default=0, ge=0, allow_inf_nan=False)
@@ -70,6 +78,8 @@ def normalize_event(raw: str | bytes) -> ProviderEvent | None:
         case "session.closed":
             return SessionClosed(event.reason)
         case "error":
+            if event.error is not None and event.error.type == "invalid_request_error":
+                return ProviderCommandError()
             return ProviderFailure()
         case "session.delegation.created" if event.delegation is not None:
             return DelegationRequested(event.delegation.id, event.offset_ms)

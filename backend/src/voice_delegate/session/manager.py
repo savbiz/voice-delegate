@@ -19,6 +19,7 @@ from voice_delegate.observability.turns import observe
 from voice_delegate.providers.base import RealtimeProvider
 from voice_delegate.providers.models import (
     DelegationRequested,
+    ProviderCommandError,
     ProviderError,
     ProviderFailure,
     SessionClosed,
@@ -164,6 +165,9 @@ class SessionManager:
                     session.finalized = True
                     break
                 if session.state == "closing":
+                    continue
+                if isinstance(event, ProviderCommandError):
+                    logger.warning("Provider rejected a command; session remains active")
                     continue
                 if isinstance(event, ProviderFailure):
                     break

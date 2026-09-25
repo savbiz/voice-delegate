@@ -89,6 +89,11 @@ class SessionStarted:
 
 
 @dataclass(frozen=True)
+class ProviderCommandError:
+    """A rejected request that does not itself indicate a broken transport."""
+
+
+@dataclass(frozen=True)
 class ProviderFailure:
     """Redacted provider error, without request bodies or credentials."""
 
@@ -102,6 +107,7 @@ type ProviderEvent = (
     | SessionClosed
     | SessionStarted
     | ProviderFailure
+    | ProviderCommandError
 )
 
 
