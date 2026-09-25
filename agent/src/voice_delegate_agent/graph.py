@@ -67,10 +67,10 @@ class OfflinePlanner:
                 return AIMessage(
                     content=(
                         "Offline worker: use 'calculate (120 + 80) * 1.22' or "
-                        "'architecture', 'limits', 'delegation'. No action was taken."
+                        "'docs fallback history'. No action was taken."
                     )
                 )
-            name, arguments = "reference_lookup", {"topic": topic}
+            name, arguments = "search_documentation", {"query": topic}
         return AIMessage(
             content="", tool_calls=[{"name": name, "args": arguments, "id": "offline-call"}]
         )

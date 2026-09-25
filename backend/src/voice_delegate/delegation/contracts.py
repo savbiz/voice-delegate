@@ -17,7 +17,7 @@ class DelegationInput(BaseModel):
 DELEGATE_TOOL = {
     "type": "function",
     "name": "delegate_task",
-    "description": "Delegate arithmetic or a project-reference lookup to the worker.",
+    "description": "Delegate arithmetic or project documentation search to the worker.",
     "parameters": DelegationInput.model_json_schema(),
 }
 

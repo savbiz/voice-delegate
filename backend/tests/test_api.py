@@ -41,7 +41,7 @@ async def test_offer_auth_validation_and_cleanup(
 async def test_body_limit_and_host_check() -> None:
     app = create_app(Settings(max_body_bytes=1024), FakeProvider())
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+        transport=httpx.ASGITransport(app=app), base_url="http://localhost"
     ) as client:
         response = await client.post("/api/sessions", content=b"x" * 1025)
         assert response.status_code == 413
@@ -56,7 +56,7 @@ async def test_lifespan_closes_active_session() -> None:
         app.router.lifespan_context(app),
         httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
-            base_url="http://testserver",
+            base_url="http://localhost",
             headers={"Origin": "http://localhost:5173"},
         ) as client,
     ):
@@ -75,13 +75,14 @@ async def test_deployment_gate_and_cors() -> None:
 
     settings = Settings(
         environment="production",
+        allowed_hosts=["localhost", "127.0.0.1"],
         allowed_origin="https://voice.example",
         access_token=SecretStr("a-test-access-code-long-enough"),
     )
     app = create_app(settings, FakeProvider())
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app),
-        base_url="http://testserver",
+        base_url="http://localhost",
         headers={"Origin": "https://voice.example"},
     ) as client:
         preflight = await client.options(
@@ -111,7 +112,7 @@ async def test_interrupt_requires_ownership_and_reports_status() -> None:
         app.router.lifespan_context(app),
         httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
-            base_url="http://testserver",
+            base_url="http://localhost",
             headers={"Origin": "http://localhost:5173"},
         ) as client,
     ):
@@ -168,7 +169,7 @@ async def test_provider_configuration_uses_existing_settings(
             app.router.lifespan_context(app),
             httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=app),
-                base_url="http://testserver",
+                base_url="http://localhost",
                 headers={"Origin": "http://localhost:5173"},
             ) as client,
         ):
@@ -230,7 +231,7 @@ async def test_connection_timeout_returns_504_without_global_timeout_handler(
         app.router.lifespan_context(app),
         httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
-            base_url="http://testserver",
+            base_url="http://localhost",
             headers={"Origin": "http://localhost:5173"},
         ) as client,
     ):

@@ -126,6 +126,9 @@ class Settings(BaseSettings):
             message = "VOICE_WORKER_MODE=openai requires OPENAI_API_KEY"
             raise ValueError(message)
         if self.environment == "production":
+            if "testserver" in self.allowed_hosts:
+                message = "Production requires explicit VOICE_ALLOWED_HOSTS without testserver"
+                raise ValueError(message)
             if not self.invite_tokens and len(self.access_token.get_secret_value()) < 24:
                 message = "Production requires VOICE_ACCESS_TOKEN of at least 24 characters"
                 raise ValueError(message)

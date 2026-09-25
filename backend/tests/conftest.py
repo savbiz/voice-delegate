@@ -32,7 +32,7 @@ def asgi_client() -> ASGIClientFactory:
         async with (
             app.router.lifespan_context(app),
             httpx.AsyncClient(
-                transport=httpx.ASGITransport(app=app), base_url="http://testserver"
+                transport=httpx.ASGITransport(app=app), base_url="http://localhost"
             ) as transport,
         ):
             yield transport
@@ -49,6 +49,7 @@ def public_settings() -> PublicSettingsFactory:
     def settings(path: Path, **overrides: object) -> Settings:
         data: dict[str, object] = {
             "environment": "production",
+            "allowed_hosts": ["localhost", "127.0.0.1"],
             "public_demo": True,
             "allowed_origin": "https://demo.example",
             "quota_database": str(path / "quotas.sqlite3"),

@@ -53,21 +53,4 @@ def _evaluate(expression: str) -> float:
     return visit(tree.body)
 
 
-@tool
-def reference_lookup(topic: str) -> str:
-    """Look up local project notes: architecture, limits, or delegation; no web search."""
-    notes = {
-        "architecture": (
-            "WebRTC carries voice. FastAPI owns sessions. LangGraph runs delegated work."
-        ),
-        "limits": "Sessions, context, worker steps, task duration and spoken results are bounded.",
-        "delegation": (
-            "One delegation boundary keeps tools in the worker. Interruptions cancel work."
-        ),
-    }
-    return notes.get(
-        topic.strip().lower(), "No local note found. Try architecture, limits or delegation."
-    )
-
-
-TOOLS = [calculate, reference_lookup, search_documentation]
+TOOLS = [calculate, search_documentation]

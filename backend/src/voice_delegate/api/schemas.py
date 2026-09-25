@@ -1,5 +1,8 @@
 """Validated browser-facing contracts, separate from provider wire formats."""
 
+from dataclasses import replace
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from voice_delegate_agent.reference import Source
 
@@ -45,12 +48,17 @@ class Answer(BaseModel):
 class Status(BaseModel):
     """Transport status; browser session.started confirms actual voice readiness."""
 
-    state: str
+    state: Literal["created", "connecting", "connected", "reconnecting", "closing", "closed"]
     delegation: str = "idle"
     generation: int = 0
     fallback_available: bool = False
     sources: tuple[Source, ...] = ()
     recap: Recap = Field(default_factory=Recap)
+
+    @field_validator("sources")
+    @classmethod
+    def bound_source_text(cls, sources: tuple[Source, ...]) -> tuple[Source, ...]:
+        return tuple(replace(source, text=source.text[:400]) for source in sources)
 
 
 class Closed(BaseModel):

@@ -25,7 +25,7 @@ def destinations(text: str) -> list[tuple[int, str]]:
     """Read inline destinations (including balanced parentheses) and definitions."""
     found: list[tuple[int, str]] = []
     starts = [m.end() for m in re.finditer(r"\]\(\s*", text)]
-    starts += [m.end() for m in re.finditer(r"(?m)^ {0,3}\[[^]\n]+\]:\s*", text)]
+    starts += [m.end() for m in re.finditer(r"(?m)^ {0,3}\[(?!\^)[^]\n]+\]:\s*", text)]
     for start in starts:
         pos = start
         depth = 0

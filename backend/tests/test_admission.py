@@ -148,6 +148,7 @@ async def test_public_demo_environment_requires_invites_and_persists_quotas(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("VOICE_ENVIRONMENT", "production")
+    monkeypatch.setenv("VOICE_ALLOWED_HOSTS", '["localhost"]')
     monkeypatch.setenv("VOICE_PUBLIC_DEMO", "true")
     monkeypatch.setenv("VOICE_ALLOWED_ORIGIN", "https://demo.example")
     monkeypatch.setenv("VOICE_QUOTA_DATABASE", str(tmp_path / "quotas.sqlite3"))

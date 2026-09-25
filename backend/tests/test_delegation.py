@@ -48,7 +48,7 @@ async def test_calculator_rejects_code_and_unbounded_operations(expression: str)
 async def test_real_graph_uses_local_tool_without_network() -> None:
     worker = LangGraphWorker(OfflinePlanner())
     assert "244" in (await worker.delegate_task("calculate (120 + 80) * 1.22", "")).text
-    assert "WebRTC" in (await worker.delegate_task("architecture", "")).text
+    assert (await worker.delegate_task("docs fallback history", "")).sources
     assert "No action" in (await worker.delegate_task("Book a flight", "")).text
 
 

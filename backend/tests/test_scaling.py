@@ -22,6 +22,7 @@ TOKEN = "test-worker-token-32-characters-long"
 def shared(path: Path, instance: str) -> Settings:
     return Settings(
         environment="production",
+        allowed_hosts=["localhost", "127.0.0.1"],
         public_demo=True,
         instance_id=instance,
         allowed_origin="https://demo.example",

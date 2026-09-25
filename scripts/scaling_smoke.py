@@ -1,7 +1,9 @@
 """Exercise two real API processes, a private worker and gateway with fake voice only."""
 
+import argparse
 import asyncio
 import json
+import logging
 import os
 import secrets
 import statistics
@@ -13,6 +15,20 @@ from pathlib import Path
 import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def require(condition: bool, message: object) -> None:
+    if not condition:
+        raise SystemExit(str(message))
+
+
+def cleanup(command: list[str], env: dict[str, str] | None = None) -> None:
+    try:
+        result = subprocess.run(command, check=False, capture_output=True, env=env)
+        if result.returncode:
+            logging.warning("Smoke teardown failed (exit %s)", result.returncode)
+    except OSError:
+        logging.warning("Smoke teardown could not run", exc_info=True)
 
 
 async def exercise(
@@ -46,15 +62,20 @@ async def exercise(
             responses = await asyncio.gather(
                 *(client.post("/api/sessions", headers=headers(u)) for u in users)
             )
-            assert all(r.status_code == 201 for r in responses), [r.status_code for r in responses]
+            require(
+                all(r.status_code == 201 for r in responses), [r.status_code for r in responses]
+            )
             owners = [r.json() for r in responses]
             instances.update(owner["id"].split("-")[0] for owner in owners)
-            assert (await client.post("/api/sessions", headers=headers("extra"))).status_code == 429
+            require(
+                (await client.post("/api/sessions", headers=headers("extra"))).status_code == 429,
+                "Smoke check failed: unexpected session HTTP status",
+            )
             wrong = await client.post(
                 "/api/sessions/" + owners[0]["id"] + "/heartbeat",
                 headers=headers(users[1], owners[0]),
             )
-            assert wrong.status_code == 404
+            require(wrong.status_code == 404, "Smoke check failed: wrong.status_code == 404")
 
             async def run(user: str, owner: dict[str, str]) -> None:
                 started = time.perf_counter()
@@ -62,34 +83,38 @@ async def exercise(
                 offered = await client.post(
                     path + "/offer", headers=headers(user, owner), json={"sdp": "v=0\r\n"}
                 )
-                assert offered.status_code == 200, offered.text
+                require(offered.status_code == 200, offered.text)
                 for _ in range(30):
                     await asyncio.sleep(0.25)
                     response = await client.post(path + "/heartbeat", headers=headers(user, owner))
-                    assert response.status_code == 200, response.text
+                    require(response.status_code == 200, response.text)
                     status = response.json()["delegation"]
                     if status != "running":
-                        assert status in {"completed", "failed", "busy"}, status
+                        require(status in {"completed", "failed", "busy"}, status)
                         outcomes[status] = outcomes.get(status, 0) + 1
                         timings.append(time.perf_counter() - started)
                         break
                 else:
                     message = "Worker failed to settle within load-test budget"
                     raise RuntimeError(message)
-                assert (
-                    await client.post(path + "/close", headers=headers(user, owner))
-                ).status_code == 200
+                require(
+                    (await client.post(path + "/close", headers=headers(user, owner))).status_code
+                    == 200,
+                    "Smoke check failed: unexpected session HTTP status",
+                )
 
             await asyncio.gather(*(run(u, o) for u, o in zip(users, owners, strict=True)))
             await asyncio.sleep(2)
-        assert instances == {"a", "b"}
-        assert outcomes.get("completed", 0) > 0
+        require(instances == {"a", "b"}, 'Smoke check failed: instances == {"a", "b"}')
+        require(
+            outcomes.get("completed", 0) > 0, 'Smoke check failed: outcomes.get("completed", 0) > 0'
+        )
 
         # A crash cannot move an existing WebRTC connection. Verify failure isolation and restart.
         crash_owners = []
         for user in ["crash1", "crash2", "crash3", "crash4"]:
             response = await client.post("/api/sessions", headers=headers(user))
-            assert response.status_code == 201
+            require(response.status_code == 201, "Smoke check failed: response.status_code == 201")
             crash_owners.append((user, response.json()))
         a = next((u, o) for u, o in crash_owners if o["id"].startswith("a-"))
         b = next((u, o) for u, o in crash_owners if o["id"].startswith("b-"))
@@ -100,12 +125,20 @@ async def exercise(
             capture_output=True,
             env=process_env,
         )
-        assert (
-            await client.post("/api/sessions/" + a[1]["id"] + "/heartbeat", headers=headers(*a))
-        ).status_code in {502, 503, 504}
-        assert (
-            await client.post("/api/sessions/" + b[1]["id"] + "/heartbeat", headers=headers(*b))
-        ).status_code == 200
+        require(
+            (
+                await client.post("/api/sessions/" + a[1]["id"] + "/heartbeat", headers=headers(*a))
+            ).status_code
+            in {502, 503, 504},
+            "Smoke check failed: unexpected session HTTP status",
+        )
+        require(
+            (
+                await client.post("/api/sessions/" + b[1]["id"] + "/heartbeat", headers=headers(*b))
+            ).status_code
+            == 200,
+            "Smoke check failed: unexpected session HTTP status",
+        )
         await asyncio.to_thread(
             subprocess.run,
             [*compose, "start", "api-a"],
@@ -120,7 +153,7 @@ async def exercise(
             if response.status_code == 404:
                 break
             await asyncio.sleep(0.25)
-        assert response.status_code == 404
+        require(response.status_code == 404, "Smoke check failed: response.status_code == 404")
         ordered = sorted(timings)
         return {
             "simulated_voice": True,
@@ -135,6 +168,10 @@ async def exercise(
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--image", help="Use this prebuilt backend image instead of building")
+    parser.add_argument("--gateway-image", help="Override the pinned gateway image")
+    options = parser.parse_args()
     project = "voice-scale-check-" + secrets.token_hex(3)
     tokens = {
         name: secrets.token_urlsafe(32)
@@ -160,14 +197,33 @@ def main() -> None:
         "-f",
         str(ROOT / "deployment/scaling/compose.test.yaml"),
     ]
+    override = Path(path + ".json")
     process_env = {
         k: v for k, v in os.environ.items() if not k.startswith("VOICE_") and k != "OPENAI_API_KEY"
     }
     try:
+        if options.image or options.gateway_image:
+            rendered = subprocess.run(
+                [*compose, "config", "--format", "json"],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=process_env,
+            )
+            config = json.loads(rendered.stdout)
+            if options.image:
+                for name in ("api-a", "api-b", "worker"):
+                    config["services"][name].pop("build", None)
+                    config["services"][name]["image"] = options.image
+            if options.gateway_image:
+                config["services"]["gateway"]["image"] = options.gateway_image
+            override.write_text(json.dumps(config))
+            compose = [*compose[: compose.index("-f")], "-f", str(override)]
         subprocess.run([*compose, "up", "-d"], check=True, env=process_env)
         print(json.dumps(asyncio.run(exercise(compose, tokens, process_env)), indent=2))
     finally:
-        subprocess.run([*compose, "down", "-v"], check=True, env=process_env)
+        cleanup([*compose, "down", "-v"], env=process_env)
+        override.unlink(missing_ok=True)
         Path(path).unlink(missing_ok=True)
 
 
