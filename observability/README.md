@@ -24,7 +24,9 @@ credentials, provider request bodies or tool results are exported.
 
 Metrics use finite operation/outcome labels:
 
-Operation outcomes are `success`, `error`, and `cancelled`. The names below are
+Operation outcomes are `success`, `error`, and `cancelled`, including delegated work.
+Worker samples also carry a finite `status` label such as `completed`, `timeout`,
+`busy`, `failed` or `delivery_failed` for diagnosis. The names below are
 post-collector Prometheus names, rather than the dotted OpenTelemetry instrument names.
 Both duration histograms use explicit second boundaries:
 `0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 30, 60, 120`.

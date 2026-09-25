@@ -167,11 +167,20 @@ class DelegationRunner:
                 state.status = "failed"
 
         finally:
+            status = state.status if generation == state.generation else "cancelled"
+            outcome = (
+                "success"
+                if status == "completed"
+                else "cancelled"
+                if status == "cancelled"
+                else "error"
+            )
             self.metrics.operations.record(
                 monotonic() - started,
                 {
                     "operation": "delegate_task",
-                    "outcome": state.status if generation == state.generation else "cancelled",
+                    "outcome": outcome,
+                    "status": status,
                 },
             )
 

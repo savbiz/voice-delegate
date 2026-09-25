@@ -105,3 +105,76 @@ def test_enabled_tracing_has_a_batch_that_fits_its_bounded_queue() -> None:
     provider = configure_tracing(Settings(otel_enabled=True, otel_endpoint=""))
     assert provider is not None
     provider.shutdown()
+
+
+@pytest.mark.parametrize(
+    ("status", "outcome"),
+    [
+        ("completed", "success"),
+        ("failed", "error"),
+        ("timeout", "error"),
+        ("busy", "error"),
+        ("delivery_failed", "error"),
+        ("cancelled", "cancelled"),
+    ],
+)
+async def test_worker_metrics_use_shared_outcomes(status: str, outcome: str) -> None:
+    from voice_delegate.delegation.contracts import DelegationInput
+    from voice_delegate.delegation.runner import DelegationRunner, DelegationState
+    from voice_delegate.providers.fake import FakeConnection
+    from voice_delegate.providers.models import ProviderCommand, ProviderError
+    from voice_delegate_agent.reference import WorkerResult
+
+    started = asyncio.Event()
+
+    class Worker:
+        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
+            started.set()
+            if status in {"cancelled", "timeout"}:
+                await asyncio.Event().wait()
+            if status == "failed":
+                raise ValueError("worker failure")
+            return WorkerResult("4")
+
+    class Connection(FakeConnection):
+        async def send(self, command: ProviderCommand) -> None:
+            if status == "delivery_failed":
+                raise ProviderError("delivery failure")
+            await super().send(command)
+
+    reader = InMemoryMetricReader()
+    meters = MeterProvider(metric_readers=[reader])
+    runner = DelegationRunner(
+        Worker(),
+        metrics=Metrics(meters),
+        capacity=0 if status == "busy" else 1,
+        timeout=0.001 if status == "timeout" else 1,
+    )
+    state = DelegationState()
+    runner.start(
+        state, "request", DelegationInput(goal="calculate 2+2"), Connection(), lambda: True
+    )
+    assert state.task is not None
+    if status == "cancelled":
+        await started.wait()
+        runner.cancel(state)
+    await asyncio.gather(state.task, return_exceptions=True)
+    assert state.status == status
+    data = reader.get_metrics_data()
+    assert data is not None
+    points = [
+        p
+        for r in data.resource_metrics
+        for s in r.scope_metrics
+        for m in s.metrics
+        if m.name == "voice.operation.duration"
+        for p in m.data.data_points
+    ]
+    assert len(points) == 1
+    assert points[0].attributes == {
+        "operation": "delegate_task",
+        "outcome": outcome,
+        "status": status,
+    }
+    await runner.aclose()
+    meters.shutdown()
