@@ -48,7 +48,8 @@ result that is no longer wanted. This project shows one way to avoid both:
 
 **0.2.0.dev1 is a development reference with sessions, delegation, recovery, observability,
 invitations, cited search and same-host scaling implemented; live voice, Azure and hosted
-acceptance remain pending as tracked in the [roadmap](docs/roadmap.md).**
+acceptance remain pending as tracked in the [roadmap](docs/roadmap.md), with deployment limits
+and remaining work in [production scope](docs/production.md).**
 
 <!-- TODO(v0.1.0): fill from the live smoke test; keep p50/p95 and the exact model names.
 | Measurement | p50 | p95 | Notes |
