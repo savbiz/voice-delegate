@@ -109,6 +109,7 @@ export function createLiveSession(
   async function finish(message: string): Promise<void> {
     if (ending) return;
     ending = true;
+    store.update({ ending: true });
     const closedAttempt = ++attemptId;
     const owner = session;
     release();
@@ -120,8 +121,6 @@ export function createLiveSession(
         : 'Check your connection or access code, then select Start conversation to begin a new session. Previous tasks will not be replayed.',
     );
     showWorker('idle');
-    ending = false;
-    store.update({ ending: false });
     if (owner) {
       void request<{ finalized: boolean }>(`/sessions/${owner.id}/close`, owner, undefined, 5000)
         .then((result) => {
@@ -134,7 +133,14 @@ export function createLiveSession(
               status:
                 message + ' Close was not confirmed; the server also enforces session expiry.',
             });
+        })
+        .finally(() => {
+          ending = false;
+          store.update({ ending: false });
         });
+    } else {
+      ending = false;
+      store.update({ ending: false });
     }
   }
 
@@ -375,12 +381,7 @@ export function createLiveSession(
               showWorker(state.delegation);
               if (state.state === 'closed' || state.state === 'closing')
                 void finish('Conversation ended.');
-              if (state.state === 'reconnecting')
-                showState(
-                  'recovering',
-                  'Provider connection lost.',
-                  'Waiting for transport recovery. You can select Stop.',
-                );
+              if (state.state === 'reconnecting') void recover('Provider connection lost.');
             }
           })
           .catch(() => {

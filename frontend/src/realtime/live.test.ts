@@ -38,6 +38,7 @@ let controller: LiveController | undefined;
 let stopTrack = vi.fn();
 let responses: number[];
 let delegation: string;
+let transportState: string;
 let closeResponse: Promise<Response> | undefined;
 const source = {
   id: 's1',
@@ -56,6 +57,7 @@ beforeEach(() => {
   FakePeer.instances = [];
   responses = [];
   delegation = 'idle';
+  transportState = 'connected';
   closeResponse = undefined;
   sources = [source];
   stopTrack = vi.fn();
@@ -74,7 +76,7 @@ beforeEach(() => {
       if (path.endsWith('/heartbeat')) {
         const status = responses.shift() ?? 200;
         return Response.json(
-          { state: 'connected', delegation, sources, generation: 0, fallback_available: true },
+          { state: transportState, delegation, sources, generation: 0, fallback_available: true },
           { status },
         );
       }
@@ -133,7 +135,7 @@ test('local onset interrupts only after a running heartbeat', async () => {
   onset?.();
   expect(requests.filter((r) => r.path.endsWith('/interrupt'))).toHaveLength(1);
 });
-test('stop releases media before close confirmation and stale confirmation cannot overwrite a new session', async () => {
+test('stop releases media immediately and keeps ending true until close confirmation', async () => {
   const store = await start();
   let complete: (response: Response) => void = () => undefined;
   closeResponse = new Promise((resolve) => {
@@ -144,11 +146,14 @@ test('stop releases media before close confirmation and stale confirmation canno
   expect(FakePeer.instances[0]?.close).toHaveBeenCalledOnce();
   expect(store.getSnapshot().phase).toBe('ended');
   expect(AbortSignal.timeout).toHaveBeenCalledWith(5000);
+  expect(store.getSnapshot().ending).toBe(true);
+  controller?.start();
+  expect(FakePeer.instances).toHaveLength(1);
+  complete(Response.json({ finalized: false }));
+  await vi.waitFor(() => expect(store.getSnapshot().ending).toBe(false));
   controller?.start();
   await vi.waitFor(() => expect(FakePeer.instances).toHaveLength(2));
   await vi.waitFor(() => expect(store.getSnapshot().phase).toBe('connected'));
-  complete(Response.json({ finalized: false }));
-  await vi.advanceTimersByTimeAsync(1);
   expect(store.getSnapshot().status).toBe('Connected. Speak naturally.');
 });
 test('same source ids retain display state and reconnect preserves captions and timings', async () => {
@@ -210,4 +215,30 @@ test('session credentials stay fixed while a new session uses the edited invitat
   );
   const created = requests.filter((request) => request.path.endsWith('/sessions')).at(-1);
   expect(new Headers(created?.init.headers).get('Authorization')).toBe('Bearer edited');
+});
+
+test('server reconnecting heartbeat recovers even when the browser peer is connected', async () => {
+  const store = await start();
+  FakePeer.instances[0]?.emit({ type: 'error' });
+  expect(requests.filter((request) => request.path.endsWith('/reconnect'))).toHaveLength(0);
+  transportState = 'reconnecting';
+  await vi.advanceTimersByTimeAsync(10000);
+  await vi.waitFor(() =>
+    expect(requests.filter((request) => request.path.endsWith('/reconnect'))).toHaveLength(1),
+  );
+  expect(FakePeer.instances).toHaveLength(2);
+  expect(store.getSnapshot().phase).toBe('connected');
+});
+
+test('failed close clears ending after reporting unconfirmed cleanup', async () => {
+  const store = await start();
+  let rejectClose: (error: Error) => void = () => undefined;
+  closeResponse = new Promise((_, reject) => {
+    rejectClose = reject;
+  });
+  controller?.stop();
+  expect(store.getSnapshot().ending).toBe(true);
+  rejectClose(new Error('timeout'));
+  await vi.waitFor(() => expect(store.getSnapshot().ending).toBe(false));
+  expect(store.getSnapshot().status).toContain('Close was not confirmed');
 });
