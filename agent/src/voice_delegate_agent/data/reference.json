@@ -104,6 +104,14 @@
     "digest": "a290f1daf6c232833b8ff9cbbe69ffb87f890adfc8e1448e3f1cc91d214ba95f"
   },
   {
+    "id": "e3194e862e273547",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Provider adapters",
+    "text": "`OpenAILiveProvider` implements GPT-Live WebRTC setup, sideband events, commentary and finalization.\n`RealtimeWebRTCProvider` contains the shared Realtime WebRTC and sideband implementation.\n`OpenAIRealtimeProvider` supplies OpenAI authentication and endpoints; `AzureRealtimeProvider`\nsupplies Azure resource authentication and deployment configuration. Each provider builds its\nown default session configuration and declares capabilities, including transcript timing.\nThe manager uses the provider protocol and normalized events; it does not select Azure models.",
+    "digest": "e3194e862e273547bd01b31024d6c7fcceaa3651fad657ab0b71604a3622a7f2"
+  },
+  {
     "id": "8e90758fce0d0248",
     "title": "Architecture",
     "path": "docs/architecture.md",

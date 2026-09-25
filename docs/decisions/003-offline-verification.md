@@ -7,3 +7,5 @@ Context: paid network calls introduce variability and require credentials. A fak
 Decision: use typed fake events, injected clocks, and in-process HTTP to test lifecycle and failure paths. Block IP sockets in pytest. Keep real voice, model delegation accuracy, and measured transport latency behind an explicit live verification gate.
 
 Consequences: offline CI can verify deterministic timeout policy and cleanup. It cannot certify spoken quality, barge-in behavior, real p50/p95 latency, or Azure failover. No M1 release tag is created until the live smoke test is recorded.
+
+Application-defined backend turn spans were chosen as parents for provider and delegation spans. Signaling TTFB, first observed audio, playback onset, transcript gap and end-to-end task latency were kept as distinct measurements. Recorded fake scenarios tested scheduling and limits; model behavior required real-model evaluations.
