@@ -2,8 +2,8 @@ services:
   api-a:
     environment:
       VOICE_SCRIPTED_PROVIDER: "1"
-    command: ["/app/.venv/bin/uvicorn", "voice_delegate.scaling.scripted_app:create_test_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]
+    command: ["/app/.venv/bin/uvicorn", "voice_delegate.scaling.scripted_app:create_test_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log", "--no-proxy-headers"]
   api-b:
     environment:
       VOICE_SCRIPTED_PROVIDER: "1"
-    command: ["/app/.venv/bin/uvicorn", "voice_delegate.scaling.scripted_app:create_test_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]
+    command: ["/app/.venv/bin/uvicorn", "voice_delegate.scaling.scripted_app:create_test_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log", "--no-proxy-headers"]

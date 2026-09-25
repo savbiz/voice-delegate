@@ -11,3 +11,13 @@
 **/.ruff_cache
 frontend
 .local
+
+**/tests
+docs
+evals
+observability
+deployment
+realtime
+scripts
+.coverage*
+htmlcov
