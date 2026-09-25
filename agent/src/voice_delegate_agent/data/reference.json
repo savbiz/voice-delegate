@@ -32,12 +32,12 @@
     "digest": "4bf5315dc199e173aa91b59722c9bce7e2f455f2973fd4aa0c0e81cac37a8aa5"
   },
   {
-    "id": "881461ab5ba8c26a",
+    "id": "fe1c791db858a47c",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Why it exists",
-    "text": "- **Bounded everything the backend owns.** Sessions, buffers, history, worker steps and result size have limits\n  with a documented reason and a documented behaviour on exhaustion.",
-    "digest": "881461ab5ba8c26a47eee9db882d97d374412b0c0032f5a019b85682b88af2f9"
+    "text": "- **Bounded everything the backend owns.** Sessions, buffers, history, worker steps and\n  result size have limits with a documented reason and a documented behaviour on exhaustion.",
+    "digest": "fe1c791db858a47cecfc12b60554d011142750e7fb512f5730aeec18a1801c6e"
   },
   {
     "id": "df138923e7ad0a2e",
@@ -80,12 +80,12 @@
     "digest": "fe627ad2438898552b957d5cb95cd97cf2adb700c135c89f9959dc7d023fa767"
   },
   {
-    "id": "9f5908c3906f1134",
+    "id": "4c61e4bed3dff1ac",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Roadmap and release gates",
-    "text": "The full plan covers voice sessions through same-host scaling: see [scope, acceptance and status](docs/roadmap.md).\nThe table below covers the original v0.1 milestones; later features extend it with a controlled\npublic demo, a complete use case, advanced voice UX and optional scaling.",
-    "digest": "9f5908c3906f11342e59d7dad2a2bf8234bd4978c7a9dbc91290865fe3cccbc9"
+    "text": "The full plan covers voice sessions through same-host scaling: see [scope, acceptance and status](docs/roadmap.md).\nThe table below covers the core features; later features extend them with a controlled\npublic demo, a complete use case, advanced voice UX and optional scaling.",
+    "digest": "4c61e4bed3dff1ac1dc8919ca3347f451612b8ae801aafa9ababc5690c7ef66e"
   },
   {
     "id": "4c84eddd371969c3",

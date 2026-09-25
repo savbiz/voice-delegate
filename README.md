@@ -34,8 +34,8 @@ result that is no longer wanted. This project shows one way to avoid both:
   is tested on its own.
 - **Interruption invalidates work.** A generation counter is bumped before cancellation, so a
   late worker result is discarded rather than narrated.
-- **Bounded everything the backend owns.** Sessions, buffers, history, worker steps and result size have limits
-  with a documented reason and a documented behaviour on exhaustion.
+- **Bounded everything the backend owns.** Sessions, buffers, history, worker steps and
+  result size have limits with a documented reason and a documented behaviour on exhaustion.
 - **Provider failover with clamped history.** A primary transport failure reconnects to a
   fallback provider and replays bounded text, never tool executions.
 - **Measured, not assumed.** OpenTelemetry spans per turn, provider time-to-first-byte,
@@ -61,7 +61,7 @@ and remaining work in [production scope](docs/production.md).**
 
 ## Quickstart — no API key required for the simulated demo
 
-Prerequisites: Python 3.12, uv, Node.js 24 and pnpm 11.19.0. Open the extracted `voice-delegate/` folder containing `pyproject.toml` in PyCharm.
+Prerequisites: Python 3.12, uv, Node.js 24 and pnpm 11.19.0. Open the repository folder containing `pyproject.toml` in PyCharm.
 
 ```bash
 cd voice-delegate
@@ -106,7 +106,7 @@ See [PyCharm and local development](docs/local-development.md) and [GitHub, Verc
 - LangGraph delegation with offline/OpenAI planners, timeout, result clipping and interruption cancellation.
 - Python 3.12, uv lockfile, Ruff, strict mypy, pytest-asyncio, a fake control provider, and GitHub Actions workflow.
 
-GPT-Live uses client delegation. `delegate_task(goal, context)` is the **internal worker contract**, not a voice-model function schema. M2 starts an asynchronous worker and returns compact commentary. `VOICE_WORKER_MODE=offline` uses a scripted planner by default; set `openai` for natural-language tool selection. No web search or external actions are available.
+GPT-Live uses client delegation. `delegate_task(goal, context)` is the **internal worker contract**, not a voice-model function schema. Delegation starts an asynchronous worker and returns compact commentary. `VOICE_WORKER_MODE=offline` uses a scripted planner by default; set `openai` for natural-language tool selection. No web search or external actions are available.
 
 The capability-aware `/token` endpoint returns **501** for this adapter. Live's documented browser flow creates sessions using server credentials and SDP; this project does not invent a Live ephemeral credential API. The browser uses `/offer`. See [ADR 001](docs/decisions/001-live-client-delegation.md).
 
@@ -116,7 +116,7 @@ The capability-aware `/token` endpoint returns **501** for this adapter. Live's 
 uv run python -m voice_delegate.delegation.demo "calculate (120 + 80) * 1.22"
 ```
 
-This executes the LangGraph graph and calculator without any API call and returns 244. See [M2](docs/milestones/m2.md) for enabling the paid text model and testing interruption.
+This executes the LangGraph graph and calculator without any API call and returns 244. See [worker delegation](docs/milestones/m2.md) for enabling the paid text model and testing interruption.
 
 ## Verification
 
@@ -140,24 +140,24 @@ and Azure calls have not yet been verified.
 
 ## Timing and cleanup limitations
 
-The UI measures an **estimated transcript gap**, not audio TTFB or end-to-end playback latency. Transcript timestamps can overlap; negative values are retained. Turns are approximated by 800 ms gaps between user transcript fragments. M4 exports separate turn, provider, delegation and failover metrics; see [observability](observability/README.md).
+The UI measures an **estimated transcript gap**, not audio TTFB or end-to-end playback latency. Transcript timestamps can overlap; negative values are retained. Turns are approximated by 800 ms gaps between user transcript fragments. The backend exports separate turn, provider, delegation and failover metrics; see [observability](observability/README.md).
 
-The provider creation POST is never automatically retried: an ambiguous response can already have created a billable session. If the sideband fails after creation, the adapter attempts to recover it solely to close the session. If recovery fails, remote finalization cannot be guaranteed and is logged as unconfirmed. The public hangup reference describes SIP, so M1 does not assume it works for WebRTC. A process crash also cannot guarantee remote cleanup. A normal close waits for `session.closed` before releasing transports.
+The provider creation POST is never automatically retried: an ambiguous response can already have created a billable session. If the sideband fails after creation, the adapter attempts to recover it solely to close the session. If recovery fails, remote finalization cannot be guaranteed and is logged as unconfirmed. The public hangup reference describes SIP, so the Live adapter does not assume it works for WebRTC. A process crash also cannot guarantee remote cleanup. A normal close waits for `session.closed` before releasing transports.
 
 ## Roadmap and release gates
 
 The full plan covers voice sessions through same-host scaling: see [scope, acceptance and status](docs/roadmap.md).
-The table below covers the original v0.1 milestones; later features extend it with a controlled
+The table below covers the core features; later features extend them with a controlled
 public demo, a complete use case, advanced voice UX and optional scaling.
 
-| Milestone | Release gate |
+| Feature | Release gate |
 |---|---|
-| M1: GPT-Live sessions, provider contract, browser | Offline checks + real voice, interruption, and cleanup smoke test; then `v0.1.0-m1` |
-| M2: LangGraph worker, internal delegation, token budget, cancellation | Offline worker tests + live delegated response; `v0.1.0-m2` |
-| M3: Azure Realtime adapter, renegotiation failover, clamped history | Capability checks and timed fallback scenarios; `v0.1.0-m3` |
-| M4: OTel, collector, Prometheus, Grafana dashboard, evals, docs | Reproducible offline suite + explicitly separate live validation; `v0.1.0` |
+| GPT-Live sessions, provider contract, browser | Offline checks + real voice, interruption, and cleanup smoke test |
+| LangGraph worker, internal delegation, token budget, cancellation | Offline worker tests + live delegated response |
+| Azure Realtime adapter, renegotiation failover, clamped history | Capability checks and timed fallback scenarios |
+| OTel, collector, Prometheus, Grafana dashboard, evals, docs | Reproducible offline suite + explicitly separate live validation |
 
-The v0.2 candidate adds language/translate preferences, an extractive interruption recap and OpenAI Realtime. M8 adds a same-host multi-process topology. ElevenLabs and cross-host high availability remain future extensions.
+The v0.2 candidate adds language/translate preferences, an extractive interruption recap and OpenAI Realtime. Optional scaling adds a same-host multi-process topology. ElevenLabs and cross-host high availability remain future extensions.
 
 The Azure adapter uses documented GA WebRTC and sideband capabilities. A provider change establishes a new browser peer connection and replays bounded text; it does not transparently migrate audio or imply identical full-duplex behavior.
 
