@@ -63,6 +63,11 @@ def search(query: str) -> tuple[Source, ...]:
         score = len(words & body) * 3 + len(words & terms(source.section))
         if words & body:
             ranked.append((score, source))
+    if not ranked:
+        # A heading-only query still has evidence: preserve document order for its overview.
+        return tuple(
+            source for source in corpus() if words & (terms(source.title) | terms(source.section))
+        )[:3]
     ranked.sort(key=lambda item: (-item[0], item[1].id))
     return tuple(source for _, source in ranked[:3])
 

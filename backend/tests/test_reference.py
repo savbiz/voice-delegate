@@ -145,3 +145,15 @@ async def test_worker_rejects_citations_without_retrieved_evidence() -> None:
     result = await LangGraphWorker(InventedCitation()).delegate_task("question", "")
     assert "task incomplete" in result.text
     assert result.sources == ()
+
+
+async def test_architecture_command_retrieves_the_document_overview() -> None:
+    result = await LangGraphWorker(OfflinePlanner()).delegate_task("architecture", "")
+    assert result.sources
+    assert result.sources[0].path == "docs/architecture.md"
+    assert result.sources[0].section == "Boundaries"
+    assert "WebRTC" in result.text
+    assert "FastAPI" in result.text
+    assert search("architettura") == search("architecture")
+    assert search("boundaries")[0].section == "Boundaries"
+    assert search("zzzzunfindable") == ()
