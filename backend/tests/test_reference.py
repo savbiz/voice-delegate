@@ -98,3 +98,50 @@ def test_demo_aliases_and_stop_words_preserve_retrieval() -> None:
     }
     assert terms("history replays") == {"history", "replay"}
     assert search("cronologia") == search("history")
+
+
+async def test_repeated_searches_keep_citation_identity_and_remap_final_indices() -> None:
+    import json
+
+    from langchain_core.messages import AIMessage, AnyMessage
+
+    class SearchTwice:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.expected: list[str] = []
+
+        async def respond(self, messages: list[AnyMessage]) -> AIMessage:
+            self.calls += 1
+            if self.calls <= 2:
+                return AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "name": "search_documentation",
+                            "args": {
+                                "query": "fallback history" if self.calls == 1 else "sqlite quotas"
+                            },
+                            "id": str(self.calls),
+                        }
+                    ],
+                )
+            sources = json.loads(str(messages[-1].content))["sources"]
+            self.expected = [source["id"] for source in sources]
+            return AIMessage(content=f"SQLite evidence [{sources[0]['citation']}]")
+
+    planner = SearchTwice()
+    result = await LangGraphWorker(planner).delegate_task("Search twice", "")
+    assert result.text == "SQLite evidence [1]"
+    assert [source.id for source in result.sources] == planner.expected
+
+
+async def test_worker_rejects_citations_without_retrieved_evidence() -> None:
+    from langchain_core.messages import AIMessage, AnyMessage
+
+    class InventedCitation:
+        async def respond(self, messages: list[AnyMessage]) -> AIMessage:
+            return AIMessage(content="Unsupported [99]")
+
+    result = await LangGraphWorker(InventedCitation()).delegate_task("question", "")
+    assert "task incomplete" in result.text
+    assert result.sources == ()
