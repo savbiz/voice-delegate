@@ -42,7 +42,9 @@ test('turn timing merges fragments, preserves overlap and bounds history', () =>
   let timings = updateTurnTiming([], 'user', 0, 100);
   timings = updateTurnTiming(timings, 'user', 100, 200);
   timings = updateTurnTiming(timings, 'assistant', 150, 300);
-  expect(timings).toEqual([{ id: 1, end: 200, reply: 150, receivedEnd: 0, estimated: false }]);
+  expect(timings).toEqual([
+    { id: 1, transportId: 0, end: 200, reply: 150, receivedEnd: 0, estimated: false },
+  ]);
   const unchanged = updateTurnTiming(timings, 'assistant', 200, 400);
   expect(unchanged).toBe(timings);
   expect(updateTurnTiming(timings, 'user', Infinity, 0)[0]?.estimated).toBe(true);
@@ -91,4 +93,29 @@ test('missing provider timing uses receipt timestamps without mixing clock origi
     6300,
   ).state;
   expect(reply.timings[0]).toMatchObject({ end: 6000, reply: 6300, estimated: true });
+});
+
+test('a user turn after a reply starts a fresh timing row even within 800 ms', () => {
+  let rows = updateTurnTiming([], 'user', 100, 200, 5000);
+  rows = updateTurnTiming(rows, 'assistant', 300, 400, 5200);
+  const completed = rows[0];
+  rows = updateTurnTiming(rows, 'user', 600, 700, 5500);
+  rows = updateTurnTiming(rows, 'assistant', 800, 900, 5700);
+  expect(rows).toHaveLength(2);
+  expect(rows[1]).toEqual(completed);
+  expect(rows[0]).toMatchObject({ id: 2, end: 700, reply: 800 });
+});
+
+test('fallback preserves old rows but never joins timestamps across transports', () => {
+  let rows = updateTurnTiming([], 'user', 10000, 11000, 15000, 1);
+  const before = rows;
+  expect(updateTurnTiming(rows, 'assistant', undefined, undefined, 15200, 2)).toBe(before);
+  rows = updateTurnTiming(rows, 'user', undefined, undefined, 15300, 2);
+  rows = updateTurnTiming(rows, 'assistant', undefined, undefined, 15400, 2);
+  expect(rows).toHaveLength(2);
+  expect(rows[1]).toEqual(before[0]);
+  expect(rows[0]).toMatchObject({ transportId: 2, end: 15300, reply: 15400, estimated: true });
+  const reset = updateTurnTiming(rows, 'user', 0, 100, 15500, 3);
+  expect(reset).toHaveLength(3);
+  expect(reset[0]).toMatchObject({ transportId: 3, end: 100, estimated: false });
 });

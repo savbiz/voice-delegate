@@ -255,6 +255,7 @@ export function createLiveSession(
     }
     const accessCode = existing?.accessCode ?? getAccessCode();
     const attempt = ++attemptId;
+    store.update({ timingTransportId: attempt });
     store.update({ active: true });
     showState(
       existing ? 'recovering' : 'connecting',

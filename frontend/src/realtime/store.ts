@@ -11,6 +11,7 @@ export type TranscriptDelta = {
 };
 export type TurnTiming = {
   id: number;
+  transportId: number;
   end: number;
   reply?: number;
   receivedEnd: number;
@@ -28,6 +29,7 @@ export type LiveState = {
   cancelPending: boolean;
   captions: { user: string; assistant: string };
   timings: TurnTiming[];
+  timingTransportId: number;
   sources: Source[];
   recap: string;
   feedbackStatus: string;
@@ -61,6 +63,7 @@ export function initialLiveState(): LiveState {
     cancelPending: false,
     captions: { user: '', assistant: '' },
     timings: [],
+    timingTransportId: 0,
     sources: [],
     recap: 'No conversation yet.',
     reportPending: false,
@@ -92,6 +95,7 @@ export function updateTurnTiming(
   start?: number,
   end?: number,
   receivedAt = 0,
+  transportId = 0,
 ): TurnTiming[] {
   const timed =
     typeof start === 'number' &&
@@ -104,10 +108,11 @@ export function updateTurnTiming(
       timed && latest && !latest.estimated
         ? start - latest.end
         : receivedAt - (latest?.receivedEnd ?? 0);
-    if (!latest || gap > 800) {
+    if (!latest || latest.reply !== undefined || latest.transportId !== transportId || gap > 800) {
       return [
         {
           id: (latest?.id ?? 0) + 1,
+          transportId,
           end: timed ? end : receivedAt,
           receivedEnd: receivedAt,
           estimated: !timed,
@@ -126,7 +131,7 @@ export function updateTurnTiming(
       ...timings.slice(1),
     ];
   }
-  if (!latest || latest.reply !== undefined) return timings;
+  if (!latest || latest.transportId !== transportId || latest.reply !== undefined) return timings;
   const estimated = latest.estimated || !timed;
   return [
     {
@@ -197,6 +202,7 @@ export function processEvent(
     transcript.start_ms,
     transcript.end_ms,
     receivedAt,
+    state.timingTransportId,
   );
   return {
     state: {
