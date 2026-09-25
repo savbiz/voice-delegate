@@ -50,9 +50,9 @@ async def test_forwarded_addresses_require_explicit_trust(trust: bool) -> None:
         transport=httpx.ASGITransport(app=limiter), base_url="http://testserver"
     ) as client:
         assert (await client.get("/", headers={"X-Forwarded-For": "192.0.2.1"})).status_code == 200
-        response = await client.get("/", headers={"X-Forwarded-For": "192.0.2.2, 10.0.0.1"})
+        response = await client.get("/", headers={"X-Forwarded-For": "10.0.0.1, 192.0.2.2"})
         assert response.status_code == (200 if trust else 429)
-        response = await client.get("/", headers={"X-Forwarded-For": "192.0.2.2, 10.0.0.2"})
+        response = await client.get("/", headers={"X-Forwarded-For": "10.0.0.2, 192.0.2.2"})
         assert response.status_code == 429
 
 
@@ -102,3 +102,42 @@ async def test_app_wires_proxy_trust(trust: bool, asgi_client: ASGIClientFactory
         ).status_code == 200
         response = await client.get("/healthz", headers={"X-Forwarded-For": "192.0.2.2"})
         assert response.status_code == (200 if trust else 429)
+
+
+@pytest.mark.parametrize("hops", [1, 2])
+async def test_appended_forwarded_spoofing_cannot_reset_bucket(hops: int) -> None:
+    limiter = RateLimitMiddleware(
+        ok, trust_proxy=True, trusted_proxy_hops=hops, burst=1, clock=lambda: 0
+    )
+    suffix = ", 192.0.2.10" + (", 10.0.0.2" if hops == 2 else "")
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=limiter), base_url="http://testserver"
+    ) as client:
+        assert (
+            await client.get("/", headers={"X-Forwarded-For": "198.51.100.1" + suffix})
+        ).status_code == 200
+        assert (
+            await client.get("/", headers={"X-Forwarded-For": "198.51.100.2" + suffix})
+        ).status_code == 429
+
+
+@pytest.mark.parametrize("header", ["bad, 192.0.2.1", "192.0.2.1,", "", "192.0.2.1:80"])
+async def test_malformed_chain_uses_socket_bucket(header: str) -> None:
+    limiter = RateLimitMiddleware(ok, trust_proxy=True, burst=1, clock=lambda: 0)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=limiter), base_url="http://testserver"
+    ) as client:
+        assert (await client.get("/")).status_code == 200
+        assert (await client.get("/", headers={"X-Forwarded-For": header})).status_code == 429
+
+
+async def test_host_mismatch_requests_are_rate_limited(asgi_client: ASGIClientFactory) -> None:
+    app = create_app(Settings(allowed_hosts=["localhost"]), FakeProvider())
+    for middleware in app.user_middleware:
+        if cast(object, middleware.cls) is RateLimitMiddleware:
+            middleware.kwargs.update(clock=lambda: 0, burst=1)
+    async with asgi_client(app) as client:
+        assert (await client.get("/healthz", headers={"Host": "wrong.example"})).status_code == 400
+        response = await client.get("/healthz", headers={"Host": "another.example"})
+        assert response.status_code == 429
+        assert response.headers["Cache-Control"] == "no-store"

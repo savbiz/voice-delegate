@@ -119,12 +119,22 @@ hosting/storage charges are separate from the voice-second allowance.
 The API also limits each client IP to 20 HTTP requests/second with a burst of 100,
 before reading request bodies. Buckets are per process, capped at 10,000 active clients;
 new clients receive 429 while that table is full. Idle buckets expire after five seconds.
-Keep `VOICE_TRUST_PROXY=false` for direct access. Set it to `true` only behind an ingress
-that overwrites `X-Forwarded-For` with a trustworthy client address and prevents direct
-access to the backend; the first address is used. Run Uvicorn with `--no-proxy-headers`
-(as the container does), so this setting exclusively controls forwarded-header trust.
-Invalid forwarded addresses fall back to the socket peer. Multi-process/global limits
-require an external shared limiter.
+Keep `VOICE_TRUST_PROXY=false` for direct access. Behind trusted ingress set it to `true`
+and set `VOICE_TRUSTED_PROXY_HOPS` (default `1`) to the number of trusted proxies,
+including the socket peer. With one hop the rightmost X-Forwarded-For entry is the client;
+with two hops the final header entry is another trusted proxy, so the preceding entry is used.
+Malformed or too-short chains fall back to the socket address. Direct backend access must
+be blocked, and all routes must have the same trusted proxy depth. Run Uvicorn with
+`--no-proxy-headers` so these settings exclusively control forwarded-header trust.
+
+Render/Cloudflare ingress can append to an existing X-Forwarded-For chain: never trust
+its leftmost entry, which a caller can supply. Count the actual ingress chain for the
+platform and any additional CDN; do not assume one hop across a composed deployment.
+[Cloudflare documents its append behaviour](https://developers.cloudflare.com/fundamentals/reference/http-headers/#x-forwarded-for).
+The bundled Nginx overwrites the header with its verified peer address, so use one hop.
+If a trusted TLS terminator is added, configure Nginx real-IP handling for that terminator
+before forwarding the verified address. Host-mismatch requests also consume the API bucket.
+Multi-process/global limits require an external shared limiter.
 
 
 ## Frontend response headers

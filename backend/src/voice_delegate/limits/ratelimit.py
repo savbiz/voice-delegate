@@ -27,11 +27,13 @@ class RateLimitMiddleware:
         burst: int = 100,
         max_clients: int = 10000,
         clock: Callable[[], float] = time.monotonic,
+        trusted_proxy_hops: int = 1,
     ) -> None:
-        if rate <= 0 or burst < 1 or max_clients < 1:
+        if rate <= 0 or burst < 1 or max_clients < 1 or trusted_proxy_hops < 1:
             message = "Rate limiter budgets must be positive"
             raise ValueError(message)
         self.app = app
+        self.trusted_proxy_hops = trusted_proxy_hops
         self.trust_proxy = trust_proxy
         self.rate = rate
         self.burst = burst
@@ -43,12 +45,21 @@ class RateLimitMiddleware:
         client = scope.get("client")
         address = str(client[0]) if client else "unknown"
         if self.trust_proxy:
-            for name, value in scope.get("headers", []):
-                if name.lower() == b"x-forwarded-for":
-                    try:
-                        return str(ip_address(value.decode("ascii").split(",", 1)[0].strip()))
-                    except (UnicodeError, ValueError):
-                        break
+            values = [
+                value
+                for name, value in scope.get("headers", [])
+                if name.lower() == b"x-forwarded-for"
+            ]
+            try:
+                forwarded = [
+                    str(ip_address(part.strip()))
+                    for part in b",".join(values).decode("ascii").split(",")
+                ]
+                # The socket peer is the first trusted hop; walk the combined chain from the right.
+                if len(forwarded) >= self.trusted_proxy_hops:
+                    return forwarded[-self.trusted_proxy_hops]
+            except (UnicodeError, ValueError):
+                pass
         return address
 
     def allow(self, address: str) -> bool:

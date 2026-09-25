@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     allowed_origin: str = "http://localhost:5173"
     allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
     trust_proxy: bool = False
+    trusted_proxy_hops: int = Field(default=1, ge=1, le=32)
     environment: str = "development"
     access_token: SecretStr = SecretStr("")
     invite_tokens: dict[str, SecretStr] = Field(default_factory=dict, repr=False)

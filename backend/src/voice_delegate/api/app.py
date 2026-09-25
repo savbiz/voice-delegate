@@ -124,8 +124,12 @@ def create_app(
     app = FastAPI(title="voice-delegate", version=version("voice-delegate"), lifespan=lifespan)
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
     # Starlette wraps the last added middleware around earlier middleware.
-    app.add_middleware(RateLimitMiddleware, trust_proxy=settings.trust_proxy)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+    app.add_middleware(
+        RateLimitMiddleware,
+        trust_proxy=settings.trust_proxy,
+        trusted_proxy_hops=settings.trusted_proxy_hops,
+    )
 
     app.add_middleware(
         CORSMiddleware,
