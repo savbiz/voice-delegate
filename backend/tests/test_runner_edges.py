@@ -3,7 +3,6 @@
 import asyncio
 
 import pytest
-from conftest import eventually
 from voice_delegate.delegation.contracts import DelegationInput
 from voice_delegate.delegation.runner import DelegationRunner, DelegationState
 from voice_delegate.limits.tokens import count_tokens, truncate
@@ -11,6 +10,8 @@ from voice_delegate.providers.fake import FakeConnection
 from voice_delegate.providers.models import ProviderCommand, ProviderError
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 from voice_delegate_agent.reference import WorkerResult
+
+from test_support import eventually
 
 
 async def test_delivery_failure_is_reported() -> None:

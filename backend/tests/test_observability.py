@@ -3,7 +3,6 @@
 import asyncio
 
 import pytest
-from conftest import eventually
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import HistogramDataPoint, InMemoryMetricReader
 from opentelemetry.sdk.trace import TracerProvider
@@ -14,6 +13,8 @@ from voice_delegate.observability.metrics import Metrics, configure_metrics
 from voice_delegate.providers.fake import FakeProvider
 from voice_delegate.providers.models import DelegationRequested, Transcript
 from voice_delegate.session.manager import SessionManager
+
+from test_support import eventually
 
 
 async def test_turn_parents_delegation_and_exports_no_private_text() -> None:

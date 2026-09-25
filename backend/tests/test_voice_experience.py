@@ -2,7 +2,6 @@
 
 import httpx
 import pytest
-from conftest import eventually
 from voice_delegate.config import Settings
 from voice_delegate.providers.base import SidebandSocket
 from voice_delegate.providers.fake import FakeProvider
@@ -16,6 +15,8 @@ from voice_delegate.providers.realtime import OpenAIRealtimeProvider
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.preferences import VoicePreferences
 from voice_delegate.session.summary import Recap
+
+from test_support import eventually
 
 
 @pytest.mark.parametrize(

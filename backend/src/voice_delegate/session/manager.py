@@ -56,9 +56,10 @@ class SessionManager:
         worker: Worker | None = None,
         fallback: RealtimeProvider | None = None,
         metrics: Metrics | None = None,
+        admission_clock: Callable[[], float] = time.time,
     ) -> None:
-        # Persistent leases need epoch time; tests share the injected clock with sessions.
-        self.admission = Admission(settings, clock=time.time if clock is time.monotonic else clock)
+        # Persistent leases use epoch time independently of monotonic session deadlines.
+        self.admission = Admission(settings, clock=admission_clock)
         self.metrics = metrics or Metrics()
         self.tracer = tracer or trace.NoOpTracerProvider().get_tracer(__name__)
         self.delegator = DelegationRunner(

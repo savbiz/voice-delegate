@@ -3,7 +3,7 @@
 from collections.abc import Callable
 
 import pytest
-from conftest import BlockingWorker, eventually
+from conftest import BlockingWorker
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeProvider
 from voice_delegate.providers.models import (
@@ -16,6 +16,8 @@ from voice_delegate.providers.models import (
 from voice_delegate.providers.openai import normalize_event as live_event
 from voice_delegate.providers.webrtc import normalize_event as realtime_event
 from voice_delegate.session.manager import SessionManager
+
+from test_support import eventually
 
 
 @pytest.mark.parametrize("normalize", [live_event, realtime_event])

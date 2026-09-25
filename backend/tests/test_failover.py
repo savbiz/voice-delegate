@@ -6,7 +6,6 @@ from typing import Any
 
 import httpx
 import pytest
-from conftest import eventually
 from pydantic import SecretStr
 from voice_delegate.config import Settings
 from voice_delegate.providers.azure import AzureRealtimeProvider, normalize_event
@@ -24,6 +23,8 @@ from voice_delegate.providers.models import (
 )
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
+
+from test_support import eventually
 
 
 class ReplayProvider(FakeProvider):

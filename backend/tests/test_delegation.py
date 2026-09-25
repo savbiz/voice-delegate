@@ -3,7 +3,7 @@
 import asyncio
 
 import pytest
-from conftest import BlockingWorker, eventually
+from conftest import BlockingWorker
 from langchain_core.messages import AIMessage, AnyMessage
 from voice_delegate.config import Settings
 from voice_delegate.delegation.contracts import DELEGATE_TOOL, DelegationInput
@@ -21,6 +21,8 @@ from voice_delegate.session.manager import SessionManager
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 from voice_delegate_agent.reference import WorkerResult
 from voice_delegate_agent.tools import calculate
+
+from test_support import eventually
 
 
 @pytest.mark.parametrize("text", ["ciao " * 200, "日本語🙂 " * 200, "<|endoftext|>" * 100])

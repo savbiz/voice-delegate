@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
-from conftest import BlockingWorker, FakeClock, eventually
+from conftest import BlockingWorker, FakeClock
 from pydantic import SecretStr
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeProvider
@@ -15,6 +15,8 @@ from voice_delegate.scaling.remote import RemoteWorker
 from voice_delegate.scaling.worker_service import create_worker_app
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
+
+from test_support import eventually
 
 TOKEN = "test-worker-token-32-characters-long"
 
@@ -35,8 +37,12 @@ def shared(path: Path, instance: str) -> Settings:
 async def test_two_instances_share_concurrency_and_ownership(
     tmp_path: Path, fake_clock: FakeClock
 ) -> None:
-    a = SessionManager(FakeProvider(), shared(tmp_path, "a"), clock=fake_clock)
-    b = SessionManager(FakeProvider(), shared(tmp_path, "b"), clock=fake_clock)
+    a = SessionManager(
+        FakeProvider(), shared(tmp_path, "a"), clock=fake_clock, admission_clock=fake_clock
+    )
+    b = SessionManager(
+        FakeProvider(), shared(tmp_path, "b"), clock=fake_clock, admission_clock=fake_clock
+    )
     session = a.create("alice")
     assert session.id.startswith("a-")
     with pytest.raises(SessionError) as full:
@@ -56,12 +62,16 @@ async def test_two_instances_share_concurrency_and_ownership(
 async def test_crashed_owner_lease_expires_without_refunding_usage(
     tmp_path: Path, fake_clock: FakeClock
 ) -> None:
-    a = SessionManager(FakeProvider(), shared(tmp_path, "a"), clock=fake_clock)
+    a = SessionManager(
+        FakeProvider(), shared(tmp_path, "a"), clock=fake_clock, admission_clock=fake_clock
+    )
     original = a.create("alice")
     db = a.admission.database
     assert db is not None
     fake_clock.advance(329)  # 300 TTL + 20 setup + 5 close + 3 cleanup, then expiry.
-    b = SessionManager(FakeProvider(), shared(tmp_path, "b"), clock=fake_clock)
+    b = SessionManager(
+        FakeProvider(), shared(tmp_path, "b"), clock=fake_clock, admission_clock=fake_clock
+    )
     recovered = b.create("alice")
     assert db.execute("SELECT SUM(sessions) FROM reservations").fetchone()[0] == 2
     assert recovered.id != original.id

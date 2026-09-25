@@ -4,12 +4,14 @@ import asyncio
 from pathlib import Path
 
 import pytest
-from conftest import BlockingProvider, FakeClock, PublicSettingsFactory, eventually
+from conftest import BlockingProvider, FakeClock, PublicSettingsFactory
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeProvider
 from voice_delegate.providers.models import ProviderCapabilities, ProviderFailure
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
+
+from test_support import eventually
 
 
 async def test_sqlite_lease_released_on_connection_timeout(

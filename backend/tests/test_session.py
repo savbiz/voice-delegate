@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator
 
 import pytest
-from conftest import BlockingProvider, FakeClock, eventually
+from conftest import BlockingProvider, FakeClock
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate.providers.models import (
@@ -15,6 +15,8 @@ from voice_delegate.providers.models import (
 )
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
+
+from test_support import eventually
 
 
 async def test_capacity_ownership_and_cleanup() -> None:

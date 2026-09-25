@@ -1,7 +1,7 @@
 """Shared offline test resources with explicit lifetime and scheduling controls."""
 
 import asyncio
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -122,9 +122,3 @@ class FakeClock:
 @pytest.fixture
 def fake_clock() -> FakeClock:
     return FakeClock()
-
-
-async def eventually(predicate: Callable[[], bool]) -> None:
-    async with asyncio.timeout(2):
-        while not predicate():  # noqa: ASYNC110
-            await asyncio.sleep(0.001)

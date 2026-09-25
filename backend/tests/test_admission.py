@@ -18,14 +18,14 @@ async def test_quotas_persist_across_restart_and_global_budget(
     public_settings: PublicSettingsFactory, tmp_path: Path, fake_clock: FakeClock
 ) -> None:
     settings = public_settings(tmp_path)
-    manager = SessionManager(FakeProvider(), settings, clock=fake_clock)
+    manager = SessionManager(FakeProvider(), settings, clock=fake_clock, admission_clock=fake_clock)
     first = manager.create("alice")
     with pytest.raises(SessionError) as concurrent:
         manager.create("alice")
     assert concurrent.value.status == 429
     await manager.close(first)
     await manager.aclose()
-    manager = SessionManager(FakeProvider(), settings, clock=fake_clock)
+    manager = SessionManager(FakeProvider(), settings, clock=fake_clock, admission_clock=fake_clock)
     await manager.close(manager.create("alice"))
     with pytest.raises(SessionError) as daily:
         manager.create("alice")
@@ -67,15 +67,21 @@ async def test_kill_switch_prevents_admission_before_provider_work() -> None:
 async def test_quota_day_rolls_over_using_injected_clock(
     public_settings: PublicSettingsFactory, tmp_path: Path, fake_clock: FakeClock
 ) -> None:
+    session_clock = FakeClock(now=100)
     fake_clock.now = datetime(2026, 9, 24, 23, 59, 59, tzinfo=UTC).timestamp()
     manager = SessionManager(
-        FakeProvider(), public_settings(tmp_path, daily_sessions_per_user=1), clock=fake_clock
+        FakeProvider(),
+        public_settings(tmp_path, daily_sessions_per_user=1),
+        clock=session_clock,
+        admission_clock=fake_clock,
     )
     await manager.close(manager.create("alice"))
     with pytest.raises(SessionError, match="Daily demo allowance"):
         manager.create("alice")
     fake_clock.advance(2)
-    await manager.close(manager.create("alice"))
+    next_day_session = manager.create("alice")
+    assert next_day_session.created_at == 100
+    await manager.close(next_day_session)
     database = manager.admission.database
     assert database is not None
     # Ten seconds of voice plus one sweep second are reserved, even after early close.

@@ -48,6 +48,7 @@ files = ["backend/src", "backend/tests", "agent/src"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["backend/tests", "evals"]
+pythonpath = ["."]
 addopts = "--disable-socket --allow-unix-socket --strict-markers --strict-config -ra"
 timeout = 30
 filterwarnings = ["error"]

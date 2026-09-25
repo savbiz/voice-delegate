@@ -6,7 +6,6 @@ from collections.abc import AsyncIterator
 
 import httpx
 import pytest
-from conftest import eventually
 from pydantic import ValidationError
 from voice_delegate.providers.base import SidebandSocket
 from voice_delegate.providers.models import (
@@ -22,6 +21,8 @@ from voice_delegate.providers.openai import (
     OpenAILiveProvider,
     normalize_event,
 )
+
+from test_support import eventually
 
 
 def test_transcripts_preserve_fragments_and_timing() -> None:
