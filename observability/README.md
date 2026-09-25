@@ -1,6 +1,6 @@
-# M4 observability
+# Backend observability
 
-Start the local stack with `docker compose -f observability/compose.yaml up -d`.
+Set `GF_SECURITY_ADMIN_PASSWORD` to a private admin password, then start the local stack with `docker compose -f observability/compose.yaml up -d`.
 Set these backend variables and restart the API:
 
 ```dotenv
@@ -34,7 +34,8 @@ Both duration histograms use explicit second boundaries:
   user transcript arrival. This includes speech and transcription time; it is not audio TTFB.
 - `voice_interruptions_total`: worker tasks canceled while pending, including close/fallback.
 
-The browser's transcript gap remains a separate estimate based on provider timestamps.
+The browser's transcript gap remains a separate estimate based on provider timestamps,
+or a labelled client-side estimate when those timestamps are absent.
 Signaling duration, transcript arrival and audio playback are different measures. Audio
 TTFB, playback onset and end-to-end acoustic latency require a live measurement harness;
 this project does not export invented values for them. Fake runs measure orchestration only.

@@ -1,11 +1,11 @@
 [
   {
-    "id": "c2f9755098654ceb",
+    "id": "65dbb2b7a864e754",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "voice-delegate",
-    "text": "A speech-to-speech model (GPT-Live over WebRTC) owns the conversation. Anything slower than a\nsentence is handed to a separate LangGraph worker through a single `delegate_task` boundary, and\nnarrated back when it completes. The user can interrupt at any time: an interrupted task is never narrated\nafter the interruption is registered. Every buffer, queue and session has an explicit budget, and every turn is\ntraced end to end.",
-    "digest": "c2f9755098654ceb80c369a22e21bad1be4c116bc9cf1d5aa6d2f39c7995d2a0"
+    "text": "A speech-to-speech model (GPT-Live over WebRTC) owns the conversation. Anything slower than a\nsentence is handed to a separate LangGraph worker through a single `delegate_task` boundary, and\nnarrated back when it completes. The user can interrupt at any time: an interrupted task is never narrated\nafter the interruption is registered. Backend-owned buffers, queues and sessions have explicit budgets; optional telemetry records\nbackend spans per turn.",
+    "digest": "65dbb2b7a864e7540a4f80d3b81024b26e6b9c65619f9d535f1f1aa2dedd602d"
   },
   {
     "id": "56c718c0e05495e8",

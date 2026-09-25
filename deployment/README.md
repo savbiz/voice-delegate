@@ -1,32 +1,14 @@
-# GitHub and deployment
+# Deployment
 
 Deploy the frontend to Vercel and **one** persistent backend process to Railway or Render. WebRTC media connects the browser to the provider; Python keeps the control WebSocket. Vercel serves the static frontend, not the Python session manager. The in-memory registry requires one replica and one Uvicorn worker. Restarting or redeploying interrupts active sessions.
 
-## 1. Publish on GitHub
-
-The supplied archive includes a Git checkout with conventional commits. Open the extracted `voice-delegate/` directory and check `git status`. With the GitHub CLI installed:
-
-```bash
-gh auth login
-gh repo create voice-delegate --public --source=. --remote=origin --push
-```
-
-Alternatively create an **empty** repository on GitHub without initializing README/license, then run:
-
-```bash
-git remote add origin https://github.com/YOUR_USERNAME/voice-delegate.git
-git push -u origin main
-```
-
-Replace YOUR_USERNAME. No GitHub repository is created automatically by this archive. GitHub Actions runs Python checks, frontend build, Vitest and Chromium Playwright on pushes and pull requests; no API secrets are required. Apache-2.0 and NOTICE are included. Rename the placeholder project before publication if desired.
-
-## 2. Frontend on Vercel
+## Frontend on Vercel
 
 Import the GitHub repository. Set **Root Directory = frontend**, framework Vite, install `pnpm install --frozen-lockfile`, build `pnpm build`, output `dist`, Node.js 24. `frontend/vercel.json` supplies build defaults and a security-header template; render it with the deployment step below. The simulated demo works immediately without a backend or API key.
 
 Disable automatic Git deployments while using the placeholder template; deploy with the rendered configuration below. Once the backend URL exists, set the **public** build variable `VITE_API_BASE_URL=https://YOUR_BACKEND_HOST` (no trailing slash), then redeploy. Never place OPENAI_API_KEY or VOICE_ACCESS_TOKEN in a VITE variable: Vite embeds them in public JavaScript.
 
-## 3. Backend on Render OR Railway
+## Backend on Render OR Railway
 
 Both platforms build `deployment/Dockerfile.backend` with the **repository root** as Docker context. `/healthz` is the health endpoint. The container reads PORT and runs as a non-root user.
 
@@ -56,9 +38,9 @@ The single shared `VOICE_ACCESS_TOKEN` mode is for private testing only. Public 
 
 Hosting plans, sleep policies and quotas change: check the platform dashboards before accepting costs. A sleeping backend adds cold-start latency and cannot sustain active control sessions while asleep. The free frontend simulation needs no paid model; live provider calls are billed separately from hosting.
 
-## M2 worker settings
+## Delegated worker settings
 
-The Dockerfile includes both uv workspace packages (`backend/` and `agent/`). Keep the build context at the repository root. For natural-language work, add `VOICE_WORKER_MODE=openai` and `VOICE_WORKER_MODEL=gpt-4.1-mini` to backend service variables, with the existing project API key. This adds text-model usage charges. Leaving worker mode at its default `offline` uses a scripted planner. Worker configuration never belongs in Vercel's public build variables. See [M2](../docs/milestones/m2.md).
+The Dockerfile includes both uv workspace packages (`backend/` and `agent/`). Keep the build context at the repository root. For natural-language work, add `VOICE_WORKER_MODE=openai` and `VOICE_WORKER_MODEL=gpt-4.1-mini` to backend service variables, with the existing project API key. This adds text-model usage charges. Leaving worker mode at its default `offline` uses a scripted planner. Worker configuration never belongs in Vercel's public build variables. See [worker execution](../docs/milestones/m2.md).
 
 ## Local container check
 
@@ -69,20 +51,20 @@ docker build -f deployment/Dockerfile.backend -t voice-delegate-api .
 docker run --rm --env-file .env -p 8000:8000 voice-delegate-api
 ```
 
-This container uses your local development origin unless production settings are supplied. `.env` is excluded from the image. Docker and hosted deployment must be validated in your environment; the delivered candidate is checked through local Python and browser tools.
+This container uses your local development origin unless production settings are supplied. `.env` is excluded from the image. Docker build, authentication, quota persistence and same-host scaling have recorded [Docker verification](../docs/milestones/m7-m8-verification.md#docker-acceptance-exercise). Public hosting and real voice acceptance remain separate checks.
 
 Public references: [Vercel Vite](https://vercel.com/docs/frameworks/frontend/vite), [Render FastAPI](https://render.com/docs/deploy-fastapi), [Railway FastAPI](https://docs.railway.com/guides/fastapi).
 
-## M5 controlled public demo
+## Controlled public demo
 
-Use [M5 configuration and rollback](../docs/milestones/m5.md) before opening access to other users.
+Use [Public-demo configuration and rollback](../docs/milestones/m5.md) before opening access to other users.
 Personal invitation tokens replace a shared code in public-demo mode. Mount durable quota
 storage at `/app/.local` owned by UID 10001, and keep one API worker. Reuse that volume across
 image replacement and rollback. Admission reserves the full session allowance up front;
 there are no refunds on failed creation. Local Docker checks cover authentication and
 quota persistence after restart, not the availability of a publicly hosted deployment.
 
-The [M6 documentation workflow](../docs/milestones/m6.md) is bundled with the agent and available
+The [Documentation workflow](../docs/milestones/m6.md) is bundled with the agent and available
 through the Documentation tab without a paid model call.
 
 

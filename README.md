@@ -8,8 +8,8 @@
 A speech-to-speech model (GPT-Live over WebRTC) owns the conversation. Anything slower than a
 sentence is handed to a separate LangGraph worker through a single `delegate_task` boundary, and
 narrated back when it completes. The user can interrupt at any time: an interrupted task is never narrated
-after the interruption is registered. Every buffer, queue and session has an explicit budget, and every turn is
-traced end to end.
+after the interruption is registered. Backend-owned buffers, queues and sessions have explicit budgets; optional telemetry records
+backend spans per turn.
 
 Built clean-room from public provider documentation. Apache-2.0, copyright 2026 Savino Bizzoca.
 

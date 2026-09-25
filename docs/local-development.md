@@ -2,7 +2,7 @@
 
 Install Python 3.12, [uv](https://docs.astral.sh/uv/getting-started/installation/), Node.js 24 and pnpm (`npm install -g pnpm@11.19.0`). These tools do not require an API subscription.
 
-Open the **voice-delegate** directory in PyCharm: it must contain the root `pyproject.toml`, `uv.lock`, `frontend/` and `backend/`. Do not open only the archive's parent directory. If `uv` reports no pyproject.toml, you are in the wrong folder.
+Open the **voice-delegate** directory in PyCharm: it must contain the root `pyproject.toml`, `uv.lock`, `frontend/` and `backend/`. Use the repository directory as the project root. If `uv` reports no pyproject.toml, you are in the wrong folder.
 
 From that root, run:
 
@@ -28,7 +28,7 @@ pnpm --dir frontend dev
 
 Open **http://localhost:5173** (use localhost, matching the allowed origin). The free simulated demo works even without the Python server. It requests no microphone and plays no generated speech. Live voice needs `OPENAI_API_KEY` in root `.env`, GPT-Live access, and billed provider usage. Restart Python after changing settings. A ChatGPT subscription does not supply a project API key.
 
-The access-code field is only needed when `VOICE_ACCESS_TOKEN` is configured. Enter that gate value, never an OpenAI key. It stays in browser memory. Editing the code or switching modes releases the current voice session.
+The access-code field accepts a configured personal invitation, or a shared `VOICE_ACCESS_TOKEN` for private testing. Enter that gate value, never an OpenAI key. It stays in browser memory. Editing it updates credentials for subsequent requests without tearing down an active session; switching modes releases the current voice session.
 
 ## Checks
 
@@ -48,8 +48,4 @@ Dependency and browser installation require internet; Python tests use no networ
 
 If your environment already provides Chromium, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/absolute/path/to/chromium pnpm --dir frontend test:e2e` can use it instead of downloading Playwright's browser. The default CI path uses Playwright's own installation.
 
-## Upgrade from the M1 archive
-
-Extract the M2 archive into a **new directory**. Open its `voice-delegate/` folder in PyCharm and copy your existing untracked `.env` into it. Run `uv sync --locked` and `pnpm --dir frontend install --frozen-lockfile`, then restart both servers. Do not replace a working .env with .env.example. New M2 settings have safe offline defaults. See [M2](milestones/m2.md) for enabling the text model.
-
-If you want to keep your existing Git checkout, first commit or stash your edits. From that checkout, fetch the extracted repository with `git fetch /absolute/path/to/new/voice-delegate main` and then `git merge --ff-only FETCH_HEAD`. If your history diverged, this deliberately stops without discarding edits; merge/rebase your local commits before proceeding. Fetch candidate tags separately with `git fetch /absolute/path/to/new/voice-delegate tag v0.1.0-m2-rc.1`.
+Container and same-host scaling checks are recorded in [Docker verification](milestones/m7-m8-verification.md#docker-acceptance-exercise). They exercise authentication, quotas and simulated orchestration without paid voice calls.
