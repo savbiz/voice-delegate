@@ -64,12 +64,12 @@
     "digest": "ed4f29c5620a4cd43a52dba604f4a468d09bf0d34431a0abde661c6f917edf56"
   },
   {
-    "id": "4ecfe87f9b7b2536",
+    "id": "9992cc65357b9c08",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status",
-    "text": "**0.2.0.dev1 is a development reference with sessions, delegation, recovery, observability,\ninvitations, cited search and same-host scaling implemented; live voice, Azure and hosted\nacceptance remain pending as tracked in the [roadmap](docs/roadmap.md), with deployment limits\nand remaining work in [production scope](docs/production.md).**",
-    "digest": "4ecfe87f9b7b2536bffbee77675d1589be1135fc62e1fbe3919812955783acf7"
+    "text": "**v0.1.0: sessions, delegation, recovery, observability, invitations, cited search and\nsame-host scaling implemented; live voice, Azure and hosted acceptance pending**.\nSee the [roadmap](docs/roadmap.md) and [production scope](docs/production.md).",
+    "digest": "9992cc65357b9c08a44ec0f41933dc83bad1b69a79a1a5b7c07528e72a96abc2"
   },
   {
     "id": "fe627ad243889855",

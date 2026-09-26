@@ -46,10 +46,9 @@ result that is no longer wanted. This project shows one way to avoid both:
 
 ## Status
 
-**0.2.0.dev1 is a development reference with sessions, delegation, recovery, observability,
-invitations, cited search and same-host scaling implemented; live voice, Azure and hosted
-acceptance remain pending as tracked in the [roadmap](docs/roadmap.md), with deployment limits
-and remaining work in [production scope](docs/production.md).**
+**v0.1.0: sessions, delegation, recovery, observability, invitations, cited search and
+same-host scaling implemented; live voice, Azure and hosted acceptance pending**.
+See the [roadmap](docs/roadmap.md) and [production scope](docs/production.md).
 
 <!-- TODO(v0.1.0): fill from the live smoke test; keep p50/p95 and the exact model names.
 | Measurement | p50 | p95 | Notes |
@@ -157,7 +156,7 @@ public demo, a complete use case, advanced voice UX and optional scaling.
 | Azure Realtime adapter, renegotiation failover, clamped history | Capability checks and timed fallback scenarios |
 | OTel, collector, Prometheus, Grafana dashboard, evals, docs | Reproducible offline suite + explicitly separate live validation |
 
-The v0.2 candidate adds language/translate preferences, an extractive interruption recap and OpenAI Realtime. Optional scaling adds a same-host multi-process topology. ElevenLabs and cross-host high availability remain future extensions.
+Voice controls include language/translate preferences, an extractive interruption recap and OpenAI Realtime. Optional scaling adds a same-host multi-process topology. ElevenLabs and cross-host high availability remain future extensions.
 
 The Azure adapter uses documented GA WebRTC and sideband capabilities. A provider change establishes a new browser peer connection and replays bounded text; it does not transparently migrate audio or imply identical full-duplex behavior.
 

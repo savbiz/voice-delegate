@@ -1,6 +1,6 @@
 # Roadmap M1–M9
 
-Version 0.2.0.dev1 is a development reference; implementation and release acceptance are separate. Passing offline tests is not proof of
+Version 0.1.0 is a reference implementation; implementation and release acceptance are separate. Passing offline tests is not proof of
 live voice quality, provider access, acoustic latency or production readiness.
 
 | Milestone | Scope | Acceptance | Current status |
