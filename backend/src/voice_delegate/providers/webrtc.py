@@ -3,6 +3,7 @@
 import asyncio
 import json
 import re
+from collections.abc import AsyncGenerator
 from contextlib import suppress
 from urllib.parse import quote, urlparse
 
@@ -15,6 +16,7 @@ from .base import SidebandSocket
 from .models import (
     COMMENTARY_MAX_BYTES,
     ClientCredential,
+    Commentary,
     DelegationRequested,
     ProviderCapabilities,
     ProviderCommand,
@@ -68,7 +70,7 @@ class WireEvent(BaseModel):
     transcript: str = Field(default="", max_length=65536)
     name: str = ""
     call_id: str = Field(default="", max_length=256)
-    arguments: str = Field(default="{}", max_length=8192)
+    arguments: object = "{}"
 
 
 class TaskArguments(BaseModel):
@@ -86,9 +88,16 @@ def normalize_event(raw: str | bytes) -> ProviderEvent | None:
             return ProviderCommandError()
         return ProviderFailure()
     if event.type == "response.function_call_arguments.done":
-        if event.name != "delegate_task" or not event.call_id:
-            return ProviderFailure("unsupported_tool")
-        args = TaskArguments.model_validate_json(event.arguments)
+        if not event.call_id:
+            return ProviderCommandError()
+        if event.name != "delegate_task":
+            return ProviderCommandError(event.call_id)
+        if not isinstance(event.arguments, str) or len(event.arguments) > 8192:
+            return DelegationRequested(event.call_id, goal="")
+        try:
+            args = TaskArguments.model_validate_json(event.arguments)
+        except ValidationError:
+            return DelegationRequested(event.call_id, goal="")
         return DelegationRequested(event.call_id, goal=args.goal)
     if event.type in {
         "conversation.item.input_audio_transcription.completed",
@@ -114,6 +123,12 @@ class RealtimeWebRTCConnection(OpenAILiveConnection):
     ) -> None:
         self._provider = provider
         super().__init__(answer, socket, 5)
+
+    async def events(self) -> AsyncGenerator[ProviderEvent]:
+        async for event in super().events():
+            if isinstance(event, ProviderCommandError) and event.call_id:
+                await self.send(Commentary(event.call_id, "Unknown tool; no action taken."))
+            yield event
 
     async def send(self, command: ProviderCommand) -> None:
         if self._closed or len(command.content.encode()) > COMMENTARY_MAX_BYTES:

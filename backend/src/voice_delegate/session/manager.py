@@ -208,7 +208,8 @@ class SessionManager:
                         session.delegation,
                         event.delegation_id,
                         DelegationInput(
-                            goal=event.goal or session.history.goal() or " ",
+                            goal=(event.goal if event.goal is not None else session.history.goal())
+                            or " ",
                             context=session.history.context(),
                         ),
                         connection,

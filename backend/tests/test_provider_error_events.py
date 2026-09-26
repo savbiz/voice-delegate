@@ -50,3 +50,93 @@ async def test_command_error_preserves_session_and_running_worker(
     connection.queue.put_nowait(failure)
     await eventually(lambda: session.state == "reconnecting")
     await manager.aclose()
+
+
+@pytest.mark.parametrize(
+    "arguments", ["{bad json", "{}", '{"goal": 42}', '{"goal":""}', "x" * 8193, {}]
+)
+async def test_bad_realtime_tool_arguments_keep_reader_alive_and_request_repetition(
+    arguments: object,
+) -> None:
+    import json
+
+    import httpx
+    from test_provider import MemorySocket
+    from voice_delegate.providers.models import WebRTCAnswer
+    from voice_delegate.providers.realtime import OpenAIRealtimeProvider
+    from voice_delegate.providers.webrtc import RealtimeWebRTCConnection
+
+    socket = MemorySocket()
+    provider = OpenAIRealtimeProvider(
+        "fixture", httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200)))
+    )
+    connection = RealtimeWebRTCConnection(WebRTCAnswer("call", "sdp"), socket, provider)
+    manager = SessionManager(FakeProvider(), Settings())
+    session = manager.create()
+    session.connection, session.state = connection, "connected"
+    session.history.append(Transcript("user", "calculate 9+9", 0, 0))
+    import asyncio
+
+    session.watcher = asyncio.create_task(manager._watch(session))
+    socket.incoming.put_nowait(
+        json.dumps(
+            {
+                "type": "response.function_call_arguments.done",
+                "name": "delegate_task",
+                "call_id": "invalid-task",
+                "arguments": arguments,
+            }
+        )
+    )
+    await eventually(lambda: len(socket.sent) == 2)
+    result = json.loads(socket.sent[0])["item"]
+    assert result["call_id"] == "invalid-task"
+    assert "Please repeat" in result["output"]
+    assert "18" not in result["output"]
+    assert not connection._failed and not connection._reader.done()
+    assert session.state == "connected"
+    await manager.aclose()
+    await provider.aclose()
+
+
+async def test_unknown_realtime_tool_returns_error_and_continues_reading() -> None:
+    import json
+
+    import httpx
+    from test_provider import MemorySocket
+    from voice_delegate.providers.models import WebRTCAnswer
+    from voice_delegate.providers.realtime import OpenAIRealtimeProvider
+    from voice_delegate.providers.webrtc import RealtimeWebRTCConnection
+
+    socket = MemorySocket()
+    provider = OpenAIRealtimeProvider(
+        "fixture", httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200)))
+    )
+    connection = RealtimeWebRTCConnection(WebRTCAnswer("call", "sdp"), socket, provider)
+    socket.incoming.put_nowait(
+        json.dumps(
+            {
+                "type": "response.function_call_arguments.done",
+                "name": "unknown",
+                "call_id": "unknown-task",
+                "arguments": "{}",
+            }
+        )
+    )
+    events = connection.events()
+    event = await anext(events)
+    assert isinstance(event, ProviderCommandError)
+    result = json.loads(socket.sent[0])["item"]
+    assert result == {
+        "type": "function_call_output",
+        "call_id": "unknown-task",
+        "output": "Unknown tool; no action taken.",
+    }
+    socket.incoming.put_nowait(
+        '{"type":"conversation.item.input_audio_transcription.completed","transcript":"still here"}'
+    )
+    assert isinstance(await anext(events), Transcript)
+    assert not connection._failed and not connection._reader.done()
+    await events.aclose()
+    await connection.aclose()
+    await provider.aclose()

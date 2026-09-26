@@ -68,7 +68,7 @@ class DelegationRequested:
 
     delegation_id: str
     offset_ms: float = 0
-    goal: str = ""
+    goal: str | None = None
 
 
 @dataclass(frozen=True)
@@ -91,6 +91,8 @@ class SessionStarted:
 @dataclass(frozen=True)
 class ProviderCommandError:
     """A rejected request that does not itself indicate a broken transport."""
+
+    call_id: str = ""
 
 
 @dataclass(frozen=True)
