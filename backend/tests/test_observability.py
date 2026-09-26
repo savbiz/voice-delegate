@@ -11,7 +11,12 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from voice_delegate.config import Settings
 from voice_delegate.observability.metrics import Metrics, configure_metrics
 from voice_delegate.providers.fake import FakeProvider
-from voice_delegate.providers.models import DelegationRequested, Transcript
+from voice_delegate.providers.models import (
+    DelegationRequested,
+    ProviderCapabilities,
+    ProviderFailure,
+    Transcript,
+)
 from voice_delegate.session.manager import SessionManager
 
 from test_support import eventually
@@ -179,3 +184,71 @@ async def test_worker_metrics_use_shared_outcomes(status: str, outcome: str) -> 
     }
     await runner.aclose()
     meters.shutdown()
+
+
+@pytest.mark.parametrize("server_failure", [False, True])
+async def test_reconnect_starts_a_new_turn_without_old_transport_wait(
+    monkeypatch: pytest.MonkeyPatch, server_failure: bool
+) -> None:
+    spans = InMemorySpanExporter()
+    tracing = TracerProvider()
+    tracing.add_span_processor(SimpleSpanProcessor(spans))
+    reader = InMemoryMetricReader()
+    meters = MeterProvider(metric_readers=[reader])
+    primary, fallback = FakeProvider(), FakeProvider()
+    fallback.capabilities = ProviderCapabilities(text_replay=True)
+    now = [10.0]
+    monkeypatch.setattr("voice_delegate.observability.turns.monotonic", lambda: now[0])
+    manager = SessionManager(
+        primary,
+        Settings(),
+        fallback=fallback,
+        tracer=tracing.get_tracer("test"),
+        metrics=Metrics(meters),
+    )
+    try:
+        session = manager.create()
+        await manager.connect(session, "sdp")
+        primary.connections[0].queue.put_nowait(Transcript("user", "first", 10000, 11000))
+        await eventually(lambda: session.turn is not None)
+        previous = session.turn
+        assert previous is not None
+        if server_failure:
+            primary.connections[0].queue.put_nowait(ProviderFailure())
+            await eventually(lambda: session.state == "reconnecting" and session.connection is None)
+        await manager.reconnect(session, "sdp", 0)
+        assert session.turn is None
+        assert not previous.span.is_recording()
+        now[0] = 100
+        connection = fallback.connections[0]
+        # An assistant event before the next user turn cannot complete the abandoned turn.
+        connection.queue.put_nowait(Transcript("assistant", "reconnected", 0, 0))
+        await eventually(connection.queue.empty)
+        assert session.turn is None
+        connection.queue.put_nowait(Transcript("user", "new request", 0, 0))
+        await eventually(lambda: session.turn is not None)
+        assert session.turn is not previous
+        now[0] = 100.25
+        connection.queue.put_nowait(Transcript("assistant", "new answer", 0, 0))
+        await eventually(lambda: session.turn is not None and session.turn.replied)
+        data = reader.get_metrics_data()
+        assert data is not None
+        points = [
+            p
+            for r in data.resource_metrics
+            for s in r.scope_metrics
+            for m in s.metrics
+            if m.name == "voice.turn.transcript_wait"
+            for p in m.data.data_points
+        ]
+        assert len(points) == 1
+        point = points[0]
+        assert isinstance(point, HistogramDataPoint)
+        assert point.count == 1
+        assert point.sum == pytest.approx(0.25)
+    finally:
+        await manager.aclose()
+        tracing.shutdown()
+        meters.shutdown()
+    turns = [span for span in spans.get_finished_spans() if span.name == "conversation.turn"]
+    assert len(turns) == 2

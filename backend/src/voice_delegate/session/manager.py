@@ -273,6 +273,10 @@ class SessionManager:
                 if not already_reconnecting:
                     session.watcher.cancel()
                 await asyncio.gather(session.watcher, return_exceptions=True)
+            # Transcript timestamps restart with the new transport; end the old turn first.
+            if session.turn is not None:
+                session.turn.span.end()
+                session.turn = None
             try:
                 async with asyncio.timeout(self.settings.connect_timeout_seconds):
                     if session.connection is not None:
@@ -289,9 +293,6 @@ class SessionManager:
                 session.watcher = asyncio.create_task(self._watch(session), name="fallback-events")
                 session.watcher.add_done_callback(self._watch_finished)
             except BaseException as exc:
-                if session.turn is not None:
-                    session.turn.span.end()
-                    session.turn = None
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
                 self.admission.release(session.id)
