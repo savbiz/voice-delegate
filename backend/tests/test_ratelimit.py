@@ -141,3 +141,50 @@ async def test_host_mismatch_requests_are_rate_limited(asgi_client: ASGIClientFa
         response = await client.get("/healthz", headers={"Host": "another.example"})
         assert response.status_code == 429
         assert response.headers["Cache-Control"] == "no-store"
+
+
+@pytest.mark.parametrize("host", ["localhost", "wrong.example"])
+async def test_preflights_share_the_request_budget_and_validate_host(
+    host: str, asgi_client: ASGIClientFactory
+) -> None:
+    app = create_app(Settings(allowed_hosts=["localhost"]), FakeProvider())
+    for middleware in app.user_middleware:
+        if cast(object, middleware.cls) is RateLimitMiddleware:
+            middleware.kwargs.update(clock=lambda: 0, burst=2)
+    headers = {
+        "Host": host,
+        "Origin": "http://localhost:5173",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "Authorization, Content-Type",
+    }
+    async with asgi_client(app) as client:
+        for _ in range(2):
+            response = await client.options("/api/sessions", headers=headers)
+            assert response.status_code == (200 if host == "localhost" else 400)
+        blocked = await client.options("/api/sessions", headers=headers)
+        assert blocked.status_code == 429
+        assert blocked.headers["Cache-Control"] == "no-store"
+        # OPTIONS cannot use a separate budget from actual application requests.
+        assert (
+            await client.post("/api/config", headers={"Origin": headers["Origin"]})
+        ).status_code == 429
+
+
+@pytest.mark.parametrize("origin", ["http://localhost:5173", "https://untrusted.example", ""])
+async def test_rate_limit_rejection_is_readable_only_by_allowed_frontend(
+    origin: str, asgi_client: ASGIClientFactory
+) -> None:
+    app = create_app(Settings(), FakeProvider())
+    for middleware in app.user_middleware:
+        if cast(object, middleware.cls) is RateLimitMiddleware:
+            middleware.kwargs.update(clock=lambda: 0, burst=1)
+    async with asgi_client(app) as client:
+        assert (await client.get("/healthz")).status_code == 200
+        response = await client.post("/api/config", headers={"Origin": origin} if origin else {})
+        assert response.status_code == 429
+        assert response.headers["Cache-Control"] == "no-store"
+        if origin == "http://localhost:5173":
+            assert response.headers["Access-Control-Allow-Origin"] == origin
+            assert response.headers["Vary"] == "Origin"
+        else:
+            assert "Access-Control-Allow-Origin" not in response.headers
