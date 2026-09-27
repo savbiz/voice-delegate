@@ -118,12 +118,14 @@ hosting/storage charges are separate from the voice-second allowance.
 
 The API also limits each client IP to 20 HTTP requests/second with a burst of 100,
 before reading request bodies. Buckets are per process, capped at 10,000 active clients;
-new clients receive 429 while that table is full. Idle buckets expire after five seconds.
+the least recently used bucket is evicted when the table is full. IPv6 clients share a
+/64 subnet bucket. Idle buckets expire after five seconds.
 Keep `VOICE_TRUST_PROXY=false` for direct access. Behind trusted ingress set it to `true`
 and set `VOICE_TRUSTED_PROXY_HOPS` (default `1`) to the number of trusted proxies,
 including the socket peer. With one hop the rightmost X-Forwarded-For entry is the client;
 with two hops the final header entry is another trusted proxy, so the preceding entry is used.
-Malformed or too-short chains fall back to the socket address. Direct backend access must
+Only the selected entry is parsed; malformed untrusted prefixes are ignored. An invalid
+selected entry or a too-short chain falls back to the socket address. Direct backend access must
 be blocked, and all routes must have the same trusted proxy depth. Run Uvicorn with
 `--no-proxy-headers` so these settings exclusively control forwarded-header trust.
 

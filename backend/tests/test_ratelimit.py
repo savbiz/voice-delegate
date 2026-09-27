@@ -79,15 +79,17 @@ async def test_rate_limit_runs_before_body_limit(
         assert (await client.post("/api/sessions", content=b"x" * 1025)).status_code == 429
 
 
-def test_bucket_storage_is_bounded_without_evicting_active_limits() -> None:
-    now = [0.0]
-    limiter = RateLimitMiddleware(ok, burst=1, max_clients=1, clock=lambda: now[0])
+def test_bucket_storage_evicts_least_recently_used_client() -> None:
+    limiter = RateLimitMiddleware(ok, burst=1, max_clients=2, clock=lambda: 0)
     assert limiter.allow("first")
-    assert not limiter.allow("second")
-    assert not limiter.allow("first")
-    now[0] = 1
     assert limiter.allow("second")
-    assert len(limiter.buckets) == 1
+    assert not limiter.allow("first")
+    assert limiter.allow("third")
+    assert list(limiter.buckets) == ["first", "third"]
+    assert not limiter.allow("first")
+    assert not limiter.allow("third")
+    assert limiter.allow("second")
+    assert list(limiter.buckets) == ["third", "second"]
 
 
 @pytest.mark.parametrize("trust", [False, True])
@@ -121,7 +123,7 @@ async def test_appended_forwarded_spoofing_cannot_reset_bucket(hops: int) -> Non
         ).status_code == 429
 
 
-@pytest.mark.parametrize("header", ["bad, 192.0.2.1", "192.0.2.1,", "", "192.0.2.1:80"])
+@pytest.mark.parametrize("header", ["192.0.2.1, bad", "192.0.2.1,", "", "192.0.2.1:80"])
 async def test_malformed_chain_uses_socket_bucket(header: str) -> None:
     limiter = RateLimitMiddleware(ok, trust_proxy=True, burst=1, clock=lambda: 0)
     async with httpx.AsyncClient(
@@ -188,3 +190,55 @@ async def test_rate_limit_rejection_is_readable_only_by_allowed_frontend(
             assert response.headers["Vary"] == "Origin"
         else:
             assert "Access-Control-Allow-Origin" not in response.headers
+
+
+@pytest.mark.parametrize("hops", [1, 2])
+@pytest.mark.parametrize("prefix", [b"invalid", b"\xff", b"", b"bad," * 1000])
+async def test_untrusted_forwarded_prefix_cannot_change_client_bucket(
+    hops: int, prefix: bytes
+) -> None:
+    limiter = RateLimitMiddleware(
+        ok, trust_proxy=True, trusted_proxy_hops=hops, burst=1, clock=lambda: 0
+    )
+    suffix = b"192.0.2.10" + (b", invalid-trusted-hop" if hops == 2 else b"")
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=limiter), base_url="http://testserver"
+    ) as client:
+        assert (await client.get("/", headers={b"X-Forwarded-For": suffix})).status_code == 200
+        assert (
+            await client.get("/", headers={b"X-Forwarded-For": prefix + b", " + suffix})
+        ).status_code == 429
+    assert list(limiter.buckets) == ["192.0.2.10"]
+
+
+@pytest.mark.parametrize("forwarded", [False, True])
+async def test_ipv6_hosts_share_a_subnet_bucket(forwarded: bool) -> None:
+    limiter = RateLimitMiddleware(ok, trust_proxy=forwarded, burst=1, clock=lambda: 0)
+    addresses = ["2001:db8:1::1", "2001:0db8:0001:0000::abcd", "2001:db8:2::1"]
+    statuses = []
+    for address in addresses:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(
+                app=limiter, client=("192.0.2.1" if forwarded else address, 1)
+            ),
+            base_url="http://testserver",
+        ) as client:
+            response = await client.get(
+                "/", headers={"X-Forwarded-For": address} if forwarded else {}
+            )
+            statuses.append(response.status_code)
+    assert statuses == [200, 429, 200]
+    assert set(limiter.buckets) == {"2001:db8:1::/64", "2001:db8:2::/64"}
+
+
+def test_short_forwarded_chain_uses_socket_subnet() -> None:
+    limiter = RateLimitMiddleware(ok, trust_proxy=True, trusted_proxy_hops=2)
+    assert (
+        limiter.client(
+            {
+                "client": ("2001:db8::123", 1),
+                "headers": [(b"x-forwarded-for", b"192.0.2.1")],
+            }
+        )
+        == "2001:db8::/64"
+    )

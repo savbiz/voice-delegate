@@ -4,7 +4,7 @@ import time
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass
-from ipaddress import ip_address
+from ipaddress import IPv6Address, ip_address, ip_network
 
 from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
@@ -54,16 +54,21 @@ class RateLimitMiddleware:
                 if name.lower() == b"x-forwarded-for"
             ]
             try:
-                forwarded = [
-                    str(ip_address(part.strip()))
-                    for part in b",".join(values).decode("ascii").split(",")
-                ]
-                # The socket peer is the first trusted hop; walk the combined chain from the right.
+                # Ignore attacker-controlled prefixes; the socket is the first trusted hop.
+                forwarded = b",".join(values).rsplit(b",", self.trusted_proxy_hops)
                 if len(forwarded) >= self.trusted_proxy_hops:
-                    return forwarded[-self.trusted_proxy_hops]
+                    address = str(
+                        ip_address(forwarded[-self.trusted_proxy_hops].strip().decode("ascii"))
+                    )
             except (UnicodeError, ValueError):
                 pass
-        return address
+        try:
+            parsed = ip_address(address)
+        except ValueError:
+            return address
+        if isinstance(parsed, IPv6Address):
+            return str(ip_network((parsed, 64), strict=False))
+        return str(parsed)
 
     def allow(self, address: str) -> bool:
         now = self.clock()
@@ -76,7 +81,7 @@ class RateLimitMiddleware:
         bucket = self.buckets.get(address)
         if bucket is None:
             if len(self.buckets) >= self.max_clients:
-                return False
+                self.buckets.popitem(last=False)
             bucket = Bucket(float(self.burst), now)
             self.buckets[address] = bucket
         bucket.tokens = min(self.burst, bucket.tokens + max(0, now - bucket.updated) * self.rate)
