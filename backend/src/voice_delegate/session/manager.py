@@ -5,6 +5,7 @@ import logging
 import secrets
 import time
 from collections.abc import Callable
+from dataclasses import replace
 from uuid import uuid4
 
 from opentelemetry import trace
@@ -176,17 +177,9 @@ class SessionManager:
                     self.interrupt(session)
                 if isinstance(event, Transcript):
                     session.turn = observe(session.turn, event, self.tracer, self.metrics)
-                    if (
-                        not event.committed
-                        and session.history.entries
-                        and session.history.entries[-1].speaker != event.speaker
-                    ):
-                        # Live fragments have no final marker: seal the previous speaker segment.
-                        session.committed_history.append(session.history.entries[-1])
                     session.history.append(event)
+                    self._seal_history(session, include_latest=event.committed)
                     session.recap.observe(event, session.history.goal())
-                    if event.committed:
-                        session.committed_history.append(event)
                     if (
                         event.speaker == "user"
                         and event.text.strip()
@@ -237,6 +230,15 @@ class SessionManager:
                 else:
                     await self.close(session)
 
+    @staticmethod
+    def _seal_history(session: Session, *, include_latest: bool = False) -> None:
+        history = session.history
+        end = history.first_index + len(history.entries) - (0 if include_latest else 1)
+        for index in range(max(session.sealed_index, history.first_index), end):
+            entry = history.entries[index - history.first_index]
+            session.committed_history.append(replace(entry, committed=True))
+        session.sealed_index = max(session.sealed_index, end)
+
     def interrupt(self, session: Session) -> None:
         if session.delegation.status == "running":
             session.recap.interrupt()
@@ -283,6 +285,7 @@ class SessionManager:
                     if session.connection is not None:
                         session.previous_finalized = await session.connection.aclose()
                     session.connection = None
+                    self._seal_history(session, include_latest=True)
                     config = self.fallback.default_config(
                         VOICE_INSTRUCTIONS + " " + session.preferences.instructions(),
                         tuple((e.speaker, e.text) for e in session.committed_history.entries),

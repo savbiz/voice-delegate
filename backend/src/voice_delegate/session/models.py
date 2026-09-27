@@ -35,6 +35,7 @@ class Session:
     generation: int = 0
     fallback_used: bool = False
     previous_finalized: bool = True
+    sealed_index: int = 0
     committed_history: History = field(default_factory=History)
     history: History = field(default_factory=History)
     delegation: DelegationState = field(default_factory=DelegationState)

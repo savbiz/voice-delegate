@@ -39,7 +39,7 @@ class ReplayProvider(FakeProvider):
         return await super().connect(config=config, offer_sdp=offer_sdp)
 
 
-async def test_failure_preserves_owner_and_replays_only_sealed_history() -> None:
+async def test_failure_preserves_owner_and_seals_trailing_history() -> None:
     primary, fallback = FakeProvider(), ReplayProvider()
     primary.model, fallback.model = "primary-model", "fallback-model"
     primary.voice, fallback.voice = "primary-voice", "fallback-voice"
@@ -60,7 +60,7 @@ async def test_failure_preserves_owner_and_replays_only_sealed_history() -> None
     assert session.connection is None
     assert manager.get(session.id, session.key) is session
     await manager.reconnect(session, "v=0\r\n", 0)
-    assert fallback.configs[0].history == (("user", "hello"),)
+    assert fallback.configs[0].history == (("user", "hello"), ("assistant", "unfinished"))
     assert fallback.configs[0].model == "fallback-model"
     assert fallback.configs[0].voice == "fallback-voice"
     assert primary.connections[0].closed
@@ -258,4 +258,34 @@ async def test_failed_connection_is_closed_before_browser_reconnects(
     assert session.previous_finalized is False
     assert session.connection is fallback.connections[0]
     assert not await manager.close(session)
+    await manager.aclose()
+
+
+@pytest.mark.parametrize("segments", [3, 20])
+async def test_failover_replays_inflight_question_and_paused_same_speaker_segments(
+    segments: int,
+) -> None:
+    primary, fallback = FakeProvider(), ReplayProvider()
+    manager = SessionManager(primary, Settings(), fallback=fallback)
+    session = manager.create()
+    await manager.connect(session, "sdp")
+    connection = primary.connections[0]
+    for index in range(segments):
+        connection.queue.put_nowait(
+            Transcript("user", f"question {index}", index * 2000, index * 2000 + 100)
+        )
+    connection.queue.put_nowait(
+        Transcript("user", " continued", (segments - 1) * 2000 + 100, (segments - 1) * 2000 + 200)
+    )
+    await eventually(connection.queue.empty)
+    await manager.reconnect(session, "sdp", 0)
+    expected = [("user", f"question {index}") for index in range(segments)]
+    expected[-1] = ("user", f"question {segments - 1} continued")
+    assert fallback.configs[0].history == tuple(expected[-12:])
+    assert session.sealed_index == segments
+    # Re-flushing cannot duplicate already sealed text.
+    manager._seal_history(session, include_latest=True)
+    assert tuple(
+        (entry.speaker, entry.text) for entry in session.committed_history.entries
+    ) == tuple(expected[-12:])
     await manager.aclose()
