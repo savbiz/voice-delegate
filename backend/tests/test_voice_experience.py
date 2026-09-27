@@ -34,6 +34,10 @@ async def test_language_and_translate_preference(language: str, name: str) -> No
     manager.provider.connections[0].queue.put_nowait(DelegationRequested("forbidden"))
     await eventually(manager.provider.connections[0].queue.empty)
     assert session.delegation.task is None
+    command = manager.provider.connections[0].commands[0]
+    assert command.delegation_id == "forbidden"
+    assert command.content == "Delegation is disabled in translation mode"
+    assert len(command.content.encode()) <= 500
     await manager.aclose()
 
 

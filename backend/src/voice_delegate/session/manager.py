@@ -19,6 +19,7 @@ from voice_delegate.observability.metrics import Metrics
 from voice_delegate.observability.turns import observe
 from voice_delegate.providers.base import RealtimeProvider
 from voice_delegate.providers.models import (
+    Commentary,
     DelegationRequested,
     ProviderCommandError,
     ProviderError,
@@ -127,13 +128,11 @@ class SessionManager:
                 raise SessionError(409, "Session already connected or closed")
             session.state = "connecting"
             try:
-                async with asyncio.timeout(self.settings.connect_timeout_seconds):
-                    with (
-                        self.metrics.operation("provider.connect"),
-                        self.tracer.start_as_current_span(
-                            "provider.connect", record_exception=False
-                        ),
-                    ):
+                with (
+                    self.metrics.operation("provider.connect"),
+                    self.tracer.start_as_current_span("provider.connect", record_exception=False),
+                ):
+                    async with asyncio.timeout(self.settings.connect_timeout_seconds):
                         session.connection = await self.provider.connect(
                             config=self.config(session), offer_sdp=offer_sdp
                         )
@@ -180,24 +179,24 @@ class SessionManager:
                     session.history.append(event)
                     self._seal_history(session, include_latest=event.committed)
                     session.recap.observe(event, session.history.goal())
-                    if (
-                        event.speaker == "user"
-                        and event.text.strip()
-                        and (event.start_ms > 0 or provider.capabilities.transcript_timing)
-                        and (event.start_ms >= session.delegation.offset_ms)
-                    ):
-                        if session.delegation.status == "running":
-                            self.interrupt(session)
-                        else:
+                    if event.speaker == "user" and event.text.strip():
+                        if session.delegation.status != "running":
                             session.recap.resume()
+                        elif (
+                            event.start_ms > 0 or provider.capabilities.transcript_timing
+                        ) and event.start_ms >= session.delegation.offset_ms:
+                            self.interrupt(session)
                 if isinstance(event, DelegationRequested):
                     if session.preferences.mode == "translate":
+                        await connection.send(
+                            Commentary(
+                                event.delegation_id, "Delegation is disabled in translation mode"
+                            )
+                        )
                         continue
-                    session.recap.resume()
                     if event.delegation_id in session.delegation.seen:
                         continue
-                    session.delegation.offset_ms = event.offset_ms
-                    self.delegator.start(
+                    rejection = self.delegator.start(
                         session.delegation,
                         event.delegation_id,
                         DelegationInput(
@@ -209,6 +208,11 @@ class SessionManager:
                         lambda: session.state == "connected",
                         context=session.turn.context if session.turn else None,
                     )
+                    if rejection is not None:
+                        await connection.send(rejection)
+                    else:
+                        session.recap.resume()
+                        session.delegation.offset_ms = event.offset_ms
         except ProviderError:
             logger.warning("Session provider stream failed")
         finally:
@@ -242,18 +246,11 @@ class SessionManager:
     def interrupt(self, session: Session) -> None:
         if session.delegation.status == "running":
             session.recap.interrupt()
+            self.metrics.interruptions.add(1)
         self.delegator.cancel(session.delegation)
 
     async def reconnect(self, session: Session, offer_sdp: str, generation: int) -> WebRTCAnswer:
-        with (
-            self.metrics.operation("provider.failover"),
-            self.tracer.start_as_current_span(
-                "provider.failover",
-                record_exception=False,
-                context=session.turn.context if session.turn else None,
-            ),
-        ):
-            return await self._reconnect(session, offer_sdp, generation)
+        return await self._reconnect(session, offer_sdp, generation)
 
     async def _reconnect(self, session: Session, offer_sdp: str, generation: int) -> WebRTCAnswer:
         """Consume one fallback attempt; never retry an ambiguous billable POST."""
@@ -264,47 +261,57 @@ class SessionManager:
                 raise SessionError(409, "Stale or duplicate fallback attempt")
             if session.state not in {"connected", "reconnecting"}:
                 raise SessionError(409, "Session cannot reconnect")
-            already_reconnecting = session.state == "reconnecting"
-            session.state = "reconnecting"
-            session.fallback_used = True
-            session.generation += 1
-            self.delegator.cancel(session.delegation)
-            # Set "reconnecting" first: the watcher's finally must not re-enter close()
-            # while this task holds session.lock, which would deadlock.
-            if session.watcher is not None:
-                # A failed watcher is already closing its connection; let it finish.
-                if not already_reconnecting:
-                    session.watcher.cancel()
-                await asyncio.gather(session.watcher, return_exceptions=True)
-            # Transcript timestamps restart with the new transport; end the old turn first.
-            if session.turn is not None:
-                session.turn.span.end()
-                session.turn = None
-            try:
-                async with asyncio.timeout(self.settings.connect_timeout_seconds):
-                    if session.connection is not None:
-                        session.previous_finalized = await session.connection.aclose()
-                    session.connection = None
-                    self._seal_history(session, include_latest=True)
-                    config = self.fallback.default_config(
-                        VOICE_INSTRUCTIONS + " " + session.preferences.instructions(),
-                        tuple((e.speaker, e.text) for e in session.committed_history.entries),
+            with (
+                self.metrics.operation("provider.failover"),
+                self.tracer.start_as_current_span(
+                    "provider.failover",
+                    record_exception=False,
+                    context=session.turn.context if session.turn else None,
+                ),
+            ):
+                already_reconnecting = session.state == "reconnecting"
+                session.state = "reconnecting"
+                session.fallback_used = True
+                session.generation += 1
+                self.delegator.cancel(session.delegation)
+                # Set "reconnecting" first: the watcher's finally must not re-enter close()
+                # while this task holds session.lock, which would deadlock.
+                if session.watcher is not None:
+                    # A failed watcher is already closing its connection; let it finish.
+                    if not already_reconnecting:
+                        session.watcher.cancel()
+                    await asyncio.gather(session.watcher, return_exceptions=True)
+                # Transcript timestamps restart with the new transport; end the old turn first.
+                if session.turn is not None:
+                    session.turn.span.end()
+                    session.turn = None
+                try:
+                    async with asyncio.timeout(self.settings.connect_timeout_seconds):
+                        if session.connection is not None:
+                            session.previous_finalized = await session.connection.aclose()
+                        session.connection = None
+                        self._seal_history(session, include_latest=True)
+                        config = self.fallback.default_config(
+                            VOICE_INSTRUCTIONS + " " + session.preferences.instructions(),
+                            tuple((e.speaker, e.text) for e in session.committed_history.entries),
+                        )
+                        session.connection = await self.fallback.connect(
+                            config=config, offer_sdp=offer_sdp
+                        )
+                    session.state = "connected"
+                    session.watcher = asyncio.create_task(
+                        self._watch(session), name="fallback-events"
                     )
-                    session.connection = await self.fallback.connect(
-                        config=config, offer_sdp=offer_sdp
-                    )
-                session.state = "connected"
-                session.watcher = asyncio.create_task(self._watch(session), name="fallback-events")
-                session.watcher.add_done_callback(self._watch_finished)
-            except BaseException as exc:
-                session.state = "closed"
-                self.sessions.pop(session.id, None)
-                self.admission.release(session.id)
-                if isinstance(exc, TimeoutError):
-                    raise SessionError(504, "Provider connection timed out") from exc
-                raise
-            else:
-                return session.connection.answer
+                    session.watcher.add_done_callback(self._watch_finished)
+                except BaseException as exc:
+                    session.state = "closed"
+                    self.sessions.pop(session.id, None)
+                    self.admission.release(session.id)
+                    if isinstance(exc, TimeoutError):
+                        raise SessionError(504, "Provider connection timed out") from exc
+                    raise
+                else:
+                    return session.connection.answer
 
     async def close(self, session: Session) -> bool:
         """Idempotently close upstream before canceling the event consumer."""

@@ -61,7 +61,6 @@ class DelegationRunner:
         state.sources = ()
         if state.task is not None and not state.task.done():
             state.status = "cancelled"
-            self.metrics.interruptions.add(1)
             state.task.cancel()
 
     def start(
@@ -72,14 +71,15 @@ class DelegationRunner:
         connection: RealtimeConnection,
         is_connected: Callable[[], bool],
         context: Context | None = None,
-    ) -> None:
-        """Dispatch without blocking the provider event reader; duplicates are ignored."""
+    ) -> Commentary | None:
+        """Dispatch or return a bounded rejection for the caller to deliver."""
         if request_id in state.seen:
-            return
-        self.cancel(state)
+            return None
         if len(state.seen) >= self.request_limit:
-            state.status = "request_limit"
-            return
+            if state.status != "running":
+                state.status = "request_limit"
+            return Commentary(request_id, "Delegation limit reached")
+        self.cancel(state)
         state.seen.add(request_id)
         state.status = "running"
         generation = state.generation
@@ -87,6 +87,7 @@ class DelegationRunner:
             self._run(state, generation, request_id, request, connection, is_connected, context),
             name="delegated-task",
         )
+        return None
 
     def _finished(self, task: asyncio.Task[WorkerResult]) -> None:
         self.work.discard(task)

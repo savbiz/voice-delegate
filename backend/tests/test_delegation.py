@@ -343,3 +343,48 @@ async def test_graph_rejects_non_ai_message_at_tool_execution() -> None:
         await worker.graph.nodes["tools"].ainvoke(
             {"messages": [HumanMessage(content="invalid")], "steps": 0, "source_ids": []}
         )
+
+
+async def test_over_limit_request_preserves_running_work(blocking_worker: BlockingWorker) -> None:
+    provider = FakeProvider()
+    manager = SessionManager(
+        provider, Settings(max_delegations_per_session=1), worker=blocking_worker
+    )
+    session = manager.create()
+    await manager.connect(session, "sdp")
+    connection = provider.connections[0]
+    connection.queue.put_nowait(DelegationRequested("accepted", 100, goal="calculate 1+1"))
+    await blocking_worker.started.wait()
+    task, generation = session.delegation.task, session.delegation.generation
+    connection.queue.put_nowait(DelegationRequested("rejected", 200, goal="calculate 2+2"))
+    await eventually(lambda: bool(connection.commands))
+    assert connection.commands[0].delegation_id == "rejected"
+    assert connection.commands[0].content == "Delegation limit reached"
+    assert session.delegation.task is task
+    assert session.delegation.generation == generation
+    assert session.delegation.offset_ms == 100
+    assert session.delegation.status == "running"
+    assert session.delegation.seen == {"accepted"}
+    assert not blocking_worker.cancelled.is_set()
+    blocking_worker.gate.set()
+    await eventually(lambda: session.delegation.status == "completed")
+    assert connection.commands[-1].delegation_id == "accepted"
+    assert connection.commands[-1].content == "done"
+    assert blocking_worker.calls == 1
+    await manager.aclose()
+
+
+async def test_untimed_user_transcript_resumes_interrupted_recap() -> None:
+    provider = FakeProvider()
+    provider.capabilities = ProviderCapabilities(transcript_timing=False)
+    manager = SessionManager(provider, Settings())
+    session = manager.create()
+    await manager.connect(session, "sdp")
+    session.recap.interrupt()
+    session.delegation.offset_ms = 100
+    connection = provider.connections[0]
+    connection.queue.put_nowait(Transcript("user", "new question", 0, 0))
+    connection.queue.put_nowait(Transcript("assistant", "new answer", 0, 0))
+    await eventually(lambda: session.recap.latest_reply == "new answer")
+    assert not session.recap.interrupted
+    await manager.aclose()
