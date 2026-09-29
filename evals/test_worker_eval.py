@@ -1,6 +1,7 @@
 """Verify scoring detects regressions without paid models or cloud access."""
 
 import json
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -39,8 +40,7 @@ def test_scorers_detect_wrong_number_evidence_and_citation() -> None:
     assert result["citation_indices_valid"] == 0
     assert result["expected_evidence_retrieved"] == 0
     assert result["tool_selection"] == 0
-    out["text"] = "long " * 500
-    assert score(CASES[12], out)["bounded_output"] == 0
+    assert "bounded_output" not in result
 
 
 async def test_offline_run_has_no_paid_calls_and_skips_language_quality() -> None:
@@ -104,10 +104,10 @@ async def test_cloud_upload_is_explicit_and_uses_only_curated_rows(
 
     from evals.worker_eval import upload
 
-    logged = []
-    initialized = {}
+    logged: list[dict[str, Any]] = []
+    initialized: dict[str, Any] = {}
 
-    def init(**kwargs):
+    def init(**kwargs: Any) -> SimpleNamespace:
         initialized.update(kwargs)
         return SimpleNamespace(
             log=lambda **row: logged.append(row),

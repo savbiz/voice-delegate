@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import hashlib
+import importlib
 import json
 import math
 import os
@@ -20,8 +21,14 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
-from voice_delegate.limits.tokens import count_tokens, truncate
-from voice_delegate_agent.graph import INSTRUCTIONS, LangGraphWorker, OfflinePlanner, OpenAIPlanner
+from voice_delegate.limits.tokens import truncate
+from voice_delegate_agent.graph import (
+    INSTRUCTIONS,
+    LangGraphWorker,
+    OfflinePlanner,
+    OpenAIPlanner,
+    Planner,
+)
 from voice_delegate_agent.reference import corpus, source_by_id
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -63,14 +70,16 @@ class Budget:
         self.calls += 1
 
     def usage(self, response: AIMessage) -> None:
-        usage = response.usage_metadata or {}
+        usage = response.usage_metadata
+        if usage is None:
+            return
         self.input_tokens += int(usage.get("input_tokens", 0))
         self.output_tokens += int(usage.get("output_tokens", 0))
 
 
 @dataclass
 class ObservedPlanner:
-    delegate: Any
+    delegate: Planner
     budget: Budget
     paid: bool
     tools: list[str] = field(default_factory=list)
@@ -92,7 +101,6 @@ def score(case: dict[str, Any], output: dict[str, Any]) -> dict[str, float]:
     ids = output["source_ids"]
     scores = {
         "completed": float(output["status"] == "completed"),
-        "bounded_output": float(len(text.encode()) <= 500 and count_tokens(text) <= 120),
         "valid_source_ids": float(all(source_by_id(s) is not None for s in ids)),
     }
     if "tool" in expected:
@@ -233,7 +241,9 @@ async def run_cases(
                                         "rubric": case["expected"]["rubric"],
                                         "answer": text,
                                         "evidence": [
-                                            source_by_id(s).text for s in ids if source_by_id(s)
+                                            source.text
+                                            for s in ids
+                                            if (source := source_by_id(s)) is not None
                                         ],
                                     }
                                 )
@@ -304,8 +314,8 @@ async def run_cases(
 
 
 def upload(report: dict[str, Any], cases: list[dict[str, Any]], project: str) -> str:
-    import braintrust
-    from braintrust.git_fields import GitMetadataSettings
+    braintrust = importlib.import_module("braintrust")
+    GitMetadataSettings = importlib.import_module("braintrust.git_fields").GitMetadataSettings
 
     experiment = braintrust.init(
         project=project,

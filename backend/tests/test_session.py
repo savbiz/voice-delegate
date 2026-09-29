@@ -178,6 +178,12 @@ async def test_janitor_continues_after_unexpected_failure(
 ) -> None:
     manager = SessionManager(FakeProvider(), Settings())
     recovered = asyncio.Event()
+    original_sleep = asyncio.sleep
+
+    async def yield_only(delay: float) -> None:
+        await original_sleep(0)
+
+    monkeypatch.setattr(asyncio, "sleep", yield_only)
     attempts = 0
 
     async def expire() -> None:

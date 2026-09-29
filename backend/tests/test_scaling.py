@@ -210,6 +210,12 @@ async def test_worker_janitor_recovers_after_sweep_failure(
 ) -> None:
     from voice_delegate.scaling.worker_service import Jobs
 
+    original_sleep = asyncio.sleep
+
+    async def yield_only(delay: float) -> None:
+        await original_sleep(0)
+
+    monkeypatch.setattr(asyncio, "sleep", yield_only)
     attempts = 0
     recovered = asyncio.Event()
 

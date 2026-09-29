@@ -42,6 +42,7 @@ def test_held_out_paraphrases_have_low_content_overlap() -> None:
     for case in held_out:
         target = source_by_id(case["expected"]["source_ids"][0])
         assert target is not None
+        assert target.id in {source.id for source in search(case["goal"].removeprefix("docs "))}
         assert len(terms(case["goal"].removeprefix("docs ")) & terms(target.text)) < 3
 
 

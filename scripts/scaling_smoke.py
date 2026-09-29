@@ -153,7 +153,9 @@ async def exercise(
             if response.status_code == 404:
                 break
             await asyncio.sleep(0.25)
-        require(response.status_code == 404, "Smoke check failed: response.status_code == 404")
+        else:
+            message = "Smoke check failed: restarted instance did not discard lost session"
+            raise SystemExit(message)
         ordered = sorted(timings)
         return {
             "simulated_voice": True,

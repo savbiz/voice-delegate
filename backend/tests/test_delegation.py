@@ -22,7 +22,7 @@ from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 from voice_delegate_agent.reference import WorkerResult
 from voice_delegate_agent.tools import calculate
 
-from test_support import eventually
+from test_support import CountingWorker, eventually
 
 
 @pytest.mark.parametrize("text", ["ciao " * 200, "日本語🙂 " * 200, "<|endoftext|>" * 100])
@@ -87,7 +87,8 @@ def test_history_merges_fragments_and_clamps_memory() -> None:
 
 async def test_delegation_result_and_duplicate_are_delivered_once() -> None:
     provider = FakeProvider()
-    manager = SessionManager(provider, Settings())
+    worker = CountingWorker()
+    manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
     connection = provider.connections[0]
@@ -95,6 +96,8 @@ async def test_delegation_result_and_duplicate_are_delivered_once() -> None:
     connection.queue.put_nowait(DelegationRequested("task", 300))
     connection.queue.put_nowait(DelegationRequested("task", 300))
     await eventually(lambda: bool(connection.commands))
+    assert worker.calls == 1
+    assert session.delegation.seen == {"task"}
     assert len(connection.commands) == 1
     assert "30" in connection.commands[0].content
     assert session.delegation.status == "completed"

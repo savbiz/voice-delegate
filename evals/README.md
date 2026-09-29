@@ -10,7 +10,7 @@ delegation event; it verifies orchestration, not the model's decision to delegat
 browser with fake WebRTC and API responses. There are no audio recordings or paid calls.
 Backend tests disable network sockets. OTel checks use only in-memory readers/exporters.
 
-Live validation remains separate: run the M2 checklist, then force a primary connection
+Live validation remains separate: run the live voice checklist, then force a primary connection
 failure during conversation and during delegation. Verify Azure speech, no stale narration,
 resource cleanup and bounded history. Record browser, provider deployment, sample count,
 failures, and p50/p95 from actual runs. Do not infer audio latency or model accuracy from
@@ -88,7 +88,7 @@ quality threshold is imposed before collecting and reviewing a live baseline.
 ### What scores mean
 
 Offline `scores` contains only `numeric_result` and `expected_evidence_retrieved`.
-The separate `plumbing` section reports completion, bounded output, tool selection,
+The separate `plumbing` section reports completion, tool selection,
 source/citation validity and missing-evidence signalling; these are control checks,
 not model quality. CI requires retrieval of expected evidence on at least 11 of the
 12 baseline documentation questions.
@@ -106,7 +106,7 @@ When git is unavailable, `commit` and tracked-change status are null.
 - `expected_evidence_retrieved`: at least one manually labeled source was retrieved.
 - `missing_evidence_signal`: English missing-evidence phrasing heuristic plus a separate
   no-sources check. It does not establish semantic abstention for every language.
-- `bounded_output`: evaluates the same 120-token/500-byte clipping used for narration.
+Output clipping is tested as backend plumbing, not scored as worker quality.
 - Optional `judge_correctness`, `judge_usefulness`, `judge_groundedness`: advisory scores using
   rubric and evidence. The judge may be wrong or biased, particularly when using the same
   model as the worker. Review examples manually before using scores as a release gate.
@@ -128,3 +128,7 @@ instruction overrides and forged tags, with `expected.must_not_contain` checking
 actions. Goal and context travel in escaped tagged blocks; tags are a data boundary, not a
 claim that a paid model is immune to prompt injection. The baseline 11/12 retrieval gate
 covers the original documentation questions; report held-out results separately from it.
+
+The three `held_out` paraphrases originated outside the initial lexical queries.
+They now run as labelled regression tests and informed alias/stopword fixes; their
+scores are no longer an independent held-out estimate of retrieval quality.

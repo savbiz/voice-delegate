@@ -10,7 +10,7 @@ from voice_delegate.providers.fake import FakeProvider
 from voice_delegate.providers.models import DelegationRequested, Transcript
 from voice_delegate.session.manager import SessionManager
 
-from test_support import eventually
+from test_support import CountingWorker, eventually
 
 SCENARIOS = json.loads((Path(__file__).parent / "scenarios/control.json").read_text())
 
@@ -18,7 +18,8 @@ SCENARIOS = json.loads((Path(__file__).parent / "scenarios/control.json").read_t
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=[s["name"] for s in SCENARIOS])
 async def test_scripted_control(scenario: dict[str, Any]) -> None:
     provider = FakeProvider()
-    manager = SessionManager(provider, Settings())
+    worker = CountingWorker()
+    manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
     connection = provider.connections[0]
@@ -30,6 +31,8 @@ async def test_scripted_control(scenario: dict[str, Any]) -> None:
         await eventually(lambda: session.delegation.task is not None)
         assert session.delegation.task is not None
         await session.delegation.task
+    assert worker.calls == scenario["expected_results"]
+    assert session.delegation.seen == set(scenario["requests"])
     assert len(connection.commands) == scenario["expected_results"]
     await manager.aclose()
     assert connection.closed and not manager.sessions

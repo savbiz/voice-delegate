@@ -243,3 +243,107 @@ async def test_connection_timeout_returns_504_without_global_timeout_handler(
         response = await client.post(path + "/offer", json={"sdp": "v=0\r\n"})
         assert response.status_code == 504
         assert response.json() == {"detail": "Provider connection timed out"}
+
+
+async def test_offer_provider_error_returns_502_and_releases_session(
+    asgi_client: ASGIClientFactory,
+) -> None:
+    from voice_delegate.providers.fake import FakeConnection
+    from voice_delegate.providers.models import ProviderError, SessionConfig
+
+    class FailingProvider(FakeProvider):
+        async def connect(self, *, config: SessionConfig, offer_sdp: str) -> FakeConnection:
+            raise ProviderError("Provider unavailable")
+
+    app = create_app(Settings(), FailingProvider())
+    async with asgi_client(app) as client:
+        client.headers["Origin"] = "http://localhost:5173"
+        created = (await client.post("/api/sessions")).json()
+        client.headers["X-Session-Key"] = created["key"]
+        path = f"/api/sessions/{created['id']}"
+        response = await client.post(path + "/offer", json={"sdp": "v=0\r\n"})
+        assert response.status_code == 502
+        assert response.json() == {"detail": "Provider unavailable"}
+        assert (await client.post(path + "/heartbeat")).status_code == 404
+
+
+@pytest.mark.parametrize("expected_status", [409, 501, 504])
+async def test_reconnect_http_errors(
+    asgi_client: ASGIClientFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    expected_status: int,
+) -> None:
+    import asyncio
+
+    from pydantic import SecretStr
+    from voice_delegate.providers.azure import AzureRealtimeProvider
+    from voice_delegate.providers.fake import FakeConnection
+    from voice_delegate.providers.models import SessionConfig
+
+    async def never_connect(
+        self: AzureRealtimeProvider, *, config: SessionConfig, offer_sdp: str
+    ) -> FakeConnection:
+        await asyncio.Event().wait()
+        raise AssertionError("unreachable")
+
+    monkeypatch.setattr(AzureRealtimeProvider, "connect", never_connect)
+    settings = Settings(
+        fallback_enabled=expected_status != 501,
+        azure_endpoint="https://test.openai.azure.com",
+        azure_api_key=SecretStr("fixture-key"),
+        connect_timeout_seconds=0.01,
+    )
+    provider = FakeProvider()
+    app = create_app(settings, provider)
+    async with asgi_client(app) as client:
+        client.headers["Origin"] = settings.allowed_origin
+        created = (await client.post("/api/sessions")).json()
+        client.headers["X-Session-Key"] = created["key"]
+        path = f"/api/sessions/{created['id']}"
+        assert (await client.post(path + "/offer", json={"sdp": "v=0\r\n"})).status_code == 200
+        response = await client.post(
+            path + "/reconnect",
+            json={"sdp": "v=0\r\n", "generation": 1 if expected_status == 409 else 0},
+        )
+        assert response.status_code == expected_status
+        if expected_status == 504:
+            assert response.json() == {"detail": "Provider connection timed out"}
+            assert provider.connections[0].closed
+            assert (await client.post(path + "/heartbeat")).status_code == 404
+        else:
+            assert (await client.post(path + "/heartbeat")).json()["state"] == "connected"
+
+
+async def test_heartbeat_payload_after_completed_delegation(
+    asgi_client: ASGIClientFactory,
+) -> None:
+    from voice_delegate.providers.models import DelegationRequested, Transcript
+    from voice_delegate_agent.reference import search
+
+    from test_support import eventually
+
+    provider = FakeProvider()
+    app = create_app(Settings(), provider)
+    async with asgi_client(app) as client:
+        client.headers["Origin"] = "http://localhost:5173"
+        created = (await client.post("/api/sessions")).json()
+        client.headers["X-Session-Key"] = created["key"]
+        path = f"/api/sessions/{created['id']}"
+        await client.post(path + "/offer", json={"sdp": "v=0\r\n"})
+        connection = provider.connections[0]
+        connection.queue.put_nowait(Transcript("user", "docs fallback history", 0, 100))
+        connection.queue.put_nowait(DelegationRequested("lookup", 200))
+        await eventually(lambda: bool(connection.commands))
+        response = await client.post(path + "/heartbeat")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["state"] == "connected"
+        assert payload["delegation"] == "completed"
+        assert payload["generation"] == 0
+        assert payload["fallback_available"] is False
+        assert payload["recap"]["latest_request"] == "docs fallback history"
+        assert payload["recap"]["interrupted"] is False
+        assert [source["id"] for source in payload["sources"]] == [
+            source.id for source in search("fallback history")
+        ]
+        assert all(len(source["text"]) <= 400 for source in payload["sources"])
