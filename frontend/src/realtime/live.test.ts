@@ -242,3 +242,74 @@ test('failed close clears ending after reporting unconfirmed cleanup', async () 
   await vi.waitFor(() => expect(store.getSnapshot().ending).toBe(false));
   expect(store.getSnapshot().status).toContain('Close was not confirmed');
 });
+
+test.each(['peer', 'channel'])(
+  'failure of the new fallback %s ends the session',
+  async (failure) => {
+    const store = await start();
+    vi.spyOn(FakePeer.prototype, 'setLocalDescription').mockImplementationOnce(async function (
+      this: FakePeer,
+    ) {
+      if (failure === 'peer') {
+        this.connectionState = 'failed';
+        this.dispatchEvent(new Event('connectionstatechange'));
+      } else {
+        this.channel.dispatchEvent(new Event('close'));
+      }
+    });
+    const primary = FakePeer.instances[0]!;
+    primary.connectionState = 'failed';
+    primary.dispatchEvent(new Event('connectionstatechange'));
+    await vi.waitFor(() => expect(store.getSnapshot().phase).toBe('ended'));
+    await vi.waitFor(() => expect(store.getSnapshot().ending).toBe(false));
+    expect(FakePeer.instances).toHaveLength(2);
+    expect(FakePeer.instances[1]?.close).toHaveBeenCalledOnce();
+    expect(requests.filter((request) => request.path.endsWith('/close'))).toHaveLength(1);
+    expect(store.getSnapshot().recovering).toBe(false);
+  },
+);
+
+test('local onset uses the current worker store before the next heartbeat', async () => {
+  const store = await start();
+  const onset = vi.mocked(watchSpeech).mock.calls[0]?.[1];
+  FakePeer.instances[0]?.emit({ type: 'session.delegation.created' });
+  expect(store.getSnapshot().worker).toBe('running');
+  onset?.();
+  expect(requests.filter((request) => request.path.endsWith('/interrupt'))).toHaveLength(1);
+  store.update({ worker: 'completed' });
+  onset?.();
+  expect(requests.filter((request) => request.path.endsWith('/interrupt'))).toHaveLength(1);
+  controller?.dispose();
+  expect(store.getSnapshot().cancelPending).toBe(false);
+});
+
+test.each([
+  ['network', 'Could not reach the server'],
+  ['timeout', 'The server took too long'],
+  ['json', 'The server returned an unreadable response'],
+  ['body-timeout', 'The server took too long'],
+])('request maps %s failures to a friendly status', async (failure, message) => {
+  const store = createLiveStore();
+  const fetchMock = vi.mocked(fetch);
+  if (failure === 'json') fetchMock.mockResolvedValueOnce(new Response('invalid-json'));
+  else if (failure === 'body-timeout') {
+    const response = Response.json({});
+    vi.spyOn(response, 'json').mockRejectedValueOnce(new DOMException('expired', 'TimeoutError'));
+    fetchMock.mockResolvedValueOnce(response);
+  } else
+    fetchMock.mockRejectedValueOnce(
+      failure === 'timeout'
+        ? new DOMException('expired', 'TimeoutError')
+        : new TypeError('fetch failed'),
+    );
+  controller = createLiveSession(
+    store,
+    { srcObject: null } as HTMLAudioElement,
+    () => 'invite',
+    () => ({ language: 'auto', mode: 'conversation' }),
+  );
+  controller.start();
+  await vi.waitFor(() => expect(store.getSnapshot().phase).toBe('ended'));
+  expect(store.getSnapshot().status).toContain(message);
+  expect(store.getSnapshot().active).toBe(false);
+});

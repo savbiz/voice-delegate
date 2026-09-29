@@ -75,3 +75,19 @@ test('timeout is friendly and changing the invitation resets an aborted search',
   await expect(page.getByRole('status')).toContainText('Search cancelled');
   await expect(page.getByRole('button', { name: 'Search documentation' })).toBeEnabled();
 });
+
+test('editing the invitation leaves idle and completed search status unchanged', async ({
+  page,
+}) => {
+  await page.route('**/api/reference/search', (route) => route.fulfill({ json: { sources: [] } }));
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  const status = page.getByRole('status');
+  await expect(status).toHaveText('Search the bundled public project documentation.');
+  await page.getByLabel('Personal invitation code').fill('first-code');
+  await expect(status).toHaveText('Search the bundled public project documentation.');
+  await page.getByRole('button', { name: 'Search documentation' }).click();
+  await expect(status).toContainText('No supporting documentation found');
+  await page.getByLabel('Personal invitation code').fill('second-code');
+  await expect(status).toContainText('No supporting documentation found');
+});

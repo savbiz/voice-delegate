@@ -17,7 +17,9 @@ export function Reference({ code }: { code: string }) {
   const pending = useRef<AbortController | undefined>(undefined);
   useEffect(
     () => () => {
-      pending.current?.abort();
+      if (!pending.current) return;
+      pending.current.abort();
+      pending.current = undefined;
       setStatus('Search cancelled. Try again when ready.');
       setBusy(false);
     },
@@ -69,7 +71,10 @@ export function Reference({ code }: { code: string }) {
               : 'Search failed.',
         );
     } finally {
-      if (pending.current === controller) setBusy(false);
+      if (pending.current === controller) {
+        pending.current = undefined;
+        setBusy(false);
+      }
     }
   }
   return (

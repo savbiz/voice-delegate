@@ -35,7 +35,6 @@ export function createLiveSession(
   let recovering = false;
   let fallbackAttempted = false;
   let heartbeatFailures = 0;
-  let lastDelegation = 'idle';
 
   function renderSources(items: Source[]): void {
     const next = items.slice(0, 3);
@@ -61,7 +60,7 @@ export function createLiveSession(
     channel = undefined;
     peer = undefined;
     session = undefined;
-    store.update({ active: false, cancelPending: true });
+    store.update({ active: false });
   }
 
   function requestOptions(
@@ -88,10 +87,20 @@ export function createLiveSession(
     timeout = 35000,
     accessCode?: string,
   ): Promise<T> {
-    const response = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL ?? ''}/api${path}`,
-      requestOptions(owner, body, timeout, accessCode),
-    );
+    let response: Response;
+    try {
+      response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL ?? ''}/api${path}`,
+        requestOptions(owner, body, timeout, accessCode),
+      );
+    } catch (error) {
+      throw new Error(
+        error instanceof Error && error.name === 'TimeoutError'
+          ? 'The server took too long to respond. Please try again.'
+          : 'Could not reach the server. Check your connection and try again.',
+        { cause: error },
+      );
+    }
     if (!response.ok) {
       const messages: Record<number, string> = {
         401: 'Your invitation is missing, invalid or revoked.',
@@ -103,7 +112,16 @@ export function createLiveSession(
           `Request failed (${response.status}). Check server configuration and access.`,
       );
     }
-    return response.json();
+    try {
+      return await response.json();
+    } catch (error) {
+      throw new Error(
+        error instanceof Error && error.name === 'TimeoutError'
+          ? 'The server took too long to respond. Please try again.'
+          : 'The server returned an unreadable response. Please try again.',
+        { cause: error },
+      );
+    }
   }
 
   async function finish(message: string): Promise<void> {
@@ -235,6 +253,7 @@ export function createLiveSession(
         'Reconnecting with Azure…',
         'Wait for connection confirmation, then repeat the unfinished phrase if needed.',
       );
+      recovering = false;
       await begin(owner, state.generation);
     } catch {
       await finish('Fallback failed.');
@@ -270,7 +289,6 @@ export function createLiveSession(
     );
     showWorker('idle');
     heartbeatFailures = 0;
-    lastDelegation = 'idle';
     try {
       const config = await request<{ voice_available: boolean }>('/config');
       if (attempt !== attemptId) return;
@@ -349,7 +367,7 @@ export function createLiveSession(
         stopVad = watchSpeech(
           stream,
           () => {
-            if (attempt !== attemptId || lastDelegation !== 'running') return;
+            if (attempt !== attemptId || store.getSnapshot().worker !== 'running') return;
             void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
           },
           audio,
@@ -368,7 +386,6 @@ export function createLiveSession(
           .then((state) => {
             if (attempt === attemptId) {
               heartbeatFailures = 0;
-              lastDelegation = state.delegation;
               renderSources(state.sources ?? []);
               if (state.recap) {
                 const recap =
