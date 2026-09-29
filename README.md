@@ -207,9 +207,9 @@ Protocol implementation is based on the public OpenAI [WebRTC guide](https://dev
 
 ## Documentation map
 
-- [Architecture and API routes](docs/architecture.md)
+- [Architecture](docs/architecture.md) and [API contracts](docs/api.md)
 - [Production scope](docs/production.md)
-- [Configuration and operations](deployment/README.md), [local development](docs/local-development.md)
-- [Provider terminology](realtime/README.md) and [worker contract](agent/README.md)
+- [Configuration](docs/configuration.md), [operations runbook](docs/operations.md) and [deployment](deployment/README.md)
+- [Glossary](docs/glossary.md), [local development](docs/local-development.md) and [worker contract](agent/README.md)
 - [Architecture decisions](docs/decisions/)
 - [Historical milestone records](docs/milestones/) and [current roadmap](docs/roadmap.md)
