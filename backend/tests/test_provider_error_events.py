@@ -140,3 +140,13 @@ async def test_unknown_realtime_tool_returns_error_and_continues_reading() -> No
     await events.aclose()
     await connection.aclose()
     await provider.aclose()
+
+
+def test_documented_tool_schema_matches_realtime_registration() -> None:
+    import json
+    from pathlib import Path
+
+    from voice_delegate.providers.webrtc import DELEGATE_TASK_TOOL
+
+    schema = Path(__file__).resolve().parents[2] / "docs/delegate_task.schema.json"
+    assert json.loads(schema.read_text()) == DELEGATE_TASK_TOOL
