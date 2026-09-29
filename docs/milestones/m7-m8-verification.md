@@ -1,3 +1,5 @@
+Historical record as of 2026-09-21; current status in [docs/roadmap.md](../roadmap.md).
+
 # M7–M8 candidate verification
 
 Date: 2026-09-21. Candidate version: `0.2.0.dev1`.
@@ -17,7 +19,7 @@ These are local checks, not hosted CI or live provider acceptance.
 
 ## Docker acceptance exercise
 
-The user reran `scripts/scaling_smoke.py` locally and supplied the successful terminal
+I reran `scripts/scaling_smoke.py` locally and recorded the successful terminal
 output on 2026-09-21 (Compose project `voice-scale-check-565a05`). This replaces the earlier
 run that reported overload as generic failure.
 
@@ -37,7 +39,7 @@ run that reported overload as generic failure.
 
 The `busy` results demonstrate controlled backpressure rather than task failures.
 Latency includes polling and a scripted voice provider; it does not measure acoustic
-latency or model quality. The supplied output does not include an image digest or build
+latency or model quality. My recorded output does not include an image digest or build
 log, so it is evidence of the successful Docker exercise rather than immutable build
 provenance. Real provider and hosted acceptance remain separate gates below.
 
@@ -49,5 +51,5 @@ latency. Verify the chosen HTTPS deployment, invitation isolation, spending cont
 and rollback, then run hosted CI and record the demonstration. See [roadmap](../roadmap.md),
 [M7](m7.md) and [M8](m8.md) for the precise scope and remaining gates.
 
-No M9 is required by this roadmap. Further features should follow demonstrated user needs;
+Further features should follow demonstrated user needs;
 the immediate next work is completing these acceptance checks and fixing their findings.

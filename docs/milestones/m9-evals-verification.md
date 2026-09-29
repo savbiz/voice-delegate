@@ -1,8 +1,10 @@
+Historical record as of 2026-09-21; current status in [docs/roadmap.md](../roadmap.md).
+
 # Initial worker evaluation evidence
 
 Date: 2026-09-21. Implementation candidate; not a voice-quality release claim.
 
-The versioned synthetic dataset has 32 cases. Offline execution completed 28 and explicitly
+This run used the earlier 32-case dataset; it is not a run against the current 40-case dataset. Offline execution completed 28 and explicitly
 skipped four requiring a real language model. Arithmetic results and structural source checks
 passed. Expected documentation evidence was retrieved in 11 of 12 cases (91.7%); the miss is
 retained in the baseline. Scripted answers are not evidence of natural-language model quality.
@@ -27,7 +29,7 @@ strict mypy checks. Tests cover wrong numeric results, fabricated evidence, inva
 budget enforcement, explicit paid/upload gates, offline skips and curated upload payloads.
 The optional Braintrust SDK was installed and its interfaces checked; no cloud experiment was
 created because `BRAINTRUST_API_KEY` was unavailable. Upload authentication and real dashboard
-visibility still need verification after the user configures that key.
+visibility still need verification after I configure that key.
 
 Local detailed reports are in `.local/evals/`, which is ignored by Git. The synthetic evaluation
 dataset and runner are version-controlled. Neither the evaluation runner nor Braintrust is

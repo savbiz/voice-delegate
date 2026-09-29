@@ -1,11 +1,9 @@
 # ADR 003: Separate deterministic orchestration tests from model evaluation
 
-Status: accepted for M1; scenario expansion planned for M4.
+Status: accepted 2026-09-20
 
 Context: paid network calls introduce variability and require credentials. A fake model's configured choices cannot establish the behavior of a real model.
 
 Decision: use typed fake events, injected clocks, and in-process HTTP to test lifecycle and failure paths. Block IP sockets in pytest. Keep real voice, model delegation accuracy, and measured transport latency behind an explicit live verification gate.
 
-Consequences: offline CI can verify deterministic timeout policy and cleanup. It cannot certify spoken quality, barge-in behavior, real p50/p95 latency, or Azure failover. No M1 release tag is created until the live smoke test is recorded.
-
-Application-defined backend turn spans were chosen as parents for provider and delegation spans. Signaling TTFB, first observed audio, playback onset, transcript gap and end-to-end task latency were kept as distinct measurements. Recorded fake scenarios tested scheduling and limits; model behavior required real-model evaluations.
+Consequences: offline CI can verify deterministic timeout policy and cleanup. It cannot certify spoken quality, barge-in behavior, real p50/p95 latency, or Azure failover. No stable release tag is created until the live smoke test is recorded. Application-defined backend turn spans were chosen as parents for provider and delegation spans. Signaling TTFB, first observed audio, playback onset, transcript gap and end-to-end task latency were kept as distinct measurements. Recorded fake scenarios tested scheduling and limits; model behavior required real-model evaluations.

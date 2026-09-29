@@ -1,3 +1,5 @@
+Historical record as of 2026-09-20; current status in [docs/roadmap.md](../roadmap.md).
+
 # M1 verification
 
 ## Automated candidate checks
@@ -26,4 +28,4 @@ No real API call, microphone playback test, or hosted GitHub Actions execution h
 
 Passed locally: 22 offline Python tests, Ruff, strict mypy (23 Python source files), locked uv/pnpm installs, Python wheel/sdist build, React production build, TypeScript checks, one Vitest unit test, and three Playwright browser tests. The browser tests cover API-free scripted playback, stopping playback, and live-mode guidance without a key.
 
-The default Playwright browser CDN download failed in this environment. Browser tests passed with Chromium 153 supplied separately through `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. Standard CI installs Chromium through Playwright. Docker build, hosted CI, cloud deployment, real voice playback and paid API access remain unverified. No release tag was created.
+The default Playwright browser CDN download failed in this environment. Browser tests passed with Chromium 153 installed separately through `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. Standard CI installs Chromium through Playwright. Docker build, hosted CI, cloud deployment, real voice playback and paid API access remain unverified. No release tag was created.

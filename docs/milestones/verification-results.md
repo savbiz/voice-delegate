@@ -1,3 +1,5 @@
+Historical record as of 2026-09-20; current status in [docs/roadmap.md](../roadmap.md).
+
 # Candidate verification results
 
 Date: 2026-09-20. Python 3.12.14; Node.js 24.19.0.
