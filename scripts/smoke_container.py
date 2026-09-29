@@ -6,6 +6,7 @@ import logging
 import secrets
 import subprocess
 import time
+from collections.abc import Callable
 
 import httpx
 
@@ -22,6 +23,26 @@ def cleanup(command: list[str], env: dict[str, str] | None = None) -> None:
             logging.warning("Smoke teardown failed (exit %s)", result.returncode)
     except OSError:
         logging.warning("Smoke teardown could not run", exc_info=True)
+
+
+def wait_ready(
+    client: httpx.Client,
+    *,
+    budget: float = 25,
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> None:
+    """Allow the image's 20-second startup grace before declaring readiness failure."""
+    deadline = clock() + budget
+    while clock() < deadline:
+        try:
+            if client.get("/healthz").status_code == 200:
+                return
+        except httpx.HTTPError:
+            pass
+        sleep(0.2)
+    message = "Container not ready within the readiness budget"
+    raise SystemExit(message)
 
 
 def main() -> None:
@@ -45,19 +66,7 @@ def main() -> None:
     subprocess.run(args, check=True, capture_output=True)
     try:
         with httpx.Client(base_url="http://127.0.0.1:18080", timeout=2) as c:
-
-            def ready():
-                for _ in range(50):
-                    try:
-                        if c.get("/healthz").status_code == 200:
-                            return
-                    except httpx.HTTPError:
-                        pass
-                    time.sleep(0.2)
-                message = "container not ready"
-                raise RuntimeError(message)
-
-            ready()
+            wait_ready(c)
             c.headers["Origin"] = "https://demo.example"
             require(
                 c.post("/api/sessions").status_code == 401,
@@ -78,7 +87,7 @@ def main() -> None:
                 "Session close failed",
             )
             subprocess.run(["docker", "restart", name], check=True, capture_output=True)
-            ready()
+            wait_ready(c)
             require(
                 c.post("/api/sessions").status_code == 429,
                 'Smoke check failed: c.post("/api/sessions").status_code == 429',

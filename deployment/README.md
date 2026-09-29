@@ -4,9 +4,9 @@ Deploy the frontend to Vercel and **one** persistent backend process to Railway 
 
 ## Frontend on Vercel
 
-Import the GitHub repository. Set **Root Directory = frontend**, framework Vite, install `pnpm install --frozen-lockfile`, build `pnpm build`, output `dist`, Node.js 24. `frontend/vercel.json` supplies build defaults and a security-header template; render it with the deployment step below. The simulated demo works immediately without a backend or API key.
+Import the GitHub repository. Set **Root Directory = frontend**, framework Vite, install `pnpm install --frozen-lockfile`, build `pnpm build`, output `dist`, Node.js 24. `frontend/vercel.json` supplies build defaults and concrete security headers. The simulated demo works immediately without a backend or API key.
 
-Disable automatic Git deployments while using the placeholder template; deploy with the rendered configuration below. Once the backend URL exists, set the **public** build variable `VITE_API_BASE_URL=https://YOUR_BACKEND_HOST` (no trailing slash), then redeploy. Never place OPENAI_API_KEY or VOICE_ACCESS_TOKEN in a VITE variable: Vite embeds them in public JavaScript.
+Set the **public** build variable `VITE_API_BASE_URL=https://voice-delegate-api-production.up.railway.app` (no trailing slash), then deploy through the GitHub integration. Never place OPENAI_API_KEY or VOICE_ACCESS_TOKEN in a VITE variable: Vite embeds them in public JavaScript.
 
 ## Backend on Render OR Railway
 
@@ -122,7 +122,12 @@ the least recently used bucket is evicted when the table is full. IPv6 clients s
 /64 subnet bucket. Idle buckets expire after five seconds.
 Keep `VOICE_TRUST_PROXY=false` for direct access. Behind trusted ingress set it to `true`
 and set `VOICE_TRUSTED_PROXY_HOPS` (default `1`) to the number of trusted proxies,
-including the socket peer. With one hop the rightmost X-Forwarded-For entry is the client;
+including the socket peer. The Render blueprint enables `VOICE_TRUST_PROXY=true`
+and `VOICE_TRUSTED_PROXY_HOPS=1`. Before exposing the demo, send a request from a
+known public IP through the complete ingress path and confirm that the rightmost
+header entry is that IP; repeat with a caller-supplied prefix to check append behaviour.
+If an extra trusted CDN is present, verify and count its hop before updating the value.
+With one hop the rightmost X-Forwarded-For entry is the client;
 with two hops the final header entry is another trusted proxy, so the preceding entry is used.
 Only the selected entry is parsed; malformed untrusted prefixes are ignored. An invalid
 selected entry or a too-short chain falls back to the socket address. Direct backend access must
@@ -138,29 +143,30 @@ If a trusted TLS terminator is added, configure Nginx real-IP handling for that 
 before forwarding the verified address. Host-mismatch requests also consume the API bucket.
 Multi-process/global limits require an external shared limiter.
 
+For the bundled Compose deployment, set `VOICE_ALLOWED_HOSTS` to a JSON array of
+the public API hostnames, alongside `VOICE_ALLOWED_ORIGIN` for the frontend origin.
+The local smoke-test default accepts only localhost and 127.0.0.1.
+
 
 ## Frontend response headers
 
 `frontend/vercel.json` applies CSP, Permissions-Policy, Referrer-Policy and
-X-Content-Type-Options to every route. `${API_HOST}` is a deployment placeholder, read
-from the environment by `scripts/render_vercel.py`; supply only the backend hostname
-(for example `voice-api.onrender.com`), without scheme, port, path or trailing slash.
-Use the same host in the public `VITE_API_BASE_URL=https://voice-api.onrender.com` build
-variable. API_HOST is public configuration, never a provider credential.
+X-Content-Type-Options to every route. Its CSP permits API connections to
+`https://voice-delegate-api-production.up.railway.app`. Set the same origin in
+Vercel's public `VITE_API_BASE_URL` build variable and redeploy after changing it.
+This hostname is public configuration, never a provider credential.
 
-Vercel does not interpolate shell variables in static JSON. Generate the concrete config
-**before** invoking deployment; setting API_HOST only in the Vercel dashboard or running
-this renderer inside the build command does not substitute a deployment's header config.
-From the repository root:
+The policy restricts scripts, styles, images and media to the frontend origin, blocks
+objects and embedding, and permits form submissions only to the same origin.
+Changing API deployments requires updating both the committed CSP hostname and
+`VITE_API_BASE_URL`. CI rejects unresolved placeholders in `frontend/vercel.json`.
 
-```bash
-API_HOST=voice-api.onrender.com python3 scripts/render_vercel.py
-cd frontend
-pnpm dlx vercel deploy --local-config .vercel/vercel.json --prod
-```
+## Railway volume permissions
 
-The renderer rejects missing or malformed hosts and writes only the ignored generated
-file `frontend/.vercel/vercel.json`. Regenerate for each target environment. A CI deploy
-must run the same renderer before the Vercel CLI; do not deploy the placeholder template
-directly through Git integration. See [Vercel static configuration](https://vercel.com/docs/project-configuration/vercel-json)
-and [the local-config CLI option](https://vercel.com/docs/cli/global-options#local-config).
+The image runs as the unprivileged `app` user (UID 10001), while Railway mounts
+volumes as root. If SQLite cannot open its files under `/app/.local`, verify the
+mount path and database paths, then follow Railway's documented compatibility
+setting `RAILWAY_RUN_UID=0`. This runs the application as root inside the container;
+it is a platform-specific exception to the image's default user, not a change to
+local or Render deployments. Keep quota and feedback files on the mounted volume.
+See [Railway volume permissions](https://docs.railway.com/volumes#permissions).

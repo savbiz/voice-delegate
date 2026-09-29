@@ -59,6 +59,8 @@ jobs:
           node-version: "24"
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Reject unresolved Vercel configuration placeholders
+        run: node -e 'if (require("node:fs").readFileSync("vercel.json", "utf8").includes("$" + "{")) { console.error("Unresolved Vercel configuration placeholder"); process.exit(1); }'
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm build && pnpm test

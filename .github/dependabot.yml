@@ -14,3 +14,10 @@ updates:
     groups:
       frontend-dependencies:
         patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      workflow-actions:
+        patterns: ["*"]

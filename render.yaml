@@ -14,6 +14,12 @@ services:
         value: production
       - key: OPENAI_API_KEY
         sync: false
+      - key: VOICE_TRUST_PROXY
+        value: "true"
+      # Verify the rightmost X-Forwarded-For entry against the caller IP;
+      # count any additional trusted CDN hops before changing this value.
+      - key: VOICE_TRUSTED_PROXY_HOPS
+        value: "1"
       - key: VOICE_PUBLIC_DEMO
         value: "true"
       - key: VOICE_INVITE_TOKENS
