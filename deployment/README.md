@@ -170,3 +170,24 @@ setting `RAILWAY_RUN_UID=0`. This runs the application as root inside the contai
 it is a platform-specific exception to the image's default user, not a change to
 local or Render deployments. Keep quota and feedback files on the mounted volume.
 See [Railway volume permissions](https://docs.railway.com/volumes#permissions).
+
+## Same-host scaling topology
+
+```mermaid
+flowchart TB
+    U["Browser"] -->|HTTPS via external TLS terminator, not included| N
+    U <-->|WebRTC audio| V["Voice provider"]
+    subgraph Host["One Docker host: deployment/scaling/compose.yaml"]
+        N["nginx gateway :8080<br/>64k bodies, 20 r/s per IP, no upstream retry<br/>/api/sessions/a-* to api-a, /api/sessions/b-* to api-b"]
+        A1["api-a<br/>VOICE_INSTANCE_ID=a, uvicorn --workers 1"]
+        A2["api-b<br/>VOICE_INSTANCE_ID=b, uvicorn --workers 1"]
+        W["worker :8001<br/>capacity 4, 128 records, bearer service token"]
+        Q[("shared volume<br/>quotas.sqlite3 + feedback.sqlite3<br/>leases shared by a and b")]
+    end
+    N -->|other /api and /healthz: round-robin| A1 & A2
+    A1 & A2 -->|POST/GET/DELETE /jobs| W
+    A1 & A2 --> Q
+    A1 & A2 <-->|SDP + sideband| V
+```
+
+The gateway's dedicated `/healthz` location bypasses its request limiter; application middleware still applies. This topology does not migrate live sessions after an owner crash. See [architecture](../docs/architecture.md), [operations](../docs/operations.md) and [production scope](../docs/production.md).

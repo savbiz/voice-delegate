@@ -44,26 +44,82 @@ The session manager dispatches delegation to a LangGraph worker in the backgroun
 ```mermaid
 sequenceDiagram
     participant B as Browser
+    participant A as FastAPI /api
     participant S as Session manager
-    participant V as GPT-Live
-    participant W as LangGraph worker
-    V->>S: Transcripts and delegation ID
-    S->>W: delegate_task(goal, context)
-    alt Worker completes
-        W-->>S: Result
-        S->>S: Check generation and clip result
-        S->>V: Commentary with delegation ID
-        V-->>B: Narrated result
-    else User interrupts
-        B->>S: Microphone onset or Cancel task
-        S->>S: Invalidate generation
-        S->>W: Cancel task
-        W-->>S: Discard any late result
+    participant R as Delegation runner
+    participant W as Worker
+    participant V as Voice provider
+    V->>S: delegation event (id, timestamp)
+    S->>R: start(goal, context) at generation n
+    R->>W: delegate_task(goal, context)
+    Note over B,V: user speaks over the answer
+    par local speech onset or Cancel task
+        B->>A: POST /sessions/{id}/interrupt
+        A->>S: interrupt(session)
+    and provider speech or transcript event
+        V->>S: SpeechStarted, or user transcript at or after the delegation timestamp
     end
+    S->>R: cancel(state)
+    R->>R: generation = n+1 first, status = cancelled
+    R--xW: task.cancel()
+    Note over S: voice_interruptions_total += 1
+    W-->>R: late result tagged generation n
+    R->>R: n != n+1, discard; no commentary sent
+    V-->>B: conversation continues without stale narration
 ```
 
 
 ## Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as FastAPI
+    participant S as Session manager
+    participant P as Primary (GPT-Live)
+    participant F as Fallback (Azure Realtime)
+    P--xS: sideband stream fails
+    S->>S: state = reconnecting; close failed connection; cancel worker
+    B->>A: POST /sessions/{id}/heartbeat
+    A-->>B: state=reconnecting, generation=g, fallback_available=true
+    B->>B: close old RTCPeerConnection, create new one
+    B->>A: POST /sessions/{id}/reconnect {sdp, generation=g}
+    A->>S: reconnect under session lock
+    alt attempt available and generation matches
+        S->>S: fallback_used = true; generation += 1
+        S->>S: seal in-flight utterance; clamp history to 12 segments, 2048 tokens; text only
+        S->>F: create call with SDP + history as conversation items
+        F-->>S: SDP answer
+        S->>S: state = connected
+        A-->>B: SDP answer
+        B->>F: WebRTC audio
+    else stale generation or attempt already used
+        A-->>B: 409
+    else no fallback configured
+        A-->>B: 501
+    end
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> created: POST /sessions (admission, lease, key)
+    created --> connecting: POST /offer
+    connecting --> connected: SDP answer and sideband attached
+    connecting --> closed: connect timeout 504 or provider error
+    connected --> reconnecting: sideband failure, fallback configured
+    connected --> closing: POST /close, absolute TTL, heartbeat expiry, shutdown
+    reconnecting --> connected: POST /reconnect accepted (single attempt)
+    reconnecting --> closing: reconnect timeout, failure or expiry
+    closing --> closed: session.closed received (finalized) or grace elapsed (unconfirmed)
+    closed --> [*]: removed; later requests 404
+    note right of connected
+        delegation generation increments on interruption
+        and new delegation; transport generation on reconnect;
+        duplicate /offer returns 409
+    end note
+```
+
+Diagram HTTP paths are relative to `/api`. The interruption counter is incremented by `SessionManager.interrupt` only while delegation is running. Transcript-based interruption additionally requires real provider timing; Realtime uses `SpeechStarted` as its authoritative onset event.
 
 The normal transport lifecycle is `created → connecting → connected → closing → closed`. A single fallback attempt adds `connected → reconnecting → connected`; a failed attempt proceeds to closing. `connected` means SDP and sideband setup completed; the browser separately waits for `session.started` before displaying voice readiness. A session lock serializes offer, reconnect and close operations. A duplicate offer returns 409. Closed sessions are removed rather than retained indefinitely. Repeating the internal close is safe; a later HTTP request for an already-removed session returns 404.
 
@@ -87,6 +143,16 @@ All `/api` routes require the configured exact Origin. Session, reference and fe
 | `POST /api/reference/search` | Search the bundled corpus with a bounded query |
 | `POST /api/reference/{id}` | Read one source excerpt by corpus ID |
 | `POST /api/feedback` | Store a bounded diagnostic report without conversation content |
+
+## Private worker service API
+
+The worker requires `Authorization: Bearer <VOICE_WORKER_SERVICE_TOKEN>` for all job routes; missing or invalid credentials return 401. It belongs on the same host/private network, not on the public ingress. Full schemas and errors are in [API contracts](api.md).
+
+| Method and route | Response | Additional errors |
+|---|---|---|
+| `POST /jobs` | 202, job status | 409 fingerprint conflict; 422 input/deadline; 429 capacity or record limit |
+| `GET /jobs/{key}` | 200, status, text and source IDs | 404 missing/expired; 422 invalid UUID |
+| `DELETE /jobs/{key}` | 200, cancelled status/tombstone | 422 invalid UUID; 503 full cancellation ledger |
 
 ## Resource budgets
 
@@ -153,8 +219,8 @@ short failure message. Provider transmission has its own two-second deadline, ou
 the worker execution budget. Noncooperative workers occupy capacity until they finish.
 
 Only sealed text segments are replayed during fallback, bounded to twelve entries and
-2048 tokens. For Live, a speaker change seals the preceding segment; the unfinished
-segment is omitted. Realtime uses completed transcripts. Tool calls, tool results and
+2048 tokens. For Live, a speaker change seals preceding segments; reconnect also seals
+every trailing in-flight segment. Realtime uses completed transcripts. Tool calls, tool results and
 audio are never replayed. History is conversation data, never system instructions.
 
 A provider stream failure retains the owned session in the reconnecting state and closes

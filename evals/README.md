@@ -18,7 +18,7 @@ scripted fixture timings. No live p50/p95 benchmark has been collected for this 
 
 ## Worker quality and Braintrust experiments
 
-The versioned `data/worker-v3.json` contains 40 synthetic cases: 12 arithmetic,
+The versioned `data/worker-v4.json` contains 40 synthetic cases: 12 arithmetic,
 12 documentation questions with manually selected expected source IDs, four missing-evidence
 queries, four live-only correction/unsupported-request cases, three held-out paraphrases,
 three distractors and two adversarial contexts. It contains no user sessions.
@@ -132,3 +132,5 @@ covers the original documentation questions; report held-out results separately 
 The three `held_out` paraphrases originated outside the initial lexical queries.
 They now run as labelled regression tests and informed alias/stopword fixes; their
 scores are no longer an independent held-out estimate of retrieval quality.
+
+`worker-v4` updates the fallback-history source label after documenting replay of all trailing in-flight text. The 40 questions and rubrics are unchanged.

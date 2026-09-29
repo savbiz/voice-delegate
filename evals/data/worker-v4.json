@@ -1,5 +1,5 @@
 {
-  "version": "worker-v3",
+  "version": "worker-v4",
   "cases": [
     {
       "id": "math-01",
@@ -210,7 +210,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "5e89815d340db149"
+          "801797fa8d44fbc5"
         ],
         "rubric": "Only sealed text is replayed, at most twelve entries and 2048 tokens; no tool executions or audio."
       }
@@ -459,7 +459,7 @@
         ],
         "rubric": "Hashes of user IDs, UTC dates, counts and reserved seconds; not tokens or transcripts.",
         "top1_source_id": "1e2d7689f6dd0559",
-        "distractor_source_id": "5e89815d340db149"
+        "distractor_source_id": "801797fa8d44fbc5"
       }
     },
     {
@@ -487,10 +487,10 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "5e89815d340db149"
+          "801797fa8d44fbc5"
         ],
         "rubric": "Only sealed text is replayed, at most twelve entries and 2048 tokens; no tool executions or audio.",
-        "top1_source_id": "5e89815d340db149",
+        "top1_source_id": "801797fa8d44fbc5",
         "distractor_source_id": "a290f1daf6c23283"
       }
     },

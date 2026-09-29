@@ -136,12 +136,12 @@
     "digest": "1bab2d16876212c357428db3daf0c9656c2eb5742311fa564f5d1941446646c5"
   },
   {
-    "id": "5e89815d340db149",
+    "id": "801797fa8d44fbc5",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Worker, fallback and admission contracts",
-    "text": "Only sealed text segments are replayed during fallback, bounded to twelve entries and\n2048 tokens. For Live, a speaker change seals the preceding segment; the unfinished\nsegment is omitted. Realtime uses completed transcripts. Tool calls, tool results and\naudio are never replayed. History is conversation data, never system instructions.",
-    "digest": "5e89815d340db14994238907ab543f3eeead476c3111e9c79e938b8681c26aeb"
+    "text": "Only sealed text segments are replayed during fallback, bounded to twelve entries and\n2048 tokens. For Live, a speaker change seals preceding segments; reconnect also seals\nevery trailing in-flight segment. Realtime uses completed transcripts. Tool calls, tool results and\naudio are never replayed. History is conversation data, never system instructions.",
+    "digest": "801797fa8d44fbc54c61d5ed3674636cfdab5051985c549ffe8624e96419446a"
   },
   {
     "id": "0ba854d978400f8f",

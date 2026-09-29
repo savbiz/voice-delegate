@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage, AnyMessage
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 from voice_delegate_agent.reference import search, source_by_id, terms
 
-CASES = json.loads((Path(__file__).resolve().parents[2] / "evals/data/worker-v3.json").read_text())[
+CASES = json.loads((Path(__file__).resolve().parents[2] / "evals/data/worker-v4.json").read_text())[
     "cases"
 ]
 
