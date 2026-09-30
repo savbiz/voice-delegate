@@ -150,7 +150,7 @@ The capability-aware `/token` endpoint returns **501** for this adapter. Live's 
 uv run python -m voice_delegate.delegation.demo "calculate (120 + 80) * 1.22"
 ```
 
-This executes the LangGraph graph and calculator without any API call and returns 244. See [worker delegation](docs/milestones/m2.md) for enabling the paid text model and testing interruption.
+This executes the LangGraph graph and calculator without any API call and returns 244. See [worker delegation](docs/worker.md) for enabling the paid text model and testing interruption.
 
 ## Verification
 

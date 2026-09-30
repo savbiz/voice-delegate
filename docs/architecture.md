@@ -39,7 +39,7 @@ sequenceDiagram
     end
 ```
 
-The session manager dispatches delegation to a LangGraph worker in the background. Bounded transcripts provide goal/context. Results return through commentary; interruptions invalidate the active generation before cancellation. See [worker execution](milestones/m2.md) and [ADR 005](decisions/005-bounded-delegation.md).
+The session manager dispatches delegation to a LangGraph worker in the background. Bounded transcripts provide goal/context. Results return through commentary; interruptions invalidate the active generation before cancellation. See [worker execution](worker.md) and [ADR 005](decisions/005-bounded-delegation.md).
 
 ```mermaid
 sequenceDiagram
@@ -69,6 +69,8 @@ sequenceDiagram
 ```
 
 ## Lifecycle
+
+When the primary control stream fails, the browser can request one fallback connection with bounded text history:
 
 ```mermaid
 sequenceDiagram
@@ -184,18 +186,6 @@ supplies Azure resource authentication and deployment configuration. Each provid
 own default session configuration and declares capabilities, including transcript timing.
 The manager uses the provider protocol and normalized events; it does not select Azure models.
 
-## Sources
-
-Reviewed public documentation on 2026-09-20:
-
-- [GPT-Live WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live)
-- [GPT-Live sideband](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live)
-- [Session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations)
-- [Delegation](https://developers.openai.com/api/docs/guides/live-delegation)
-- [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
-
-Application limits and ownership rules are first-principles design choices, not upstream service guarantees.
-
 ## Speech interruption authority
 
 Provider-side speech detection is authoritative for interruption. The browser's local
@@ -251,3 +241,15 @@ keep delegated results compact enough for narration.
 The offline planner is deterministic, not a free language model. It exercises the real
 LangGraph graph and read-only tools with English commands, without provider calls.
 Natural-language planning requires the separately configured paid text model.
+
+## Sources
+
+Reviewed public documentation on 2026-09-20:
+
+- [GPT-Live WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live)
+- [GPT-Live sideband](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live)
+- [Session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations)
+- [Delegation](https://developers.openai.com/api/docs/guides/live-delegation)
+- [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
+
+Application limits and ownership rules are first-principles design choices, not upstream service guarantees.

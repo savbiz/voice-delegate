@@ -6,4 +6,4 @@ Audio flows directly between the browser and GPT-Live. FastAPI exchanges SDP and
 
 `RTCPeerConnection` and the microphone need a secure context: localhost during development, HTTPS when deployed. The free demo is a deterministic browser recording, not a fake WebRTC connection or model-quality evaluation.
 
-M2 adds `frontend/src/realtime/vad.ts`: a lightweight microphone-energy onset detector that calls the owned `/interrupt` route. It is heuristic, with timestamped transcript cancellation as a second signal. It cancels delegated work; GPT-Live remains responsible for full-duplex speech behavior. An explicit Cancel task button is also available.
+`frontend/src/realtime/vad.ts` supplies a lightweight microphone-energy onset detector that calls the owned `/interrupt` route only while delegated work is running. It suppresses local onset during measurable remote playback to reduce echo-induced cancellation. The Realtime provider's `input_audio_buffer.speech_started` signal is the interruption authority; untimed transcripts do not cancel work. An explicit Cancel task button is also available.

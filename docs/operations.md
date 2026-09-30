@@ -8,7 +8,7 @@ Set `VOICE_DEMO_ENABLED=false` on the backend and restart/redeploy every API ins
 
 ## Rotate or revoke an invitation
 
-Edit `VOICE_INVITE_TOKENS`, a JSON map of stable pseudonymous names to unique random tokens of at least 32 characters. Generate a replacement locally with `python3 -c 'import secrets; print(secrets.token_urlsafe(32))'`. Keep the name unchanged when rotating so its hashed quota identity and reservations remain associated. Remove the name to revoke it. Apply the same mapping to all API instances and restart them. Distribute tokens privately. Never put tokens in URLs, screenshots, issue reports or frontend environment variables. `VOICE_ACCESS_TOKEN` is only for private testing, not the public-demo profile.
+Edit `VOICE_INVITE_TOKENS`, a JSON map of stable pseudonymous names to unique random tokens of at least 32 characters. Generate a replacement locally with `uv run python -c 'import secrets; print(secrets.token_urlsafe(32))'`. Keep the name unchanged when rotating so its hashed quota identity and reservations remain associated. Remove the name to revoke it. Apply the same mapping to all API instances and restart them. Distribute tokens privately. Never put tokens in URLs, screenshots, issue reports or frontend environment variables. `VOICE_ACCESS_TOKEN` is only for private testing, not the public-demo profile.
 
 ## Quotas and cost controls
 
