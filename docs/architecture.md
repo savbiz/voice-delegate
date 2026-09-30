@@ -35,7 +35,7 @@ sequenceDiagram
         S-->>B: Finalization status
         B->>B: Release microphone and peer
     else Control channel fails
-        S->>S: Bounded cleanup; mark unconfirmed if needed
+        S->>S: Bounded cleanup, mark unconfirmed if needed
     end
 ```
 
@@ -64,10 +64,9 @@ sequenceDiagram
     R--xW: task.cancel()
     Note over S: voice_interruptions_total += 1
     W-->>R: late result tagged generation n
-    R->>R: n != n+1, discard; no commentary sent
+    R->>R: n != n+1, discard and send no commentary
     V-->>B: conversation continues without stale narration
 ```
-
 
 ## Lifecycle
 
@@ -79,15 +78,15 @@ sequenceDiagram
     participant P as Primary (GPT-Live)
     participant F as Fallback (Azure Realtime)
     P--xS: sideband stream fails
-    S->>S: state = reconnecting; close failed connection; cancel worker
+    S->>S: Cancel worker, set reconnecting, close failed connection
     B->>A: POST /sessions/{id}/heartbeat
     A-->>B: state=reconnecting, generation=g, fallback_available=true
     B->>B: close old RTCPeerConnection, create new one
     B->>A: POST /sessions/{id}/reconnect {sdp, generation=g}
     A->>S: reconnect under session lock
     alt attempt available and generation matches
-        S->>S: fallback_used = true; generation += 1
-        S->>S: seal in-flight utterance; clamp history to 12 segments, 2048 tokens; text only
+        S->>S: Set fallback_used, increment generation
+        S->>S: Seal in-flight utterance, clamp text history to 12 segments and 2048 tokens
         S->>F: create call with SDP + history as conversation items
         F-->>S: SDP answer
         S->>S: state = connected
@@ -104,24 +103,26 @@ sequenceDiagram
 stateDiagram-v2
     [*] --> created: POST /sessions (admission, lease, key)
     created --> connecting: POST /offer
+    created --> closing: Close, expiry or shutdown before offer
     connecting --> connected: SDP answer and sideband attached
     connecting --> closed: connect timeout 504 or provider error
-    connected --> reconnecting: sideband failure, fallback configured
-    connected --> closing: POST /close, absolute TTL, heartbeat expiry, shutdown
+    connected --> reconnecting: Sideband failure with unused fallback
+    connected --> closing: Close, expiry, shutdown or failure without fallback
     reconnecting --> connected: POST /reconnect accepted (single attempt)
-    reconnecting --> closing: reconnect timeout, failure or expiry
+    reconnecting --> closing: Close, expiry or shutdown
+    reconnecting --> closed: Reconnect timeout or provider failure
     closing --> closed: session.closed received (finalized) or grace elapsed (unconfirmed)
-    closed --> [*]: removed; later requests 404
+    closed --> [*]: Removed, later requests return 404
     note right of connected
         delegation generation increments on interruption
-        and new delegation; transport generation on reconnect;
+        and new delegation. Transport generation on reconnect.
         duplicate /offer returns 409
     end note
 ```
 
 Diagram HTTP paths are relative to `/api`. The interruption counter is incremented by `SessionManager.interrupt` only while delegation is running. Transcript-based interruption additionally requires real provider timing; Realtime uses `SpeechStarted` as its authoritative onset event.
 
-The normal transport lifecycle is `created → connecting → connected → closing → closed`. A single fallback attempt adds `connected → reconnecting → connected`; a failed attempt proceeds to closing. `connected` means SDP and sideband setup completed; the browser separately waits for `session.started` before displaying voice readiness. A session lock serializes offer, reconnect and close operations. A duplicate offer returns 409. Closed sessions are removed rather than retained indefinitely. Repeating the internal close is safe; a later HTTP request for an already-removed session returns 404.
+The normal transport lifecycle is `created → connecting → connected → closing → closed`. A single fallback attempt adds `connected → reconnecting → connected`; a failed attempt marks the session closed and releases its admission lease. `connected` means SDP and sideband setup completed; the browser separately handles `session.started` (Live) or `session.created` (Realtime) to display voice readiness. A session lock serializes offer, reconnect and close operations. A duplicate offer returns 409. Closed sessions are removed rather than retained indefinitely. Repeating the internal close is safe; a later HTTP request for an already-removed session returns 404.
 
 A single WebSocket reader receives lifecycle events even while close is waiting. Queue exhaustion ends event consumption with an error rather than dropping delegation or termination messages silently. Graceful finalization may be unconfirmed after overflow or a transport failure. The browser heartbeat maintains liveness; it never resets the absolute session deadline.
 
@@ -194,7 +195,6 @@ Reviewed public documentation on 2026-09-20:
 - [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
 
 Application limits and ownership rules are first-principles design choices, not upstream service guarantees.
-
 
 ## Speech interruption authority
 
