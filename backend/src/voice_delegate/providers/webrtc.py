@@ -12,6 +12,8 @@ from pydantic import BaseModel, Field, ValidationError
 from websockets.asyncio.client import connect
 from websockets.exceptions import WebSocketException
 
+from voice_delegate.delegation.contracts import DELEGATE_TOOL
+
 from .base import SidebandSocket
 from .models import (
     COMMENTARY_MAX_BYTES,
@@ -33,6 +35,8 @@ from .models import (
 )
 from .openai import OpenAILiveConnection, WireError
 
+DELEGATE_TASK_TOOL = DELEGATE_TOOL
+
 CALL_ID = re.compile(r"[A-Za-z0-9_-]{1,256}")
 
 
@@ -48,19 +52,6 @@ def validate_answer(response: httpx.Response, provider: str) -> None:
     if not response.text.startswith("v=0") or len(response.content) > 65536:
         message = f"{provider} returned an invalid SDP answer"
         raise ProviderError(message)
-
-
-DELEGATE_TASK_TOOL = {
-    "type": "function",
-    "name": "delegate_task",
-    "description": "Delegate arithmetic and project questions to the worker.",
-    "parameters": {
-        "type": "object",
-        "properties": {"goal": {"type": "string"}},
-        "required": ["goal"],
-        "additionalProperties": False,
-    },
-}
 
 
 class WireEvent(BaseModel):
