@@ -1,5 +1,6 @@
 /** Exercise free playback, cancellation, and the live-mode boundary without a key. */
 import { expect, test } from '@playwright/test';
+import vercel from '../vercel.json' with { type: 'json' };
 test('demo completes without backend requests', async ({ page }) => {
   const api: string[] = [];
   page.on('request', (request) => {
@@ -66,4 +67,37 @@ test('mode tabs support keyboard selection and expose their panel', async ({ pag
   );
   await expect(page.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'tab-live');
   await expect(page.locator('#recap')).toHaveAttribute('aria-live', 'off');
+});
+
+test('demo head and favicon load without console errors under production CSP', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  page.on('pageerror', (error) => errors.push(error.message));
+  const headers = Object.fromEntries(
+    vercel.headers.flatMap((route) => route.headers.map(({ key, value }) => [key, value])),
+  );
+  await page.route('**/', async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, headers: { ...response.headers(), ...headers } });
+  });
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Start demo', exact: true })).toBeVisible();
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    'content',
+    'A reference architecture for real-time voice agents that stay responsive while doing real work.',
+  );
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#0b1120');
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
+  const faviconLoaded = await page.evaluate(async () => {
+    const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!icon) return false;
+    const image = new Image();
+    image.src = icon.href;
+    await image.decode();
+    return image.naturalWidth > 0;
+  });
+  expect(faviconLoaded).toBe(true);
+  expect(errors).toEqual([]);
 });
