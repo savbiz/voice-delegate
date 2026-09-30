@@ -41,10 +41,12 @@ def create_app(
             azure = AzureRealtimeProvider(
                 settings.azure_endpoint, settings.azure_api_key.get_secret_value()
             )
+            azure.close_timeout = settings.close_timeout_seconds
             azure.model, azure.voice = settings.azure_deployment, settings.azure_voice
             provider = azure
         elif settings.voice_provider == "realtime":
             realtime = OpenAIRealtimeProvider(settings.openai_api_key.get_secret_value())
+            realtime.close_timeout = settings.close_timeout_seconds
             realtime.model, realtime.voice = settings.realtime_model, settings.voice
             provider = realtime
         else:
@@ -58,6 +60,7 @@ def create_app(
         fallback = AzureRealtimeProvider(
             settings.azure_endpoint, settings.azure_api_key.get_secret_value()
         )
+        fallback.close_timeout = settings.close_timeout_seconds
         fallback.model, fallback.voice = settings.azure_deployment, settings.azure_voice
     telemetry = configure_tracing(settings)
     meter_provider = configure_metrics(settings)

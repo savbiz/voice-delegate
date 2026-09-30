@@ -122,7 +122,7 @@ class RealtimeWebRTCConnection(OpenAILiveConnection):
         self, answer: WebRTCAnswer, socket: SidebandSocket, provider: "RealtimeWebRTCProvider"
     ) -> None:
         self._provider = provider
-        super().__init__(answer, socket, 5)
+        super().__init__(answer, socket, provider.close_timeout)
 
     async def events(self) -> AsyncGenerator[ProviderEvent]:
         async for event in super().events():
@@ -183,6 +183,7 @@ class RealtimeWebRTCProvider:
         client_delegation=False, text_replay=True, transcript_timing=False
     )
     name = "Realtime"
+    close_timeout: float = 5
 
     def __init__(
         self, endpoint: str, headers: dict[str, str], http: httpx.AsyncClient | None = None
@@ -214,7 +215,7 @@ class RealtimeWebRTCProvider:
 
     async def hangup(self, call_id: str) -> bool:
         try:
-            async with asyncio.timeout(5):
+            async with asyncio.timeout(self.close_timeout):
                 response = await self._http.post(
                     f"{self._endpoint}/calls/{quote(call_id, safe='')}/hangup",
                     headers=self._headers,
@@ -250,7 +251,7 @@ class RealtimeWebRTCProvider:
             call_id = call_identity(response, self.name)
             validate_answer(response, self.name)
             socket = await self._attach(call_id)
-            async with asyncio.timeout(5):
+            async with asyncio.timeout(self.close_timeout):
                 for role, content in config.history:
                     await socket.send(
                         json.dumps(

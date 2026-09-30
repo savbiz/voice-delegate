@@ -180,3 +180,27 @@ async def test_unknown_tool_response_during_teardown_does_not_fail_stream() -> N
     assert not socket.sent
     await events.aclose()
     await provider.aclose()
+
+
+async def test_realtime_hangup_respects_configured_close_timeout() -> None:
+    import asyncio
+
+    import httpx
+    from voice_delegate.providers.realtime import OpenAIRealtimeProvider
+
+    cancelled = asyncio.Event()
+
+    async def blocked(request: httpx.Request) -> httpx.Response:
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.set()
+        return httpx.Response(200)
+
+    provider = OpenAIRealtimeProvider(
+        "fixture", httpx.AsyncClient(transport=httpx.MockTransport(blocked))
+    )
+    provider.close_timeout = 0.01
+    assert not await provider.hangup("call")
+    assert cancelled.is_set()
+    await provider.aclose()
