@@ -6,10 +6,12 @@ import os
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from voice_delegate.limits.defaults import WORKER_PORT
+
 
 def main(worker: bool = False) -> int:
     try:
-        port = 8001 if worker else int(os.environ.get("PORT", "8000"))
+        port = WORKER_PORT if worker else int(os.environ.get("PORT", "8000"))
         hosts = json.loads(os.environ.get("VOICE_ALLOWED_HOSTS", '["localhost"]'))
         host = hosts[0].replace("*", "healthcheck")
         path = "/jobs" if worker else "/healthz"

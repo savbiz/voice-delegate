@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from voice_delegate.limits.defaults import WORKER_PORT
+
 
 class Settings(BaseSettings):
     """Resource budgets and server-owned provider configuration."""
@@ -46,7 +48,7 @@ class Settings(BaseSettings):
     instance_id: str = Field(default="", pattern=r"^[a-z0-9]{0,16}$")
     worker_execution: Literal["local", "remote"] = "local"
     # http:// worker URLs are only acceptable on the same host or a private network.
-    worker_service_url: str = "http://worker:8001"
+    worker_service_url: str = f"http://worker:{WORKER_PORT}"
     worker_service_token: SecretStr = SecretStr("")
     worker_service_capacity: int = Field(default=4, ge=1, le=32)
     worker_max_records: int = Field(default=128, ge=32, le=1024)

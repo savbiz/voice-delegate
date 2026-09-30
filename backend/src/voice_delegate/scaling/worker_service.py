@@ -18,6 +18,7 @@ from voice_delegate.config import Settings, load_settings
 from voice_delegate.delegation.contracts import Worker
 from voice_delegate.limits.http import BodyLimitMiddleware
 from voice_delegate.limits.tokens import truncate
+from voice_delegate.providers.models import COMMENTARY_MAX_BYTES
 
 
 class JobInput(BaseModel):
@@ -104,7 +105,9 @@ class Jobs:
                 result = await self.worker.delegate_task(body.goal, body.context)
             if job.status != "cancelled":
                 job.text = truncate(
-                    result.text, self.settings.delegation_result_tokens, max_bytes=500
+                    result.text,
+                    self.settings.delegation_result_tokens,
+                    max_bytes=COMMENTARY_MAX_BYTES,
                 )
                 job.source_ids = tuple(s.id for s in result.sources)
                 job.status = "completed"

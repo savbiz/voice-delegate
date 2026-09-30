@@ -4,6 +4,7 @@ from dataclasses import replace
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from voice_delegate_agent.limits import SOURCE_PREVIEW_CHARS
 from voice_delegate_agent.reference import Source
 
 from voice_delegate.session.summary import Recap
@@ -58,7 +59,7 @@ class Status(BaseModel):
     @field_validator("sources")
     @classmethod
     def bound_source_text(cls, sources: tuple[Source, ...]) -> tuple[Source, ...]:
-        return tuple(replace(source, text=source.text[:400]) for source in sources)
+        return tuple(replace(source, text=source.text[:SOURCE_PREVIEW_CHARS]) for source in sources)
 
 
 class Closed(BaseModel):

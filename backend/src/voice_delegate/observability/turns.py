@@ -6,6 +6,7 @@ from time import monotonic
 from opentelemetry import trace
 from opentelemetry.context import Context
 
+from voice_delegate.limits.defaults import TRANSCRIPT_GAP_MS
 from voice_delegate.providers.models import Transcript
 
 from .metrics import Metrics
@@ -28,7 +29,7 @@ def observe(
 ) -> Turn | None:
     now = monotonic()
     if event.speaker == "user":
-        if turn is None or turn.replied or event.start_ms - turn.user_end > 800:
+        if turn is None or turn.replied or event.start_ms - turn.user_end > TRANSCRIPT_GAP_MS:
             if turn is not None:
                 turn.span.end()
             turn = Turn(

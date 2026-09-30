@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 
+from voice_delegate.limits.defaults import TRANSCRIPT_GAP_MS
 from voice_delegate.limits.tokens import count_tokens, truncate
 from voice_delegate.providers.models import Transcript
 
@@ -23,7 +24,7 @@ class History:
             self.entries
             and not event.committed
             and self.entries[-1].speaker == event.speaker
-            and (event.start_ms - self.entries[-1].end_ms <= 800)
+            and (event.start_ms - self.entries[-1].end_ms <= TRANSCRIPT_GAP_MS)
         ):
             previous = self.entries.pop()
             event = Transcript(

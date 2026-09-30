@@ -8,6 +8,8 @@ from importlib.resources import files
 
 from langchain_core.tools import tool
 
+from .limits import QUERY_MAX_CHARS, SOURCE_PREVIEW_CHARS
+
 
 @dataclass(frozen=True)
 class Source:
@@ -54,7 +56,7 @@ def terms(text: str) -> set[str]:
 
 
 def search(query: str) -> tuple[Source, ...]:
-    if not query.strip() or len(query) > 500:
+    if not query.strip() or len(query) > QUERY_MAX_CHARS:
         return ()
     words = terms(query)
     ranked = []
@@ -78,7 +80,7 @@ def search_documentation(query: str) -> str:
     matches = search(query)
     return json.dumps(
         {
-            "sources": [{"id": s.id, "text": s.text[:400]} for s in matches],
+            "sources": [{"id": s.id, "text": s.text[:SOURCE_PREVIEW_CHARS]} for s in matches],
             "status": "found" if matches else "No supporting documentation found.",
         }
     )

@@ -1,6 +1,8 @@
 /** Immutable display state and pure provider-event transitions. */
 import type { Source } from '../reference';
 
+const TRANSCRIPT_GAP_MS = 800;
+
 export type Phase =
   'ready' | 'connecting' | 'connected' | 'working' | 'busy' | 'recovering' | 'ended';
 export type TranscriptDelta = {
@@ -108,7 +110,7 @@ export function updateTurnTiming(
       timed && latest && !latest.estimated
         ? start - latest.end
         : receivedAt - (latest?.receivedEnd ?? 0);
-    if (!latest || latest.reply !== undefined || latest.transportId !== transportId || gap > 800) {
+    if (!latest || latest.reply !== undefined || latest.transportId !== transportId || gap > TRANSCRIPT_GAP_MS) {
       return [
         {
           id: (latest?.id ?? 0) + 1,
