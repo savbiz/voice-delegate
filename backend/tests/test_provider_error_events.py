@@ -150,3 +150,33 @@ def test_documented_tool_schema_matches_realtime_registration() -> None:
 
     schema = Path(__file__).resolve().parents[2] / "docs/delegate_task.schema.json"
     assert json.loads(schema.read_text()) == DELEGATE_TASK_TOOL
+
+
+async def test_unknown_tool_response_during_teardown_does_not_fail_stream() -> None:
+    import httpx
+    from test_provider import MemorySocket
+    from voice_delegate.providers.models import WebRTCAnswer
+    from voice_delegate.providers.realtime import OpenAIRealtimeProvider
+    from voice_delegate.providers.webrtc import RealtimeWebRTCConnection
+
+    socket = MemorySocket()
+    provider = OpenAIRealtimeProvider(
+        "fixture", httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200)))
+    )
+    connection = RealtimeWebRTCConnection(WebRTCAnswer("call", "sdp"), socket, provider)
+    socket.incoming.put_nowait(
+        '{"type":"response.function_call_arguments.done","name":"unknown",'
+        '"call_id":"closing-task","arguments":"{}"}'
+    )
+    await eventually(lambda: not connection._queue.empty())
+    await connection.aclose()
+    events = connection.events()
+    event = await anext(events)
+    assert isinstance(event, ProviderCommandError)
+    assert event.call_id == "closing-task"
+    with pytest.raises(StopAsyncIteration):
+        await anext(events)
+    assert not connection._failed
+    assert not socket.sent
+    await events.aclose()
+    await provider.aclose()

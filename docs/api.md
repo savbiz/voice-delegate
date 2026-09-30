@@ -19,7 +19,7 @@ The backend serves JSON over HTTPS in hosted deployments. All `/api` routes requ
 | POST | `/api/reference/{id}` | No body → source by corpus ID | 200 | 404 unknown source |
 | POST | `/api/feedback` | `diagnostic_id` UUID, `category`, `state` → same diagnostic ID | 201 | 404 another principal's ID; 409 changed duplicate; 429 report quota; 503 disabled/full/unavailable store |
 
-Common errors: 400 invalid Host; 401 authentication; 403 Origin; 404 missing session/ownership; 413 oversized request; 422 schema validation; 429 IP rate limit. Rate-limited responses carry `Cache-Control: no-store`. CORS preflight uses OPTIONS and checks the configured origin. Framework documentation routes (`/docs`, `/redoc`, `/openapi.json`, `/docs/oauth2-redirect`) are also enabled and subject to host/body/rate middleware.
+Common errors: 400 invalid Host; 401 authentication; 403 Origin; 404 missing session/ownership; 413 oversized request; 422 schema validation; 429 IP rate limit. Rate-limited responses carry `Cache-Control: no-store`. CORS preflight uses OPTIONS and checks the configured origin. Framework documentation routes (`/docs`, `/redoc`, `/openapi.json`, `/docs/oauth2-redirect`) are enabled outside production. In production, set `VOICE_API_DOCS=true` temporarily to expose Swagger; default off in production. ReDoc and the OpenAPI schema follow the same switch. Enabled documentation routes remain subject to host/body/rate middleware.
 
 Preferences accept `language` = `auto`, `it`, `en`, `es`, `fr`, `de`; `mode` = `conversation` or `translate`. They are immutable during a session. SDP must start with `v=0`, contain a newline and be at most 64,000 characters. Reconnect generation must be nonnegative. Additional SDP/preference fields are rejected.
 

@@ -127,7 +127,8 @@ class RealtimeWebRTCConnection(OpenAILiveConnection):
     async def events(self) -> AsyncGenerator[ProviderEvent]:
         async for event in super().events():
             if isinstance(event, ProviderCommandError) and event.call_id:
-                await self.send(Commentary(event.call_id, "Unknown tool; no action taken."))
+                with suppress(ProviderError):
+                    await self.send(Commentary(event.call_id, "Unknown tool; no action taken."))
             yield event
 
     async def send(self, command: ProviderCommand) -> None:

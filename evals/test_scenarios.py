@@ -26,7 +26,9 @@ async def test_scripted_control(scenario: dict[str, Any]) -> None:
     connection.queue.put_nowait(Transcript("user", scenario["text"], 0, 10))
     for request in scenario["requests"]:
         connection.queue.put_nowait(DelegationRequested(request, 20))
-    await eventually(connection.queue.empty)
+    trailing = Transcript("assistant", "Control events processed", 0, 0)
+    connection.queue.put_nowait(trailing)
+    await eventually(lambda: trailing in session.history.entries)
     if scenario["requests"]:
         await eventually(lambda: session.delegation.task is not None)
         assert session.delegation.task is not None

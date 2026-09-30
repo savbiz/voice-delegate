@@ -47,3 +47,7 @@ Record the deployed commit/image and settings before rollout. Disable new sessio
 ## Monitor and escalate
 
 Check backend health, worker busy/timeouts, provider error/cancelled outcomes, lease counts and provider billed usage. Use [observability](../observability/README.md) for optional local dashboards; hosted alerting and trace retention are operator responsibilities. For a security issue use the [private reporting channel](../SECURITY.md), not a public transcript or log dump.
+
+## Temporary API documentation
+
+Set `VOICE_API_DOCS=true` temporarily to expose Swagger; default off in production. Restart the backend to apply it. This also exposes ReDoc and the OpenAPI schema without invitation authentication, subject to host and rate middleware. Restore `false` and restart after inspection. Development exposes these routes by default.

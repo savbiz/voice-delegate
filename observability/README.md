@@ -22,7 +22,7 @@ failover spans share that parent. Turns end at the next turn, close or failed fa
 An idle turn can remain open until session expiry. No transcript, session IDs, SDP,
 credentials, provider request bodies or tool results are exported.
 
-Metrics use finite operation/outcome labels:
+Metrics use finite operation/outcome labels. `delegate_task` duration samples also carry a finite `status` label to distinguish worker outcomes. `provider.failover` duration includes cleanup of the failed connection performed by reconnect; cleanup already completed by the failed-stream watcher precedes that span and is not counted again:
 
 Operation outcomes are `success`, `error`, and `cancelled`, including delegated work.
 Worker samples also carry a finite `status` label such as `completed`, `timeout`,
@@ -34,7 +34,7 @@ Both duration histograms use explicit second boundaries:
 - `voice_operation_duration_seconds`: provider setup, fallback and worker duration.
 - `voice_turn_transcript_wait_seconds`: first assistant transcript arrival minus first
   user transcript arrival. This includes speech and transcription time; it is not audio TTFB.
-- `voice_interruptions_total`: worker tasks canceled while pending, including close/fallback.
+- `voice_interruptions_total`: interruptions registered by the session manager while a delegation is running; close/fallback cancellation does not increment it.
 
 The browser's transcript gap remains a separate estimate based on provider timestamps,
 or a labelled client-side estimate when those timestamps are absent.

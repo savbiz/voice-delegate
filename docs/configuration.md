@@ -24,6 +24,7 @@ Declared defaults below never read your environment or reveal configured secrets
 | `trust_proxy` | `VOICE_TRUST_PROXY` | `false` | `{"type": "boolean"}` |
 | `trusted_proxy_hops` | `VOICE_TRUSTED_PROXY_HOPS` | `1` | `{"type": "integer", "minimum": 1, "maximum": 32}` |
 | `environment` | `VOICE_ENVIRONMENT` | `"development"` | `{"type": "string"}` |
+| `api_docs` | `VOICE_API_DOCS` | `false` | `{"type": "boolean"}` |
 | `access_token` | `VOICE_ACCESS_TOKEN` | `""` | `{"type": "string"}` |
 | `invite_tokens` | `VOICE_INVITE_TOKENS` | `{}` | `{"type": "object"}` |
 | `public_demo` | `VOICE_PUBLIC_DEMO` | `false` | `{"type": "boolean"}` |

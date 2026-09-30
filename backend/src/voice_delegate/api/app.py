@@ -121,7 +121,15 @@ def create_app(
             if telemetry is not None:
                 await asyncio.to_thread(telemetry.shutdown)
 
-    app = FastAPI(title="voice-delegate", version=version("voice-delegate"), lifespan=lifespan)
+    expose_docs = settings.environment != "production" or settings.api_docs
+    app = FastAPI(
+        title="voice-delegate",
+        version=version("voice-delegate"),
+        lifespan=lifespan,
+        docs_url="/docs" if expose_docs else None,
+        redoc_url="/redoc" if expose_docs else None,
+        openapi_url="/openapi.json" if expose_docs else None,
+    )
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
     app.add_middleware(
         CORSMiddleware,
