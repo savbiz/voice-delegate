@@ -49,7 +49,7 @@ class _Created(BaseModel):
 
 
 class _Delegation(BaseModel):
-    id: str = Field(max_length=256)
+    id: str = Field(min_length=1, max_length=256)
 
 
 class WireError(BaseModel):

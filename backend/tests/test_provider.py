@@ -227,3 +227,8 @@ async def test_commentary_wire_budget_counts_utf8_bytes(realtime: bool) -> None:
     finally:
         await connection.aclose()
         await provider.aclose()
+
+
+def test_live_delegation_requires_nonempty_identity() -> None:
+    with pytest.raises(ValidationError):
+        normalize_event('{"type":"session.delegation.created","delegation":{"id":""}}')
