@@ -1,6 +1,6 @@
 # Deployment
 
-Deploy the frontend to Vercel and **one** persistent backend process to Railway or Render. WebRTC media connects the browser to the provider; Python keeps the control WebSocket. Vercel serves the static frontend, not the Python session manager. The in-memory registry requires one replica and one Uvicorn worker. Restarting or redeploying interrupts active sessions.
+The frontend is deployed at `https://voice-delegate.vercel.app` and the canonical backend at `https://voice-delegate-api-production.up.railway.app` on Railway. Render is a supported alternative. Keep **one** persistent backend process. WebRTC media connects the browser to the provider; Python keeps the control WebSocket. Vercel serves the static frontend, not the Python session manager. The in-memory registry requires one replica and one Uvicorn worker. Restarting or redeploying interrupts active sessions.
 
 ## Frontend on Vercel
 
@@ -8,29 +8,38 @@ Import the GitHub repository. Set **Root Directory = frontend**, framework Vite,
 
 Set the **public** build variable `VITE_API_BASE_URL=https://voice-delegate-api-production.up.railway.app` (no trailing slash), then deploy through the GitHub integration. Never place OPENAI_API_KEY or VOICE_ACCESS_TOKEN in a VITE variable: Vite embeds them in public JavaScript.
 
-## Backend on Render OR Railway
+## Existing Railway deployment and Render alternative
 
-Both platforms build `deployment/Dockerfile.backend` with the **repository root** as Docker context. `/healthz` is the health endpoint. The container reads PORT and runs as a non-root user.
+Both platforms build `deployment/Dockerfile.backend` with the repository root as Docker context and one replica. The container reads `PORT`. Root `railway.json` records Dockerfile build, `/healthz`, and restart on failure. Keep the existing Railway volume mounted at `/app/.local`; do not create another service or volume.
 
-- **Render:** New Blueprint, connect the GitHub repo, use root `render.yaml`. Choose a service plan and review its cost before deploying. Fill the environment values requested by the blueprint.
-- **Railway:** New Project → deploy from GitHub, select the repo, leave the root directory at the repository root. Set service variable `RAILWAY_DOCKERFILE_PATH=deployment/Dockerfile.backend`, healthcheck path `/healthz` in Settings, and one replica. Generate a public domain. Add the variables below before expecting a healthy production startup.
+Railway's legacy [Config as Code](https://docs.railway.com/config-as-code/reference) supports build/deploy settings, not volume provisioning or environment variables. Those existing dashboard resources are recorded in [railway-requirements.json](railway-requirements.json) and checked against Render by tests. Railway documents a 2026-12-01 cutoff for legacy config files; migration to its current IaC requires a separate reviewed import of the existing service. Do not apply an empty/new project definition. The dashboard Dockerfile variable remains configured on the deployed service.
 
-Use these environment settings in the backend service dashboard:
+Root `render.yaml` describes the supported alternative: one Docker service, protected public-demo mode and a 1 GB disk at `/app/.local`. No Render service is currently configured.
+
+## Variables
+
+Use this shared backend configuration. Secrets stay in platform dashboards; the table does not expose or certify their current values. In particular, replace the Railway API-key placeholder with a real key before live calls. Proxy settings below are the required profile and must be checked against the actual ingress before enabling them.
 
 | Variable | Value |
 |---|---|
+| `OPENAI_API_KEY` | Backend project key, secret; a placeholder cannot authenticate provider calls |
 | `VOICE_ENVIRONMENT` | `production` |
-| `OPENAI_API_KEY` | Your provider project key; secret |
 | `VOICE_PUBLIC_DEMO` | `true` |
 | `VOICE_INVITE_TOKENS` | Secret JSON mapping invitation names to unique random tokens of at least 32 characters |
-| `VOICE_QUOTA_DATABASE` | `/app/.local/quotas.sqlite3` on persistent storage |
-| `VOICE_FEEDBACK_DATABASE` | `/app/.local/feedback.sqlite3` on persistent storage |
-| `VOICE_ALLOWED_ORIGIN` | Exact production frontend URL, e.g. `https://voice-delegate.vercel.app`; no trailing slash |
-| `VOICE_ALLOWED_HOSTS` | JSON array containing the backend public hostname, e.g. `["your-service.onrender.com"]` |
-| `VOICE_MAX_SESSIONS` | `4` initially |
-| `VOICE_SESSION_TTL_SECONDS` | `300` initially |
+| `VOICE_ALLOWED_ORIGIN` | `https://voice-delegate.vercel.app` |
+| `VOICE_ALLOWED_HOSTS` | Railway: `["voice-delegate-api-production.up.railway.app","healthcheck.railway.app","localhost","127.0.0.1"]`; Render: its assigned public hostname plus `localhost` and `127.0.0.1` for container checks |
+| `VOICE_TRUST_PROXY` | `true`, after verifying trusted ingress |
+| `VOICE_TRUSTED_PROXY_HOPS` | `1`, after verifying the chain below |
+| `VOICE_QUOTA_DATABASE` | `/app/.local/quotas.sqlite3` |
+| `VOICE_FEEDBACK_DATABASE` | `/app/.local/feedback.sqlite3` |
 
-For Railway, include its healthcheck hostname too: `VOICE_ALLOWED_HOSTS=["your-service.up.railway.app","healthcheck.railway.app"]`. This is required by [Railway healthchecks](https://docs.railway.com/deployments/healthchecks). The setup uses the documented [Dockerfile service variable](https://docs.railway.com/builds/dockerfiles); legacy railway.toml config is deprecated for new services.
+Railway's healthcheck hostname is required by [Railway healthchecks](https://docs.railway.com/deployments/healthchecks). Railway-specific `RAILWAY_DOCKERFILE_PATH` and `RAILWAY_RUN_UID` are described below; they are not shared application settings.
+
+To verify the hop count, send `/healthz` from a known public IP and correlate its timestamp/request ID with a trusted ingress request log showing the socket peer and raw `X-Forwarded-For`. With one trusted hop, the rightmost entry must be the caller. Repeat with `X-Forwarded-For: 198.51.100.123` supplied by the caller: that prefix must not become the selected client. Count additional trusted proxies from the right. Standard Uvicorn access logs do not contain the raw header; use an ingress log or temporary restricted diagnostic logging of only peer and XFF, never authorization headers, invitations or bodies, and remove that logging afterwards. Do not claim the hop count is verified from a normal access log alone.
+
+## Switching platform
+
+The frontend CSP allows exactly one API host. To switch to Render, update `connect-src` in `frontend/vercel.json`, set the backend `VOICE_ALLOWED_ORIGIN` to the Vercel origin and `VOICE_ALLOWED_HOSTS` to the Render hostname, and change `VITE_API_BASE_URL` in Vercel. Update both deployment and frontend READMEs with that host, then redeploy the frontend. Move persistent quota/feedback data through the backup/restore procedure in [operations](../docs/operations.md); never discard existing daily reservations during a switch. CI checks the CSP host against both READMEs.
 
 Generate each invitation token locally with `uv run python -c 'import secrets; print(secrets.token_urlsafe(32))'`. Assign each token a distinct invitation name and share it only with that user, who enter it in the frontend field. Keep it out of Git and build logs. Check `/healthz`, set Vercel's backend URL, redeploy the frontend, and test using the exact permitted origin. Preview deployment URLs are not automatically allowed.
 

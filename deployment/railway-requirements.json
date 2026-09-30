@@ -1,0 +1,16 @@
+{
+  "description": "Existing dashboard-managed resources; this manifest is checked by tests, not consumed by Railway.",
+  "volumeMountPath": "/app/.local",
+  "requiredVariables": [
+    "OPENAI_API_KEY",
+    "VOICE_ENVIRONMENT",
+    "VOICE_PUBLIC_DEMO",
+    "VOICE_INVITE_TOKENS",
+    "VOICE_ALLOWED_ORIGIN",
+    "VOICE_ALLOWED_HOSTS",
+    "VOICE_TRUST_PROXY",
+    "VOICE_TRUSTED_PROXY_HOPS",
+    "VOICE_QUOTA_DATABASE",
+    "VOICE_FEEDBACK_DATABASE"
+  ]
+}
