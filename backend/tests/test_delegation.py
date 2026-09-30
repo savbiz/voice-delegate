@@ -358,13 +358,13 @@ async def test_over_limit_request_preserves_running_work(blocking_worker: Blocki
     connection = provider.connections[0]
     connection.queue.put_nowait(DelegationRequested("accepted", 100, goal="calculate 1+1"))
     await blocking_worker.started.wait()
-    task, generation = session.delegation.task, session.delegation.generation
+    task, generation = session.delegation.task, session.delegation.work_generation
     connection.queue.put_nowait(DelegationRequested("rejected", 200, goal="calculate 2+2"))
     await eventually(lambda: bool(connection.commands))
     assert connection.commands[0].delegation_id == "rejected"
     assert connection.commands[0].content == "Delegation limit reached"
     assert session.delegation.task is task
-    assert session.delegation.generation == generation
+    assert session.delegation.work_generation == generation
     assert session.delegation.offset_ms == 100
     assert session.delegation.status == "running"
     assert session.delegation.seen == {"accepted"}

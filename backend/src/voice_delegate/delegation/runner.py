@@ -22,9 +22,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DelegationState:
-    """Per-session generation, deduplication and UI status without storing results."""
+    """Per-session work_generation, deduplication and UI status without storing results."""
 
-    generation: int = 0
+    work_generation: int = 0
     task: asyncio.Task[None] | None = None
     seen: set[str] = field(default_factory=set)
     status: str = "idle"
@@ -57,7 +57,7 @@ class DelegationRunner:
 
     def cancel(self, state: DelegationState) -> None:
         """Invalidate before canceling so a late return can never be narrated."""
-        state.generation += 1
+        state.work_generation += 1
         state.sources = ()
         if state.task is not None and not state.task.done():
             state.status = "cancelled"
@@ -82,9 +82,11 @@ class DelegationRunner:
         self.cancel(state)
         state.seen.add(request_id)
         state.status = "running"
-        generation = state.generation
+        work_generation = state.work_generation
         state.task = asyncio.create_task(
-            self._run(state, generation, request_id, request, connection, is_connected, context),
+            self._run(
+                state, work_generation, request_id, request, connection, is_connected, context
+            ),
             name="delegated-task",
         )
         return None
@@ -97,7 +99,7 @@ class DelegationRunner:
     async def _run(
         self,
         state: DelegationState,
-        generation: int,
+        work_generation: int,
         request_id: str,
         request: DelegationInput,
         connection: RealtimeConnection,
@@ -143,7 +145,7 @@ class DelegationRunner:
                                 WorkerResult("Worker failed; task incomplete."),
                                 "failed",
                             )
-                if generation == state.generation and is_connected():
+                if work_generation == state.work_generation and is_connected():
                     # 500 UTF-8 bytes also conservatively bound the provider's 500-token limit.
                     await connection.send(
                         Commentary(
@@ -151,24 +153,24 @@ class DelegationRunner:
                             truncate(result.text, self.budget, max_bytes=COMMENTARY_MAX_BYTES),
                         )
                     )
-                    if generation == state.generation:
+                    if work_generation == state.work_generation:
                         state.status = status
                         state.sources = result.sources
         except asyncio.CancelledError:
-            if generation == state.generation:
+            if work_generation == state.work_generation:
                 state.status = "cancelled"
             if child is not None:
                 child.cancel()
             raise
         except ProviderError:
-            if generation == state.generation:
+            if work_generation == state.work_generation:
                 state.status = "delivery_failed"
         except Exception:
-            if generation == state.generation:
+            if work_generation == state.work_generation:
                 state.status = "failed"
 
         finally:
-            status = state.status if generation == state.generation else "cancelled"
+            status = state.status if work_generation == state.work_generation else "cancelled"
             outcome = (
                 "success"
                 if status == "completed"
