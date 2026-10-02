@@ -3,6 +3,7 @@
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
+from voice_delegate_agent.reference import WorkerResult
 
 
 class DelegationInput(BaseModel):
@@ -16,8 +17,13 @@ class DelegationInput(BaseModel):
 DELEGATE_TOOL = {
     "type": "function",
     "name": "delegate_task",
-    "description": "Delegate arithmetic or a project-reference lookup to the worker.",
-    "parameters": DelegationInput.model_json_schema(),
+    "description": "Delegate arithmetic and project questions to the worker.",
+    "parameters": {
+        "type": "object",
+        "properties": {"goal": {"type": "string"}},
+        "required": ["goal"],
+        "additionalProperties": False,
+    },
 }
 
 
@@ -28,6 +34,6 @@ class WorkerBusy(Exception):
 class Worker(Protocol):
     """Workers must cooperate with asyncio cancellation and avoid blocking I/O."""
 
-    async def delegate_task(self, goal: str, context: str) -> str:
+    async def delegate_task(self, goal: str, context: str) -> WorkerResult:
         """Return compact factual text; never change live session instructions."""
         ...

@@ -1,9 +1,9 @@
 """Exercise real LangGraph tools and cancellation races with all IP sockets disabled."""
 
 import asyncio
-from collections.abc import Callable
 
 import pytest
+from conftest import BlockingWorker
 from langchain_core.messages import AIMessage, AnyMessage
 from voice_delegate.config import Settings
 from voice_delegate.delegation.contracts import DELEGATE_TOOL, DelegationInput
@@ -19,14 +19,10 @@ from voice_delegate.providers.models import (
 )
 from voice_delegate.session.manager import SessionManager
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
+from voice_delegate_agent.reference import WorkerResult
 from voice_delegate_agent.tools import calculate
 
-
-async def eventually(predicate: Callable[[], bool]) -> None:
-    async with asyncio.timeout(2):
-        # Observe side effects in the fake transport, which has no notification primitive.
-        while not predicate():  # noqa: ASYNC110
-            await asyncio.sleep(0)
+from test_support import CountingWorker, eventually
 
 
 @pytest.mark.parametrize("text", ["ciao " * 200, "日本語🙂 " * 200, "<|endoftext|>" * 100])
@@ -53,9 +49,9 @@ async def test_calculator_rejects_code_and_unbounded_operations(expression: str)
 
 async def test_real_graph_uses_local_tool_without_network() -> None:
     worker = LangGraphWorker(OfflinePlanner())
-    assert "244" in await worker.delegate_task("calculate (120 + 80) * 1.22", "")
-    assert "WebRTC" in await worker.delegate_task("architecture", "")
-    assert "No action" in await worker.delegate_task("Book a flight", "")
+    assert "244" in (await worker.delegate_task("calculate (120 + 80) * 1.22", "")).text
+    assert (await worker.delegate_task("docs fallback history", "")).sources
+    assert "No action" in (await worker.delegate_task("Book a flight", "")).text
 
 
 async def test_graph_loop_is_finite() -> None:
@@ -73,7 +69,7 @@ async def test_graph_loop_is_finite() -> None:
             )
 
     worker = LangGraphWorker(LoopPlanner(), max_steps=2)
-    assert "step limit" in await worker.delegate_task("Keep going", "")
+    assert "step limit" in (await worker.delegate_task("Keep going", "")).text
 
 
 def test_history_merges_fragments_and_clamps_memory() -> None:
@@ -91,7 +87,8 @@ def test_history_merges_fragments_and_clamps_memory() -> None:
 
 async def test_delegation_result_and_duplicate_are_delivered_once() -> None:
     provider = FakeProvider()
-    manager = SessionManager(provider, Settings())
+    worker = CountingWorker()
+    manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
     connection = provider.connections[0]
@@ -99,31 +96,19 @@ async def test_delegation_result_and_duplicate_are_delivered_once() -> None:
     connection.queue.put_nowait(DelegationRequested("task", 300))
     connection.queue.put_nowait(DelegationRequested("task", 300))
     await eventually(lambda: bool(connection.commands))
+    assert worker.calls == 1
+    assert session.delegation.seen == {"task"}
     assert len(connection.commands) == 1
     assert "30" in connection.commands[0].content
     assert session.delegation.status == "completed"
     await manager.aclose()
 
 
-class WaitingWorker:
-    def __init__(self) -> None:
-        self.started = asyncio.Event()
-        self.cancelled = asyncio.Event()
-
-    async def delegate_task(self, goal: str, context: str) -> str:
-        self.started.set()
-        try:
-            await asyncio.Event().wait()
-        except asyncio.CancelledError:
-            self.cancelled.set()
-            # Simulate an extension that returns a stale result despite cancellation.
-            return "STALE RESULT"
-        return "unreachable"
-
-
-async def test_timeout_cancels_worker_and_reports_failure() -> None:
+async def test_timeout_cancels_worker_and_reports_failure(
+    blocking_worker: BlockingWorker,
+) -> None:
     provider = FakeProvider()
-    worker = WaitingWorker()
+    worker = blocking_worker
     manager = SessionManager(provider, Settings(delegation_timeout_seconds=0.01), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
@@ -138,8 +123,10 @@ async def test_timeout_cancels_worker_and_reports_failure() -> None:
 
 
 @pytest.mark.parametrize("interrupt", ["transcript", "explicit", "close"])
-async def test_interruption_and_close_never_narrate_late_result(interrupt: str) -> None:
-    provider, worker = FakeProvider(), WaitingWorker()
+async def test_interruption_and_close_never_narrate_late_result(
+    blocking_worker: BlockingWorker, interrupt: str
+) -> None:
+    provider, worker = FakeProvider(), blocking_worker
     manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
@@ -166,10 +153,10 @@ async def test_failure_is_redacted_and_result_is_truncated(
     caplog.set_level("DEBUG", logger="voice_delegate.delegation.runner")
 
     class Worker:
-        async def delegate_task(self, goal: str, context: str) -> str:
+        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
             if goal == "fail":
                 raise RuntimeError("PRIVATE ERROR DETAIL")
-            return "日本語🙂 " * 1000
+            return WorkerResult("日本語🙂 " * 1000)
 
     provider = FakeProvider()
     manager = SessionManager(provider, Settings(), worker=Worker())
@@ -191,8 +178,10 @@ async def test_failure_is_redacted_and_result_is_truncated(
     await manager.aclose()
 
 
-async def test_capacity_and_latest_task_supersedes_old_result() -> None:
-    worker, provider = WaitingWorker(), FakeProvider()
+async def test_capacity_and_latest_task_supersedes_old_result(
+    blocking_worker: BlockingWorker,
+) -> None:
+    worker, provider = blocking_worker, FakeProvider()
     manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
@@ -207,16 +196,35 @@ async def test_capacity_and_latest_task_supersedes_old_result() -> None:
     await second.task
     assert second.status == "busy"
     assert "not started" in connection.commands[0].content
+    runner.cancel(first)
+    assert first.task is not None
+    await asyncio.gather(first.task, return_exceptions=True)
+    await runner.aclose()
+    # A separate two-slot runner lets replacement execute during old-task cancellation.
+    worker = BlockingWorker()
+    runner = DelegationRunner(worker, capacity=2)
+    first = DelegationState()
+    runner.start(first, "old", request, connection, lambda: True)
+    await worker.started.wait()
+    worker.started.clear()
     runner.start(first, "replacement", request, connection, lambda: True)
+    await worker.started.wait()
+    worker.gate.set()
     assert first.task is not None
     await first.task
+    assert first.status == "completed"
+    assert connection.commands[-1].delegation_id == "replacement"
+    assert connection.commands[-1].content == "done"
+    assert worker.calls == 2
     assert all(command.delegation_id != "old" for command in connection.commands)
     await runner.aclose()
     await manager.aclose()
 
 
-async def test_old_transcript_fragment_does_not_cancel_current_delegation() -> None:
-    worker, provider = WaitingWorker(), FakeProvider()
+async def test_old_transcript_fragment_does_not_cancel_current_delegation(
+    blocking_worker: BlockingWorker,
+) -> None:
+    worker, provider = blocking_worker, FakeProvider()
     manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
@@ -231,8 +239,10 @@ async def test_old_transcript_fragment_does_not_cancel_current_delegation() -> N
 
 
 @pytest.mark.parametrize("fallback", [False, True])
-async def test_realtime_interrupts_on_speech_not_delayed_transcript(fallback: bool) -> None:
-    worker, realtime = WaitingWorker(), FakeProvider()
+async def test_realtime_interrupts_on_speech_not_delayed_transcript(
+    blocking_worker: BlockingWorker, fallback: bool
+) -> None:
+    worker, realtime = blocking_worker, FakeProvider()
     realtime.capabilities = ProviderCapabilities(text_replay=True, transcript_timing=False)
     manager = SessionManager(
         FakeProvider() if fallback else realtime,
@@ -258,9 +268,11 @@ async def test_realtime_interrupts_on_speech_not_delayed_transcript(fallback: bo
     await manager.aclose()
 
 
-@pytest.mark.parametrize("timing,start_ms", [(True, 0), (False, 1)])
-async def test_real_transcript_timing_interrupts(timing: bool, start_ms: int) -> None:
-    worker, provider = WaitingWorker(), FakeProvider()
+@pytest.mark.parametrize(("timing", "start_ms"), [(True, 0), (False, 1)])
+async def test_real_transcript_timing_interrupts(
+    blocking_worker: BlockingWorker, timing: bool, start_ms: int
+) -> None:
+    worker, provider = blocking_worker, FakeProvider()
     provider.capabilities = ProviderCapabilities(transcript_timing=timing)
     manager = SessionManager(provider, Settings(), worker=worker)
     session = manager.create()
@@ -277,13 +289,13 @@ async def test_real_transcript_timing_interrupts(timing: bool, start_ms: int) ->
 @pytest.mark.parametrize("goal", ["calcola 2+2", "documentazione limiti"])
 async def test_offline_planner_rejects_non_english_commands(goal: str) -> None:
     result = await LangGraphWorker(OfflinePlanner()).delegate_task(goal, "")
-    assert "No action was taken" in result
+    assert "No action was taken" in result.text
 
 
 @pytest.mark.parametrize("goal", ["calculate 2+2", "docs limits"])
 async def test_offline_planner_keeps_english_commands(goal: str) -> None:
     result = await LangGraphWorker(OfflinePlanner()).delegate_task(goal, "")
-    assert ("4" if goal.startswith("calculate") else "Documentation excerpt") in result
+    assert ("4" if goal.startswith("calculate") else "Documentation excerpt") in result.text
 
 
 @pytest.mark.parametrize("failure", ["validation", "runtime", "value"])
@@ -319,7 +331,7 @@ async def test_graph_distinguishes_invalid_input_from_tool_failure(
             )
 
     result = await LangGraphWorker(Planner()).delegate_task("test", "")
-    assert result == (
+    assert result.text == (
         "Tool input invalid; no action taken."
         if failure == "validation"
         else "Tool failed; no action taken."
@@ -334,3 +346,48 @@ async def test_graph_rejects_non_ai_message_at_tool_execution() -> None:
         await worker.graph.nodes["tools"].ainvoke(
             {"messages": [HumanMessage(content="invalid")], "steps": 0, "source_ids": []}
         )
+
+
+async def test_over_limit_request_preserves_running_work(blocking_worker: BlockingWorker) -> None:
+    provider = FakeProvider()
+    manager = SessionManager(
+        provider, Settings(max_delegations_per_session=1), worker=blocking_worker
+    )
+    session = manager.create()
+    await manager.connect(session, "sdp")
+    connection = provider.connections[0]
+    connection.queue.put_nowait(DelegationRequested("accepted", 100, goal="calculate 1+1"))
+    await blocking_worker.started.wait()
+    task, generation = session.delegation.task, session.delegation.work_generation
+    connection.queue.put_nowait(DelegationRequested("rejected", 200, goal="calculate 2+2"))
+    await eventually(lambda: bool(connection.commands))
+    assert connection.commands[0].delegation_id == "rejected"
+    assert connection.commands[0].content == "Delegation limit reached"
+    assert session.delegation.task is task
+    assert session.delegation.work_generation == generation
+    assert session.delegation.offset_ms == 100
+    assert session.delegation.status == "running"
+    assert session.delegation.seen == {"accepted"}
+    assert not blocking_worker.cancelled.is_set()
+    blocking_worker.gate.set()
+    await eventually(lambda: session.delegation.status == "completed")
+    assert connection.commands[-1].delegation_id == "accepted"
+    assert connection.commands[-1].content == "done"
+    assert blocking_worker.calls == 1
+    await manager.aclose()
+
+
+async def test_untimed_user_transcript_resumes_interrupted_recap() -> None:
+    provider = FakeProvider()
+    provider.capabilities = ProviderCapabilities(transcript_timing=False)
+    manager = SessionManager(provider, Settings())
+    session = manager.create()
+    await manager.connect(session, "sdp")
+    session.recap.interrupt()
+    session.delegation.offset_ms = 100
+    connection = provider.connections[0]
+    connection.queue.put_nowait(Transcript("user", "new question", 0, 0))
+    connection.queue.put_nowait(Transcript("assistant", "new answer", 0, 0))
+    await eventually(lambda: session.recap.latest_reply == "new answer")
+    assert not session.recap.interrupted
+    await manager.aclose()

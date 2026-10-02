@@ -1,4 +1,4 @@
-/** Verify the offline recording stays bounded and never implies completed actions. */
+/** Verify the visible offline recording stays within its step bounds. */
 import { expect, test } from 'vitest';
 import { visibleScenario } from './demo';
 test('bounds the visible recording', () => {

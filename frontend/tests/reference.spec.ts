@@ -2,26 +2,92 @@ import { expect, test } from '@playwright/test';
 
 test('documentation search shows source evidence without starting voice', async ({ page }) => {
   const requests: string[] = [];
-  await page.route('**/api/**', async route => {
+  const queries: unknown[] = [];
+  await page.route('**/api/**', async (route) => {
     requests.push(new URL(route.request().url()).pathname);
-    expect(route.request().postDataJSON().query).toBe('fallback history');
-    await route.fulfill({ json: { sources: [{ id: 'source-1', title: 'M3', section: 'History', path: 'docs/milestones/m3.md', text: 'Only sealed text segments are replayed.', digest: 'snapshot' }] } });
+    queries.push(route.request().postDataJSON().query);
+    await route.fulfill({
+      json: {
+        sources: [
+          {
+            id: 'source-1',
+            title: 'Architecture',
+            section: 'History',
+            path: 'docs/architecture.md',
+            text: 'Only sealed text segments are replayed.',
+            digest: 'snapshot',
+          },
+        ],
+      },
+    });
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Documentation', exact: true }).click();
+  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
   await page.getByLabel('Project question').fill('fallback history');
   await page.getByRole('button', { name: 'Search documentation' }).click();
   await expect(page.getByRole('status')).toContainText('1 source excerpts found');
-  await page.getByText('[1] M3 — History').click();
+  await page.getByText('[1] Architecture — History').click();
   await expect(page.getByText('Only sealed text segments are replayed.')).toBeVisible();
-  await expect(page.getByText('docs/milestones/m3.md')).toBeVisible();
+  await expect(page.getByText('docs/architecture.md')).toBeVisible();
+  expect(queries).toEqual(['fallback history']);
   expect(requests).toEqual(['/api/reference/search']);
 });
 
 test('missing evidence is explicit', async ({ page }) => {
-  await page.route('**/api/reference/search', route => route.fulfill({ json: { sources: [] } }));
+  await page.route('**/api/reference/search', (route) => route.fulfill({ json: { sources: [] } }));
   await page.goto('/');
-  await page.getByRole('button', { name: 'Documentation', exact: true }).click();
+  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
   await page.getByRole('button', { name: 'Search documentation' }).click();
   await expect(page.getByRole('status')).toContainText('No supporting documentation found');
+});
+
+test('invalid search results produce a friendly error', async ({ page }) => {
+  await page.route('**/api/reference/search', (route) => route.fulfill({ json: { sources: {} } }));
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  await page.getByRole('button', { name: 'Search documentation' }).click();
+  await expect(page.getByRole('status')).toContainText('returned invalid results');
+});
+
+test('timeout is friendly and changing the invitation resets an aborted search', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const originalFetch = window.fetch;
+    let calls = 0;
+    window.fetch = (input, init) => {
+      if (!String(input).endsWith('/api/reference/search')) return originalFetch(input, init);
+      if (++calls === 1) return Promise.reject(new DOMException('Expired', 'TimeoutError'));
+      return new Promise((_, reject) =>
+        init?.signal?.addEventListener('abort', () =>
+          reject(new DOMException('Aborted', 'AbortError')),
+        ),
+      );
+    };
+  });
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  await page.getByRole('button', { name: 'Search documentation' }).click();
+  await expect(page.getByRole('status')).toContainText('took too long. Please try again');
+  await page.getByRole('button', { name: 'Search documentation' }).click();
+  await expect(page.getByRole('status')).toHaveText('Searching…');
+  await page.getByLabel('Personal invitation code').fill('new-code');
+  await expect(page.getByRole('status')).toContainText('Search cancelled');
+  await expect(page.getByRole('button', { name: 'Search documentation' })).toBeEnabled();
+});
+
+test('editing the invitation leaves idle and completed search status unchanged', async ({
+  page,
+}) => {
+  await page.route('**/api/reference/search', (route) => route.fulfill({ json: { sources: [] } }));
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  const status = page.getByRole('status');
+  await expect(status).toHaveText('Search the bundled public project documentation.');
+  await page.getByLabel('Personal invitation code').fill('first-code');
+  await expect(status).toHaveText('Search the bundled public project documentation.');
+  await page.getByRole('button', { name: 'Search documentation' }).click();
+  await expect(status).toContainText('No supporting documentation found');
+  await page.getByLabel('Personal invitation code').fill('second-code');
+  await expect(status).toContainText('No supporting documentation found');
 });

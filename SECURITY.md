@@ -13,5 +13,5 @@ acknowledgement window is not a promise that a fix will be available within 72 h
 
 ## Supported versions
 
-Security fixes target the current `main` branch. Update to the latest reviewed commit;
-older candidate snapshots are not maintained separately.
+Security fixes target the latest tagged release and `main`. Older snapshots are not
+maintained separately. Until the first release is tagged, use the latest reviewed `main` commit.

@@ -2,16 +2,29 @@
 
 import asyncio
 
+import pytest
+from conftest import BlockingProvider, BlockingWorker
 from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics.export import InMemoryMetricReader
+from opentelemetry.sdk.metrics.export import (
+    HistogramDataPoint,
+    InMemoryMetricReader,
+    NumberDataPoint,
+)
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from voice_delegate.config import Settings
 from voice_delegate.observability.metrics import Metrics, configure_metrics
 from voice_delegate.providers.fake import FakeProvider
-from voice_delegate.providers.models import DelegationRequested, Transcript
+from voice_delegate.providers.models import (
+    DelegationRequested,
+    ProviderCapabilities,
+    ProviderFailure,
+    Transcript,
+)
 from voice_delegate.session.manager import SessionManager
+
+from test_support import eventually
 
 
 async def test_turn_parents_delegation_and_exports_no_private_text() -> None:
@@ -29,11 +42,11 @@ async def test_turn_parents_delegation_and_exports_no_private_text() -> None:
     connection = provider.connections[0]
     connection.queue.put_nowait(Transcript("user", "private transcript", 0, 100))
     connection.queue.put_nowait(DelegationRequested("private-call"))
-    await asyncio.sleep(0)
+    await eventually(lambda: session.delegation.task is not None)
     assert session.delegation.task is not None
     await session.delegation.task
     connection.queue.put_nowait(Transcript("assistant", "private answer", 200, 300))
-    await asyncio.sleep(0)
+    await eventually(lambda: session.turn is not None and session.turn.replied)
     await manager.aclose()
     exported = spans.get_finished_spans()
     turn = next(span for span in exported if span.name == "conversation.turn")
@@ -57,9 +70,303 @@ def test_disabled_metrics_never_construct_an_exporter() -> None:
     assert configure_metrics(Settings(otel_enabled=True)) is None
 
 
+def test_histograms_use_seconds_and_distinguish_cancellation() -> None:
+    reader = InMemoryMetricReader()
+    provider = MeterProvider(metric_readers=[reader])
+    metrics = Metrics(provider)
+    try:
+        with pytest.raises(asyncio.CancelledError), metrics.operation("cancel"):
+            raise asyncio.CancelledError
+        with pytest.raises(ValueError), metrics.operation("fail"):
+            raise ValueError("failure")
+        metrics.turn_gap.record(0.2)
+        data = reader.get_metrics_data()
+        assert data is not None
+        histograms = [m for r in data.resource_metrics for s in r.scope_metrics for m in s.metrics]
+        for metric in histograms:
+            for point in metric.data.data_points:
+                assert isinstance(point, HistogramDataPoint)
+                assert point.explicit_bounds == (
+                    0.05,
+                    0.1,
+                    0.25,
+                    0.5,
+                    1,
+                    2,
+                    3,
+                    5,
+                    10,
+                    20,
+                    30,
+                    60,
+                    120,
+                )
+        operations = next(m for m in histograms if m.name == "voice.operation.duration")
+        assert {p.attributes["outcome"] for p in operations.data.data_points if p.attributes} == {
+            "cancelled",
+            "error",
+        }
+    finally:
+        provider.shutdown()
+
+
 def test_enabled_tracing_has_a_batch_that_fits_its_bounded_queue() -> None:
     from voice_delegate.observability.tracing import configure_tracing
 
     provider = configure_tracing(Settings(otel_enabled=True, otel_endpoint=""))
     assert provider is not None
     provider.shutdown()
+
+
+@pytest.mark.parametrize(
+    ("status", "outcome"),
+    [
+        ("completed", "success"),
+        ("failed", "error"),
+        ("timeout", "error"),
+        ("busy", "error"),
+        ("delivery_failed", "error"),
+        ("cancelled", "cancelled"),
+    ],
+)
+async def test_worker_metrics_use_shared_outcomes(status: str, outcome: str) -> None:
+    from voice_delegate.delegation.contracts import DelegationInput
+    from voice_delegate.delegation.runner import DelegationRunner, DelegationState
+    from voice_delegate.providers.fake import FakeConnection
+    from voice_delegate.providers.models import ProviderCommand, ProviderError
+    from voice_delegate_agent.reference import WorkerResult
+
+    started = asyncio.Event()
+
+    class Worker:
+        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
+            started.set()
+            if status in {"cancelled", "timeout"}:
+                await asyncio.Event().wait()
+            if status == "failed":
+                raise ValueError("worker failure")
+            return WorkerResult("4")
+
+    class Connection(FakeConnection):
+        async def send(self, command: ProviderCommand) -> None:
+            if status == "delivery_failed":
+                raise ProviderError("delivery failure")
+            await super().send(command)
+
+    reader = InMemoryMetricReader()
+    meters = MeterProvider(metric_readers=[reader])
+    runner = DelegationRunner(
+        Worker(),
+        metrics=Metrics(meters),
+        capacity=0 if status == "busy" else 1,
+        timeout=0.001 if status == "timeout" else 1,
+    )
+    state = DelegationState()
+    runner.start(
+        state, "request", DelegationInput(goal="calculate 2+2"), Connection(), lambda: True
+    )
+    assert state.task is not None
+    if status == "cancelled":
+        await started.wait()
+        runner.cancel(state)
+    await asyncio.gather(state.task, return_exceptions=True)
+    assert state.status == status
+    data = reader.get_metrics_data()
+    assert data is not None
+    points = [
+        p
+        for r in data.resource_metrics
+        for s in r.scope_metrics
+        for m in s.metrics
+        if m.name == "voice.operation.duration"
+        for p in m.data.data_points
+    ]
+    assert len(points) == 1
+    assert points[0].attributes == {
+        "operation": "delegate_task",
+        "outcome": outcome,
+        "status": status,
+    }
+    await runner.aclose()
+    meters.shutdown()
+
+
+@pytest.mark.parametrize("server_failure", [False, True])
+async def test_reconnect_starts_a_new_turn_without_old_transport_wait(
+    monkeypatch: pytest.MonkeyPatch, server_failure: bool
+) -> None:
+    spans = InMemorySpanExporter()
+    tracing = TracerProvider()
+    tracing.add_span_processor(SimpleSpanProcessor(spans))
+    reader = InMemoryMetricReader()
+    meters = MeterProvider(metric_readers=[reader])
+    primary, fallback = FakeProvider(), FakeProvider()
+    fallback.capabilities = ProviderCapabilities(text_replay=True)
+    now = [10.0]
+    monkeypatch.setattr("voice_delegate.observability.turns.monotonic", lambda: now[0])
+    manager = SessionManager(
+        primary,
+        Settings(),
+        fallback=fallback,
+        tracer=tracing.get_tracer("test"),
+        metrics=Metrics(meters),
+    )
+    try:
+        session = manager.create()
+        await manager.connect(session, "sdp")
+        primary.connections[0].queue.put_nowait(Transcript("user", "first", 10000, 11000))
+        await eventually(lambda: session.turn is not None)
+        previous = session.turn
+        assert previous is not None
+        if server_failure:
+            primary.connections[0].queue.put_nowait(ProviderFailure())
+            await eventually(lambda: session.state == "reconnecting" and session.connection is None)
+        await manager.reconnect(session, "sdp", 0)
+        assert session.turn is None
+        assert not previous.span.is_recording()
+        now[0] = 100
+        connection = fallback.connections[0]
+        # An assistant event before the next user turn cannot complete the abandoned turn.
+        connection.queue.put_nowait(Transcript("assistant", "reconnected", 0, 0))
+        await eventually(connection.queue.empty)
+        assert session.turn is None
+        connection.queue.put_nowait(Transcript("user", "new request", 0, 0))
+        await eventually(lambda: session.turn is not None)
+        assert session.turn is not previous
+        now[0] = 100.25
+        connection.queue.put_nowait(Transcript("assistant", "new answer", 0, 0))
+        await eventually(lambda: session.turn is not None and session.turn.replied)
+        data = reader.get_metrics_data()
+        assert data is not None
+        points = [
+            p
+            for r in data.resource_metrics
+            for s in r.scope_metrics
+            for m in s.metrics
+            if m.name == "voice.turn.transcript_wait"
+            for p in m.data.data_points
+        ]
+        assert len(points) == 1
+        point = points[0]
+        assert isinstance(point, HistogramDataPoint)
+        assert point.count == 1
+        assert point.sum == pytest.approx(0.25)
+    finally:
+        await manager.aclose()
+        tracing.shutdown()
+        meters.shutdown()
+    turns = [span for span in spans.get_finished_spans() if span.name == "conversation.turn"]
+    assert len(turns) == 2
+
+
+@pytest.mark.parametrize("operation", ["connect", "reconnect"])
+async def test_connection_timeouts_record_error(
+    blocking_provider: BlockingProvider, operation: str
+) -> None:
+    from voice_delegate.session.models import SessionError
+
+    blocking_provider.capabilities = ProviderCapabilities(text_replay=True)
+    reader = InMemoryMetricReader()
+    meters = MeterProvider(metric_readers=[reader])
+    manager = SessionManager(
+        blocking_provider if operation == "connect" else FakeProvider(),
+        Settings(connect_timeout_seconds=0.01),
+        fallback=blocking_provider if operation == "reconnect" else None,
+        metrics=Metrics(meters),
+    )
+    try:
+        session = manager.create()
+        if operation == "reconnect":
+            await manager.connect(session, "sdp")
+        pending = (
+            manager.connect(session, "sdp")
+            if operation == "connect"
+            else manager.reconnect(session, "sdp", 0)
+        )
+        with pytest.raises(SessionError, match="Provider connection timed out"):
+            await pending
+        data = reader.get_metrics_data()
+        assert data is not None
+        target = "provider.connect" if operation == "connect" else "provider.failover"
+        points = [
+            p
+            for r in data.resource_metrics
+            for s in r.scope_metrics
+            for m in s.metrics
+            for p in m.data.data_points
+            if p.attributes and p.attributes.get("operation") == target
+        ]
+        assert len(points) == 1
+        assert points[0].attributes is not None
+        assert points[0].attributes["outcome"] == "error"
+    finally:
+        await manager.aclose()
+        meters.shutdown()
+
+
+@pytest.mark.parametrize("rejection", ["unconfigured", "created", "stale", "used"])
+async def test_reconnect_prechecks_do_not_record_provider_operations(rejection: str) -> None:
+    from voice_delegate.session.models import SessionError
+
+    fallback = FakeProvider()
+    fallback.capabilities = ProviderCapabilities(text_replay=True)
+    reader = InMemoryMetricReader()
+    meters = MeterProvider(metric_readers=[reader])
+    manager = SessionManager(
+        FakeProvider(),
+        Settings(),
+        metrics=Metrics(meters),
+        fallback=None if rejection == "unconfigured" else fallback,
+    )
+    try:
+        session = manager.create()
+        session.fallback_used = rejection == "used"
+        with pytest.raises(SessionError) as exc:
+            await manager.reconnect(session, "sdp", 1 if rejection == "stale" else 0)
+        assert exc.value.status == (501 if rejection == "unconfigured" else 409)
+        assert reader.get_metrics_data() is None
+    finally:
+        await manager.aclose()
+        meters.shutdown()
+
+
+@pytest.mark.parametrize("action", ["interrupt", "supersede", "close"])
+async def test_only_explicit_interruption_increments_counter(
+    blocking_worker: BlockingWorker, action: str
+) -> None:
+    reader = InMemoryMetricReader()
+    meters = MeterProvider(metric_readers=[reader])
+    provider = FakeProvider()
+    manager = SessionManager(provider, Settings(), worker=blocking_worker, metrics=Metrics(meters))
+    try:
+        session = manager.create()
+        await manager.connect(session, "sdp")
+        connection = provider.connections[0]
+        connection.queue.put_nowait(DelegationRequested("first", goal="calculate 1+1"))
+        await blocking_worker.started.wait()
+        if action == "interrupt":
+            manager.interrupt(session)
+            manager.interrupt(session)
+        elif action == "supersede":
+            connection.queue.put_nowait(DelegationRequested("second", goal="calculate 2+2"))
+            await eventually(lambda: "second" in session.delegation.seen)
+        else:
+            await manager.close(session)
+        data = reader.get_metrics_data()
+        assert data is not None
+        points = [
+            p
+            for r in data.resource_metrics
+            for s in r.scope_metrics
+            for m in s.metrics
+            if m.name == "voice.interruptions"
+            for p in m.data.data_points
+        ]
+        values = []
+        for point in points:
+            assert isinstance(point, NumberDataPoint)
+            values.append(point.value)
+        assert values == ([1] if action == "interrupt" else [])
+    finally:
+        await manager.aclose()
+        meters.shutdown()

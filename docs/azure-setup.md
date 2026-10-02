@@ -1,6 +1,6 @@
 # Configure Azure fallback
 
-Azure is the second voice provider for M3. It is not needed to use the primary Live
+Azure is the optional fallback provider. It is not needed to use the primary Live
 provider or the free simulated demo. An Azure subscription and usage billing are separate
 from the primary provider account.
 

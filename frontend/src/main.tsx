@@ -1,63 +1,337 @@
 /** React shell separating a free scripted demo from the live WebRTC lifecycle. */
-import { StrictMode, useEffect, useRef, useState } from 'react';
+import { StrictMode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createRoot } from 'react-dom/client';
-import { mountLive } from './realtime/live';
+import { createLiveSession } from './realtime/live';
+import type { LiveController } from './realtime/live';
+import { createLiveStore } from './realtime/store';
 import { scenario, visibleScenario } from './demo';
 import './style.css';
 import { Reference } from './reference';
+import { version } from '../package.json';
 
 function Live({ code }: { code: string }) {
-  const root = useRef<HTMLDivElement>(null);
-  useEffect(() => root.current ? mountLive(root.current, code) : undefined, [code]);
-  return <div ref={root}>
-    <p className="notice">Live voice requires a server API key and incurs provider usage charges. Your microphone is requested only when you start.</p>
-    <fieldset id="voice-preferences"><legend>Voice preferences (before starting)</legend>
-      <label>Response language <select id="language" defaultValue="auto"><option value="auto">Follow the speaker</option><option value="it">Italiano</option><option value="en">English</option><option value="es">Español</option><option value="fr">Français</option><option value="de">Deutsch</option></select></label>
-      <label>Conversation style <select id="voice-mode" defaultValue="conversation"><option value="conversation">Assistant conversation</option><option value="translate">Translation mode</option></select></label>
-    </fieldset>
-    <div className="actions"><button id="mute-audio" aria-pressed="false">Mute assistant</button><button id="large-captions" aria-pressed="false">Large captions</button></div>
-    <div className="actions"><button id="start">Start conversation</button><button id="stop" disabled>Stop</button></div>
-    <p id="status" role="status">Ready to connect</p>
-    <p id="task-status" aria-live="polite">Worker: idle</p>
-    <button id="cancel-task" disabled>Cancel task</button>
-    <p id="recovery-help">Start a conversation when you are ready.</p>
-    <section aria-label="Report a problem"><h2>Report a problem</h2>
-      <p>Send only a category, diagnostic ID, interface state, configured provider and app version. No audio, transcripts or message text. Reports expire after seven days. A pseudonymous identity is used to limit submissions.</p>
-      <label>Problem category <select id="feedback-category"><option value="wrong_answer">Wrong answer</option><option value="source">Unhelpful source</option><option value="audio">Audio problem</option><option value="connection">Connection problem</option><option value="other">Other problem</option></select></label>
-      <button id="send-feedback" disabled>Send report</button><p id="feedback-status" aria-live="polite">An invitation or access code is required to send feedback.</p>
-    </section>
-    <section aria-label="Worker sources"><h2>Documentation sources</h2><div id="sources" /></section>
-    <audio id="audio" controls autoPlay aria-label="Assistant audio" />
-    <div className="grid gap-4 md:grid-cols-2"><section><h2>You</h2><p id="user">—</p></section><section><h2>Assistant</h2><p id="assistant">—</p></section></div>
-    <section><h2>Conversation recap</h2><p className="muted">Extracts from transcripts; interruption does not mean completion.</p><p id="recap" aria-live="polite">No conversation yet.</p></section>
-    <section><h2>Turn timing</h2><p className="muted">Transcript timestamp gap: a proxy, not measured audio latency. May be negative during overlap.</p><ol id="timings" /></section>
-  </div>;
+  const [store] = useState(createLiveStore);
+  const storeRef = useRef(store);
+  const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  const audio = useRef<HTMLAudioElement>(null);
+  const controller = useRef<LiveController | null>(null);
+  const codeRef = useRef(code);
+  codeRef.current = code;
+  const [language, setLanguage] = useState('auto');
+  const [voiceMode, setVoiceMode] = useState('conversation');
+  const preferences = useRef({ language, mode: voiceMode });
+  preferences.current = { language, mode: voiceMode };
+  const [muted, setMuted] = useState(false);
+  const [largeCaptions, setLargeCaptions] = useState(false);
+  const [category, setCategory] = useState('wrong_answer');
+  useEffect(() => {
+    if (!audio.current) return;
+    const session = createLiveSession(
+      storeRef.current,
+      audio.current,
+      () => codeRef.current,
+      () => preferences.current,
+    );
+    controller.current = session;
+    return () => {
+      session.dispose();
+      controller.current = null;
+    };
+  }, []);
+  return (
+    <div className={largeCaptions ? 'large-captions' : undefined}>
+      <p className="notice">
+        Live voice requires a server API key and incurs provider usage charges. Your microphone is
+        requested only when you start.
+      </p>
+      <fieldset id="voice-preferences" disabled={state.active}>
+        <legend>Voice preferences (before starting)</legend>
+        <label>
+          Response language{' '}
+          <select id="language" value={language} onChange={(e) => setLanguage(e.target.value)}>
+            <option value="auto">Follow the speaker</option>
+            <option value="it">Italiano</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+          </select>
+        </label>
+        <label>
+          Conversation style{' '}
+          <select id="voice-mode" value={voiceMode} onChange={(e) => setVoiceMode(e.target.value)}>
+            <option value="conversation">Assistant conversation</option>
+            <option value="translate">Translation mode</option>
+          </select>
+        </label>
+      </fieldset>
+      <div className="actions">
+        <button id="mute-audio" aria-pressed={muted} onClick={() => setMuted((value) => !value)}>
+          {muted ? 'Unmute assistant' : 'Mute assistant'}
+        </button>
+        <button
+          id="large-captions"
+          aria-pressed={largeCaptions}
+          onClick={() => setLargeCaptions((value) => !value)}
+        >
+          Large captions
+        </button>
+      </div>
+      <div className="actions">
+        <button
+          id="start"
+          disabled={state.active || state.ending || state.recovering}
+          onClick={() => controller.current?.start()}
+        >
+          Start conversation
+        </button>
+        <button
+          id="stop"
+          disabled={!state.active || state.ending}
+          onClick={() => controller.current?.stop()}
+        >
+          Stop
+        </button>
+      </div>
+      <p id="status" role="status">
+        {state.status}
+      </p>
+      <p id="task-status" aria-live="polite">
+        {state.workerMessage}
+      </p>
+      <button
+        id="cancel-task"
+        disabled={
+          state.worker !== 'running' ||
+          !state.active ||
+          state.ending ||
+          state.recovering ||
+          state.cancelPending
+        }
+        onClick={() => controller.current?.cancel()}
+      >
+        Cancel task
+      </button>
+      <p id="recovery-help">{state.help}</p>
+      <section aria-label="Report a problem">
+        <h2>Report a problem</h2>
+        <p>
+          Send only a category, diagnostic ID, interface state, configured provider and app version.
+          No audio, transcripts or message text. Reports expire after seven days. A pseudonymous
+          identity is used to limit submissions.
+        </p>
+        <label>
+          Problem category{' '}
+          <select
+            id="feedback-category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            disabled={state.reportLocked}
+          >
+            <option value="wrong_answer">Wrong answer</option>
+            <option value="source">Unhelpful source</option>
+            <option value="audio">Audio problem</option>
+            <option value="connection">Connection problem</option>
+            <option value="other">Other problem</option>
+          </select>
+        </label>
+        <button
+          id="send-feedback"
+          disabled={!code || state.reportPending || state.reportSent}
+          onClick={() => {
+            void controller.current?.feedback(category);
+          }}
+        >
+          Send report
+        </button>
+        <p id="feedback-status" aria-live="polite">
+          {state.feedbackStatus}
+        </p>
+      </section>
+      <section aria-label="Worker sources">
+        <h2>Documentation sources</h2>
+        <div id="sources">
+          {state.sources.map((source, index) => (
+            <details key={source.id}>
+              <summary>
+                [{index + 1}] {source.title} — {source.section}
+              </summary>
+              <blockquote>{source.text}</blockquote>
+              <small>
+                {source.path} · Snapshot {source.id}
+              </small>
+            </details>
+          ))}
+        </div>
+      </section>
+      <audio id="audio" ref={audio} muted={muted} controls autoPlay aria-label="Assistant audio" />
+      <div className="grid gap-4 md:grid-cols-2">
+        <section>
+          <h2>You</h2>
+          <p id="user">{state.captions.user || '—'}</p>
+        </section>
+        <section>
+          <h2>Assistant</h2>
+          <p id="assistant">{state.captions.assistant || '—'}</p>
+        </section>
+      </div>
+      <section>
+        <h2>Conversation recap</h2>
+        <p className="muted">Extracts from transcripts; interruption does not mean completion.</p>
+        <p id="recap" aria-live="off">
+          {state.recap}
+        </p>
+      </section>
+      <section>
+        <h2>Turn timing</h2>
+        <p className="muted">
+          Transcript timestamp gap: a proxy, not measured audio latency. May be negative during
+          overlap.
+        </p>
+        <ol id="timings">
+          {state.timings.map((turn) => (
+            <li key={turn.id}>
+              Turn {turn.id}:{' '}
+              {turn.reply === undefined
+                ? 'waiting for assistant transcript'
+                : `${Math.round(turn.reply - turn.end)} ms ${turn.estimated ? 'client-side estimate' : 'transcript gap'}`}
+            </li>
+          ))}
+        </ol>
+      </section>
+    </div>
+  );
 }
 function Demo() {
   const [step, setStep] = useState(0);
   const [running, setRunning] = useState(false);
   useEffect(() => {
     if (!running) return;
-    const timer = setInterval(() => setStep(previous => Math.min(previous + 1, scenario.length)), 900);
+    const timer = setInterval(
+      () => setStep((previous) => Math.min(previous + 1, scenario.length)),
+      900,
+    );
     return () => clearInterval(timer);
   }, [running]);
-  useEffect(() => { if (step === scenario.length) setRunning(false); }, [step]);
-  return <>
-    <p className="notice">Simulated demo · No API key, network requests, microphone or generated audio. Timing values are illustrative.</p>
-    <div className="actions"><button disabled={running} onClick={() => { setStep(0); setRunning(true); }}>Start demo</button><button disabled={!running} onClick={() => setRunning(false)}>Stop demo</button></div>
-    <p role="status">{running ? 'Playing recorded scenario…' : step ? 'Demo stopped' : 'Ready — try the free demo'}</p>
-    <div aria-live="polite" className="space-y-3">{visibleScenario(step).map((turn, i) => <section key={i}><h2>{turn.speaker}</h2><p>{turn.text}</p>{turn.gap !== null && <span className="badge">{turn.gap} ms · simulated</span>}</section>)}</div>
-  </>;
+  useEffect(() => {
+    if (step === scenario.length) setRunning(false);
+  }, [step]);
+  return (
+    <>
+      <p className="notice">
+        Simulated demo · No API key, network requests, microphone or generated audio. Timing values
+        are illustrative.
+      </p>
+      <div className="actions">
+        <button
+          disabled={running}
+          onClick={() => {
+            setStep(0);
+            setRunning(true);
+          }}
+        >
+          Start demo
+        </button>
+        <button disabled={!running} onClick={() => setRunning(false)}>
+          Stop demo
+        </button>
+      </div>
+      <p role="status">
+        {running
+          ? 'Playing recorded scenario…'
+          : step
+            ? 'Demo stopped'
+            : 'Ready — try the free demo'}
+      </p>
+      <div aria-live="polite" className="space-y-3">
+        {visibleScenario(step).map((turn, i) => (
+          <section key={i}>
+            <h2>{turn.speaker}</h2>
+            <p>{turn.text}</p>
+            {turn.gap !== null && <span className="badge">{turn.gap} ms · simulated</span>}
+          </section>
+        ))}
+      </div>
+    </>
+  );
 }
 function App() {
-  const [mode, setMode] = useState('demo');
+  const [mode, setMode] = useState<'demo' | 'live' | 'reference'>('demo');
   const [code, setCode] = useState('');
-  return <main className="mx-auto max-w-4xl px-6 py-12">
-    <header className="mb-10"><span className="badge">OPEN REFERENCE · M8 PREVIEW</span><h1 className="mt-5 text-5xl font-semibold tracking-tight">voice-delegate<span className="text-emerald-400">.</span></h1><p className="mt-4 text-lg text-slate-400">A fast voice conversation. A separate worker for the heavy lifting.</p></header>
-    <nav className="actions" aria-label="Conversation mode"><button aria-pressed={mode === 'demo'} onClick={() => setMode('demo')}>Free demo</button><button aria-pressed={mode === 'live'} onClick={() => setMode('live')}>Live voice</button><button aria-pressed={mode === 'reference'} onClick={() => setMode('reference')}>Documentation</button></nav>
-    {mode !== 'demo' && <label className="block my-5">Personal invitation code <input type="password" autoComplete="off" value={code} onChange={e => setCode(e.target.value)} placeholder="Only if configured on the server" /></label>}
-    {mode === 'demo' ? <Demo /> : mode === 'reference' ? <Reference code={code} /> : <Live code={code} />}
-    <footer className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-500">React 19 · FastAPI · WebRTC<br />Bounded delegation · Azure recovery · Optional telemetry.</footer>
-  </main>;
+  return (
+    <main className="mx-auto max-w-4xl px-6 py-12">
+      <header className="mb-10">
+        <span className="badge">OPEN REFERENCE · {version}</span>
+        <h1 className="mt-5 text-5xl font-semibold tracking-tight">
+          voice-delegate<span className="text-emerald-400">.</span>
+        </h1>
+        <p className="mt-4 text-lg text-slate-400">
+          A fast voice conversation. A separate worker for the heavy lifting.
+        </p>
+      </header>
+      <nav className="actions" role="tablist" aria-label="Conversation mode">
+        {(['demo', 'live', 'reference'] as const).map((tab, index, tabs) => (
+          <button
+            key={tab}
+            role="tab"
+            id={`tab-${tab}`}
+            aria-controls="mode-panel"
+            aria-selected={mode === tab}
+            tabIndex={mode === tab ? 0 : -1}
+            onClick={() => setMode(tab)}
+            onKeyDown={(event) => {
+              const next =
+                event.key === 'ArrowRight'
+                  ? tabs[(index + 1) % tabs.length]
+                  : event.key === 'ArrowLeft'
+                    ? tabs[(index + tabs.length - 1) % tabs.length]
+                    : event.key === 'Home'
+                      ? tabs[0]
+                      : event.key === 'End'
+                        ? tabs.at(-1)
+                        : undefined;
+              if (next) {
+                event.preventDefault();
+                setMode(next);
+                document.getElementById(`tab-${next}`)?.focus();
+              }
+            }}
+          >
+            {tab === 'demo' ? 'Free demo' : tab === 'live' ? 'Live voice' : 'Documentation'}
+          </button>
+        ))}
+      </nav>
+      <div id="mode-panel" role="tabpanel" aria-labelledby={`tab-${mode}`}>
+        {mode !== 'demo' && (
+          <label className="block my-5">
+            Personal invitation code{' '}
+            <input
+              type="password"
+              autoComplete="off"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Only if configured on the server"
+            />
+          </label>
+        )}
+        {mode === 'demo' ? (
+          <Demo />
+        ) : mode === 'reference' ? (
+          <Reference code={code} />
+        ) : (
+          <Live code={code} />
+        )}
+      </div>
+      <footer className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-400">
+        React 19 · FastAPI · WebRTC
+        <br />
+        Bounded delegation · Azure recovery · Optional telemetry.
+      </footer>
+    </main>
+  );
 }
-createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

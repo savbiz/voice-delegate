@@ -1,3 +1,5 @@
+Historical record as of 2026-09-20; current status in [docs/roadmap.md](../roadmap.md).
+
 # M1 verification
 
 ## Automated candidate checks
@@ -16,7 +18,7 @@ The GitHub Actions workflow runs the same lint, types, tests, client build, and 
 6. End the call. Confirm microphone indicator stops and the server reports confirmed finalization when `session.closed` is received.
 7. Repeat with a closed tab, lost network, denied microphone permission, and a short configured absolute TTL. Check bounded cleanup and unconfirmed-close messaging.
 8. Verify the browser never receives the project API key and the project contains only `.env.example` in Git.
-9. Record test date, model, browser, observed setup/turn behavior, and any failed cases before creating `v0.1.0-m1`.
+9. Record test date, model, browser, observed setup/turn behavior, and any failed cases before creating the release.
 
 ## Known verification boundaries
 
@@ -26,4 +28,4 @@ No real API call, microphone playback test, or hosted GitHub Actions execution h
 
 Passed locally: 22 offline Python tests, Ruff, strict mypy (23 Python source files), locked uv/pnpm installs, Python wheel/sdist build, React production build, TypeScript checks, one Vitest unit test, and three Playwright browser tests. The browser tests cover API-free scripted playback, stopping playback, and live-mode guidance without a key.
 
-The default Playwright browser CDN download failed in this environment. Browser tests passed with Chromium 153 supplied separately through `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. Standard CI installs Chromium through Playwright. Docker build, hosted CI, cloud deployment, real voice playback and paid API access remain unverified. No release tag was created.
+The default Playwright browser CDN download failed in this environment. Browser tests passed with Chromium 153 installed separately through `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. Standard CI installs Chromium through Playwright. Docker build, hosted CI, cloud deployment, real voice playback and paid API access remain unverified. No release tag was created.

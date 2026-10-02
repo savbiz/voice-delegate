@@ -1,5 +1,7 @@
 """Explicit container-test entry point. Never use this factory for real voice."""
 
+import os
+
 from fastapi import FastAPI
 
 from voice_delegate.api.app import create_app
@@ -17,4 +19,7 @@ class ScriptedProvider(FakeProvider):
 
 
 def create_test_app() -> FastAPI:
+    if os.environ.get("VOICE_SCRIPTED_PROVIDER") != "1":
+        message = "Scripted provider requires VOICE_SCRIPTED_PROVIDER=1"
+        raise ValueError(message)
     return create_app(load_settings(), ScriptedProvider())

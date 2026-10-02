@@ -5,9 +5,10 @@ import re
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib.resources import files
-from typing import Self
 
 from langchain_core.tools import tool
+
+from .limits import QUERY_MAX_CHARS, SOURCE_PREVIEW_CHARS
 
 
 @dataclass(frozen=True)
@@ -20,15 +21,12 @@ class Source:
     digest: str
 
 
-class GroundedAnswer(str):
-    """Text remains compatible with worker contracts; citations travel out of band."""
+@dataclass(frozen=True)
+class WorkerResult:
+    """Worker text and immutable evidence are separate parts of the result."""
 
-    sources: tuple[Source, ...]
-
-    def __new__(cls, text: str, sources: tuple[Source, ...]) -> Self:
-        answer = super().__new__(cls, text)
-        answer.sources = sources
-        return answer
+    text: str
+    sources: tuple[Source, ...] = ()
 
 
 @lru_cache(maxsize=1)
@@ -58,17 +56,20 @@ def terms(text: str) -> set[str]:
 
 
 def search(query: str) -> tuple[Source, ...]:
-    if not query.strip() or len(query) > 500:
+    if not query.strip() or len(query) > QUERY_MAX_CHARS:
         return ()
     words = terms(query)
-    if "history" in words:
-        words.update({"replay", "sealed"})
     ranked = []
     for source in corpus():
         body = terms(source.text)
         score = len(words & body) * 3 + len(words & terms(source.section))
         if words & body:
             ranked.append((score, source))
+    if not ranked:
+        # A heading-only query still has evidence: preserve document order for its overview.
+        return tuple(
+            source for source in corpus() if words & (terms(source.title) | terms(source.section))
+        )[:3]
     ranked.sort(key=lambda item: (-item[0], item[1].id))
     return tuple(source for _, source in ranked[:3])
 
@@ -79,7 +80,7 @@ def search_documentation(query: str) -> str:
     matches = search(query)
     return json.dumps(
         {
-            "sources": [{"id": s.id, "text": s.text[:400]} for s in matches],
+            "sources": [{"id": s.id, "text": s.text[:SOURCE_PREVIEW_CHARS]} for s in matches],
             "status": "found" if matches else "No supporting documentation found.",
         }
     )

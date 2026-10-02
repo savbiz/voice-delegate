@@ -1,6 +1,8 @@
 services:
   - type: web
     name: voice-delegate-api
+    plan: starter
+    numInstances: 1
     runtime: docker
     dockerfilePath: ./deployment/Dockerfile.backend
     dockerContext: .
@@ -14,6 +16,12 @@ services:
         value: production
       - key: OPENAI_API_KEY
         sync: false
+      - key: VOICE_TRUST_PROXY
+        value: "true"
+      # Verify the rightmost X-Forwarded-For entry against the caller IP;
+      # count any additional trusted CDN hops before changing this value.
+      - key: VOICE_TRUSTED_PROXY_HOPS
+        value: "1"
       - key: VOICE_PUBLIC_DEMO
         value: "true"
       - key: VOICE_INVITE_TOKENS
@@ -23,6 +31,6 @@ services:
       - key: VOICE_FEEDBACK_DATABASE
         value: /app/.local/feedback.sqlite3
       - key: VOICE_ALLOWED_ORIGIN
-        sync: false
+        value: https://voice-delegate.vercel.app
       - key: VOICE_ALLOWED_HOSTS
         sync: false

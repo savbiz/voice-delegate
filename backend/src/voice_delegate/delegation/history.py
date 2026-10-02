@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 
+from voice_delegate.limits.defaults import TRANSCRIPT_GAP_MS
 from voice_delegate.limits.tokens import count_tokens, truncate
 from voice_delegate.providers.models import Transcript
 
@@ -12,6 +13,7 @@ class History:
 
     budget: int = 2048
     entries: list[Transcript] = field(default_factory=list)
+    first_index: int = 0
 
     def append(self, event: Transcript) -> None:
         """Retain a Unicode-safe suffix; never keep a full oversized wire fragment."""
@@ -22,7 +24,7 @@ class History:
             self.entries
             and not event.committed
             and self.entries[-1].speaker == event.speaker
-            and (event.start_ms - self.entries[-1].end_ms <= 800)
+            and (event.start_ms - self.entries[-1].end_ms <= TRANSCRIPT_GAP_MS)
         ):
             previous = self.entries.pop()
             event = Transcript(
@@ -32,9 +34,11 @@ class History:
                 max(previous.end_ms, event.end_ms),
             )
         self.entries.append(event)
+        self.first_index += max(0, len(self.entries) - 12)
         self.entries = self.entries[-12:]
         while len(self.entries) > 1 and count_tokens(self.context()) > self.budget:
             self.entries.pop(0)
+            self.first_index += 1
         if count_tokens(self.context()) > self.budget:
             last = self.entries[-1]
             self.entries[-1] = Transcript(

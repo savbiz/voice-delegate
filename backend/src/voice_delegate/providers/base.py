@@ -13,6 +13,16 @@ from .models import (
 )
 
 
+class SidebandSocket(Protocol):
+    """The text-control subset shared by WebSocket transports and offline fixtures."""
+
+    def __aiter__(self) -> AsyncIterator[str | bytes]: ...
+
+    async def send(self, message: str) -> None: ...
+
+    async def close(self) -> None: ...
+
+
 class RealtimeConnection(Protocol):
     """An established call with a single server-side event consumer."""
 

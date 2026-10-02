@@ -1,6 +1,10 @@
 """Validated browser-facing contracts, separate from provider wire formats."""
 
+from dataclasses import replace
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from voice_delegate_agent.limits import SOURCE_PREVIEW_CHARS
 from voice_delegate_agent.reference import Source
 
 from voice_delegate.session.summary import Recap
@@ -17,7 +21,8 @@ class Offer(BaseModel):
     def validate_sdp(cls, value: str) -> str:
         """Reject obviously invalid input before a billable request."""
         if not value.startswith("v=0") or "\n" not in value:
-            raise ValueError("Expected an SDP offer")
+            message = "Expected an SDP offer"
+            raise ValueError(message)
         return value
 
 
@@ -44,12 +49,17 @@ class Answer(BaseModel):
 class Status(BaseModel):
     """Transport status; browser session.started confirms actual voice readiness."""
 
-    state: str
+    state: Literal["created", "connecting", "connected", "reconnecting", "closing", "closed"]
     delegation: str = "idle"
     generation: int = 0
     fallback_available: bool = False
     sources: tuple[Source, ...] = ()
     recap: Recap = Field(default_factory=Recap)
+
+    @field_validator("sources")
+    @classmethod
+    def bound_source_text(cls, sources: tuple[Source, ...]) -> tuple[Source, ...]:
+        return tuple(replace(source, text=source.text[:SOURCE_PREVIEW_CHARS]) for source in sources)
 
 
 class Closed(BaseModel):

@@ -50,39 +50,43 @@ class FeedbackStore:
         report_id = str(body.diagnostic_id)
         now = time.time()
         try:
-            self.db.execute("BEGIN IMMEDIATE")
-            self.db.execute(
-                "DELETE FROM feedback WHERE created <= ?", (now - self.retention_seconds,)
-            )
-            row = self.db.execute(
-                "SELECT principal, category, state FROM feedback WHERE id=?", (report_id,)
-            ).fetchone()
-            if row:
-                if row[0] != identity:
-                    raise SessionError(404, "Diagnostic report unavailable")
-                if row[1:] != (body.category, body.state):
-                    raise SessionError(409, "This diagnostic report has already been submitted")
-            else:
-                count = self.db.execute(
-                    "SELECT COUNT(*) FROM feedback WHERE principal=? AND created>=?",
-                    (identity, now - 86400),
-                ).fetchone()[0]
-                if count >= 5:
-                    raise SessionError(429, "Feedback limit reached; try again tomorrow")
-                if self.db.execute("SELECT COUNT(*) FROM feedback").fetchone()[0] >= self.capacity:
-                    raise SessionError(503, "Feedback temporarily unavailable")
-                self.db.execute(
-                    "INSERT INTO feedback VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (report_id, identity, body.category, body.state, provider, self.version, now),
-                )
-            self.db.commit()
-            return report_id
+            self._store(identity, report_id, now, body, provider)
         except SessionError:
             self.db.rollback()
             raise
         except sqlite3.Error as exc:
             self.db.rollback()
             raise SessionError(503, "Feedback temporarily unavailable") from exc
+
+        return report_id
+
+    def _store(
+        self, identity: str, report_id: str, now: float, body: FeedbackInput, provider: str
+    ) -> None:
+        self.db.execute("BEGIN IMMEDIATE")
+        self.db.execute("DELETE FROM feedback WHERE created <= ?", (now - self.retention_seconds,))
+        row = self.db.execute(
+            "SELECT principal, category, state FROM feedback WHERE id=?", (report_id,)
+        ).fetchone()
+        if row:
+            if row[0] != identity:
+                raise SessionError(404, "Diagnostic report unavailable")
+            if row[1:] != (body.category, body.state):
+                raise SessionError(409, "This diagnostic report has already been submitted")
+        else:
+            count = self.db.execute(
+                "SELECT COUNT(*) FROM feedback WHERE principal=? AND created>=?",
+                (identity, now - 86400),
+            ).fetchone()[0]
+            if count >= 5:
+                raise SessionError(429, "Feedback limit reached; try again tomorrow")
+            if self.db.execute("SELECT COUNT(*) FROM feedback").fetchone()[0] >= self.capacity:
+                raise SessionError(503, "Feedback temporarily unavailable")
+            self.db.execute(
+                "INSERT INTO feedback VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (report_id, identity, body.category, body.state, provider, self.version, now),
+            )
+        self.db.commit()
 
     def close(self) -> None:
         self.db.close()

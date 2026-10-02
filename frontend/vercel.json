@@ -8,7 +8,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; connect-src 'self' https://${API_HOST}; media-src 'self' blob:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'"
+          "value": "default-src 'self'; connect-src 'self' https://voice-delegate-api-production.up.railway.app; style-src 'self'; img-src 'self'; media-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
         },
         {
           "key": "Permissions-Policy",
@@ -24,5 +24,6 @@
         }
       ]
     }
-  ]
+  ],
+  "installCommand": "pnpm install --frozen-lockfile"
 }

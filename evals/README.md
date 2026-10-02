@@ -10,7 +10,7 @@ delegation event; it verifies orchestration, not the model's decision to delegat
 browser with fake WebRTC and API responses. There are no audio recordings or paid calls.
 Backend tests disable network sockets. OTel checks use only in-memory readers/exporters.
 
-Live validation remains separate: run the M2 checklist, then force a primary connection
+Live validation remains separate: run the live voice checklist, then force a primary connection
 failure during conversation and during delegation. Verify Azure speech, no stale narration,
 resource cleanup and bounded history. Record browser, provider deployment, sample count,
 failures, and p50/p95 from actual runs. Do not infer audio latency or model accuracy from
@@ -18,9 +18,10 @@ scripted fixture timings. No live p50/p95 benchmark has been collected for this 
 
 ## Worker quality and Braintrust experiments
 
-The versioned `data/worker-v1.json` contains 32 synthetic cases: 12 arithmetic,
+The versioned `data/worker-v4.json` contains 40 synthetic cases: 12 arithmetic,
 12 documentation questions with manually selected expected source IDs, four missing-evidence
-queries and four live-only correction/unsupported-request cases. It contains no user sessions.
+queries, four live-only correction/unsupported-request cases, three held-out paraphrases,
+three distractors and two adversarial contexts. It contains no user sessions.
 The remaining cases exercise the actual graph and tools with the scripted offline planner.
 
 Run the free local baseline from the repository root:
@@ -29,7 +30,7 @@ Run the free local baseline from the repository root:
 uv run python -m evals.worker_eval --output .local/evals/offline.json
 ```
 
-This runs 28 cases and marks four as skipped, with no provider or Braintrust calls even if
+This runs 36 cases and marks four as skipped, with no provider or Braintrust calls even if
 keys are present. Offline latency is graph/tool execution time, not model or acoustic latency.
 Do not compare scripted quality results to live-model quality. The existing pytest suite
 checks the dataset and scorers offline on every CI run, including deliberately wrong answers,
@@ -70,7 +71,7 @@ uv run --group eval python -m evals.worker_eval \
 ```
 
 Omit `--upload` for a local-only report. Omit `--judge-model` for deterministic scoring only.
-A full 32-case run needs a maximum budget of 128 calls without the judge, or 160 with it.
+A full 40-case run needs a maximum budget of 160 calls without the judge, or 200 with it.
 The command validates the conservative upper bound before starting, disables model retries,
 and enforces the call budget at each invocation. Worker calls allow at most 1,000 completion
 tokens; judge calls allow at most 500. Each worker case has a 45-second timeout and judge HTTP
@@ -86,6 +87,17 @@ quality threshold is imposed before collecting and reviewing a live baseline.
 
 ### What scores mean
 
+Offline `scores` contains only `numeric_result` and `expected_evidence_retrieved`.
+The separate `plumbing` section reports completion, tool selection,
+source/citation validity and missing-evidence signalling; these are control checks,
+not model quality. CI requires retrieval of expected evidence on at least 11 of the
+12 baseline documentation questions.
+
+Each report records `n_trials=1`: repeat runs explicitly to measure variability.
+The optional judge uses temperature zero. Judge averages include every executed case;
+failed workers and failed judge calls contribute zero, while skipped cases are excluded.
+When git is unavailable, `commit` and tracked-change status are null.
+
 - `numeric_result`: last numeric value in the answer matches the expected result; a formatting
   heuristic, not a general mathematical proof or language-quality judge.
 - `tool_selection`: expected tool was requested, not proof that every action was necessary.
@@ -94,7 +106,7 @@ quality threshold is imposed before collecting and reviewing a live baseline.
 - `expected_evidence_retrieved`: at least one manually labeled source was retrieved.
 - `missing_evidence_signal`: English missing-evidence phrasing heuristic plus a separate
   no-sources check. It does not establish semantic abstention for every language.
-- `bounded_output`: evaluates the same 120-token/500-byte clipping used for narration.
+Output clipping is tested as backend plumbing, not scored as worker quality.
 - Optional `judge_correctness`, `judge_usefulness`, `judge_groundedness`: advisory scores using
   rubric and evidence. The judge may be wrong or biased, particularly when using the same
   model as the worker. Review examples manually before using scores as a release gate.
@@ -105,3 +117,20 @@ An absent judge is never represented as a perfect semantic score. Voice pronunci
 WebRTC latency, listening tests, interruption timing and Azure failover remain separate tests.
 
 Integration follows the official [Braintrust experiment SDK guide](https://www.braintrust.dev/docs/evaluate/run-in-code).
+
+### Dataset maintenance
+
+Rule: **bump the dataset version whenever labels change**. Freeze held-out questions before
+retrieval changes; do not add aliases merely to fit them. The paraphrases share fewer than
+three content tokens with their target paragraph. Distractors label a different paragraph
+as top-1, so retrieving the tempting alternative is a miss. Adversarial context includes
+instruction overrides and forged tags, with `expected.must_not_contain` checking fabricated
+actions. Goal and context travel in escaped tagged blocks; tags are a data boundary, not a
+claim that a paid model is immune to prompt injection. The baseline 11/12 retrieval gate
+covers the original documentation questions; report held-out results separately from it.
+
+The three `held_out` paraphrases originated outside the initial lexical queries.
+They now run as labelled regression tests and informed alias/stopword fixes; their
+scores are no longer an independent held-out estimate of retrieval quality.
+
+`worker-v4` updates the fallback-history source label after documenting replay of all trailing in-flight text. The 40 questions and rubrics are unchanged.

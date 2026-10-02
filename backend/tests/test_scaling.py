@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from conftest import BlockingWorker, FakeClock
 from pydantic import SecretStr
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeProvider
@@ -15,12 +16,15 @@ from voice_delegate.scaling.worker_service import create_worker_app
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
 
+from test_support import eventually
+
 TOKEN = "test-worker-token-32-characters-long"
 
 
 def shared(path: Path, instance: str) -> Settings:
     return Settings(
         environment="production",
+        allowed_hosts=["localhost", "127.0.0.1"],
         public_demo=True,
         instance_id=instance,
         allowed_origin="https://demo.example",
@@ -30,9 +34,15 @@ def shared(path: Path, instance: str) -> Settings:
     )
 
 
-async def test_two_instances_share_concurrency_and_ownership(tmp_path: Path) -> None:
-    a = SessionManager(FakeProvider(), shared(tmp_path, "a"))
-    b = SessionManager(FakeProvider(), shared(tmp_path, "b"))
+async def test_two_instances_share_concurrency_and_ownership(
+    tmp_path: Path, fake_clock: FakeClock
+) -> None:
+    a = SessionManager(
+        FakeProvider(), shared(tmp_path, "a"), clock=fake_clock, admission_clock=fake_clock
+    )
+    b = SessionManager(
+        FakeProvider(), shared(tmp_path, "b"), clock=fake_clock, admission_clock=fake_clock
+    )
     session = a.create("alice")
     assert session.id.startswith("a-")
     with pytest.raises(SessionError) as full:
@@ -49,14 +59,19 @@ async def test_two_instances_share_concurrency_and_ownership(tmp_path: Path) -> 
     await b.aclose()
 
 
-async def test_crashed_owner_lease_expires_without_refunding_usage(tmp_path: Path) -> None:
-    a = SessionManager(FakeProvider(), shared(tmp_path, "a"))
+async def test_crashed_owner_lease_expires_without_refunding_usage(
+    tmp_path: Path, fake_clock: FakeClock
+) -> None:
+    a = SessionManager(
+        FakeProvider(), shared(tmp_path, "a"), clock=fake_clock, admission_clock=fake_clock
+    )
     original = a.create("alice")
     db = a.admission.database
     assert db is not None
-    db.execute("UPDATE leases SET expires=0")
-    db.commit()
-    b = SessionManager(FakeProvider(), shared(tmp_path, "b"))
+    fake_clock.advance(329)  # 300 TTL + 20 setup + 5 close + 3 cleanup, then expiry.
+    b = SessionManager(
+        FakeProvider(), shared(tmp_path, "b"), clock=fake_clock, admission_clock=fake_clock
+    )
     recovered = b.create("alice")
     assert db.execute("SELECT SUM(sessions) FROM reservations").fetchone()[0] == 2
     assert recovered.id != original.id
@@ -64,50 +79,43 @@ async def test_crashed_owner_lease_expires_without_refunding_usage(tmp_path: Pat
     await a.aclose()
 
 
-async def test_worker_backpressure_duplicates_and_cancellation_tombstones() -> None:
-    class Slow:
-        calls = 0
-        gate = asyncio.Event()
+async def test_worker_backpressure_duplicates_and_cancellation_tombstones(
+    blocking_worker: BlockingWorker,
+) -> None:
 
-        async def delegate_task(self, goal: str, context: str) -> str:
-            self.calls += 1
-            await self.gate.wait()
-            return "done"
-
-    worker = Slow()
+    worker = blocking_worker
+    worker.return_on_cancel = False
     settings = Settings(worker_service_token=SecretStr(TOKEN), worker_service_capacity=2)
     app = create_worker_app(settings, worker)
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://worker"
-        ) as client:
-            body = {"request_id": str(uuid4()), "goal": "work", "deadline": time.time() + 30}
-            assert (await client.post("/jobs", json=body)).status_code == 401
-            client.headers["Authorization"] = "Bearer " + TOKEN
-            assert (await client.post("/jobs", json=body)).status_code == 202
-            assert (await client.post("/jobs", json=body)).status_code == 202
-            results = await asyncio.gather(
-                *(
-                    client.post("/jobs", json={**body, "request_id": str(uuid4())})
-                    for _ in range(20)
-                )
-            )
-            assert sum(r.status_code == 202 for r in results) == 1
-            assert sum(r.status_code == 429 for r in results) == 19
-            await asyncio.sleep(0)
-            assert worker.calls == 2
-            assert (await client.delete("/jobs/" + str(body["request_id"]))).status_code == 200
-            assert (await client.post("/jobs", json=body)).json()["status"] == "cancelled"
-            unknown = str(uuid4())
-            await client.delete("/jobs/" + unknown)
-            assert (await client.post("/jobs", json={**body, "request_id": unknown})).json()[
-                "status"
-            ] == "cancelled"
-            worker.gate.set()
+        ) as client,
+    ):
+        body = {"request_id": str(uuid4()), "goal": "work", "deadline": time.time() + 30}
+        assert (await client.post("/jobs", json=body)).status_code == 401
+        client.headers["Authorization"] = "Bearer " + TOKEN
+        assert (await client.post("/jobs", json=body)).status_code == 202
+        assert (await client.post("/jobs", json=body)).status_code == 202
+        results = await asyncio.gather(
+            *(client.post("/jobs", json={**body, "request_id": str(uuid4())}) for _ in range(20))
+        )
+        assert sum(r.status_code == 202 for r in results) == 1
+        assert sum(r.status_code == 429 for r in results) == 19
+        await eventually(lambda: worker.calls == 2)
+        assert worker.calls == 2
+        assert (await client.delete("/jobs/" + str(body["request_id"]))).status_code == 200
+        assert (await client.post("/jobs", json=body)).json()["status"] == "cancelled"
+        unknown = str(uuid4())
+        await client.delete("/jobs/" + unknown)
+        assert (await client.post("/jobs", json={**body, "request_id": unknown})).json()[
+            "status"
+        ] == "cancelled"
+        worker.gate.set()
 
 
 async def test_remote_worker_executes_graph_and_carries_sources() -> None:
-    from voice_delegate_agent.reference import GroundedAnswer
 
     settings = Settings(
         worker_service_token=SecretStr(TOKEN),
@@ -119,30 +127,20 @@ async def test_remote_worker_executes_graph_and_carries_sources() -> None:
         client = httpx.AsyncClient(transport=httpx.ASGITransport(app=app))
         remote = RemoteWorker(settings, client)
         result = await remote.delegate_task("docs fallback history", "")
-        assert isinstance(result, GroundedAnswer) and result.sources
+        assert result.sources
         await remote.aclose()
 
 
-async def test_remote_cancellation_cancels_server_job() -> None:
-    class Slow:
-        entered = asyncio.Event()
-        cancelled = asyncio.Event()
+async def test_remote_cancellation_cancels_server_job(blocking_worker: BlockingWorker) -> None:
 
-        async def delegate_task(self, goal: str, context: str) -> str:
-            self.entered.set()
-            try:
-                await asyncio.Event().wait()
-            finally:
-                self.cancelled.set()
-            return "unreachable"
-
-    worker = Slow()
+    worker = blocking_worker
+    worker.return_on_cancel = False
     settings = Settings(worker_service_token=SecretStr(TOKEN), worker_service_url="http://worker")
     app = create_worker_app(settings, worker)
     async with app.router.lifespan_context(app):
         remote = RemoteWorker(settings, httpx.AsyncClient(transport=httpx.ASGITransport(app=app)))
         task = asyncio.create_task(remote.delegate_task("wait", ""))
-        await worker.entered.wait()
+        await worker.started.wait()
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
@@ -201,7 +199,7 @@ async def test_remote_worker_polls_at_200ms(monkeypatch: pytest.MonkeyPatch) -> 
         Settings(worker_service_url="http://worker"),
         httpx.AsyncClient(transport=httpx.MockTransport(handler)),
     )
-    assert await remote.delegate_task("test", "") == "done"
+    assert (await remote.delegate_task("test", "")).text == "done"
     assert delays == [0.2, 0.2]
     assert methods == ["POST", "GET", "GET", "GET", "DELETE"]
     await remote.aclose()
@@ -212,6 +210,12 @@ async def test_worker_janitor_recovers_after_sweep_failure(
 ) -> None:
     from voice_delegate.scaling.worker_service import Jobs
 
+    original_sleep = asyncio.sleep
+
+    async def yield_only(delay: float) -> None:
+        await original_sleep(0)
+
+    monkeypatch.setattr(asyncio, "sleep", yield_only)
     attempts = 0
     recovered = asyncio.Event()
 

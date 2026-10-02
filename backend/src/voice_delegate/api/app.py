@@ -41,10 +41,12 @@ def create_app(
             azure = AzureRealtimeProvider(
                 settings.azure_endpoint, settings.azure_api_key.get_secret_value()
             )
+            azure.close_timeout = settings.close_timeout_seconds
             azure.model, azure.voice = settings.azure_deployment, settings.azure_voice
             provider = azure
         elif settings.voice_provider == "realtime":
             realtime = OpenAIRealtimeProvider(settings.openai_api_key.get_secret_value())
+            realtime.close_timeout = settings.close_timeout_seconds
             realtime.model, realtime.voice = settings.realtime_model, settings.voice
             provider = realtime
         else:
@@ -58,6 +60,7 @@ def create_app(
         fallback = AzureRealtimeProvider(
             settings.azure_endpoint, settings.azure_api_key.get_secret_value()
         )
+        fallback.close_timeout = settings.close_timeout_seconds
         fallback.model, fallback.voice = settings.azure_deployment, settings.azure_voice
     telemetry = configure_tracing(settings)
     meter_provider = configure_metrics(settings)
@@ -97,7 +100,7 @@ def create_app(
     )
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         janitor = asyncio.create_task(manager.sweep(), name="session-janitor")
         feedback_janitor = asyncio.create_task(clean_feedback(), name="feedback-janitor")
         try:
@@ -121,25 +124,37 @@ def create_app(
             if telemetry is not None:
                 await asyncio.to_thread(telemetry.shutdown)
 
-    app = FastAPI(title="voice-delegate", version=version("voice-delegate"), lifespan=lifespan)
+    expose_docs = settings.environment != "production" or settings.api_docs
+    app = FastAPI(
+        title="voice-delegate",
+        version=version("voice-delegate"),
+        lifespan=lifespan,
+        docs_url="/docs" if expose_docs else None,
+        redoc_url="/redoc" if expose_docs else None,
+        openapi_url="/openapi.json" if expose_docs else None,
+    )
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
-    # Starlette wraps the last added middleware around earlier middleware.
-    app.add_middleware(RateLimitMiddleware, trust_proxy=settings.trust_proxy)
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
-
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[settings.allowed_origin],
         allow_methods=["POST"],
         allow_headers=["Content-Type", "X-Session-Key", "Authorization"],
     )
+    # Wrap CORS too: preflights must pass host validation and consume the same IP budget.
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
+    app.add_middleware(
+        RateLimitMiddleware,
+        trust_proxy=settings.trust_proxy,
+        trusted_proxy_hops=settings.trusted_proxy_hops,
+        allowed_origin=settings.allowed_origin,
+    )
 
     @app.exception_handler(SessionError)
-    async def session_error(request: Request, exc: SessionError) -> JSONResponse:
+    async def session_error(_request: Request, exc: SessionError) -> JSONResponse:
         return JSONResponse({"detail": str(exc)}, status_code=exc.status)
 
     @app.exception_handler(ProviderError)
-    async def provider_error(request: Request, exc: ProviderError) -> JSONResponse:
+    async def provider_error(_request: Request, exc: ProviderError) -> JSONResponse:
         status = 501 if isinstance(exc, UnsupportedCapability) else 502
         return JSONResponse({"detail": str(exc)}, status_code=status)
 

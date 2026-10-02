@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
+from voice_delegate_agent.limits import QUERY_MAX_CHARS
 from voice_delegate_agent.reference import search, source_by_id
 
 from voice_delegate.feedback import FeedbackInput, FeedbackStore
@@ -17,7 +18,7 @@ from .schemas import Answer, Closed, Created, Offer, Reconnect, Status
 
 
 class ReferenceQuery(BaseModel):
-    query: str = Field(min_length=1, max_length=500)
+    query: str = Field(min_length=1, max_length=QUERY_MAX_CHARS)
 
 
 def build_router(manager: SessionManager, feedback: FeedbackStore | None = None) -> APIRouter:
@@ -125,7 +126,8 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
         return {"delegation": session.delegation.status}
 
     @router.post("/sessions/{session_id}/token")
-    async def token(session: Annotated[Session, Depends(owned)]) -> None:
-        raise UnsupportedCapability("GPT-Live uses /offer; ephemeral credentials are unsupported")
+    async def token(_session: Annotated[Session, Depends(owned)]) -> None:
+        message = "GPT-Live uses /offer; ephemeral credentials are unsupported"
+        raise UnsupportedCapability(message)
 
     return router

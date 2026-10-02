@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from voice_delegate.limits.defaults import WORKER_PORT
+
 
 class Settings(BaseSettings):
     """Resource budgets and server-owned provider configuration."""
@@ -26,7 +28,9 @@ class Settings(BaseSettings):
     allowed_origin: str = "http://localhost:5173"
     allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
     trust_proxy: bool = False
+    trusted_proxy_hops: int = Field(default=1, ge=1, le=32)
     environment: str = "development"
+    api_docs: bool = False
     access_token: SecretStr = SecretStr("")
     invite_tokens: dict[str, SecretStr] = Field(default_factory=dict, repr=False)
     public_demo: bool = False
@@ -44,7 +48,7 @@ class Settings(BaseSettings):
     instance_id: str = Field(default="", pattern=r"^[a-z0-9]{0,16}$")
     worker_execution: Literal["local", "remote"] = "local"
     # http:// worker URLs are only acceptable on the same host or a private network.
-    worker_service_url: str = "http://worker:8001"
+    worker_service_url: str = f"http://worker:{WORKER_PORT}"
     worker_service_token: SecretStr = SecretStr("")
     worker_service_capacity: int = Field(default=4, ge=1, le=32)
     worker_max_records: int = Field(default=128, ge=32, le=1024)
@@ -64,9 +68,8 @@ class Settings(BaseSettings):
     def validate_production(self) -> "Settings":
         """Require an explicit browser origin and access gate on public deployments."""
         if self.instance_id and not self.public_demo:
-            raise ValueError(
-                "Multiple API instances require public-demo identity and quota controls"
-            )
+            message = "Multiple API instances require public-demo identity and quota controls"
+            raise ValueError(message)
         if self.worker_execution == "remote":
             from urllib.parse import urlparse
 
@@ -79,20 +82,27 @@ class Settings(BaseSettings):
                 or target.query
                 or target.fragment
             ):
-                raise ValueError("Worker URL must be an HTTP(S) service origin")
+                message = "Worker URL must be an HTTP(S) service origin"
+                raise ValueError(message)
             if len(self.worker_service_token.get_secret_value()) < 32:
-                raise ValueError("Remote worker requires a service token of at least 32 characters")
+                message = "Remote worker requires a service token of at least 32 characters"
+                raise ValueError(message)
         if len(self.invite_tokens) > 100:
-            raise ValueError("At most 100 named invitations are supported")
+            message = "At most 100 named invitations are supported"
+            raise ValueError(message)
         values = [token.get_secret_value() for token in self.invite_tokens.values()]
         if any(not name or len(name) > 64 for name in self.invite_tokens):
-            raise ValueError("Invitation names must contain 1 to 64 characters")
+            message = "Invitation names must contain 1 to 64 characters"
+            raise ValueError(message)
         if any(len(value) < 32 for value in values) or len(set(values)) != len(values):
-            raise ValueError("Invitations require unique random tokens of at least 32 characters")
+            message = "Invitations require unique random tokens of at least 32 characters"
+            raise ValueError(message)
         if self.public_demo and (not values or self.quota_database == ":memory:"):
-            raise ValueError("Public demo requires named invitations and durable quota storage")
+            message = "Public demo requires named invitations and durable quota storage"
+            raise ValueError(message)
         if self.public_demo and self.environment != "production":
-            raise ValueError("Public demo requires production configuration")
+            message = "Public demo requires production configuration"
+            raise ValueError(message)
         if self.fallback_enabled or self.voice_provider == "azure":
             from urllib.parse import urlparse
 
@@ -108,18 +118,27 @@ class Settings(BaseSettings):
                 or endpoint.password
                 or endpoint.port not in {None, 443}
             ):
-                raise ValueError("Azure endpoint must be an HTTPS Azure OpenAI resource origin")
+                message = "Azure endpoint must be an HTTPS Azure OpenAI resource origin"
+                raise ValueError(message)
             if not self.azure_api_key.get_secret_value():
-                raise ValueError("Azure fallback requires VOICE_AZURE_API_KEY")
+                message = "Azure fallback requires VOICE_AZURE_API_KEY"
+                raise ValueError(message)
         if self.fallback_enabled and self.voice_provider == "azure":
-            raise ValueError("Azure cannot be both primary and fallback")
+            message = "Azure cannot be both primary and fallback"
+            raise ValueError(message)
         if self.worker_mode == "openai" and not self.openai_api_key.get_secret_value():
-            raise ValueError("VOICE_WORKER_MODE=openai requires OPENAI_API_KEY")
+            message = "VOICE_WORKER_MODE=openai requires OPENAI_API_KEY"
+            raise ValueError(message)
         if self.environment == "production":
+            if "testserver" in self.allowed_hosts:
+                message = "Production requires explicit VOICE_ALLOWED_HOSTS without testserver"
+                raise ValueError(message)
             if not self.invite_tokens and len(self.access_token.get_secret_value()) < 24:
-                raise ValueError("Production requires VOICE_ACCESS_TOKEN of at least 24 characters")
+                message = "Production requires VOICE_ACCESS_TOKEN of at least 24 characters"
+                raise ValueError(message)
             if not self.allowed_origin.startswith("https://"):
-                raise ValueError("Production requires an HTTPS frontend origin")
+                message = "Production requires an HTTPS frontend origin"
+                raise ValueError(message)
         return self
 
 

@@ -1,6 +1,6 @@
-# M4 observability
+# Backend observability
 
-Start the local stack with `docker compose -f observability/compose.yaml up -d`.
+Set `GF_SECURITY_ADMIN_PASSWORD` to a private admin password, then start the local stack with `docker compose -f observability/compose.yaml up -d`.
 Set these backend variables and restart the API:
 
 ```dotenv
@@ -22,13 +22,22 @@ failover spans share that parent. Turns end at the next turn, close or failed fa
 An idle turn can remain open until session expiry. No transcript, session IDs, SDP,
 credentials, provider request bodies or tool results are exported.
 
-Metrics use finite operation/outcome labels:
+Metrics use finite operation/outcome labels. `delegate_task` duration samples also carry a finite `status` label to distinguish worker outcomes. `provider.failover` duration includes cleanup of the failed connection performed by reconnect; cleanup already completed by the failed-stream watcher precedes that span and is not counted again:
+
+Operation outcomes are `success`, `error`, and `cancelled`, including delegated work.
+Worker samples also carry a finite `status` label such as `completed`, `timeout`,
+`busy`, `failed` or `delivery_failed` for diagnosis. The names below are
+post-collector Prometheus names, rather than the dotted OpenTelemetry instrument names.
+Both duration histograms use explicit second boundaries:
+`0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 30, 60, 120`.
+
 - `voice_operation_duration_seconds`: provider setup, fallback and worker duration.
 - `voice_turn_transcript_wait_seconds`: first assistant transcript arrival minus first
   user transcript arrival. This includes speech and transcription time; it is not audio TTFB.
-- `voice_interruptions_total`: worker tasks canceled while pending, including close/fallback.
+- `voice_interruptions_total`: interruptions registered by the session manager while a delegation is running; close/fallback cancellation does not increment it.
 
-The browser's transcript gap remains a separate estimate based on provider timestamps.
+The browser's transcript gap remains a separate estimate based on provider timestamps,
+or a labelled client-side estimate when those timestamps are absent.
 Signaling duration, transcript arrival and audio playback are different measures. Audio
 TTFB, playback onset and end-to-end acoustic latency require a live measurement harness;
 this project does not export invented values for them. Fake runs measure orchestration only.

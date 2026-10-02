@@ -13,12 +13,12 @@ from uuid import UUID
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner, OpenAIPlanner
-from voice_delegate_agent.reference import GroundedAnswer
 
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.delegation.contracts import Worker
 from voice_delegate.limits.http import BodyLimitMiddleware
 from voice_delegate.limits.tokens import truncate
+from voice_delegate.providers.models import COMMENTARY_MAX_BYTES
 
 
 class JobInput(BaseModel):
@@ -104,12 +104,12 @@ class Jobs:
             ):
                 result = await self.worker.delegate_task(body.goal, body.context)
             if job.status != "cancelled":
-                job.text = truncate(result, self.settings.delegation_result_tokens, max_bytes=500)
-                job.source_ids = (
-                    tuple(s.id for s in result.sources)
-                    if isinstance(result, GroundedAnswer)
-                    else ()
+                job.text = truncate(
+                    result.text,
+                    self.settings.delegation_result_tokens,
+                    max_bytes=COMMENTARY_MAX_BYTES,
                 )
+                job.source_ids = tuple(s.id for s in result.sources)
                 job.status = "completed"
         except asyncio.CancelledError:
             job.status = "cancelled"
@@ -131,7 +131,8 @@ class Jobs:
 def create_worker_app(settings: Settings | None = None, worker: Worker | None = None) -> FastAPI:
     settings = settings or load_settings()
     if len(settings.worker_service_token.get_secret_value()) < 32:
-        raise ValueError("Private worker service requires a token of at least 32 characters")
+        message = "Private worker service requires a token of at least 32 characters"
+        raise ValueError(message)
     planner = None
     if worker is None:
         planner = (
@@ -151,7 +152,7 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
                 logging.getLogger(__name__).exception("Worker janitor failed; retrying")
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         sweep = asyncio.create_task(janitor())
         try:
             yield

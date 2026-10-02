@@ -59,15 +59,16 @@ class FakeProvider:
         """Build startup configuration using this provider's model and voice."""
         return SessionConfig(self.model, self.voice, instructions, history)
 
-    async def connect(self, *, config: SessionConfig, offer_sdp: str) -> FakeConnection:
+    async def connect(self, *, config: SessionConfig, offer_sdp: str) -> FakeConnection:  # noqa: ARG002 - provider contract
         """Create an independently controllable fake connection."""
         connection = FakeConnection()
         self.connections.append(connection)
         return connection
 
-    async def issue_client_credential(self, config: SessionConfig) -> ClientCredential:
+    async def issue_client_credential(self, config: SessionConfig) -> ClientCredential:  # noqa: ARG002 - provider contract
         """Do not issue credentials that could be mistaken for real ones."""
-        raise UnsupportedCapability("Fake provider has no browser credentials")
+        message = "Fake provider has no browser credentials"
+        raise UnsupportedCapability(message)
 
     async def aclose(self) -> None:
         """The fake owns no shared external resources."""

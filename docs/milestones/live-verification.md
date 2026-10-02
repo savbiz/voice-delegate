@@ -1,3 +1,5 @@
+Historical record as of 2026-09-24; current status in [docs/roadmap.md](../roadmap.md).
+
 # Live verification
 
 Fill this record after executing the [live smoke-test checklist](m1-verification.md).

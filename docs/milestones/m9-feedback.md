@@ -1,3 +1,5 @@
+Historical record as of 2026-09-24; current status in [docs/roadmap.md](../roadmap.md).
+
 # M9 recovery UX and minimal feedback
 
 The live interface describes worker running, busy, cancelled, timed out, failed,

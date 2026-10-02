@@ -1,6 +1,7 @@
 """Verify scoring detects regressions without paid models or cloud access."""
 
 import json
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -13,8 +14,8 @@ CASES = json.loads(DATASET.read_text())["cases"]
 
 
 def test_dataset_is_versioned_unique_and_grounded() -> None:
-    assert len(CASES) == 32
-    assert len({c["id"] for c in CASES}) == 32
+    assert len(CASES) == 40
+    assert len({c["id"] for c in CASES}) == 40
     assert all(c["goal"] and c["expected"]["rubric"] for c in CASES)
     for case in CASES:
         for source in case["expected"].get("source_ids", []):
@@ -39,19 +40,20 @@ def test_scorers_detect_wrong_number_evidence_and_citation() -> None:
     assert result["citation_indices_valid"] == 0
     assert result["expected_evidence_retrieved"] == 0
     assert result["tool_selection"] == 0
-    out["text"] = "long " * 500
-    assert score(CASES[12], out)["bounded_output"] == 0
+    assert "bounded_output" not in result
 
 
 async def test_offline_run_has_no_paid_calls_and_skips_language_quality() -> None:
-    report = await run_cases(CASES, "offline", "unused", 0)
+    report = await run_cases(CASES[:32], "offline", "unused", 0)
     summary = report["summary"]
     assert summary["executed"] == 28 and summary["skipped"] == 4
     assert summary["model_calls"] == 0
     assert summary["scores"]["numeric_result"] == 1
-    assert summary["scores"]["valid_source_ids"] == 1
-    assert summary["scores"]["no_sources"] == 1
-    # Do not require perfect retrieval: the report must surface real misses, not hide them.
+    assert summary["plumbing"]["valid_source_ids"] == 1
+    assert summary["plumbing"]["no_sources"] == 1
+    assert summary["scores"]["expected_evidence_retrieved"] >= 11 / 12
+    assert set(summary["scores"]) == {"numeric_result", "expected_evidence_retrieved"}
+    assert report["metadata"]["n_trials"] == 1
     assert summary["score_counts"]["expected_evidence_retrieved"] == 12
     assert "judge_correctness" not in summary["scores"]
 
@@ -102,10 +104,10 @@ async def test_cloud_upload_is_explicit_and_uses_only_curated_rows(
 
     from evals.worker_eval import upload
 
-    logged = []
-    initialized = {}
+    logged: list[dict[str, Any]] = []
+    initialized: dict[str, Any] = {}
 
-    def init(**kwargs):
+    def init(**kwargs: Any) -> SimpleNamespace:
         initialized.update(kwargs)
         return SimpleNamespace(
             log=lambda **row: logged.append(row),

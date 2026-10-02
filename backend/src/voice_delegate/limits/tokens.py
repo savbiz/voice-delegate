@@ -29,7 +29,8 @@ def count_tokens(text: str) -> int:
 def truncate(text: str, budget: int, *, max_bytes: int | None = None) -> str:
     """Keep a valid UTF-8 prefix within both budgets, including a truncation marker."""
     if budget < 1:
-        raise ValueError("Token budget must be positive")
+        message = "Token budget must be positive"
+        raise ValueError(message)
     # Bound processing of unusually large worker output before encoding it.
     source = text[:100_000]
     if (

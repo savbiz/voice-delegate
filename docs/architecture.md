@@ -2,9 +2,15 @@
 
 ## Boundaries
 
-The browser owns microphone capture, WebRTC playback, and display-only captions. FastAPI owns admission, session capability keys, time budgets, and server credentials. The session manager owns exactly one provider connection per application session and is the sole executor of delegation requests. The provider adapter translates public wire events into typed application events. M2 runs a LangGraph worker behind `delegate_task(goal, context)`.
+The browser owns microphone capture, WebRTC playback, and display-only captions. FastAPI owns
+admission, session capability keys, time budgets, and server credentials. The session manager
+owns exactly one provider connection per application session and is the sole executor of
+delegation requests. The provider adapter translates public wire events into typed application
+events. The application runs a LangGraph worker behind `delegate_task(goal, context)`.
 
-Keeping audio on a direct media connection avoids an application audio hop. A sideband provides server-side authority without routing the microphone through Python. Backend results enter as commentary, separate from trusted instructions.
+Keeping audio on a direct media connection avoids an application audio hop. A sideband provides
+server-side authority without routing the microphone through Python. Backend results enter as
+commentary, separate from trusted instructions.
 
 ```mermaid
 sequenceDiagram
@@ -29,58 +35,131 @@ sequenceDiagram
         S-->>B: Finalization status
         B->>B: Release microphone and peer
     else Control channel fails
-        S->>S: Bounded cleanup; mark unconfirmed if needed
+        S->>S: Bounded cleanup, mark unconfirmed if needed
     end
 ```
 
-M2 dispatches delegation to a LangGraph worker in the background. Bounded transcripts provide goal/context. Results return through commentary; interruptions invalidate the active generation before cancellation. See [M2](milestones/m2.md) and [ADR 005](decisions/005-bounded-delegation.md).
+The session manager dispatches delegation to a LangGraph worker in the background. Bounded transcripts provide goal/context. Results return through commentary; interruptions invalidate the active generation before cancellation. See [worker execution](worker.md) and [ADR 005](decisions/005-bounded-delegation.md).
 
 ```mermaid
 sequenceDiagram
     participant B as Browser
+    participant A as FastAPI /api
     participant S as Session manager
-    participant V as GPT-Live
-    participant W as LangGraph worker
-    V->>S: Transcripts and delegation ID
-    S->>W: delegate_task(goal, context)
-    alt Worker completes
-        W-->>S: Result
-        S->>S: Check generation and clip result
-        S->>V: Commentary with delegation ID
-        V-->>B: Narrated result
-    else User interrupts
-        B->>S: Microphone onset or Cancel task
-        S->>S: Invalidate generation
-        S->>W: Cancel task
-        W-->>S: Discard any late result
+    participant R as Delegation runner
+    participant W as Worker
+    participant V as Voice provider
+    V->>S: delegation event (id, timestamp)
+    S->>R: start(goal, context) at generation n
+    R->>W: delegate_task(goal, context)
+    Note over B,V: user speaks over the answer
+    par local speech onset or Cancel task
+        B->>A: POST /sessions/{id}/interrupt
+        A->>S: interrupt(session)
+    and provider speech or transcript event
+        V->>S: SpeechStarted, or user transcript at or after the delegation timestamp
     end
+    S->>R: cancel(state)
+    R->>R: generation = n+1 first, status = cancelled
+    R--xW: task.cancel()
+    Note over S: voice_interruptions_total += 1
+    W-->>R: late result tagged generation n
+    R->>R: n != n+1, discard and send no commentary
+    V-->>B: conversation continues without stale narration
 ```
-
 
 ## Lifecycle
 
-`created → connecting → connected → closing → closed` is application transport state. `connected` means SDP and sideband setup completed; the browser separately waits for `session.started` before displaying voice readiness. A session lock serializes offer and close operations. A duplicate offer returns 409. Closed sessions are removed rather than retained indefinitely. Repeating the internal close is safe; a later HTTP request for an already-removed session returns 404.
+When the primary control stream fails, the browser can request one fallback connection with bounded text history:
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as FastAPI
+    participant S as Session manager
+    participant P as Primary (GPT-Live)
+    participant F as Fallback (Azure Realtime)
+    P--xS: sideband stream fails
+    S->>S: Cancel worker, set reconnecting, close failed connection
+    B->>A: POST /sessions/{id}/heartbeat
+    A-->>B: state=reconnecting, generation=g, fallback_available=true
+    B->>B: close old RTCPeerConnection, create new one
+    B->>A: POST /sessions/{id}/reconnect {sdp, generation=g}
+    A->>S: reconnect under session lock
+    alt attempt available and generation matches
+        S->>S: Set fallback_used, increment generation
+        S->>S: Seal in-flight utterance, clamp text history to 12 segments and 2048 tokens
+        S->>F: create call with SDP + history as conversation items
+        F-->>S: SDP answer
+        S->>S: state = connected
+        A-->>B: SDP answer
+        B->>F: WebRTC audio
+    else stale generation or attempt already used
+        A-->>B: 409
+    else no fallback configured
+        A-->>B: 501
+    end
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> created: POST /sessions (admission, lease, key)
+    created --> connecting: POST /offer
+    created --> closing: Close, expiry or shutdown before offer
+    connecting --> connected: SDP answer and sideband attached
+    connecting --> closed: connect timeout 504 or provider error
+    connected --> reconnecting: Sideband failure with unused fallback
+    connected --> closing: Close, expiry, shutdown or failure without fallback
+    reconnecting --> connected: POST /reconnect accepted (single attempt)
+    reconnecting --> closing: Close, expiry or shutdown
+    reconnecting --> closed: Reconnect timeout or provider failure
+    closing --> closed: session.closed received (finalized) or grace elapsed (unconfirmed)
+    closed --> [*]: Removed, later requests return 404
+    note right of connected
+        delegation generation increments on interruption
+        and new delegation. Transport generation on reconnect.
+        duplicate /offer returns 409
+    end note
+```
+
+Diagram HTTP paths are relative to `/api`. The interruption counter is incremented by `SessionManager.interrupt` only while delegation is running. Transcript-based interruption additionally requires real provider timing; Realtime uses `SpeechStarted` as its authoritative onset event.
+
+The normal transport lifecycle is `created → connecting → connected → closing → closed`. A single fallback attempt adds `connected → reconnecting → connected`; a failed attempt marks the session closed and releases its admission lease. `connected` means SDP and sideband setup completed; the browser separately handles `session.started` (Live) or `session.created` (Realtime) to display voice readiness. A session lock serializes offer, reconnect and close operations. A duplicate offer returns 409. Closed sessions are removed rather than retained indefinitely. Repeating the internal close is safe; a later HTTP request for an already-removed session returns 404.
 
 A single WebSocket reader receives lifecycle events even while close is waiting. Queue exhaustion ends event consumption with an error rather than dropping delegation or termination messages silently. Graceful finalization may be unconfirmed after overflow or a transport failure. The browser heartbeat maintains liveness; it never resets the absolute session deadline.
 
 ## API
 
-All `/api` routes require the configured exact Origin. Session routes also require the configured bearer access code; production startup requires a code of at least 24 characters. CORS allows only the explicit frontend origin. Routes with `{id}` also require `X-Session-Key`.
+All `/api` routes require the configured exact Origin. Session, reference and feedback routes require the configured shared code or personal invitation. Public-demo deployments require personal invitations; the shared code is for private testing. CORS allows only the explicit frontend origin. Session routes with `{id}` also require `X-Session-Key`; reference IDs are public corpus identifiers, not session keys.
 
 | Method and path | Meaning |
 |---|---|
 | `GET /healthz` | Process health; no provider call |
-| `POST /api/config` | Report whether a demo access code is required |
+| `POST /api/config` | Return `requires_access_code`, `voice_available` and `feedback_available` booleans |
 | `POST /api/sessions` | Reserve an application session; return ID, key, TTL |
 | `POST /api/sessions/{id}/offer` | JSON SDP offer; return SDP answer |
+| `POST /api/sessions/{id}/reconnect` | New SDP offer and current generation; consume one configured fallback attempt |
 | `POST /api/sessions/{id}/heartbeat` | Refresh browser liveness and return state |
 | `POST /api/sessions/{id}/close` | Close and report finalization confirmation |
 | `POST /api/sessions/{id}/interrupt` | Invalidate and cancel the active worker |
-| `POST /api/sessions/{id}/token` | 501 for GPT-Live; capability boundary for later adapters |
+| `POST /api/sessions/{id}/token` | 501 for GPT-Live; adapter capability boundary |
+| `POST /api/reference/search` | Search the bundled corpus with a bounded query |
+| `POST /api/reference/{id}` | Read one source excerpt by corpus ID |
+| `POST /api/feedback` | Store a bounded diagnostic report without conversation content |
+
+## Private worker service API
+
+The worker requires `Authorization: Bearer <VOICE_WORKER_SERVICE_TOKEN>` for all job routes; missing or invalid credentials return 401. It belongs on the same host/private network, not on the public ingress. Full schemas and errors are in [API contracts](api.md).
+
+| Method and route | Response | Additional errors |
+|---|---|---|
+| `POST /jobs` | 202, job status | 409 fingerprint conflict; 422 input/deadline; 429 capacity or record limit |
+| `GET /jobs/{key}` | 200, status, text and source IDs | 404 missing/expired; 422 invalid UUID |
+| `DELETE /jobs/{key}` | 200, cancelled status/tombstone | 422 invalid UUID; 503 full cancellation ledger |
 
 ## Resource budgets
 
-| Limit | M1 value | Reason and exhaustion behavior |
+| Limit | Default | Reason and exhaustion behavior |
 |---|---|---|
 | Concurrent application sessions | 4, configurable | Bound sockets and spend; admission returns 429 |
 | Absolute lifetime | 300 s, configurable | Bound duration-based voice cost; server closes |
@@ -93,29 +172,19 @@ All `/api` routes require the configured exact Origin. Session routes also requi
 | Normalized event queue | 64 | Fail on slow consumers rather than accumulate stale work |
 | WebSocket write high-water mark | 32 KiB | Backpressure for outbound control messages |
 | Commentary write deadline | 2 s | Prevent stuck sends from blocking event handling indefinitely |
-| M1 commentary content | 500 UTF-8 bytes | Conservative wire guard alongside M2 configurable token accounting |
+| Commentary content | 500 UTF-8 bytes | Conservative wire guard alongside configurable token accounting |
 | Browser captions / timing rows | 6,000 characters per speaker / 20 | Bound DOM memory during long sessions |
 
-WebRTC audio buffers belong to the browser and provider. We do not claim to bound those with a Python queue. M3 must define bounded audio buffers if an audio relay is introduced.
+WebRTC audio buffers belong to the browser and provider. We do not claim to bound those with a Python queue. An audio relay would need its own explicit buffer limits.
 
-## M2–M4 design commitments
+## Provider adapters
 
-- M2: construct task context from transcripts and application state, not from delegation metadata alone. Keep worker instructions separate from voice instructions. Cancellation suppresses late results and cannot undo already-completed external side effects.
-- M3: adapter capabilities determine supported fallback. Reconnect uses a new peer connection, a generation ID, and clamped committed text history. Never replay tool executions blindly.
-- M4: application-defined turn spans parent provider and delegation spans. Distinguish signaling TTFB, first observed audio, playback onset, transcript gap, and end-to-end task latency. Recorded fake scenarios test scheduling and limits; a real model is required to evaluate model behavior.
-
-## Sources
-
-Reviewed public documentation on 2026-09-20:
-
-- [GPT-Live WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live)
-- [GPT-Live sideband](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live)
-- [Session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations)
-- [Delegation](https://developers.openai.com/api/docs/guides/live-delegation)
-- [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
-
-Application limits and ownership rules are first-principles design choices, not upstream service guarantees.
-
+`OpenAILiveProvider` implements GPT-Live WebRTC setup, sideband events, commentary and finalization.
+`RealtimeWebRTCProvider` contains the shared Realtime WebRTC and sideband implementation.
+`OpenAIRealtimeProvider` supplies OpenAI authentication and endpoints; `AzureRealtimeProvider`
+supplies Azure resource authentication and deployment configuration. Each provider builds its
+own default session configuration and declares capabilities, including transcript timing.
+The manager uses the provider protocol and normalized events; it does not select Azure models.
 
 ## Speech interruption authority
 
@@ -128,3 +197,59 @@ Local detection rearms after 300 ms of remote silence and requires a fresh onset
 Paused, muted and silent remote audio do not indefinitely block local detection.
 Provider speech-start events can still interrupt during remote playback; headphones and
 real-device testing remain necessary to assess acoustic behaviour.
+
+## Worker, fallback and admission contracts
+
+Cancellation invalidates the generation before cancelling tasks. Results from workers
+that return after cancellation are discarded. A result already sent to the voice provider
+cannot be withdrawn, and cancellation cannot undo a completed external action.
+
+Timeout limits how long a worker result is awaited. It cancels the worker and sends a
+short failure message. Provider transmission has its own two-second deadline, outside
+the worker execution budget. Noncooperative workers occupy capacity until they finish.
+
+Only sealed text segments are replayed during fallback, bounded to twelve entries and
+2048 tokens. For Live, a speaker change seals preceding segments; reconnect also seals
+every trailing in-flight segment. Realtime uses completed transcripts. Tool calls, tool results and
+audio are never replayed. History is conversation data, never system instructions.
+
+A provider stream failure retains the owned session in the reconnecting state and closes
+the failed connection immediately. Browser transport failure starts recovery with a new
+peer. An authenticated reconnect request consumes one fallback attempt under the session
+lock. Azure fallback preserves lifetime and admission limits; stale requests return 409.
+
+Cleanup reports failure if either provider's finalization was unconfirmed. A lost creation
+response can leave an unknown upstream call; no subsequent request can reliably identify
+that call for cleanup. Creation requests are never automatically retried.
+
+All session operations require both the user's invitation and the session ownership key.
+A different valid invitation cannot operate the session even if it knows its key.
+Shared-code setups remain available for private testing when public demo mode is disabled.
+
+SQLite records daily quota reservations before admitting a session. Only hashes of stable
+user IDs, UTC dates, counts and reserved seconds are stored, never tokens or transcripts.
+The single API process needs durable writable quota storage across deployment and rollback.
+
+Set `VOICE_DEMO_ENABLED=false` and restart to disable new demo sessions with status 503.
+Existing close and heartbeat routes retain authorization. Provider-side spend controls
+remain necessary because crashes and remote cleanup failures can outlive local deadlines.
+
+The worker allows four model steps by default and one tool per model response.
+Configurable step and duration budgets stop unbounded loops, while token and byte limits
+keep delegated results compact enough for narration.
+
+The offline planner is deterministic, not a free language model. It exercises the real
+LangGraph graph and read-only tools with English commands, without provider calls.
+Natural-language planning requires the separately configured paid text model.
+
+## Sources
+
+Reviewed public documentation on 2026-09-20:
+
+- [GPT-Live WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live)
+- [GPT-Live sideband](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live)
+- [Session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations)
+- [Delegation](https://developers.openai.com/api/docs/guides/live-delegation)
+- [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
+
+Application limits and ownership rules are first-principles design choices, not upstream service guarantees.

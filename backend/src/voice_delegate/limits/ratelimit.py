@@ -4,8 +4,9 @@ import time
 from collections import OrderedDict
 from collections.abc import Callable
 from dataclasses import dataclass
-from ipaddress import ip_address
+from ipaddress import IPv6Address, ip_address, ip_network
 
+from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -27,10 +28,15 @@ class RateLimitMiddleware:
         burst: int = 100,
         max_clients: int = 10000,
         clock: Callable[[], float] = time.monotonic,
+        trusted_proxy_hops: int = 1,
+        allowed_origin: str | None = None,
     ) -> None:
-        if rate <= 0 or burst < 1 or max_clients < 1:
-            raise ValueError("Rate limiter budgets must be positive")
+        if rate <= 0 or burst < 1 or max_clients < 1 or trusted_proxy_hops < 1:
+            message = "Rate limiter budgets must be positive"
+            raise ValueError(message)
         self.app = app
+        self.allowed_origin = allowed_origin
+        self.trusted_proxy_hops = trusted_proxy_hops
         self.trust_proxy = trust_proxy
         self.rate = rate
         self.burst = burst
@@ -42,13 +48,27 @@ class RateLimitMiddleware:
         client = scope.get("client")
         address = str(client[0]) if client else "unknown"
         if self.trust_proxy:
-            for name, value in scope.get("headers", []):
-                if name.lower() == b"x-forwarded-for":
-                    try:
-                        return str(ip_address(value.decode("ascii").split(",", 1)[0].strip()))
-                    except (UnicodeError, ValueError):
-                        break
-        return address
+            values = [
+                value
+                for name, value in scope.get("headers", [])
+                if name.lower() == b"x-forwarded-for"
+            ]
+            try:
+                # Ignore attacker-controlled prefixes; the socket is the first trusted hop.
+                forwarded = b",".join(values).rsplit(b",", self.trusted_proxy_hops)
+                if len(forwarded) >= self.trusted_proxy_hops:
+                    address = str(
+                        ip_address(forwarded[-self.trusted_proxy_hops].strip().decode("ascii"))
+                    )
+            except (UnicodeError, ValueError):
+                pass
+        try:
+            parsed = ip_address(address)
+        except ValueError:
+            return address
+        if isinstance(parsed, IPv6Address):
+            return str(ip_network((parsed, 64), strict=False))
+        return str(parsed)
 
     def allow(self, address: str) -> bool:
         now = self.clock()
@@ -61,7 +81,7 @@ class RateLimitMiddleware:
         bucket = self.buckets.get(address)
         if bucket is None:
             if len(self.buckets) >= self.max_clients:
-                return False
+                self.buckets.popitem(last=False)
             bucket = Bucket(float(self.burst), now)
             self.buckets[address] = bucket
         bucket.tokens = min(self.burst, bucket.tokens + max(0, now - bucket.updated) * self.rate)
@@ -74,10 +94,16 @@ class RateLimitMiddleware:
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http" and not self.allow(self.client(scope)):
+            headers = {"Cache-Control": "no-store"}
+            # Rejections bypass inner CORS; keep them readable only by the configured frontend.
+            if self.allowed_origin and Headers(scope=scope).get("origin") == self.allowed_origin:
+                headers.update(
+                    {"Access-Control-Allow-Origin": self.allowed_origin, "Vary": "Origin"}
+                )
             await JSONResponse(
                 {"detail": "Request rate limit exceeded"},
                 status_code=429,
-                headers={"Cache-Control": "no-store"},
+                headers=headers,
             )(scope, receive, send)
             return
         await self.app(scope, receive, send)

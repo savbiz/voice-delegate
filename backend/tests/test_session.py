@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator
 
 import pytest
+from conftest import BlockingProvider, FakeClock
 from voice_delegate.config import Settings
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate.providers.models import (
@@ -11,10 +12,11 @@ from voice_delegate.providers.models import (
     ProviderCapabilities,
     ProviderEvent,
     ProviderFailure,
-    SessionConfig,
 )
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
+
+from test_support import eventually
 
 
 async def test_capacity_ownership_and_cleanup() -> None:
@@ -50,41 +52,39 @@ async def test_duplicate_offers_create_only_one_upstream_call() -> None:
     await manager.aclose()
 
 
-async def test_absolute_deadline_survives_heartbeats() -> None:
-    now = [0.0]
+async def test_absolute_deadline_survives_heartbeats(
+    fake_clock: FakeClock,
+) -> None:
+    fake_clock.now = 0.0
     provider = FakeProvider()
     manager = SessionManager(
-        provider, Settings(session_ttl_seconds=10, heartbeat_timeout_seconds=5), lambda: now[0]
+        provider, Settings(session_ttl_seconds=10, heartbeat_timeout_seconds=5), fake_clock
     )
     session = manager.create()
     await manager.connect(session, "v=0\r\n")
-    now[0] = 9
+    fake_clock.now = 9
     manager.heartbeat(session)
-    now[0] = 10
+    fake_clock.now = 10
     await manager.expire()
     assert provider.connections[0].closed
     assert not manager.sessions
 
 
-async def test_abandoned_unconnected_session_expires() -> None:
-    now = [0.0]
-    manager = SessionManager(FakeProvider(), Settings(heartbeat_timeout_seconds=5), lambda: now[0])
+async def test_abandoned_unconnected_session_expires(
+    fake_clock: FakeClock,
+) -> None:
+    fake_clock.now = 0.0
+    manager = SessionManager(FakeProvider(), Settings(heartbeat_timeout_seconds=5), fake_clock)
     manager.create()
-    now[0] = 6
+    fake_clock.now = 6
     await manager.expire()
     assert not manager.sessions
 
 
-class SlowProvider(FakeProvider):
-    """Hold setup until canceled by the application timeout."""
-
-    async def connect(self, *, config: SessionConfig, offer_sdp: str) -> FakeConnection:
-        await asyncio.Event().wait()
-        raise AssertionError("unreachable")
-
-
-async def test_setup_timeout_releases_capacity() -> None:
-    manager = SessionManager(SlowProvider(), Settings(connect_timeout_seconds=0.01))
+async def test_setup_timeout_releases_capacity(
+    blocking_provider: BlockingProvider,
+) -> None:
+    manager = SessionManager(blocking_provider, Settings(connect_timeout_seconds=0.01))
     session = manager.create()
     with pytest.raises(SessionError, match="Provider connection timed out") as error:
         await manager.connect(session, "v=0\r\n")
@@ -94,11 +94,13 @@ async def test_setup_timeout_releases_capacity() -> None:
     assert session.state == "closed"
 
 
-async def test_canceled_setup_releases_capacity() -> None:
-    manager = SessionManager(SlowProvider(), Settings())
+async def test_canceled_setup_releases_capacity(
+    blocking_provider: BlockingProvider,
+) -> None:
+    manager = SessionManager(blocking_provider, Settings())
     session = manager.create()
     setup = asyncio.create_task(manager.connect(session, "v=0\r\n"))
-    await asyncio.sleep(0)
+    await blocking_provider.started.wait()
     setup.cancel()
     with pytest.raises(asyncio.CancelledError):
         await setup
@@ -113,7 +115,7 @@ async def test_delegation_without_transcript_requests_clarification() -> None:
     await manager.connect(session, "v=0\r\n")
     connection = provider.connections[0]
     connection.queue.put_nowait(DelegationRequested("task-1"))
-    await asyncio.sleep(0)
+    await eventually(lambda: session.delegation.task is not None)
     assert session.delegation.task is not None
     await session.delegation.task
     assert connection.commands[0].delegation_id == "task-1"
@@ -143,11 +145,14 @@ async def test_shutdown_rejects_new_sessions() -> None:
 
 @pytest.mark.parametrize("shutdown", [False, True])
 async def test_failed_close_does_not_stop_other_sessions(
-    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, shutdown: bool
+    fake_clock: FakeClock,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+    shutdown: bool,
 ) -> None:
-    now = [0.0]
+    fake_clock.now = 0.0
     provider = FakeProvider()
-    manager = SessionManager(provider, Settings(heartbeat_timeout_seconds=5), lambda: now[0])
+    manager = SessionManager(provider, Settings(heartbeat_timeout_seconds=5), fake_clock)
     first, later = manager.create(), manager.create()
     await manager.connect(first, "v=0\r\n")
     await manager.connect(later, "v=0\r\n")
@@ -156,7 +161,7 @@ async def test_failed_close_does_not_stop_other_sessions(
         raise RuntimeError("cleanup failed")
 
     monkeypatch.setattr(provider.connections[0], "aclose", fail)
-    now[0] = 6
+    fake_clock.now = 6
     if shutdown:
         await manager.aclose()
     else:
@@ -173,6 +178,12 @@ async def test_janitor_continues_after_unexpected_failure(
 ) -> None:
     manager = SessionManager(FakeProvider(), Settings())
     recovered = asyncio.Event()
+    original_sleep = asyncio.sleep
+
+    async def yield_only(delay: float) -> None:
+        await original_sleep(0)
+
+    monkeypatch.setattr(asyncio, "sleep", yield_only)
     attempts = 0
 
     async def expire() -> None:
@@ -205,7 +216,7 @@ async def test_watcher_logs_unexpected_stream_failure(
         entered.set()
         await fail.wait()
         raise RuntimeError("event reader exploded")
-        yield  # pragma: no cover
+        yield  # type: ignore[unreachable]  # async-generator fixture; pragma: no cover
 
     provider = FakeProvider()
     provider.capabilities = ProviderCapabilities(text_replay=True)
@@ -223,7 +234,7 @@ async def test_watcher_logs_unexpected_stream_failure(
     assert session.watcher is not None
     with pytest.raises(RuntimeError, match="event reader exploded"):
         await session.watcher
-    await asyncio.sleep(0)
+    await eventually(lambda: "Session watcher failed" in caplog.text)
     assert "Session watcher failed" in caplog.text
     assert "event reader exploded" in caplog.text
     await manager.aclose()
@@ -239,7 +250,7 @@ async def test_watcher_failure_during_close_does_not_deadlock(
         entered.set()
         await closing.wait()
         raise RuntimeError("stream failed during close")
-        yield  # pragma: no cover
+        yield  # type: ignore[unreachable]  # async-generator fixture; pragma: no cover
 
     monkeypatch.setattr(FakeConnection, "events", events)
     provider = FakeProvider()
