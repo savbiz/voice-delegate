@@ -110,7 +110,12 @@ export function updateTurnTiming(
       timed && latest && !latest.estimated
         ? start - latest.end
         : receivedAt - (latest?.receivedEnd ?? 0);
-    if (!latest || latest.reply !== undefined || latest.transportId !== transportId || gap > TRANSCRIPT_GAP_MS) {
+    if (
+      !latest ||
+      latest.reply !== undefined ||
+      latest.transportId !== transportId ||
+      gap > TRANSCRIPT_GAP_MS
+    ) {
       return [
         {
           id: (latest?.id ?? 0) + 1,
