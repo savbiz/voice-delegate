@@ -81,3 +81,16 @@ async def test_expired_running_job_is_cancelled_before_removal(
         await job.task
     jobs.sweep()
     assert not jobs.items
+
+
+@pytest.mark.parametrize("api_docs", [False, True])
+async def test_private_worker_never_exposes_documentation(
+    asgi_client: ASGIClientFactory, blocking_worker: BlockingWorker, api_docs: bool
+) -> None:
+    app = create_worker_app(
+        Settings(worker_service_token=SecretStr("x" * 32), api_docs=api_docs), blocking_worker
+    )
+    async with asgi_client(app) as client:
+        for headers in ({}, {"Authorization": "Bearer " + "x" * 32}):
+            for path in ("/docs", "/redoc", "/openapi.json"):
+                assert (await client.get(path, headers=headers)).status_code == 404

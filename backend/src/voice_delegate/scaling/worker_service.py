@@ -169,7 +169,13 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
         if not compare_digest(authorization.encode(), expected.encode()):
             raise HTTPException(401, "Private worker authentication required")
 
-    app = FastAPI(lifespan=lifespan, dependencies=[Depends(authorized)])
+    app = FastAPI(
+        lifespan=lifespan,
+        dependencies=[Depends(authorized)],
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+    )
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
 
     @app.post("/jobs", status_code=202)
