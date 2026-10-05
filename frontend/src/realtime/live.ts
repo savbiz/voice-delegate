@@ -266,7 +266,12 @@ export function createLiveSession(
   async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
     if (!existing) {
       fallbackAttempted = false;
-      store.update({ captions: { user: '', assistant: '' }, timings: [], sources: [] });
+      store.update({
+        captions: { user: '', assistant: '' },
+        timings: [],
+        sources: [],
+        recap: 'No conversation yet.',
+      });
       if (!reportPending) {
         diagnosticId = crypto.randomUUID();
         reportBody = undefined;
@@ -398,7 +403,8 @@ export function createLiveSession(
               showWorker(state.delegation);
               if (state.state === 'closed' || state.state === 'closing')
                 void finish('Conversation ended.');
-              if (state.state === 'reconnecting') void recover('Provider connection lost.');
+              if (shouldRecover('heartbeat', state.state))
+                void recover('Provider connection lost.');
             }
           })
           .catch(() => {

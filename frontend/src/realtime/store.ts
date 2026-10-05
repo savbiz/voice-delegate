@@ -75,6 +75,7 @@ export function initialLiveState(): LiveState {
   };
 }
 export function workerState(state: LiveState, worker: string): LiveState {
+  const cancelPending = state.cancelPending && worker === 'running';
   const phase =
     state.active && !state.ending && !state.recovering
       ? worker === 'running'
@@ -87,8 +88,10 @@ export function workerState(state: LiveState, worker: string): LiveState {
     ...state,
     phase,
     worker,
-    cancelPending: false,
-    workerMessage: workerMessages[worker] ?? 'Waiting for worker status.',
+    cancelPending,
+    workerMessage: cancelPending
+      ? state.workerMessage
+      : (workerMessages[worker] ?? 'Waiting for worker status.'),
   };
 }
 export function updateTurnTiming(

@@ -313,3 +313,18 @@ test.each([
   expect(store.getSnapshot().status).toContain(message);
   expect(store.getSnapshot().active).toBe(false);
 });
+
+test('a fresh session clears the previous recap while fallback preserves it', async () => {
+  const store = await start();
+  store.update({ recap: 'Previous conversation details' });
+  FakePeer.instances[0]!.connectionState = 'failed';
+  FakePeer.instances[0]!.dispatchEvent(new Event('connectionstatechange'));
+  await vi.waitFor(() => expect(FakePeer.instances).toHaveLength(2));
+  await vi.waitFor(() => expect(store.getSnapshot().phase).toBe('connected'));
+  expect(store.getSnapshot().recap).toBe('Previous conversation details');
+  controller?.stop();
+  await vi.waitFor(() => expect(store.getSnapshot().ending).toBe(false));
+  controller?.start();
+  expect(store.getSnapshot().recap).toBe('No conversation yet.');
+  await vi.waitFor(() => expect(FakePeer.instances).toHaveLength(3));
+});

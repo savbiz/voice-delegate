@@ -1,5 +1,11 @@
 import { expect, test, vi } from 'vitest';
-import { createLiveStore, initialLiveState, processEvent, updateTurnTiming } from './store';
+import {
+  createLiveStore,
+  initialLiveState,
+  processEvent,
+  updateTurnTiming,
+  workerState,
+} from './store';
 
 test('provider errors update display without requesting recovery', () => {
   const state = { ...initialLiveState(), active: true };
@@ -118,4 +124,21 @@ test('fallback preserves old rows but never joins timestamps across transports',
   const reset = updateTurnTiming(rows, 'user', 0, 100, 15500, 3);
   expect(reset).toHaveLength(3);
   expect(reset[0]).toMatchObject({ transportId: 3, end: 100, estimated: false });
+});
+
+test('running heartbeats retain cancellation until the worker changes state', () => {
+  const message = 'Worker cancellation requested. You can give a new request.';
+  const state = {
+    ...initialLiveState(),
+    worker: 'running',
+    cancelPending: true,
+    workerMessage: message,
+  };
+  const running = workerState(state, 'running');
+  expect(running.cancelPending).toBe(true);
+  expect(running.workerMessage).toBe(message);
+  const cancelled = workerState(running, 'cancelled');
+  expect(cancelled.cancelPending).toBe(false);
+  expect(cancelled.workerMessage).toContain('Task cancelled');
+  expect(workerState(running, 'completed').cancelPending).toBe(false);
 });
