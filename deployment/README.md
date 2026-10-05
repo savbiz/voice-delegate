@@ -2,6 +2,8 @@
 
 The frontend is deployed at `https://voice-delegate.vercel.app` and the canonical backend at `https://voice-delegate-api-production.up.railway.app` on Railway. Render is a supported alternative. Keep **one** persistent backend process. WebRTC media connects the browser to the provider; Python keeps the control WebSocket. Vercel serves the static frontend, not the Python session manager. The in-memory registry requires one replica and one Uvicorn worker. Restarting or redeploying interrupts active sessions.
 
+The hosted instance offers the simulated demo and invitation-protected documentation search today. Live voice is available only when a real provider key is configured on the backend; a placeholder is insufficient. Public availability does not establish live voice, Azure, measured latency or hosted end-to-end acceptance.
+
 ## Frontend on Vercel
 
 Import the GitHub repository. Set **Root Directory = frontend**, framework Vite, install `pnpm install --frozen-lockfile`, build `pnpm build`, output `dist`, Node.js 24. `frontend/vercel.json` supplies build defaults and concrete security headers. The simulated demo works immediately without a backend or API key.

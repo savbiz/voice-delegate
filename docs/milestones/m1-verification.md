@@ -8,17 +8,9 @@ The candidate includes tests for admission capacity, session ownership, duplicat
 
 The GitHub Actions workflow runs the same lint, types, tests, client build, and Python package build. It has been prepared locally; a remote workflow run requires a GitHub repository.
 
-## Manual live gate — not yet executed
+## Manual live gate
 
-1. Use a project key with GPT-Live access via `.env`, following README quickstart.
-2. Start the browser session. Confirm microphone capture, `session.started`, and audible output.
-3. Speak in two supported languages and verify captions are independently updated.
-4. Interrupt a spoken answer. Record whether playback and conversation follow the interruption naturally. Do not infer this from transcripts alone.
-5. Request an external lookup. Confirm the model reports task execution unavailable and does not claim completion.
-6. End the call. Confirm microphone indicator stops and the server reports confirmed finalization when `session.closed` is received.
-7. Repeat with a closed tab, lost network, denied microphone permission, and a short configured absolute TTL. Check bounded cleanup and unconfirmed-close messaging.
-8. Verify the browser never receives the project API key and the project contains only `.env.example` in Git.
-9. Record test date, model, browser, observed setup/turn behavior, and any failed cases before creating the release.
+The current [nine-step live acceptance checklist](live-verification.md#live-smoke-test-checklist) is maintained separately from this historical record.
 
 ## Known verification boundaries
 

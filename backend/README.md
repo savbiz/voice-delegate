@@ -1,3 +1,4 @@
 # voice-delegate backend
 
-FastAPI session ownership and GPT-Live control. See the root README for setup.
+FastAPI owns sessions, admission, provider control and bounded delegation.
+See [architecture](../docs/architecture.md), [API contracts](../docs/api.md) and the [setup guide](../README.md#quickstart--no-api-key-required-for-the-simulated-demo).

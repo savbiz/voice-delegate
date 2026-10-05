@@ -59,16 +59,15 @@ result that is no longer wanted. This project shows one way to avoid both:
   result size have limits with a documented reason and a documented behaviour on exhaustion.
 - **Provider failover with clamped history.** A primary transport failure reconnects to a
   fallback provider and replays bounded text, never tool executions.
-- **Measured, not assumed.** OpenTelemetry spans per turn, provider time-to-first-byte,
-  delegation latency and failover count; offline evals for scheduling and limits.
+- **Measured, not assumed.** OpenTelemetry spans per turn, provider setup duration,
+  transcript-arrival wait, delegation duration by status, failover duration; offline evals for scheduling and limits.
 - **Fake provider for evals.** Reproducible failure sequences and injected clocks make
   lifecycle behaviour testable without credentials. Scripted tests verify orchestration;
   live model-quality and audio-latency measurements remain separate.
 
 ## Status
 
-**v0.1.0: sessions, delegation, recovery, observability, invitations, cited search and
-same-host scaling implemented; live voice, Azure and hosted acceptance pending**.
+**v0.1.0 is an implementation release.** The hosted [Vercel frontend](https://voice-delegate.vercel.app) and [Railway backend](https://voice-delegate-api-production.up.railway.app/healthz) offer the simulated demo and invitation-protected documentation search; live voice requires a real backend provider key. Sessions, delegation, recovery, observability, invitations, cited search and same-host scaling are implemented. Live voice, Azure calls, measured voice latency and hosted end-to-end acceptance remain unverified.
 See the [roadmap](docs/roadmap.md) and [production scope](docs/production.md).
 
 <!-- TODO(v0.1.0): fill from the live smoke test; keep p50/p95 and the exact model names.
@@ -81,7 +80,7 @@ See the [roadmap](docs/roadmap.md) and [production scope](docs/production.md).
 
 ## Quickstart — no API key required for the simulated demo
 
-Prerequisites: Python 3.12, uv, Node.js 24 and pnpm 11.19.0. Open the repository folder containing `pyproject.toml`.
+Prerequisites: Python 3.12 or 3.13, uv, Node.js 24 and pnpm 11.19.0. Open the repository folder containing `pyproject.toml`.
 
 ```bash
 cd voice-delegate
@@ -132,7 +131,7 @@ Other implemented areas:
 
 - [Voice controls](docs/architecture.md): language, translation mode, captions and interruption recap.
 - [Cited documentation search](agent/README.md): local evidence with immutable source IDs.
-- [Admission and feedback](deployment/README.md): invitations, durable quotas and bounded reports.
+- [Admission and feedback](docs/api.md): invitations, durable quotas and bounded reports.
 - [Provider recovery](docs/architecture.md): one fallback attempt with clamped text history.
 - [Observability](observability/README.md): backend traces, counters and latency histograms.
 - [Same-host scaling](deployment/README.md): instance routing, shared leases and a private worker.
@@ -159,6 +158,7 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy
 uv run pytest --cov=voice_delegate --cov=voice_delegate_agent --cov-fail-under=85
+uv run python scripts/check_deployment.py
 uv run python scripts/check_links.py
 uv run python scripts/build_reference.py --check
 pnpm --dir frontend lint
@@ -170,11 +170,11 @@ docker build -f deployment/Dockerfile.backend -t voice-delegate:ci .
 uv run python scripts/smoke_container.py
 ```
 
-CI runs the backend on Python 3.12 and 3.13, builds and smoke-tests the container on 3.12, checks release tag/version agreement on tag pushes, and rejects unresolved Vercel placeholders.
+CI runs the backend on Python 3.12 and 3.13, builds and smoke-tests the container on 3.12, checks release tag/version agreement on tag pushes, checks that the CSP API host appears in both deployment guides, and rejects unresolved Vercel placeholders. The pytest suite also checks generated configuration documentation for drift.
 
 Pytest disables IP sockets; only local Unix sockets used by asyncio are allowed. HTTP tests use in-process ASGI and mock transports. Test fixtures contain invented identifiers and no recordings from private systems. Dependency installation needs internet; the tests themselves do not.
 
-See [the live smoke-test checklist](docs/milestones/m1-verification.md). CI runs on hosted GitHub Actions, and paid text-worker evaluations are recorded in
+See [the live smoke-test checklist](docs/milestones/live-verification.md#live-smoke-test-checklist). CI runs on hosted GitHub Actions, and paid text-worker evaluations are recorded in
 [the evaluation verification record](docs/milestones/m9-evals-verification.md); live voice
 and Azure calls have not yet been verified.
 
@@ -184,13 +184,14 @@ The UI measures an **estimated transcript gap**, not audio TTFB or end-to-end pl
 
 The provider creation POST is never automatically retried: an ambiguous response can already have created a billable session. If the sideband fails after creation, the adapter attempts to recover it solely to close the session. If recovery fails, remote finalization cannot be guaranteed and is logged as unconfirmed. The public hangup reference describes SIP, so the Live adapter does not assume it works for WebRTC. A process crash also cannot guarantee remote cleanup. A normal close waits for `session.closed` before releasing transports.
 
-## Roadmap and release gates
+## Roadmap and acceptance gates
 
+v0.x tags publish the implementation with documented verification gaps; acceptance-gated tags begin at v1.0.
 The full plan covers voice sessions through same-host scaling: see [scope, acceptance and status](docs/roadmap.md).
 The table below covers the core features; later features extend them with a controlled
 public demo, a complete use case, advanced voice UX and optional scaling.
 
-| Feature | Release gate |
+| Feature | Acceptance gate |
 |---|---|
 | GPT-Live sessions, provider contract, browser | Offline checks + real voice, interruption, and cleanup smoke test |
 | LangGraph worker, internal delegation, token budget, cancellation | Offline worker tests + live delegated response |

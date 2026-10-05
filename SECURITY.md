@@ -14,4 +14,4 @@ acknowledgement window is not a promise that a fix will be available within 72 h
 ## Supported versions
 
 Security fixes target the latest tagged release and `main`. Older snapshots are not
-maintained separately. Until the first release is tagged, use the latest reviewed `main` commit.
+maintained separately.

@@ -48,12 +48,12 @@
     "digest": "df138923e7ad0a2eb11d739c6e3c4faf625783e9e01116e3985d53722fcb4c4c"
   },
   {
-    "id": "cc1d2600d7184dd0",
+    "id": "57ae2fd71364d694",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Why it exists",
-    "text": "- **Measured, not assumed.** OpenTelemetry spans per turn, provider time-to-first-byte,\n  delegation latency and failover count; offline evals for scheduling and limits.",
-    "digest": "cc1d2600d7184dd05d59eaa883475204dc8d8f706e0fc5a77ca7b9305a08d040"
+    "text": "- **Measured, not assumed.** OpenTelemetry spans per turn, provider setup duration,\n  transcript-arrival wait, delegation duration by status, failover duration; offline evals for scheduling and limits.",
+    "digest": "57ae2fd71364d694bc64595bcf61f5403ae7f5ff59716bb8544fbfc8ce8783ad"
   },
   {
     "id": "ed4f29c5620a4cd4",
@@ -64,28 +64,28 @@
     "digest": "ed4f29c5620a4cd43a52dba604f4a468d09bf0d34431a0abde661c6f917edf56"
   },
   {
-    "id": "9992cc65357b9c08",
+    "id": "f1dd64b407005908",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status",
-    "text": "**v0.1.0: sessions, delegation, recovery, observability, invitations, cited search and\nsame-host scaling implemented; live voice, Azure and hosted acceptance pending**.\nSee the [roadmap](docs/roadmap.md) and [production scope](docs/production.md).",
-    "digest": "9992cc65357b9c08a44ec0f41933dc83bad1b69a79a1a5b7c07528e72a96abc2"
+    "text": "**v0.1.0 is an implementation release.** The hosted [Vercel frontend](https://voice-delegate.vercel.app) and [Railway backend](https://voice-delegate-api-production.up.railway.app/healthz) offer the simulated demo and invitation-protected documentation search; live voice requires a real backend provider key. Sessions, delegation, recovery, observability, invitations, cited search and same-host scaling are implemented. Live voice, Azure calls, measured voice latency and hosted end-to-end acceptance remain unverified.\nSee the [roadmap](docs/roadmap.md) and [production scope](docs/production.md).",
+    "digest": "f1dd64b40700590822b9fc77801f16067b716d70acc5ce082ae59baf2cfbab95"
   },
   {
-    "id": "fe627ad243889855",
+    "id": "64774157d5bce328",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Verification",
-    "text": "See [the live smoke-test checklist](docs/milestones/m1-verification.md). CI runs on hosted GitHub Actions, and paid text-worker evaluations are recorded in\n[the evaluation verification record](docs/milestones/m9-evals-verification.md); live voice\nand Azure calls have not yet been verified.",
-    "digest": "fe627ad2438898552b957d5cb95cd97cf2adb700c135c89f9959dc7d023fa767"
+    "text": "See [the live smoke-test checklist](docs/milestones/live-verification.md#live-smoke-test-checklist). CI runs on hosted GitHub Actions, and paid text-worker evaluations are recorded in\n[the evaluation verification record](docs/milestones/m9-evals-verification.md); live voice\nand Azure calls have not yet been verified.",
+    "digest": "64774157d5bce3283db94f668fb23aeb4bd79dca000bbed5ec0e2dc00f00aaf6"
   },
   {
-    "id": "4c61e4bed3dff1ac",
+    "id": "558836e5b8cc2d87",
     "title": "voice-delegate",
     "path": "README.md",
-    "section": "Roadmap and release gates",
-    "text": "The full plan covers voice sessions through same-host scaling: see [scope, acceptance and status](docs/roadmap.md).\nThe table below covers the core features; later features extend them with a controlled\npublic demo, a complete use case, advanced voice UX and optional scaling.",
-    "digest": "4c61e4bed3dff1ac1dc8919ca3347f451612b8ae801aafa9ababc5690c7ef66e"
+    "section": "Roadmap and acceptance gates",
+    "text": "v0.x tags publish the implementation with documented verification gaps; acceptance-gated tags begin at v1.0.\nThe full plan covers voice sessions through same-host scaling: see [scope, acceptance and status](docs/roadmap.md).\nThe table below covers the core features; later features extend them with a controlled\npublic demo, a complete use case, advanced voice UX and optional scaling.",
+    "digest": "558836e5b8cc2d87e4b0a674394bd30bb981b88424f0892f3c4f8c5a9ea1024e"
   },
   {
     "id": "4c84eddd371969c3",

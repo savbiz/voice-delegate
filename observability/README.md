@@ -22,10 +22,10 @@ failover spans share that parent. Turns end at the next turn, close or failed fa
 An idle turn can remain open until session expiry. No transcript, session IDs, SDP,
 credentials, provider request bodies or tool results are exported.
 
-Metrics use finite operation/outcome labels. `delegate_task` duration samples also carry a finite `status` label to distinguish worker outcomes. `provider.failover` duration includes cleanup of the failed connection performed by reconnect; cleanup already completed by the failed-stream watcher precedes that span and is not counted again:
+Metrics use finite operation/outcome labels. `provider.failover` duration includes cleanup of the failed connection performed by reconnect; cleanup already completed by the failed-stream watcher precedes that span and is not counted again.
 
 Operation outcomes are `success`, `error`, and `cancelled`, including delegated work.
-Worker samples also carry a finite `status` label such as `completed`, `timeout`,
+`delegate_task` duration samples carry a finite `status` label such as `completed`, `timeout`,
 `busy`, `failed` or `delivery_failed` for diagnosis. The names below are
 post-collector Prometheus names, rather than the dotted OpenTelemetry instrument names.
 Both duration histograms use explicit second boundaries:

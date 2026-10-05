@@ -9,9 +9,9 @@ uv run ruff check .
 uv run ruff format --check .
 uv run mypy
 uv run pytest --cov=voice_delegate --cov=voice_delegate_agent --cov-fail-under=85
+uv run python scripts/check_deployment.py
 uv run python scripts/check_links.py
 uv run python scripts/build_reference.py --check
-uv run python scripts/build_configuration.py --check
 pnpm --dir frontend lint
 pnpm --dir frontend build
 pnpm --dir frontend test
@@ -20,6 +20,8 @@ uv build --all-packages
 docker build -f deployment/Dockerfile.backend -t voice-delegate:ci .
 uv run python scripts/smoke_container.py
 ```
+
+CI runs backend checks on Python 3.12 and 3.13, container build/smoke on 3.12, tag/version checks on tag pushes, and a frontend check rejecting unresolved Vercel placeholders. Pytest also verifies generated configuration documentation.
 
 Run pnpm only for `frontend/`. Backend tests disable IP sockets and use fakes; do not add paid provider calls to CI. Voice/Azure acceptance is recorded separately with real environment and measurements, never invented numbers. Regenerate the reference corpus after evergreen documentation changes; bump the evaluation dataset version whenever labels change.
 

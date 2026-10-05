@@ -1,27 +1,29 @@
-# Roadmap M1–M9
+# Roadmap
 
 Version 0.1.0 is a reference implementation; implementation and release acceptance are separate. Passing offline tests is not proof of
 live voice quality, provider access, acoustic latency or production readiness.
 
-| Milestone | Scope | Acceptance | Current status |
+| Feature | Scope | Acceptance | Current status |
 |---|---|---|---|
-| M1 — Voice and sessions | FastAPI, GPT-Live, WebRTC, React, session cleanup | Real microphone conversation and resource cleanup | Implemented; live verification pending |
-| M2 — Delegated worker | LangGraph, read-only tools, timeout, bounded results, interruption cancellation | Delegated result is spoken; interrupted work cannot return late | Candidate; offline checks pass; live verification pending |
-| M3 — Providers and recovery | Azure fallback, new peer, bounded history, duplicate protection | Injected failure recovers within configured budget | Implemented; offline/browser checks pass; Azure live validation pending |
-| M4 — Measurement, evals and v0.1 | OTel, metrics, Prometheus, Grafana, reproducible evals, docs, recorded demo | CI green, measured latency, live checks and demonstration | Implemented candidate; release evidence incomplete |
-| M5 — Controlled public demo | Verified deployment, authentication, per-user quotas, application spending limits, private logs, rollback | External users can try it with bounded consumption and protected credentials | Implemented candidate: personal invites, durable quotas, local container checks; hosted acceptance pending |
-| M6 — Complete use case | Read-only questions over public project documentation with source citations | Useful end-to-end workflow beyond calculator | Implemented: cited documentation search and worker tool; hosted/live narration acceptance pending |
-| M7 — Advanced voice experience | Multilingual behavior, translation, interruption-aware summaries, accessibility, additional providers | Multilingual and user-correction scenarios pass | Implemented candidate: language/translate controls, interruption recap, accessibility and Realtime adapter; live language evaluation pending |
-| M8 — Scaling | Multiple instances, session ownership, separate workers, backpressure, load tests | Recovery and isolation work across processes under load | Implemented same-host reference: two APIs, separate bounded worker, shared leases, ownership routing and crash/load tests; hosted real-voice acceptance pending |
-| M9 — Measured quality and feedback | Versioned task evaluations, clear recovery states, minimal diagnostic feedback | Regression reports, verified recovery UX and bounded feedback from a private pilot | Recovery UX, feedback and 40-case worker eval runner implemented; Braintrust upload verification, accessibility audit and pilot pending; see [M9](milestones/m9.md) |
+| Voice and sessions | FastAPI, GPT-Live, WebRTC, React, session cleanup | Real microphone conversation and resource cleanup | Implemented; live verification pending |
+| Delegated worker | LangGraph, read-only tools, timeout, bounded results, interruption cancellation | Delegated result is spoken; interrupted work cannot return late | Candidate; offline checks pass; live verification pending |
+| Providers and recovery | Azure fallback, new peer, bounded history, duplicate protection | Injected failure recovers within configured budget | Implemented; offline/browser checks pass; Azure live validation pending |
+| Measurement, evals and v0.1 | OTel, metrics, Prometheus, Grafana, reproducible evals, docs, recorded demo | CI green, measured latency, live checks and demonstration | Implemented candidate; release evidence incomplete |
+| Controlled public demo | Verified deployment, authentication, per-user quotas, application spending limits, private logs, rollback | External users can try it with bounded consumption and protected credentials | Implemented candidate: personal invites, durable quotas, local container checks; hosted acceptance pending |
+| Complete use case | Read-only questions over public project documentation with source citations | Useful end-to-end workflow beyond calculator | Implemented: cited documentation search and worker tool; hosted/live narration acceptance pending |
+| Advanced voice experience | Multilingual behavior, translation, interruption-aware summaries, accessibility, additional providers | Multilingual and user-correction scenarios pass | Implemented candidate: language/translate controls, interruption recap, accessibility and Realtime adapter; live language evaluation pending |
+| Scaling | Multiple instances, session ownership, separate workers, backpressure, load tests | Recovery and isolation work across processes under load | Implemented same-host reference: two APIs, separate bounded worker, shared leases, ownership routing and crash/load tests; hosted real-voice acceptance pending |
+| Measured quality and feedback | Versioned task evaluations, clear recovery states, minimal diagnostic feedback | Regression reports, verified recovery UX and bounded feedback from a private pilot | Recovery UX, feedback and 40-case worker eval runner implemented; Braintrust upload verification, accessibility audit and pilot pending; see [quality and feedback record](milestones/m9.md) |
 
-The first eight implementation milestones now have code and offline verification. Release acceptance
-still requires the listed live/hosted evidence. M8 deliberately targets multiple processes on
+All nine milestones have implementation and offline verification. Release acceptance
+still requires the listed live/hosted evidence. Same-host scaling deliberately targets multiple processes on
 one host; cross-host high availability is a further architectural change.
 
-See [Azure setup](azure-setup.md), [M3](milestones/m3.md), [M4](milestones/m4.md), and
-[observability](../observability/README.md). Stable tags require the acceptance evidence;
+See [Azure setup](azure-setup.md), [provider recovery](milestones/m3.md), [measurement](milestones/m4.md), and
+[observability](../observability/README.md). Acceptance-gated tags beginning at v1.0 require the listed evidence;
 implementation commits alone do not close a milestone.
 
-The [M7–M8 verification record](milestones/m7-m8-verification.md) records passing local checks and
+The [voice experience and scaling verification record](milestones/m7-m8-verification.md) records passing local checks and
 the successful Docker rerun, separately from the live and hosted acceptance still required.
+
+Amended 2026-10-05: v0.x tags are implementation releases; acceptance-gated tags begin at v1.0.
