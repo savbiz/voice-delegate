@@ -1,5 +1,7 @@
 """Exercise the HTTP boundary in-process with real sockets disabled."""
 
+from pathlib import Path
+
 import httpx
 import pytest
 from conftest import ASGIClientFactory
@@ -70,7 +72,7 @@ async def test_lifespan_closes_active_session() -> None:
     assert provider.connections[0].closed
 
 
-async def test_deployment_gate_and_cors() -> None:
+async def test_deployment_gate_and_cors(asgi_client: ASGIClientFactory, tmp_path: Path) -> None:
     from pydantic import SecretStr
 
     settings = Settings(
@@ -78,13 +80,11 @@ async def test_deployment_gate_and_cors() -> None:
         allowed_hosts=["localhost", "127.0.0.1"],
         allowed_origin="https://voice.example",
         access_token=SecretStr("a-test-access-code-long-enough"),
+        feedback_database=str(tmp_path / "feedback.sqlite3"),
     )
     app = create_app(settings, FakeProvider())
-    async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app),
-        base_url="http://localhost",
-        headers={"Origin": "https://voice.example"},
-    ) as client:
+    async with asgi_client(app) as client:
+        client.headers["Origin"] = "https://voice.example"
         preflight = await client.options(
             "/api/sessions",
             headers={
@@ -138,6 +138,7 @@ async def test_provider_configuration_uses_existing_settings(
     from voice_delegate.providers.webrtc import RealtimeWebRTCProvider
 
     configs: list[SessionConfig] = []
+    timeouts: list[float] = []
 
     async def connect(
         self: OpenAILiveProvider | RealtimeWebRTCProvider,
@@ -146,6 +147,9 @@ async def test_provider_configuration_uses_existing_settings(
         offer_sdp: str,
     ) -> FakeConnection:
         configs.append(config)
+        timeouts.append(
+            self._close_timeout if isinstance(self, OpenAILiveProvider) else self.close_timeout
+        )
         return FakeConnection()
 
     for cls in (OpenAILiveProvider, OpenAIRealtimeProvider, AzureRealtimeProvider):
@@ -155,6 +159,7 @@ async def test_provider_configuration_uses_existing_settings(
         app = create_app(
             Settings(
                 voice_provider=kind,
+                close_timeout_seconds=0.125,
                 model="custom-live",
                 realtime_model="custom-realtime",
                 voice="custom-voice",
@@ -177,6 +182,7 @@ async def test_provider_configuration_uses_existing_settings(
             path = f"/api/sessions/{payload['id']}"
             client.headers["X-Session-Key"] = payload["key"]
             assert (await client.post(path + "/offer", json={"sdp": "v=0\r\n"})).status_code == 200
+            assert timeouts[-1] == 0.125
             assert configs[-1].model == f"custom-{kind}"
             assert configs[-1].voice == (
                 "custom-azure-voice" if kind == "azure" else "custom-voice"
@@ -186,6 +192,7 @@ async def test_provider_configuration_uses_existing_settings(
                     path + "/reconnect", json={"sdp": "v=0\r\n", "generation": 0}
                 )
                 assert response.status_code == 200
+                assert timeouts[-1] == 0.125
                 assert configs[-1].model == "custom-azure"
                 assert configs[-1].voice == "custom-azure-voice"
 

@@ -62,11 +62,17 @@ def test_worker_result_equality_includes_sources() -> None:
         result.text = "changed"  # type: ignore[misc]
 
 
-async def test_authenticated_search_and_inspect_source_without_voice() -> None:
+async def test_authenticated_search_and_inspect_source_without_voice(tmp_path: Path) -> None:
     from pydantic import SecretStr
 
     provider = FakeProvider()
-    app = create_app(Settings(access_token=SecretStr("test-access")), provider)
+    app = create_app(
+        Settings(
+            access_token=SecretStr("test-access"),
+            feedback_database=str(tmp_path / "feedback.sqlite3"),
+        ),
+        provider,
+    )
     async with (
         app.router.lifespan_context(app),
         httpx.AsyncClient(
