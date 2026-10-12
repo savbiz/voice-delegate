@@ -4,3 +4,5 @@ dist
 test-results
 playwright-report
 .vercel
+.license-inventory
+public/third-party-notices.txt

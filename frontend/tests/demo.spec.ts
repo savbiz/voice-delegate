@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 /** Exercise free playback, cancellation, and the live-mode boundary without a key. */
 import { expect, test } from '@playwright/test';
 import vercel from '../vercel.json' with { type: 'json' };
@@ -100,4 +101,24 @@ test('demo head and favicon load without console errors under production CSP', a
   });
   expect(faviconLoaded).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test('published notices and dependency licence comments survive the production build', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const link = page.getByRole('link', { name: 'Third-party notices' });
+  await expect(link).toHaveAttribute('href', '/third-party-notices.txt');
+  const notices = await page.request.get('/third-party-notices.txt');
+  expect(notices.ok()).toBe(true);
+  expect(await notices.text()).toBe(
+    readFileSync(new URL('../../THIRD_PARTY_NOTICES.md', import.meta.url), 'utf8'),
+  );
+  const script = await page.locator('script[type="module"]').getAttribute('src');
+  expect(script).toBeTruthy();
+  const bundle = await page.request.get(script!);
+  const source = await bundle.text();
+  expect(source).toContain('@license React');
+  expect(source).toContain('Copyright');
+  expect(source).toContain('MIT license');
 });
