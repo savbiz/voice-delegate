@@ -5,6 +5,14 @@
 
 **A reference architecture for real-time voice agents that stay responsive while doing real work.**
 
+## Independence
+
+This is a personal project by Savino Bizzoca. It is independent and not affiliated with,
+endorsed by, or derived from my employer's products, code or internal information. It is
+also not affiliated with or endorsed by OpenAI, Microsoft Azure or any other provider
+named in this documentation; product names are used descriptively. Copyright 2026 Savino
+Bizzoca, Apache-2.0.
+
 A speech-to-speech model (GPT-Live over WebRTC) owns the conversation. Anything slower than a
 sentence is handed to a separate LangGraph worker through a single `delegate_task` boundary, and
 narrated back when it completes. The user can interrupt at any time: an interrupted task is never narrated
