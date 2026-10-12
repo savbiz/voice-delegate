@@ -5,6 +5,7 @@ Open the repository folder. Use Python 3.12 or 3.13, uv, Node.js 24 and the decl
 ## Required checks
 
 ```bash
+uv run python scripts/check_independence.py
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
@@ -32,3 +33,25 @@ Never commit `.env`, provider keys, invitations, session keys, private recording
 ## Architecture decisions
 
 For a durable architectural choice, add the next numbered Markdown file under [docs/decisions](docs/decisions/). Include title, `Status: accepted YYYY-MM-DD` (or proposed until accepted), context, decision, consequences and supporting sources. Describe implemented behavior in present tense and identify unverified assumptions. Keep historical acceptance evidence under [docs/milestones](docs/milestones/) and current status in [docs/roadmap.md](docs/roadmap.md).
+
+
+## Independence check and optional local hook
+
+Both CI jobs run `scripts/check_independence.py`. It scans tracked files, excluding
+`uv.lock` and `frontend/pnpm-lock.yaml`, for prohibited terms without echoing their content.
+Matching is case-insensitive and uses whole terms to avoid unrelated substrings in
+third-party author names. Only the string literals in the script's top-level
+`FORBIDDEN_TERMS` declaration are exempt; comments and the rest of the script are checked.
+The check covers the current snapshot, not Git history or untracked files.
+
+To enable the optional pre-commit hook, run from the repository folder:
+
+```sh
+git config core.hooksPath scripts/hooks
+```
+
+This replaces any existing local hooks path. The hook requires uv and checks the exact
+staged content, blocking a commit on a violation. It also prints a non-blocking reminder
+when local time is Monday–Friday from 09:00 inclusive to 18:00 exclusive. The reminder
+does not determine whether work is permitted. To restore Git's default hooks path, run
+`git config --unset core.hooksPath` (or restore your previous path).

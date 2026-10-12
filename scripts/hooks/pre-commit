@@ -1,0 +1,5 @@
+#!/bin/sh
+# Check the staged snapshot; the timing reminder is advisory only.
+set -eu
+cd "$(git rev-parse --show-toplevel)"
+exec uv run --no-project python scripts/check_independence.py --staged --warn-work-hours

@@ -2,6 +2,9 @@
 
 - Never reference the author's employer, its products, people, events, internal names,
   numbers or documents in code, comments, documentation, tests, fixtures or commit messages.
+- The sole exception is the `FORBIDDEN_TERMS` string-literal list in
+  `scripts/check_independence.py`, used to enforce the independence rule. No other
+  content in that file is exempt.
 - Never create or switch a GitHub repository to public. Never run `gh repo create`
   without `--private`. The author makes visibility changes manually.
 - Never stage or commit `.env*`, `*.pem`, `*.key`, or files whose names match
