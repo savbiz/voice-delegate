@@ -2196,11 +2196,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `langgraph` 1.2.2
+### `langgraph` 1.2.14
 
 Licence: MIT.
 
-Source: langgraph-1.2.2.dist-info/licenses/LICENSE
+Source: langgraph-1.2.14.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -2286,11 +2286,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `langgraph-sdk` 0.3.15
+### `langgraph-sdk` 0.4.6
 
 Licence: MIT.
 
-Source: langgraph_sdk-0.3.15.dist-info/licenses/LICENSE
+Source: langgraph_sdk-0.4.6.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -10267,11 +10267,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `websockets` 17.1
+### `websockets` 16.1.1
 
 Licence: BSD-3-Clause.
 
-Source: websockets-17.1.dist-info/licenses/LICENSE
+Source: websockets-16.1.1.dist-info/licenses/LICENSE
 
 ````text
 Copyright (c) Aymeric Augustin and contributors
@@ -20295,7 +20295,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `source-map-js` 1.2.1
+### `source-map-js` 1.2.2
 
 Licence: BSD-3-Clause.
 

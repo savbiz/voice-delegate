@@ -21,7 +21,7 @@ dependencies = [
     "python-dotenv>=1.2.3",
     "tiktoken>=0.14.0",
     "uvicorn[standard]>=0.53.0",
-    "websockets>=17.1,<18",
+    "websockets>=16,<18",
 ]
 
 [build-system]
