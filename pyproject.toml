@@ -6,6 +6,7 @@ dependencies = ["voice-delegate"]
 
 [tool.uv]
 package = false
+constraint-dependencies = ["langgraph-sdk>=0.4.4"]
 
 [tool.uv.workspace]
 members = ["backend", "agent"]

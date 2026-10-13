@@ -6,6 +6,8 @@ multi-tenant service. The [architecture](architecture.md) describes its boundari
 profile and private same-host scaling exercise. Live voice, Azure calls and public hosting
 acceptance remain pending in the [roadmap](roadmap.md).
 
+Internal use by any organisation requires its own dependency and licence review; this repository provides [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) as input, not as clearance.
+
 ## What the reference implements
 
 The backend owns session admission, capability keys, absolute and heartbeat deadlines,

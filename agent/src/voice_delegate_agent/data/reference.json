@@ -1,11 +1,19 @@
 [
   {
-    "id": "65dbb2b7a864e754",
+    "id": "6b2b4470a602bb3b",
     "title": "voice-delegate",
     "path": "README.md",
-    "section": "voice-delegate",
+    "section": "Independence",
+    "text": "This is a personal project by Savino Bizzoca. It is independent and not affiliated with,\nendorsed by, or derived from my employer's products, code or internal information. It is\nalso not affiliated with or endorsed by OpenAI, Microsoft Azure or any other provider\nnamed in this documentation; product names are used descriptively. Copyright 2026 Savino\nBizzoca, Apache-2.0.",
+    "digest": "6b2b4470a602bb3b27525aa071264754a41a049da3feb7eaffc7ec189fdbea6c"
+  },
+  {
+    "id": "aa1431b128f7d265",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Independence",
     "text": "A speech-to-speech model (GPT-Live over WebRTC) owns the conversation. Anything slower than a\nsentence is handed to a separate LangGraph worker through a single `delegate_task` boundary, and\nnarrated back when it completes. The user can interrupt at any time: an interrupted task is never narrated\nafter the interruption is registered. Backend-owned buffers, queues and sessions have explicit budgets; optional telemetry records\nbackend spans per turn.",
-    "digest": "65dbb2b7a864e7540a4f80d3b81024b26e6b9c65619f9d535f1f1aa2dedd602d"
+    "digest": "aa1431b128f7d265138a26aff0f8d1407af879974bfe941a1ab2e9ff79e626ce"
   },
   {
     "id": "56c718c0e05495e8",

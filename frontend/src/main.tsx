@@ -326,6 +326,10 @@ function App() {
         React 19 · FastAPI · WebRTC
         <br />
         Bounded delegation · Azure recovery · Optional telemetry.
+        <br />
+        <a href="/third-party-notices.txt" className="underline">
+          Third-party notices
+        </a>
       </footer>
     </main>
   );
