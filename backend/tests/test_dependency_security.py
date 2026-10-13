@@ -27,3 +27,12 @@ def test_all_locked_source_map_copies_have_the_offset_fix_and_current_attributio
     for version in versions:
         assert Version(version) >= Version("1.2.2")
         assert f"### `source-map-js` {version}\n" in notices
+
+
+def test_frontend_lockfile_has_no_duplicate_package_or_snapshot_keys() -> None:
+    lock = (ROOT / "frontend/pnpm-lock.yaml").read_text()
+    packages, snapshots = lock.split("\npackages:\n", 1)[1].split("\nsnapshots:\n", 1)
+    for section in (packages, snapshots):
+        keys = re.findall(r"^  (\S.*?):(?: .*)?$", section, re.MULTILINE)
+        assert keys
+        assert len(keys) == len(set(keys)), "Duplicate package keys break frozen installs"
