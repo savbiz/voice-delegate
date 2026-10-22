@@ -6,6 +6,7 @@ import secrets
 import time
 from collections.abc import Callable
 from dataclasses import replace
+from typing import Literal
 from uuid import uuid4
 
 from opentelemetry import trace
@@ -173,7 +174,7 @@ class SessionManager:
                 if isinstance(event, ProviderFailure):
                     break
                 if isinstance(event, SpeechStarted) and session.delegation.status == "running":
-                    self.interrupt(session)
+                    self.interrupt(session, source="provider_speech")
                 if isinstance(event, Transcript):
                     session.turn = observe(session.turn, event, self.tracer, self.metrics)
                     session.history.append(event)
@@ -185,7 +186,7 @@ class SessionManager:
                         elif (
                             event.start_ms > 0 or provider.capabilities.transcript_timing
                         ) and event.start_ms >= session.delegation.offset_ms:
-                            self.interrupt(session)
+                            self.interrupt(session, source="provider_transcript")
                 if isinstance(event, DelegationRequested):
                     if session.preferences.mode == "translate":
                         await connection.send(
@@ -214,7 +215,7 @@ class SessionManager:
                         session.recap.resume()
                         session.delegation.offset_ms = event.offset_ms
         except ProviderError:
-            logger.warning("Session provider stream failed")
+            logger.warning("Session provider stream failed; inspect preceding sideband diagnostics")
         finally:
             if session.state not in {"closing", "closed", "reconnecting"}:
                 if (
@@ -243,8 +244,14 @@ class SessionManager:
             session.committed_history.append(replace(entry, committed=True))
         session.sealed_index = max(session.sealed_index, end)
 
-    def interrupt(self, session: Session) -> None:
+    def interrupt(
+        self,
+        session: Session,
+        *,
+        source: Literal["client", "provider_speech", "provider_transcript"] = "client",
+    ) -> None:
         if session.delegation.status == "running":
+            logger.info("Delegation interrupted: source=%s", source)
             session.recap.interrupt()
             self.metrics.interruptions.add(1)
         self.delegator.cancel(session.delegation)

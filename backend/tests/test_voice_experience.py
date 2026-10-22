@@ -88,12 +88,18 @@ async def test_realtime_uses_fixed_openai_origin_and_bearer_auth() -> None:
 
 
 @pytest.mark.parametrize("status", ["idle", "completed", "cancelled", "failed", "running"])
-async def test_interrupt_marks_recap_only_for_running_delegation(status: str) -> None:
+async def test_interrupt_marks_recap_only_for_running_delegation(
+    status: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     manager = SessionManager(FakeProvider(), Settings())
     session = manager.create()
     session.recap.observe(Transcript("assistant", "Previous answer", 1, 2), "A request")
     session.delegation.status = status
-    manager.interrupt(session)
+    with caplog.at_level("INFO", logger="voice_delegate.session.manager"):
+        manager.interrupt(session)
+    assert ("Delegation interrupted: source=client" in caplog.text) is (status == "running")
+    assert "Previous answer" not in caplog.text
     assert session.recap.interrupted is (status == "running")
     assert session.recap.latest_reply == ("" if status == "running" else "Previous answer")
     await manager.aclose()

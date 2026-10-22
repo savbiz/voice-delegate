@@ -268,6 +268,8 @@ export function createLiveSession(
       fallbackAttempted = false;
       store.update({
         captions: { user: '', assistant: '' },
+        captionTails: {},
+        lastSpeaker: undefined,
         timings: [],
         sources: [],
         recap: 'No conversation yet.',

@@ -168,11 +168,15 @@ function Live({ code }: { code: string }) {
       <div className="grid gap-4 md:grid-cols-2">
         <section>
           <h2>You</h2>
-          <p id="user">{state.captions.user || '—'}</p>
+          <p id="user" className="whitespace-pre-line">
+            {state.captions.user || '—'}
+          </p>
         </section>
         <section>
           <h2>Assistant</h2>
-          <p id="assistant">{state.captions.assistant || '—'}</p>
+          <p id="assistant" className="whitespace-pre-line">
+            {state.captions.assistant || '—'}
+          </p>
         </section>
       </div>
       <section>

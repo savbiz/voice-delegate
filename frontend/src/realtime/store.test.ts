@@ -142,3 +142,57 @@ test('running heartbeats retain cancellation until the worker changes state', ()
   expect(cancelled.workerMessage).toContain('Task cancelled');
   expect(workerState(running, 'completed').cancelPending).toBe(false);
 });
+
+test('completed user turns are separated, including identical repeated words', () => {
+  const event = {
+    type: 'conversation.item.input_audio_transcription.completed',
+    transcript: 'Hello',
+  };
+  let state = processEvent(initialLiveState(), { ...event, item_id: 'one' }).state;
+  state = processEvent(state, { ...event, item_id: 'two' }).state;
+  expect(state.captions.user).toBe('Hello\nHello');
+  expect(processEvent(state, { ...event, item_id: 'two' }).state).toBe(state);
+});
+
+test('assistant final transcript replaces fragments and next response starts a line', () => {
+  let state = initialLiveState();
+  for (const delta of ['Hel', 'lo'])
+    state = processEvent(state, {
+      type: 'response.output_audio_transcript.delta',
+      item_id: 'one',
+      delta,
+    }).state;
+  expect(state.captions.assistant).toBe('Hello');
+  state = processEvent(state, {
+    type: 'response.output_audio_transcript.done',
+    item_id: 'one',
+    transcript: 'Hello!',
+  }).state;
+  expect(state.captions.assistant).toBe('Hello!');
+  state = processEvent(state, {
+    type: 'response.output_audio_transcript.delta',
+    item_id: 'two',
+    delta: 'Next',
+  }).state;
+  expect(state.captions.assistant).toBe('Hello!\nNext');
+});
+
+test('Live fragments keep word boundaries intact and separate turns after pauses', () => {
+  let state = initialLiveState();
+  for (const [delta, start_ms, end_ms] of [
+    ['Hel', 10, 20],
+    ['lo', 20, 30],
+    ['Again', 1000, 1100],
+  ] as const) {
+    state = processEvent(state, {
+      type: 'session.input_transcript.delta',
+      delta,
+      start_ms,
+      end_ms,
+    }).state;
+  }
+  expect(state.captions.user).toBe('Hello\nAgain');
+  state = processEvent(state, { type: 'session.output_transcript.delta', delta: 'Yes' }).state;
+  state = processEvent(state, { type: 'session.input_transcript.delta', delta: 'Thanks' }).state;
+  expect(state.captions.user).toBe('Hello\nAgain\nThanks');
+});

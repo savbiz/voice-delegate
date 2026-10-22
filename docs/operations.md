@@ -51,3 +51,22 @@ Check backend health, worker busy/timeouts, provider error/cancelled outcomes, l
 ## Temporary API documentation
 
 Set `VOICE_API_DOCS=true` temporarily to expose Swagger; default off in production. Restart the backend to apply it. This also exposes ReDoc and the OpenAPI schema without invitation authentication, subject to host and rate middleware. Restore `false` and restart after inspection. Development exposes these routes by default.
+
+## Investigating interrupted audio locally
+
+For a local Live test, set `VOICE_VOICE_PROVIDER=live` and `VOICE_MODEL=gpt-live-1`
+in the untracked root `.env`, keep the project key on the backend, and restart Python.
+The existing Realtime adapter remains available through `VOICE_VOICE_PROVIDER=realtime`.
+Provider access and audible playback still require a live test; a successful SDP exchange
+alone does not establish audio quality.
+
+Sideband warnings record an exception category and, when available, a numeric WebSocket
+close code. They omit raw events, exception messages and close reasons because these can
+contain conversation content. A normal stream end without finalization is reported separately.
+At INFO level, delegation interruption logs distinguish client requests, provider speech
+and timed provider transcripts. These describe worker cancellation, not every audio interruption.
+
+Feedback remains limited to category, diagnostic ID, interface state, provider and version,
+with a pseudonymous quota identity and seven-day retention. It does not save conversations,
+audio or transcripts, and its ID is not a session-log correlation key. Use the report time
+alongside local server logs. Do not paste keys or invitation codes into bug reports.

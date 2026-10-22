@@ -11,6 +11,7 @@ from voice_delegate.providers.base import SidebandSocket
 from voice_delegate.providers.models import (
     Commentary,
     DelegationRequested,
+    ProviderCommandError,
     ProviderError,
     SessionConfig,
     Transcript,
@@ -21,6 +22,7 @@ from voice_delegate.providers.openai import (
     OpenAILiveProvider,
     normalize_event,
 )
+from voice_delegate.providers.webrtc import RealtimeWebRTCConnection
 
 from test_support import eventually
 
@@ -232,3 +234,54 @@ async def test_commentary_wire_budget_counts_utf8_bytes(realtime: bool) -> None:
 def test_live_delegation_requires_nonempty_identity() -> None:
     with pytest.raises(ValidationError):
         normalize_event('{"type":"session.delegation.created","delegation":{"id":""}}')
+
+
+@pytest.mark.parametrize("adapter", [OpenAILiveConnection, RealtimeWebRTCConnection])
+async def test_unconsumed_events_do_not_break_sideband(adapter: type[OpenAILiveConnection]) -> None:
+    class AdapterConnection(OpenAILiveConnection):
+        normalize = staticmethod(adapter.normalize)
+
+    socket = MemorySocket()
+    connection = AdapterConnection(WebRTCAnswer("id", "sdp"), socket, 0.01)
+    socket.incoming.put_nowait('{"type":"unused.event","delta":null,"transcript":null}')
+    socket.incoming.put_nowait('{"type":"error","error":{"type":"invalid_request_error"}}')
+    stream = connection.events()
+    assert isinstance(await anext(stream), ProviderCommandError)
+    assert not connection._failed
+    await stream.aclose()
+    await connection.aclose()
+
+
+async def test_sideband_failure_logs_category_without_payload(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    socket = MemorySocket(finalize=False)
+    connection = OpenAILiveConnection(WebRTCAnswer("id", "sdp"), socket, 0.01)
+    socket.incoming.put_nowait(
+        '{"type":"session.input_transcript.delta","start_ms":"private-payload"}'
+    )
+    with pytest.raises(ProviderError, match="ValidationError"):
+        async for _event in connection.events():
+            pass
+    assert "kind=ValidationError" in caplog.text
+    assert "private-payload" not in caplog.text
+    assert "session.input_transcript.delta" not in caplog.text
+    await connection.aclose()
+
+
+async def test_sideband_close_logs_code_without_reason(caplog: pytest.LogCaptureFixture) -> None:
+    from websockets.exceptions import ConnectionClosedError
+    from websockets.frames import Close
+
+    class ClosedSocket(MemorySocket):
+        async def __aiter__(self) -> AsyncIterator[str]:
+            yield '{"type":"session.started"}'
+            raise ConnectionClosedError(Close(1011, "private-close-reason"), None)
+
+    connection = OpenAILiveConnection(WebRTCAnswer("id", "sdp"), ClosedSocket(), 0.01)
+    with pytest.raises(ProviderError, match="ConnectionClosedError"):
+        async for _event in connection.events():
+            pass
+    assert "close_code=1011" in caplog.text
+    assert "private-close-reason" not in caplog.text
+    await connection.aclose()

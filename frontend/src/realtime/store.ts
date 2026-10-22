@@ -19,6 +19,13 @@ export type TurnTiming = {
   receivedEnd: number;
   estimated: boolean;
 };
+type CaptionTail = {
+  key?: string;
+  length: number;
+  complete: boolean;
+  end?: number;
+  transportId: number;
+};
 export type LiveState = {
   phase: Phase;
   status: string;
@@ -30,6 +37,8 @@ export type LiveState = {
   recovering: boolean;
   cancelPending: boolean;
   captions: { user: string; assistant: string };
+  captionTails: Partial<Record<'user' | 'assistant', CaptionTail>>;
+  lastSpeaker?: 'user' | 'assistant';
   timings: TurnTiming[];
   timingTransportId: number;
   sources: Source[];
@@ -64,6 +73,7 @@ export function initialLiveState(): LiveState {
     recovering: false,
     cancelPending: false,
     captions: { user: '', assistant: '' },
+    captionTails: {},
     timings: [],
     timingTransportId: 0,
     sources: [],
@@ -190,16 +200,48 @@ export function processEvent(
     'conversation.item.input_audio_transcription.completed',
   ].includes(String(event.type))
     ? 'user'
-    : ['session.output_transcript.delta', 'response.output_audio_transcript.delta'].includes(
-          String(event.type),
-        )
+    : [
+          'session.output_transcript.delta',
+          'response.output_audio_transcript.delta',
+          'response.output_audio_transcript.done',
+        ].includes(String(event.type))
       ? 'assistant'
       : undefined;
   const delta =
-    event.type === 'conversation.item.input_audio_transcription.completed'
+    event.type === 'conversation.item.input_audio_transcription.completed' ||
+    event.type === 'response.output_audio_transcript.done'
       ? event.transcript
       : event.delta;
   if (!speaker || typeof delta !== 'string') return { state };
+  if (!delta) return { state };
+  const complete =
+    event.type === 'conversation.item.input_audio_transcription.completed' ||
+    event.type === 'response.output_audio_transcript.done';
+  const key = typeof event.item_id === 'string' ? event.item_id : undefined;
+  const tail = state.captionTails[speaker];
+  const sameTransport = tail?.transportId === state.timingTransportId;
+  const sameItem = key !== undefined && tail?.key === key && sameTransport;
+  if (sameItem && tail.complete) return { state };
+  const start = typeof event.start_ms === 'number' ? event.start_ms : undefined;
+  const gap =
+    start !== undefined && tail?.end !== undefined && start > tail.end + TRANSCRIPT_GAP_MS;
+  const continuation =
+    sameItem ||
+    (key === undefined &&
+      tail?.key === undefined &&
+      sameTransport &&
+      !tail.complete &&
+      state.lastSpeaker === speaker &&
+      !gap);
+  const prior = state.captions[speaker];
+  const replace = complete && continuation;
+  const prefix = replace ? prior.slice(0, prior.length - (tail?.length ?? 0)) : prior;
+  const separator = !continuation && prefix ? '\n' : '';
+  const caption = (prefix + separator + delta).slice(-6000);
+  const length = Math.min(
+    6000,
+    (continuation && !replace ? (tail?.length ?? 0) : 0) + delta.length,
+  );
   const transcript: TranscriptDelta = {
     speaker,
     delta,
@@ -218,7 +260,18 @@ export function processEvent(
     state: {
       ...state,
       timings,
-      captions: { ...state.captions, [speaker]: (state.captions[speaker] + delta).slice(-6000) },
+      captions: { ...state.captions, [speaker]: caption },
+      lastSpeaker: speaker,
+      captionTails: {
+        ...state.captionTails,
+        [speaker]: {
+          key,
+          length,
+          complete,
+          end: transcript.end_ms,
+          transportId: state.timingTransportId,
+        },
+      },
     },
   };
 }
