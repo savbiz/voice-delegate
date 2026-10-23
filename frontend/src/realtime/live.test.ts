@@ -374,3 +374,22 @@ test('normal sessions never send debug content', async () => {
   await vi.waitFor(() => expect(requests.some((r) => r.path.endsWith('/close'))).toBe(true));
   expect(requests.some((r) => r.path.endsWith('/debug'))).toBe(false);
 });
+
+test('autoplay rejection exposes an audio action and stopping clears it', async () => {
+  vi.stubGlobal('MediaStream', class {});
+  const store = createLiveStore();
+  const audio = { srcObject: null, play: vi.fn().mockRejectedValue(new Error('blocked')) };
+  controller = createLiveSession(
+    store,
+    audio as unknown as HTMLAudioElement,
+    () => 'invite',
+    () => ({ language: 'auto', mode: 'conversation' }),
+  );
+  controller.start();
+  await vi.waitFor(() => expect(store.getSnapshot().status).toContain('Connected'));
+  FakePeer.instances[0]!.dispatchEvent(Object.assign(new Event('track'), { track: {} }));
+  await vi.waitFor(() => expect(store.getSnapshot().audioBlocked).toBe(true));
+  expect(store.getSnapshot().status).toContain('Enable audio');
+  controller.stop();
+  expect(store.getSnapshot().audioBlocked).toBe(false);
+});

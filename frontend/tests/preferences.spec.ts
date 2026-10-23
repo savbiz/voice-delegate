@@ -74,6 +74,7 @@ for (const enabled of [false, true]) {
     });
     await page.goto('/');
     await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+    await page.getByText('Voice settings & recording', { exact: true }).click();
     const checkbox = page.getByLabel(/Record this session for server debugging/);
     await expect(checkbox).not.toBeChecked();
     await checkbox.check();

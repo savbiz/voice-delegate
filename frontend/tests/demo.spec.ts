@@ -41,6 +41,7 @@ test('voice preferences and accessible playback controls work before connecting'
 }) => {
   await page.goto('/');
   await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByText('Voice settings & recording', { exact: true }).click();
   await page.getByLabel('Response language').selectOption('it');
   await page.getByLabel('Conversation style').selectOption('translate');
   await page.getByRole('button', { name: 'Mute assistant', exact: true }).click();

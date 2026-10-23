@@ -19,7 +19,9 @@ export type TurnTiming = {
   receivedEnd: number;
   estimated: boolean;
 };
+export type ChatMessage = { id: number; speaker: 'user' | 'assistant'; text: string };
 type CaptionTail = {
+  messageId?: number;
   key?: string;
   length: number;
   complete: boolean;
@@ -37,6 +39,8 @@ export type LiveState = {
   recovering: boolean;
   cancelPending: boolean;
   captions: { user: string; assistant: string };
+  messages: ChatMessage[];
+  audioBlocked: boolean;
   captionTails: Partial<Record<'user' | 'assistant', CaptionTail>>;
   lastSpeaker?: 'user' | 'assistant';
   timings: TurnTiming[];
@@ -77,6 +81,8 @@ export function initialLiveState(): LiveState {
     recovering: false,
     cancelPending: false,
     captions: { user: '', assistant: '' },
+    messages: [],
+    audioBlocked: false,
     captionTails: {},
     timings: [],
     timingTransportId: 0,
@@ -251,6 +257,21 @@ export function processEvent(
     6000,
     (continuation && !replace ? (tail?.length ?? 0) : 0) + delta.length,
   );
+  const messages = [...state.messages];
+  const existingIndex = continuation
+    ? messages.findIndex((message) => message.id === tail?.messageId)
+    : -1;
+  const existing = messages[existingIndex];
+  const messageId = existing?.id ?? (messages.at(-1)?.id ?? 0) + 1;
+  const message: ChatMessage = {
+    id: messageId,
+    speaker,
+    text: ((existing && !replace ? existing.text : '') + delta).slice(-6000),
+  };
+  if (existingIndex >= 0) messages[existingIndex] = message;
+  else messages.push(message);
+  let total = messages.reduce((sum, entry) => sum + entry.text.length, 0);
+  while (messages.length > 40 || total > 12000) total -= messages.shift()!.text.length;
   const transcript: TranscriptDelta = {
     speaker,
     delta,
@@ -269,12 +290,14 @@ export function processEvent(
     state: {
       ...state,
       timings,
+      messages,
       captions: { ...state.captions, [speaker]: caption },
       lastSpeaker: speaker,
       captionTails: {
         ...state.captionTails,
         [speaker]: {
           key,
+          messageId,
           length,
           complete,
           end: transcript.end_ms,

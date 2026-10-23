@@ -39,6 +39,7 @@ test('audio capture is explicit and produces a local download without uploading 
   });
   await page.goto('/');
   await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByText('Voice settings & recording', { exact: true }).click();
   const checkbox = page.getByLabel(/Record audio locally/);
   await expect(checkbox).not.toBeChecked();
   await checkbox.check();

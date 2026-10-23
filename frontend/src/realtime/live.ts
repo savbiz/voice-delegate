@@ -75,7 +75,7 @@ export function createLiveSession(
     channel = undefined;
     peer = undefined;
     session = undefined;
-    store.update({ active: false });
+    store.update({ active: false, audioBlocked: false });
   }
 
   function requestOptions(
@@ -312,6 +312,8 @@ export function createLiveSession(
       fallbackAttempted = false;
       store.update({
         captions: { user: '', assistant: '' },
+        messages: [],
+        audioBlocked: false,
         captionTails: {},
         lastSpeaker: undefined,
         timings: [],
@@ -398,7 +400,10 @@ export function createLiveSession(
         audio.srcObject = remote;
         recording?.assistant(remote);
         void audio.play().catch(() => {
-          store.update({ status: 'Press Play below to hear the assistant.' });
+          store.update({
+            audioBlocked: true,
+            status: 'Select Enable audio to hear the assistant.',
+          });
         });
       });
       connection.addEventListener('connectionstatechange', () => {

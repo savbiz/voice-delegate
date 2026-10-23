@@ -101,8 +101,7 @@ fieldset {
   padding: 1rem;
   margin-top: 1rem;
 }
-.large-captions #user,
-.large-captions #assistant {
+.large-captions .chat-message p {
   font-size: 1.5rem;
   line-height: 1.7;
 }
@@ -130,4 +129,116 @@ fieldset {
   display: inline-block;
   width: auto;
   margin-right: 0.5rem;
+}
+
+.session-controls {
+  margin-top: 1.5rem;
+}
+#status {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+#recovery-help {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  margin-top: 0.4rem;
+}
+.session-controls .actions {
+  display: inline-flex;
+  margin: 1rem 0.75rem 0.5rem 0;
+}
+#start {
+  background: #6ee7b7;
+  color: #0b1120;
+  border-color: #6ee7b7;
+  font-weight: 600;
+}
+#start:hover:not(:disabled) {
+  background: #a7f3d0;
+  color: #0b1120;
+}
+.secondary-panel {
+  border: 1px solid #253248;
+  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  margin-top: 0.75rem;
+}
+.secondary-panel > summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: #cbd5e1;
+}
+.secondary-panel[open] > summary {
+  margin-bottom: 1rem;
+}
+.settings-panel fieldset {
+  margin-top: 0;
+}
+.conversation {
+  padding: 1.25rem;
+}
+.conversation-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.chat-scroll {
+  max-height: 32rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 0.5rem 0.25rem;
+}
+.chat-empty {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #94a3b8;
+}
+.chat-empty small {
+  display: block;
+  margin-top: 0.5rem;
+}
+.chat-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.chat-message {
+  max-width: 85%;
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  overflow-wrap: anywhere;
+}
+.chat-message.user {
+  align-self: flex-end;
+  background: #15382f;
+  border: 1px solid #245849;
+}
+.chat-message.assistant {
+  align-self: flex-start;
+  background: #1c293e;
+  border: 1px solid #334155;
+}
+.chat-speaker {
+  display: block;
+  color: #a7f3d0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+.chat-message p {
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+@media (max-width: 540px) {
+  .chat-message {
+    max-width: 95%;
+  }
+  .conversation {
+    padding: 0.8rem;
+  }
 }

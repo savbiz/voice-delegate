@@ -85,7 +85,7 @@ test('busy work and failed recovery explain manual actions without replay', asyn
   await expect(page.getByRole('status')).toContainText('Connected.');
   await page.clock.fastForward(10000);
   await expect(page.locator('#task-status')).toContainText('Your task was not started');
-  await expect(page.getByRole('button', { name: 'Cancel task' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Cancel task' })).toHaveCount(0);
   worker = 'running';
   await page.clock.fastForward(10000);
   await expect(page.getByRole('button', { name: 'Cancel task' })).toBeEnabled();

@@ -5,6 +5,7 @@ import type { LiveController } from './realtime/live';
 import { createLiveStore } from './realtime/store';
 import { scenario, visibleScenario } from './demo';
 import { Reference } from './reference';
+import { Transcript } from './Transcript';
 import { version } from '../package.json';
 import { readInvitation, saveInvitation } from './invitation';
 
@@ -54,49 +55,124 @@ function Live({ code }: { code: string }) {
         Live voice requires a server API key and incurs provider usage charges. Your microphone is
         requested only when you start.
       </p>
-      <fieldset id="voice-preferences" disabled={state.active}>
-        <legend>Voice preferences (before starting)</legend>
-        <label>
-          Response language{' '}
-          <select id="language" value={language} onChange={(e) => setLanguage(e.target.value)}>
-            <option value="auto">Follow the speaker</option>
-            <option value="it">Italiano</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="fr">Français</option>
-            <option value="de">Deutsch</option>
-          </select>
-        </label>
-        <label>
-          Conversation style{' '}
-          <select id="voice-mode" value={voiceMode} onChange={(e) => setVoiceMode(e.target.value)}>
-            <option value="conversation">Assistant conversation</option>
-            <option value="translate">Translation mode</option>
-          </select>
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={debugRecording}
-            onChange={(event) => setDebugRecording(event.target.checked)}
-          />
-          Record this session for server debugging. I consent to saving transcripts, bounded worker
-          results, session events and selected audio connection statistics on this backend for up to
-          24 hours while it is running. No audio recording, request credentials or network
-          addresses. Requires server debug mode. The service operator can read these recordings.
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={audioRecording}
-            onChange={(event) => setAudioRecording(event.target.checked)}
-          />
-          Record audio locally. I consent to recording my microphone and the assistant for this
-          session (up to five minutes or approximately 20 MiB). The recording is not uploaded; live
-          audio still goes to the voice provider. Download it before reloading, leaving Live voice
-          or starting another recording.
-        </label>
-      </fieldset>
+      <div className="session-controls">
+        <p id="status" role="status">
+          {state.status}
+        </p>
+        <p id="task-status" className="muted" aria-live="polite">
+          {state.workerMessage}
+        </p>
+        {state.worker === 'running' && (
+          <button
+            id="cancel-task"
+            disabled={
+              state.worker !== 'running' ||
+              !state.active ||
+              state.ending ||
+              state.recovering ||
+              state.cancelPending
+            }
+            onClick={() => controller.current?.cancel()}
+          >
+            Cancel task
+          </button>
+        )}
+        <p id="recovery-help">{state.help}</p>
+        <div className="actions">
+          <button
+            id="start"
+            disabled={state.active || state.ending || state.recovering}
+            onClick={() => controller.current?.start()}
+          >
+            Start conversation
+          </button>
+          <button
+            id="stop"
+            disabled={!state.active || state.ending}
+            onClick={() => controller.current?.stop()}
+          >
+            Stop
+          </button>
+        </div>
+        <div className="actions">
+          <button id="mute-audio" aria-pressed={muted} onClick={() => setMuted((value) => !value)}>
+            {muted ? 'Unmute assistant' : 'Mute assistant'}
+          </button>
+          <button
+            id="large-captions"
+            aria-pressed={largeCaptions}
+            onClick={() => setLargeCaptions((value) => !value)}
+          >
+            Large captions
+          </button>
+        </div>
+        {state.active && state.audioBlocked && (
+          <button
+            onClick={() => {
+              void audio.current
+                ?.play()
+                .then(() => {
+                  if (store.getSnapshot().active)
+                    store.update({ audioBlocked: false, status: 'Connected. Speak naturally.' });
+                })
+                .catch(() => {});
+            }}
+          >
+            Enable audio
+          </button>
+        )}
+      </div>
+      <details className="secondary-panel settings-panel">
+        <summary>Voice settings &amp; recording</summary>
+        <fieldset id="voice-preferences" disabled={state.active}>
+          <legend>Voice preferences (before starting)</legend>
+          <label>
+            Response language{' '}
+            <select id="language" value={language} onChange={(e) => setLanguage(e.target.value)}>
+              <option value="auto">Follow the speaker</option>
+              <option value="it">Italiano</option>
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </label>
+          <label>
+            Conversation style{' '}
+            <select
+              id="voice-mode"
+              value={voiceMode}
+              onChange={(e) => setVoiceMode(e.target.value)}
+            >
+              <option value="conversation">Assistant conversation</option>
+              <option value="translate">Translation mode</option>
+            </select>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={debugRecording}
+              onChange={(event) => setDebugRecording(event.target.checked)}
+            />
+            Record this session for server debugging. I consent to saving transcripts, bounded
+            worker results, session events and selected audio connection statistics on this backend
+            for up to 24 hours while it is running. No audio recording, request credentials or
+            network addresses. Requires server debug mode. The service operator can read these
+            recordings.
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={audioRecording}
+              onChange={(event) => setAudioRecording(event.target.checked)}
+            />
+            Record audio locally. I consent to recording my microphone and the assistant for this
+            session (up to five minutes or approximately 20 MiB). The recording is not uploaded;
+            live audio still goes to the voice provider. Download it before reloading, leaving Live
+            voice or starting another recording.
+          </label>
+        </fieldset>
+      </details>
       {state.debugStatus && <p aria-live="polite">{state.debugStatus}</p>}
       {state.audioStatus && <p aria-live="polite">{state.audioStatus}</p>}
       {state.audioUrl && (
@@ -104,56 +180,55 @@ function Live({ code }: { code: string }) {
           Download session audio
         </a>
       )}
-      <div className="actions">
-        <button id="mute-audio" aria-pressed={muted} onClick={() => setMuted((value) => !value)}>
-          {muted ? 'Unmute assistant' : 'Mute assistant'}
-        </button>
-        <button
-          id="large-captions"
-          aria-pressed={largeCaptions}
-          onClick={() => setLargeCaptions((value) => !value)}
-        >
-          Large captions
-        </button>
-      </div>
-      <div className="actions">
-        <button
-          id="start"
-          disabled={state.active || state.ending || state.recovering}
-          onClick={() => controller.current?.start()}
-        >
-          Start conversation
-        </button>
-        <button
-          id="stop"
-          disabled={!state.active || state.ending}
-          onClick={() => controller.current?.stop()}
-        >
-          Stop
-        </button>
-      </div>
-      <p id="status" role="status">
-        {state.status}
-      </p>
-      <p id="task-status" aria-live="polite">
-        {state.workerMessage}
-      </p>
-      <button
-        id="cancel-task"
-        disabled={
-          state.worker !== 'running' ||
-          !state.active ||
-          state.ending ||
-          state.recovering ||
-          state.cancelPending
-        }
-        onClick={() => controller.current?.cancel()}
-      >
-        Cancel task
-      </button>
-      <p id="recovery-help">{state.help}</p>
-      <section aria-label="Report a problem">
-        <h2>Report a problem</h2>
+      <audio id="audio" ref={audio} muted={muted} autoPlay hidden />
+      <Transcript messages={state.messages} />
+      {state.sources.length > 0 && (
+        <section aria-label="Worker sources">
+          <h2>Documentation sources</h2>
+          <div id="sources">
+            {state.sources.map((source, index) => (
+              <details key={source.id}>
+                <summary>
+                  [{index + 1}] {source.title} — {source.section}
+                </summary>
+                <blockquote>{source.text}</blockquote>
+                <small>
+                  {source.path} · Snapshot {source.id}
+                </small>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
+      <details className="secondary-panel">
+        <summary>Conversation recap</summary>
+        <p className="muted">
+          Live transcript excerpts, refreshed every 10 seconds; not an AI summary. Interruption does
+          not mean completion.
+        </p>
+        <p id="recap" aria-live="off">
+          {state.recap}
+        </p>
+      </details>
+      <details className="secondary-panel">
+        <summary>Connection timings</summary>
+        <p className="muted">
+          Transcript timestamp gap: a proxy, not measured audio latency. May be negative during
+          overlap.
+        </p>
+        <ol id="timings">
+          {state.timings.map((turn) => (
+            <li key={turn.id}>
+              Turn {turn.id}:{' '}
+              {turn.reply === undefined
+                ? 'waiting for assistant transcript'
+                : `${Math.round(turn.reply - turn.end)} ms ${turn.estimated ? 'client-side estimate' : 'transcript gap'}`}
+            </li>
+          ))}
+        </ol>
+      </details>
+      <details className="secondary-panel">
+        <summary>Report a problem</summary>
         <p>
           Send only a category, diagnostic ID, interface state, configured provider and app version.
           No audio, transcripts or message text. Reports expire after seven days. A pseudonymous
@@ -186,65 +261,7 @@ function Live({ code }: { code: string }) {
         <p id="feedback-status" aria-live="polite">
           {state.feedbackStatus}
         </p>
-      </section>
-      <section aria-label="Worker sources">
-        <h2>Documentation sources</h2>
-        <div id="sources">
-          {state.sources.map((source, index) => (
-            <details key={source.id}>
-              <summary>
-                [{index + 1}] {source.title} — {source.section}
-              </summary>
-              <blockquote>{source.text}</blockquote>
-              <small>
-                {source.path} · Snapshot {source.id}
-              </small>
-            </details>
-          ))}
-        </div>
-      </section>
-      <audio id="audio" ref={audio} muted={muted} controls autoPlay aria-label="Assistant audio" />
-      <div className="grid gap-4 md:grid-cols-2">
-        <section>
-          <h2>You</h2>
-          <p id="user" className="whitespace-pre-line">
-            {state.captions.user || '—'}
-          </p>
-        </section>
-        <section>
-          <h2>Assistant</h2>
-          <p id="assistant" className="whitespace-pre-line">
-            {state.captions.assistant || '—'}
-          </p>
-        </section>
-      </div>
-      <section>
-        <h2>Conversation recap</h2>
-        <p className="muted">
-          Live transcript excerpts, refreshed every 10 seconds; not an AI summary. Interruption does
-          not mean completion.
-        </p>
-        <p id="recap" aria-live="off">
-          {state.recap}
-        </p>
-      </section>
-      <section>
-        <h2>Turn timing</h2>
-        <p className="muted">
-          Transcript timestamp gap: a proxy, not measured audio latency. May be negative during
-          overlap.
-        </p>
-        <ol id="timings">
-          {state.timings.map((turn) => (
-            <li key={turn.id}>
-              Turn {turn.id}:{' '}
-              {turn.reply === undefined
-                ? 'waiting for assistant transcript'
-                : `${Math.round(turn.reply - turn.end)} ms ${turn.estimated ? 'client-side estimate' : 'transcript gap'}`}
-            </li>
-          ))}
-        </ol>
-      </section>
+      </details>
     </div>
   );
 }
