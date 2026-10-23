@@ -3,6 +3,12 @@
 Version 0.1.0 is a reference implementation; implementation and release acceptance are separate. Passing offline tests is not proof of
 live voice quality, provider access, acoustic latency or production readiness.
 
+On 2026-10-23, the maintainer reported successful local GPT-Live conversations,
+English/Italian transcripts and spoken arithmetic responses after the worker fixes.
+This is a partial local smoke test, not completion of the live acceptance checklist.
+Azure recovery, measured latency and hosted end-to-end acceptance remain pending.
+No recordings or conversation content are published as release evidence.
+
 | Feature | Scope | Acceptance | Current status |
 |---|---|---|---|
 | Voice and sessions | FastAPI, GPT-Live, WebRTC, React, session cleanup | Real microphone conversation and resource cleanup | Implemented; live verification pending |
