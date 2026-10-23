@@ -47,7 +47,7 @@ See [configuration](configuration.md), [operations](operations.md) and [architec
 
 `POST /api/config` includes `debug_recording_available` (false by default).
 `POST /api/sessions` accepts optional `debug_recording: true` consent alongside voice
-preferences; it returns 403 if the server has not enabled development recording, or 503
+preferences; it returns 403 if the server has not enabled debug recording, or 503
 if the recording cannot be created. No consent means no recording.
 
 `POST /api/sessions/{id}/debug` accepts only the allowlisted `DebugSample` schema:
@@ -57,5 +57,5 @@ if the recording cannot be created. No consent means no recording.
 checks as other session routes. Responses: 200 with `recording` boolean, 401 invalid
 invitation, 403 wrong origin or missing recording consent, 404 absent/not-owned session,
 422 invalid/extra fields, and the normal body/rate limits (413/429).
-There is no HTTP recording-download endpoint; recordings stay on the development backend.
-See [operations](operations.md#opt-in-local-session-recording).
+There is no HTTP recording-download endpoint; recordings stay on the backend, including its persistent volume in production.
+See [operations](operations.md#opt-in-server-session-recording).

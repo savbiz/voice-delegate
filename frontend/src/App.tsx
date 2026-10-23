@@ -74,19 +74,17 @@ function Live({ code }: { code: string }) {
             <option value="translate">Translation mode</option>
           </select>
         </label>
-        {import.meta.env.DEV && (
-          <label>
-            <input
-              type="checkbox"
-              checked={debugRecording}
-              onChange={(event) => setDebugRecording(event.target.checked)}
-            />
-            Record this session for local debugging. I consent to saving transcripts, bounded worker
-            results, session events and selected audio connection statistics on this backend for up
-            to 24 hours while it is running. No audio recording, request credentials or network
-            addresses. Requires server debug mode.
-          </label>
-        )}
+        <label>
+          <input
+            type="checkbox"
+            checked={debugRecording}
+            onChange={(event) => setDebugRecording(event.target.checked)}
+          />
+          Record this session for server debugging. I consent to saving transcripts, bounded worker
+          results, session events and selected audio connection statistics on this backend for up to
+          24 hours while it is running. No audio recording, request credentials or network
+          addresses. Requires server debug mode. The service operator can read these recordings.
+        </label>
         <label>
           <input
             type="checkbox"

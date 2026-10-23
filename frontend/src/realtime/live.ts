@@ -348,7 +348,7 @@ export function createLiveSession(
       if (attempt !== attemptId) return;
       if (requestedPreferences.debug_recording && !config.debug_recording_available)
         throw new Error(
-          'Enable VOICE_DEBUG_RECORDING=true on the development backend, or uncheck debug recording.',
+          'Server debugging is disabled. Uncheck recording to continue, or ask the operator to enable it.',
         );
       if (!config.voice_available)
         throw new Error(

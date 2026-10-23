@@ -71,13 +71,20 @@ with a pseudonymous quota identity and seven-day retention. It does not save con
 audio or transcripts, and its ID is not a session-log correlation key. Use the report time
 alongside local server logs. Do not paste keys or invitation codes into bug reports.
 
-## Opt-in local session recording
+## Opt-in server session recording
 
-For development only, set `VOICE_DEBUG_RECORDING=true` in the root untracked `.env`
-and restart the backend. Keep `VOICE_ENVIRONMENT=development`. Run the frontend with
-`pnpm dev` from `frontend/`, select Live voice, and check **Record this session for local
-debugging** before starting. Consent resets when the session ends. Production builds
-hide the checkbox and a non-development backend refuses the debug configuration.
+Recording is off by default in every environment. Set `VOICE_DEBUG_RECORDING=true`
+on the backend and restart it, then select Live voice and check **Record this session
+for server debugging** before starting. The checkbox is available in production builds
+as well as development. Consent is unchecked initially and resets when the session ends;
+server permission alone never records a conversation. If recording is disabled on the
+server, uncheck the option to start a normal session.
+
+For Railway, keep `VOICE_ENVIRONMENT=production` and set
+`VOICE_DEBUG_DIRECTORY=/app/.local/debug` on the existing persistent volume.
+Deploy the supporting backend and frontend commits before enabling the setting.
+The service operator can read these files; there is no public download route.
+For local development, the default directory is `.local/debug` in the repository.
 
 This is separate from feedback. With consent, the backend writes transcripts, normalized
 provider-event categories, worker interruptions, consent and close events. The browser

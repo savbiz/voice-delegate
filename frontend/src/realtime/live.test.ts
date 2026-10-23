@@ -339,7 +339,7 @@ test('debug consent is rejected before microphone capture when server debug is o
   );
   controller.start();
   await vi.waitFor(() => expect(store.getSnapshot().phase).toBe('ended'));
-  expect(store.getSnapshot().status).toContain('VOICE_DEBUG_RECORDING');
+  expect(store.getSnapshot().status).toContain('Server debugging is disabled');
   expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
 });
 

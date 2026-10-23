@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 from conftest import ASGIClientFactory
-from pydantic import SecretStr, ValidationError
+from pydantic import SecretStr
 from voice_delegate.api.app import create_app
 from voice_delegate.config import Settings
 from voice_delegate.debug import MAX_BYTES, RETENTION_SECONDS, DebugRecording, purge_recordings
@@ -21,7 +21,9 @@ from test_support import eventually
 @pytest.mark.parametrize(
     ("enabled", "consent", "status"), [(False, True, 403), (True, False, 201), (True, True, 201)]
 )
+@pytest.mark.parametrize("environment", ["development", "production"])
 async def test_recording_requires_both_gates_and_ownership(
+    environment: str,
     enabled: bool,
     consent: bool,
     status: int,
@@ -32,11 +34,20 @@ async def test_recording_requires_both_gates_and_ownership(
     settings = Settings(
         debug_recording=enabled,
         debug_directory=str(tmp_path),
-        access_token=SecretStr("local-placeholder"),
+        environment=environment,
+        allowed_hosts=["localhost"],
+        allowed_origin="https://frontend.example",
+        public_demo=environment == "production",
+        quota_database=str(tmp_path / "quotas.sqlite3"),
+        feedback_database=str(tmp_path / "feedback.sqlite3"),
+        invite_tokens={"tester": SecretStr("local-placeholder-invitation-32-characters")},
     )
     async with asgi_client(create_app(settings, provider)) as client:
         client.headers.update(
-            {"Origin": settings.allowed_origin, "Authorization": "Bearer local-placeholder"}
+            {
+                "Origin": settings.allowed_origin,
+                "Authorization": "Bearer local-placeholder-invitation-32-characters",
+            }
         )
         assert (await client.post("/api/config")).json()["debug_recording_available"] is enabled
         response = await client.post("/api/sessions", json={"debug_recording": consent})
@@ -78,11 +89,6 @@ async def test_recording_requires_both_gates_and_ownership(
             assert finished[0]["text"]
             assert "local-placeholder" not in text and data["key"] not in text
             assert files[0].stat().st_mode & 0o777 == 0o600
-
-
-def test_production_rejects_debug_recording() -> None:
-    with pytest.raises(ValidationError, match="only available in development"):
-        Settings(environment="production", debug_recording=True)
 
 
 def test_recording_is_bounded_and_expired_files_are_removed(tmp_path: Path) -> None:

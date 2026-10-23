@@ -1,4 +1,4 @@
-"""Explicit development-only recording, separate from content-free feedback."""
+"""Explicit opt-in session recording, separate from content-free feedback."""
 
 import json
 import logging
