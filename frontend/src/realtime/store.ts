@@ -44,6 +44,10 @@ export type LiveState = {
   sources: Source[];
   recap: string;
   feedbackStatus: string;
+  debugStatus: string;
+  audioStatus: string;
+  audioUrl: string;
+  audioFilename: string;
   reportPending: boolean;
   reportSent: boolean;
   reportLocked: boolean;
@@ -81,6 +85,10 @@ export function initialLiveState(): LiveState {
     reportPending: false,
     reportSent: false,
     reportLocked: false,
+    debugStatus: '',
+    audioStatus: '',
+    audioUrl: '',
+    audioFilename: '',
     feedbackStatus: 'An invitation or access code is required to send feedback.',
   };
 }

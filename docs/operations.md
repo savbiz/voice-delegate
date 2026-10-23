@@ -70,3 +70,52 @@ Feedback remains limited to category, diagnostic ID, interface state, provider a
 with a pseudonymous quota identity and seven-day retention. It does not save conversations,
 audio or transcripts, and its ID is not a session-log correlation key. Use the report time
 alongside local server logs. Do not paste keys or invitation codes into bug reports.
+
+## Opt-in local session recording
+
+For development only, set `VOICE_DEBUG_RECORDING=true` in the root untracked `.env`
+and restart the backend. Keep `VOICE_ENVIRONMENT=development`. Run the frontend with
+`pnpm dev` from `frontend/`, select Live voice, and check **Record this session for local
+debugging** before starting. Consent resets when the session ends. Production builds
+hide the checkbox and a non-development backend refuses the debug configuration.
+
+This is separate from feedback. With consent, the backend writes transcripts, normalized
+provider-event categories, worker interruptions, consent and close events. The browser
+uploads selected incoming-audio WebRTC counters every two seconds (lost/received packets,
+jitter, concealed samples and audio level where supported), peer-state changes, local
+worker-interruption requests and explicit stop events. A timestamp accompanies each record.
+Statistics are browser-reported observations, not proof of provider latency or audio quality.
+Tab closure, network failure or a full file can leave gaps; this is not a complete traffic capture.
+
+Files are stored under `VOICE_DEBUG_DIRECTORY` (default `.local/debug`) as
+`<session-id>.jsonl`; the interface shows the filename. The directory has mode 0700 and files
+0600. Read the JSONL locally with your editor; do not commit or post it publicly. Spoken
+personal information can appear in transcripts. No audio, SDP, candidate addresses, device
+identifiers, request credentials or raw provider payloads are collected. Feedback remains
+content-free even when this separate recorder is enabled.
+
+Each file is capped at 2 MiB and at most 20 files are retained. Recording stops on a storage
+error or size limit. The running debug-enabled backend removes files older than 24 hours;
+cleanup also runs when creating a recording. If the backend is stopped, files remain until
+it runs again or you delete them. Delete individual recordings in `.local/debug` whenever
+finished. Uncheck recording for the next session or set `VOICE_DEBUG_RECORDING=false` and
+restart to disable the feature. Never enable broad HTTP/header/body debug logging.
+
+### Optional audio download
+
+The separate **Record audio locally** checkbox records microphone and assistant audio
+into one mixed track in the browser. It is unchecked initially and resets after the session.
+It does not enable transcript recording, upload the recording to the backend, or attach it to feedback.
+Live audio still travels to the voice provider as part of the normal conversation.
+After Stop, use **Download session audio** and keep the file locally for playback. The browser
+chooses WebM/Opus, Ogg/Opus or MP4 according to supported recording formats. A supported
+MediaRecorder and Web Audio implementation are required; failure is reported before the
+provider offer is sent when recording initialization fails.
+
+Capture stops at five minutes or approximately 20 MiB (checked at one-second chunk
+boundaries). The call may continue after capture stops. No recording is started unless you
+check the audio box. Both voices are included even if assistant playback is muted. Download
+before reloading, closing the tab, leaving Live voice or starting another recording: the
+unsaved blob is held only in browser memory and is not backed up. Browser crashes can lose it.
+Deleting a downloaded file is your responsibility; the backend's 24-hour cleanup does not
+apply to downloads. Do not record other people without their knowledge and agreement.

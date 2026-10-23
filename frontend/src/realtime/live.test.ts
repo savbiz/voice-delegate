@@ -328,3 +328,49 @@ test('a fresh session clears the previous recap while fallback preserves it', as
   expect(store.getSnapshot().recap).toBe('No conversation yet.');
   await vi.waitFor(() => expect(FakePeer.instances).toHaveLength(3));
 });
+
+test('debug consent is rejected before microphone capture when server debug is off', async () => {
+  const store = createLiveStore();
+  controller = createLiveSession(
+    store,
+    { srcObject: null } as HTMLAudioElement,
+    () => 'invite',
+    () => ({ language: 'auto', mode: 'conversation', debug_recording: true }),
+  );
+  controller.start();
+  await vi.waitFor(() => expect(store.getSnapshot().phase).toBe('ended'));
+  expect(store.getSnapshot().status).toContain('VOICE_DEBUG_RECORDING');
+  expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
+});
+
+test('debug records stop before close only when consent was accepted', async () => {
+  const store = createLiveStore();
+  vi.mocked(fetch).mockResolvedValueOnce(
+    Response.json({ voice_available: true, debug_recording_available: true }),
+  );
+  controller = createLiveSession(
+    store,
+    { srcObject: null } as HTMLAudioElement,
+    () => 'invite',
+    () => ({ language: 'auto', mode: 'conversation', debug_recording: true }),
+  );
+  controller.start();
+  await vi.waitFor(() => expect(store.getSnapshot().status).toContain('Connected'));
+  const created = requests.find((r) => r.path.endsWith('/sessions'))!;
+  expect(JSON.parse(String(created.init.body)).debug_recording).toBe(true);
+  controller.stop();
+  expect(stopTrack).toHaveBeenCalledOnce();
+  await vi.waitFor(() => expect(store.getSnapshot().ending).toBe(false));
+  const debugIndex = requests.findIndex((r) => r.path.endsWith('/debug'));
+  expect(debugIndex).toBeGreaterThan(-1);
+  expect(JSON.parse(String(requests[debugIndex]!.init.body))).toEqual({ event: 'client_stop' });
+  expect(requests.findIndex((r) => r.path.endsWith('/close'))).toBeGreaterThan(debugIndex);
+});
+
+test('normal sessions never send debug content', async () => {
+  await start();
+  await vi.advanceTimersByTimeAsync(4000);
+  controller?.stop();
+  await vi.waitFor(() => expect(requests.some((r) => r.path.endsWith('/close'))).toBe(true));
+  expect(requests.some((r) => r.path.endsWith('/debug'))).toBe(false);
+});

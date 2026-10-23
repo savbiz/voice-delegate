@@ -6,6 +6,7 @@ import secrets
 import time
 from collections.abc import Callable
 from dataclasses import replace
+from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
@@ -14,6 +15,7 @@ from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 
 from voice_delegate.admission.policy import Admission
 from voice_delegate.config import Settings
+from voice_delegate.debug import DebugRecording, purge_recordings
 from voice_delegate.delegation.contracts import DelegationInput, Worker
 from voice_delegate.delegation.runner import DelegationRunner
 from voice_delegate.observability.metrics import Metrics
@@ -85,6 +87,8 @@ class SessionManager:
         self, principal: str = "local", preferences: VoicePreferences | None = None
     ) -> Session:
         """Reserve capacity atomically before any billable provider request."""
+        if preferences and preferences.debug_recording and not self.settings.debug_recording:
+            raise SessionError(403, "Debug recording is disabled on this server")
         if self._shutting_down:
             raise SessionError(503, "Service shutting down")
         if len(self.sessions) >= self.settings.max_sessions:
@@ -103,6 +107,17 @@ class SessionManager:
         session = Session(identity, secrets.token_urlsafe(32), now, now)
         session.principal = principal
         session.preferences = preferences or VoicePreferences()
+        if session.preferences.debug_recording:
+            try:
+                session.debug = DebugRecording(Path(self.settings.debug_directory), session.id)
+                session.debug.write(
+                    "consent",
+                    provider=self.settings.voice_provider,
+                    model=self.config(session).model,
+                )
+            except OSError as exc:
+                self.admission.release(session.id)
+                raise SessionError(503, "Debug recording unavailable") from exc
         self.sessions[session.id] = session
         return session
 
@@ -138,6 +153,8 @@ class SessionManager:
                             config=self.config(session), offer_sdp=offer_sdp
                         )
             except (ProviderError, TimeoutError, asyncio.CancelledError) as exc:
+                if session.debug:
+                    session.debug.close(session.finalized and session.previous_finalized)
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
                 self.admission.release(session.id)
@@ -163,6 +180,16 @@ class SessionManager:
             async for event in connection.events():
                 if connection is not session.connection:
                     return
+                if session.debug:
+                    session.debug.write("provider_event", kind=type(event).__name__)
+                    if isinstance(event, Transcript):
+                        session.debug.write(
+                            "transcript",
+                            speaker=event.speaker,
+                            text=event.text,
+                            start_ms=event.start_ms,
+                            end_ms=event.end_ms,
+                        )
                 if isinstance(event, SessionClosed):
                     session.finalized = True
                     break
@@ -215,6 +242,8 @@ class SessionManager:
                         session.recap.resume()
                         session.delegation.offset_ms = event.offset_ms
         except ProviderError:
+            if session.debug:
+                session.debug.write("provider_stream_failed")
             logger.warning("Session provider stream failed; inspect preceding sideband diagnostics")
         finally:
             if session.state not in {"closing", "closed", "reconnecting"}:
@@ -251,6 +280,8 @@ class SessionManager:
         source: Literal["client", "provider_speech", "provider_transcript"] = "client",
     ) -> None:
         if session.delegation.status == "running":
+            if session.debug:
+                session.debug.write("delegation_interrupted", source=source)
             logger.info("Delegation interrupted: source=%s", source)
             session.recap.interrupt()
             self.metrics.interruptions.add(1)
@@ -311,6 +342,8 @@ class SessionManager:
                     )
                     session.watcher.add_done_callback(self._watch_finished)
                 except BaseException as exc:
+                    if session.debug:
+                        session.debug.close(session.finalized and session.previous_finalized)
                     session.state = "closed"
                     self.sessions.pop(session.id, None)
                     self.admission.release(session.id)
@@ -337,6 +370,8 @@ class SessionManager:
                 if watcher is not None and watcher is not asyncio.current_task():
                     watcher.cancel()
                     await asyncio.gather(watcher, return_exceptions=True)
+                if session.debug:
+                    session.debug.close(session.finalized and session.previous_finalized)
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
                 self.admission.release(session.id)
@@ -367,6 +402,8 @@ class SessionManager:
             try:
                 await asyncio.sleep(1)
                 await self.expire()
+                if self.settings.debug_recording:
+                    purge_recordings(Path(self.settings.debug_directory))
             except Exception:
                 logger.exception("Session janitor failed")
 

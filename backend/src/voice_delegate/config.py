@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     trusted_proxy_hops: int = Field(default=1, ge=1, le=32)
     environment: str = "development"
     api_docs: bool = False
+    debug_recording: bool = False
+    debug_directory: str = ".local/debug"
     access_token: SecretStr = SecretStr("")
     invite_tokens: dict[str, SecretStr] = Field(default_factory=dict, repr=False)
     public_demo: bool = False
@@ -87,6 +89,9 @@ class Settings(BaseSettings):
             if len(self.worker_service_token.get_secret_value()) < 32:
                 message = "Remote worker requires a service token of at least 32 characters"
                 raise ValueError(message)
+        if self.debug_recording and self.environment != "development":
+            message = "Debug recording is only available in development"
+            raise ValueError(message)
         if len(self.invite_tokens) > 100:
             message = "At most 100 named invitations are supported"
             raise ValueError(message)

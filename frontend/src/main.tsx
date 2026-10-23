@@ -19,8 +19,12 @@ function Live({ code }: { code: string }) {
   codeRef.current = code;
   const [language, setLanguage] = useState('auto');
   const [voiceMode, setVoiceMode] = useState('conversation');
-  const preferences = useRef({ language, mode: voiceMode });
-  preferences.current = { language, mode: voiceMode };
+  const [debugRecording, setDebugRecording] = useState(false);
+  const [audioRecording, setAudioRecording] = useState(false);
+  const recordingRef = useRef(audioRecording);
+  recordingRef.current = audioRecording;
+  const preferences = useRef({ language, mode: voiceMode, debug_recording: debugRecording });
+  preferences.current = { language, mode: voiceMode, debug_recording: debugRecording };
   const [muted, setMuted] = useState(false);
   const [largeCaptions, setLargeCaptions] = useState(false);
   const [category, setCategory] = useState('wrong_answer');
@@ -31,6 +35,7 @@ function Live({ code }: { code: string }) {
       audio.current,
       () => codeRef.current,
       () => preferences.current,
+      () => recordingRef.current,
     );
     controller.current = session;
     return () => {
@@ -38,6 +43,12 @@ function Live({ code }: { code: string }) {
       controller.current = null;
     };
   }, []);
+  useEffect(() => {
+    if (state.phase === 'ended') {
+      setDebugRecording(false);
+      setAudioRecording(false);
+    }
+  }, [state.phase]);
   return (
     <div className={largeCaptions ? 'large-captions' : undefined}>
       <p className="notice">
@@ -64,7 +75,38 @@ function Live({ code }: { code: string }) {
             <option value="translate">Translation mode</option>
           </select>
         </label>
+        {import.meta.env.DEV && (
+          <label>
+            <input
+              type="checkbox"
+              checked={debugRecording}
+              onChange={(event) => setDebugRecording(event.target.checked)}
+            />
+            Record this session for local debugging. I consent to saving transcripts, session events
+            and selected audio connection statistics on this backend for up to 24 hours while it is
+            running. No audio recording, request credentials or network addresses. Requires server
+            debug mode.
+          </label>
+        )}
+        <label>
+          <input
+            type="checkbox"
+            checked={audioRecording}
+            onChange={(event) => setAudioRecording(event.target.checked)}
+          />
+          Record audio locally. I consent to recording my microphone and the assistant for this
+          session (up to five minutes or approximately 20 MiB). The recording is not uploaded; live
+          audio still goes to the voice provider. Download it before reloading, leaving Live voice
+          or starting another recording.
+        </label>
       </fieldset>
+      {state.debugStatus && <p aria-live="polite">{state.debugStatus}</p>}
+      {state.audioStatus && <p aria-live="polite">{state.audioStatus}</p>}
+      {state.audioUrl && (
+        <a href={state.audioUrl} download={state.audioFilename}>
+          Download session audio
+        </a>
+      )}
       <div className="actions">
         <button id="mute-audio" aria-pressed={muted} onClick={() => setMuted((value) => !value)}>
           {muted ? 'Unmute assistant' : 'Mute assistant'}

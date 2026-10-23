@@ -1,16 +1,21 @@
 /** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
 import type { Source } from '../reference';
 import { watchSpeech } from './vad';
+import { audioSample } from './debug';
+import { recordAudio } from './recording';
+import type { AudioRecording } from './recording';
+import type { DebugSample } from './debug';
 import { shouldRecover } from './recovery';
 
 import { processEvent, workerState } from './store';
 import type { LiveStore, Phase } from './store';
-export type Preferences = { language: string; mode: string };
+export type Preferences = { language: string; mode: string; debug_recording?: boolean };
 export function createLiveSession(
   store: LiveStore,
   audio: HTMLAudioElement,
   getAccessCode: () => string,
   getPreferences: () => Preferences,
+  getAudioConsent: () => boolean = () => false,
 ) {
   let diagnosticId = crypto.randomUUID();
   let reportBody: { diagnostic_id: string; category: string; state: string } | undefined;
@@ -22,13 +27,18 @@ export function createLiveSession(
   function showWorker(worker: string): void {
     store.update(workerState(store.getSnapshot(), worker));
   }
-  type Session = { id: string; key: string; accessCode: string };
+  type Session = { id: string; key: string; accessCode: string; debugRecording?: boolean };
+  let recording: AudioRecording | undefined;
+  let disposed = false;
+  let audioUrl: string | undefined;
   let stopVad: (() => void) | undefined;
   let peer: RTCPeerConnection | undefined;
   let microphone: MediaStream | undefined;
   let channel: RTCDataChannel | undefined;
   let session: Session | undefined;
   let heartbeat: ReturnType<typeof setInterval> | undefined;
+  let debugTimer: ReturnType<typeof setInterval> | undefined;
+  let debugBusy = false;
   let startup: ReturnType<typeof setTimeout> | undefined;
   let attemptId = 0;
   let ending = false;
@@ -47,10 +57,15 @@ export function createLiveSession(
     }
   }
 
-  function release(): void {
+  function release(preserveRecording = false): void {
+    if (!preserveRecording) {
+      recording?.stop();
+      recording = undefined;
+    }
     stopVad?.();
     stopVad = undefined;
     clearInterval(heartbeat);
+    clearInterval(debugTimer);
     clearTimeout(startup);
     microphone?.getTracks().forEach((track) => track.stop());
     channel?.close();
@@ -124,7 +139,23 @@ export function createLiveSession(
     }
   }
 
-  async function finish(message: string): Promise<void> {
+  async function recordDebug(owner: Session, sample: DebugSample): Promise<void> {
+    if (!owner.debugRecording) return;
+    try {
+      const result = await request<{ recording: boolean }>(
+        `/sessions/${owner.id}/debug`,
+        owner,
+        sample,
+        2000,
+      );
+      if (!result.recording)
+        store.update({ debugStatus: 'Debug recording stopped: file limit or storage error.' });
+    } catch {
+      store.update({ debugStatus: 'Some debug samples could not be saved.' });
+    }
+  }
+
+  async function finish(message: string, userStopped = false): Promise<void> {
     if (ending) return;
     ending = true;
     store.update({ ending: true });
@@ -140,7 +171,13 @@ export function createLiveSession(
     );
     showWorker('idle');
     if (owner) {
-      void request<{ finalized: boolean }>(`/sessions/${owner.id}/close`, owner, undefined, 5000)
+      const close = () =>
+        request<{ finalized: boolean }>(`/sessions/${owner.id}/close`, owner, undefined, 5000);
+      const closing =
+        owner.debugRecording && userStopped
+          ? recordDebug(owner, { event: 'client_stop' }).then(close)
+          : close();
+      void closing
         .then((result) => {
           if (closedAttempt === attemptId && !result.finalized)
             store.update({ status: message + ' Provider finalization unconfirmed.' });
@@ -245,7 +282,7 @@ export function createLiveSession(
       }
       fallbackAttempted = true;
       attemptId += 1;
-      release();
+      release(true);
       session = owner;
       store.update({ active: true });
       showState(
@@ -264,7 +301,10 @@ export function createLiveSession(
   }
 
   async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
+    const requestedPreferences = { ...getPreferences() };
+    const audioConsent = !existing && getAudioConsent();
     if (!existing) {
+      store.update({ debugStatus: '' });
       fallbackAttempted = false;
       store.update({
         captions: { user: '', assistant: '' },
@@ -297,8 +337,15 @@ export function createLiveSession(
     showWorker('idle');
     heartbeatFailures = 0;
     try {
-      const config = await request<{ voice_available: boolean }>('/config');
+      const config = await request<{
+        voice_available: boolean;
+        debug_recording_available?: boolean;
+      }>('/config');
       if (attempt !== attemptId) return;
+      if (requestedPreferences.debug_recording && !config.debug_recording_available)
+        throw new Error(
+          'Enable VOICE_DEBUG_RECORDING=true on the development backend, or uncheck debug recording.',
+        );
       if (!config.voice_available)
         throw new Error(
           'Set OPENAI_API_KEY on the backend to use live voice. Free demo works without a key.',
@@ -311,17 +358,51 @@ export function createLiveSession(
         return;
       }
       microphone = stream;
+      if (audioConsent) {
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        audioUrl = undefined;
+        store.update({ audioUrl: '', audioFilename: '' });
+        try {
+          recording = recordAudio(
+            stream,
+            (blob) => {
+              if (disposed) return;
+              audioUrl = URL.createObjectURL(blob);
+              const extension = blob.type.includes('ogg')
+                ? 'ogg'
+                : blob.type.includes('mp4')
+                  ? 'm4a'
+                  : 'webm';
+              store.update({ audioUrl, audioFilename: `voice-session-${Date.now()}.${extension}` });
+            },
+            (audioStatus) => {
+              if (!disposed) store.update({ audioStatus });
+            },
+          );
+        } catch {
+          throw new Error(
+            'Audio recording is unavailable in this browser. Uncheck recording or use a supported browser.',
+          );
+        }
+      } else if (existing) recording?.microphone(stream);
       const connection = new RTCPeerConnection();
       peer = connection;
       stream.getTracks().forEach((track) => connection.addTrack(track, stream));
       connection.addEventListener('track', (event) => {
         if (attempt !== attemptId) return;
-        audio.srcObject = new MediaStream([event.track]);
+        const remote = new MediaStream([event.track]);
+        audio.srcObject = remote;
+        recording?.assistant(remote);
         void audio.play().catch(() => {
           store.update({ status: 'Press Play below to hear the assistant.' });
         });
       });
       connection.addEventListener('connectionstatechange', () => {
+        if (session && attempt === attemptId)
+          void recordDebug(session, {
+            event: 'peer_state',
+            peer_state: connection.connectionState,
+          });
         if (
           attempt === attemptId &&
           shouldRecover('connectionstatechange', connection.connectionState)
@@ -344,6 +425,8 @@ export function createLiveSession(
         }
       });
       channel.addEventListener('close', () => {
+        if (session && attempt === attemptId)
+          void recordDebug(session, { event: 'channel_closed' });
         if (attempt === attemptId && shouldRecover('data-channel-close'))
           void recover('Event connection closed.');
       });
@@ -359,22 +442,45 @@ export function createLiveSession(
         ...(await request<{ id: string; key: string }>(
           '/sessions',
           undefined,
-          getPreferences(),
+          requestedPreferences,
           35000,
           accessCode,
         )),
         accessCode,
+        debugRecording: requestedPreferences.debug_recording,
       };
       if (attempt !== attemptId) {
         await request(`/sessions/${created.id}/close`, created);
         return;
       }
       session = created;
+      if (created.debugRecording) {
+        store.update({ debugStatus: `Debug session file: ${created.id}.jsonl` });
+        debugTimer = setInterval(() => {
+          if (debugBusy || attempt !== attemptId) return;
+          debugBusy = true;
+          void connection
+            .getStats()
+            .then(async (reports) => {
+              const samples: DebugSample[] = [];
+              reports.forEach((report: Record<string, unknown>) => {
+                const sample = audioSample(report);
+                if (sample && samples.length < 2) samples.push(sample);
+              });
+              for (const sample of samples) await recordDebug(created, sample);
+            })
+            .catch(() => undefined)
+            .finally(() => {
+              debugBusy = false;
+            });
+        }, 2000);
+      }
       try {
         stopVad = watchSpeech(
           stream,
           () => {
             if (attempt !== attemptId || store.getSnapshot().worker !== 'running') return;
+            void recordDebug(created, { event: 'local_onset' });
             void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
           },
           audio,
@@ -475,11 +581,13 @@ export function createLiveSession(
       if (!store.getSnapshot().active && !ending && !recovering) void begin();
     },
     stop: () => {
-      void finish('Conversation ended.');
+      void finish('Conversation ended.', true);
     },
     cancel: onCancelTask,
     feedback: onFeedback,
     dispose: () => {
+      disposed = true;
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
       window.removeEventListener('pagehide', onPageHide);
       onPageHide();
     },

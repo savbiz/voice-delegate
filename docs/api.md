@@ -42,3 +42,20 @@ Body limits also return 413. The worker's framework documentation routes are ena
 Job states are `running`, `completed`, `cancelled`, `timeout`, `failed`. Results carry text and source IDs separately. The API polls every 200 ms and resolves IDs against its matching bundled corpus. Default capacity is 4 and the ledger holds 128 records. Jobs/tombstones are ephemeral with 180-second retention; active expired jobs are cancelled before removal. A repeated ID with the same fingerprint returns its existing state, including cancellation. Restart loses this ledger. No automatic execution retry is promised.
 
 See [configuration](configuration.md), [operations](operations.md) and [architecture](architecture.md).
+
+## Development session diagnostics
+
+`POST /api/config` includes `debug_recording_available` (false by default).
+`POST /api/sessions` accepts optional `debug_recording: true` consent alongside voice
+preferences; it returns 403 if the server has not enabled development recording, or 503
+if the recording cannot be created. No consent means no recording.
+
+`POST /api/sessions/{id}/debug` accepts only the allowlisted `DebugSample` schema:
+`event` (`stats`, `local_onset`, `client_stop`, `peer_state`, `channel_closed`), optional
+`peer_state`, and numeric `packets_lost`, `packets_received`, `jitter_seconds`,
+`concealed_samples`, `audio_level`. It uses the same origin, invitation and `X-Session-Key`
+checks as other session routes. Responses: 200 with `recording` boolean, 401 invalid
+invitation, 403 wrong origin or missing recording consent, 404 absent/not-owned session,
+422 invalid/extra fields, and the normal body/rate limits (413/429).
+There is no HTTP recording-download endpoint; recordings stay on the development backend.
+See [operations](operations.md#opt-in-local-session-recording).

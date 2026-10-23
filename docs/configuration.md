@@ -25,6 +25,8 @@ Declared defaults below never read your environment or reveal configured secrets
 | `trusted_proxy_hops` | `VOICE_TRUSTED_PROXY_HOPS` | `1` | `{"type": "integer", "minimum": 1, "maximum": 32}` |
 | `environment` | `VOICE_ENVIRONMENT` | `"development"` | `{"type": "string"}` |
 | `api_docs` | `VOICE_API_DOCS` | `false` | `{"type": "boolean"}` |
+| `debug_recording` | `VOICE_DEBUG_RECORDING` | `false` | `{"type": "boolean"}` |
+| `debug_directory` | `VOICE_DEBUG_DIRECTORY` | `".local/debug"` | `{"type": "string"}` |
 | `access_token` | `VOICE_ACCESS_TOKEN` | `""` | `{"type": "string"}` |
 | `invite_tokens` | `VOICE_INVITE_TOKENS` | `{}` | `{"type": "object"}` |
 | `public_demo` | `VOICE_PUBLIC_DEMO` | `false` | `{"type": "boolean"}` |
@@ -89,6 +91,9 @@ def validate_production(self) -> "Settings":
         if len(self.worker_service_token.get_secret_value()) < 32:
             message = "Remote worker requires a service token of at least 32 characters"
             raise ValueError(message)
+    if self.debug_recording and self.environment != "development":
+        message = "Debug recording is only available in development"
+        raise ValueError(message)
     if len(self.invite_tokens) > 100:
         message = "At most 100 named invitations are supported"
         raise ValueError(message)

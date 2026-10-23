@@ -34,6 +34,7 @@ export function installFakePeers() {
   }
   Object.defineProperty(window, 'RTCPeerConnection', { value: FakePeer });
   Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+    configurable: true,
     value: async () => new MediaStream(),
   });
   Object.defineProperty(window, '__peers', { value: peers });
