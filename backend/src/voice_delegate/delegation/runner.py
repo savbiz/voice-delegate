@@ -71,6 +71,7 @@ class DelegationRunner:
         connection: RealtimeConnection,
         is_connected: Callable[[], bool],
         context: Context | None = None,
+        on_finished: Callable[[str, str], None] | None = None,
     ) -> Commentary | None:
         """Dispatch or return a bounded rejection for the caller to deliver."""
         if request_id in state.seen:
@@ -85,7 +86,14 @@ class DelegationRunner:
         work_generation = state.work_generation
         state.task = asyncio.create_task(
             self._run(
-                state, work_generation, request_id, request, connection, is_connected, context
+                state,
+                work_generation,
+                request_id,
+                request,
+                connection,
+                is_connected,
+                context,
+                on_finished,
             ),
             name="delegated-task",
         )
@@ -105,8 +113,10 @@ class DelegationRunner:
         connection: RealtimeConnection,
         is_connected: Callable[[], bool],
         context: Context | None = None,
+        on_finished: Callable[[str, str], None] | None = None,
     ) -> None:
         started = monotonic()
+        narration = ""
         child: asyncio.Task[WorkerResult] | None = None
         try:
             with self.tracer.start_as_current_span(
@@ -134,7 +144,8 @@ class DelegationRunner:
                         )
                     else:
                         try:
-                            result, status = child.result(), "completed"
+                            result = child.result()
+                            status = result.status
                         except WorkerBusy:
                             result, status = (
                                 WorkerResult("Worker busy; task was not started."),
@@ -147,12 +158,8 @@ class DelegationRunner:
                             )
                 if work_generation == state.work_generation and is_connected():
                     # 500 UTF-8 bytes also conservatively bound the provider's 500-token limit.
-                    await connection.send(
-                        Commentary(
-                            request_id,
-                            truncate(result.text, self.budget, max_bytes=COMMENTARY_MAX_BYTES),
-                        )
-                    )
+                    narration = truncate(result.text, self.budget, max_bytes=COMMENTARY_MAX_BYTES)
+                    await connection.send(Commentary(request_id, narration))
                     if work_generation == state.work_generation:
                         state.status = status
                         state.sources = result.sources
@@ -171,6 +178,8 @@ class DelegationRunner:
 
         finally:
             status = state.status if work_generation == state.work_generation else "cancelled"
+            if on_finished is not None:
+                on_finished(status, narration)
             outcome = (
                 "success"
                 if status == "completed"

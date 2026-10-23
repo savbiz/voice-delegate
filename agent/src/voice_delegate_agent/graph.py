@@ -93,7 +93,7 @@ class OpenAIPlanner:
             timeout=20,
             max_completion_tokens=1000,
         )
-        self.model = self.client.bind_tools(TOOLS)
+        self.model = self.client.bind_tools(TOOLS, parallel_tool_calls=False)
 
     async def respond(self, messages: list[AnyMessage]) -> AIMessage:
         """Call the bound text model; cancellation propagates through await."""
@@ -116,6 +116,7 @@ class State(TypedDict):
     steps: int
     source_ids: list[str]
     latest_source_ids: list[str]
+    failed: bool
 
 
 class LangGraphWorker:
@@ -129,7 +130,8 @@ class LangGraphWorker:
         async def reason(state: State) -> dict[str, object]:
             if state["steps"] >= self.max_steps:
                 return {
-                    "messages": [AIMessage(content="Worker step limit reached; task incomplete.")]
+                    "messages": [AIMessage(content="Worker step limit reached; task incomplete.")],
+                    "failed": True,
                 }
             answer = await self.planner.respond(state["messages"])
             return {"messages": [answer], "steps": state["steps"] + 1}
@@ -143,17 +145,21 @@ class LangGraphWorker:
                 return {
                     "messages": [
                         AIMessage(content="Worker rejected parallel tool calls; task incomplete.")
-                    ]
+                    ],
+                    "failed": True,
                 }
             call = answer.tool_calls[0]
             tool = tools.get(call["name"])
+            failed = state.get("failed", False) or tool is None
             try:
                 result = (
                     await tool.ainvoke(call["args"]) if tool else "Unknown tool; no action taken."
                 )
             except ValidationError:
+                failed = True
                 result = "Tool input invalid; no action taken."
             except Exception:
+                failed = True
                 result = "Tool failed; no action taken."
             source_ids = list(state["source_ids"])
             latest_source_ids = state["latest_source_ids"]
@@ -172,6 +178,7 @@ class LangGraphWorker:
             return {
                 "messages": [ToolMessage(content=str(result), tool_call_id=call["id"])],
                 "source_ids": source_ids,
+                "failed": failed,
                 "latest_source_ids": latest_source_ids,
             }
 
@@ -201,6 +208,7 @@ class LangGraphWorker:
                     ),
                 ],
                 "steps": 0,
+                "failed": False,
                 "source_ids": [],
                 "latest_source_ids": [],
             },
@@ -215,7 +223,9 @@ class LangGraphWorker:
         identities = result["source_ids"]
         citations = list(dict.fromkeys(int(n) for n in re.findall(r"\[(\d+)\]", answer)))
         if len(citations) > 3 or any(index < 1 or index > len(identities) for index in citations):
-            return WorkerResult("Worker citations could not be verified; task incomplete.")
+            return WorkerResult(
+                "Worker citations could not be verified; task incomplete.", status="failed"
+            )
         selected = list(
             dict.fromkeys(
                 [identities[index - 1] for index in citations] + result["latest_source_ids"]
@@ -229,4 +239,5 @@ class LangGraphWorker:
         sources = tuple(
             source for identity in selected if (source := source_by_id(identity)) is not None
         )
-        return WorkerResult(answer, sources)
+        failed = result["failed"] or not isinstance(last.content, str)
+        return WorkerResult(answer, sources, "failed" if failed else "completed")

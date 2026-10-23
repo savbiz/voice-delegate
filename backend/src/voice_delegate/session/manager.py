@@ -235,6 +235,7 @@ class SessionManager:
                         connection,
                         lambda: session.state == "connected",
                         context=session.turn.context if session.turn else None,
+                        on_finished=session.debug.delegation_finished if session.debug else None,
                     )
                     if rejection is not None:
                         await connection.send(rejection)

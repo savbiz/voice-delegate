@@ -119,3 +119,8 @@ before reloading, closing the tab, leaving Live voice or starting another record
 unsaved blob is held only in browser memory and is not backed up. Browser crashes can lose it.
 Deleting a downloaded file is your responsibility; the backend's 24-hour cleanup does not
 apply to downloads. Do not record other people without their knowledge and agreement.
+
+Consented debug recordings also include `delegation_finished`: the final worker status
+and bounded narration text. Rejected tool calls and execution failures are reported as
+`failed`, not completed; cancelled work has no delivered result. The text planner requests
+one tool call per step and can run calculation and documentation search sequentially.

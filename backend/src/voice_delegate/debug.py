@@ -74,6 +74,10 @@ class DebugRecording:
             self.stopped = True
             logger.warning("Debug recording unavailable; recording stopped")
 
+    def delegation_finished(self, status: str, text: str) -> None:
+        """Record only the bounded narration and outcome for an opted-in session."""
+        self.write("delegation_finished", status=status, text=text)
+
     def close(self, finalized: bool) -> None:
         self.write("closed", finalized=finalized)
         self.stopped = True

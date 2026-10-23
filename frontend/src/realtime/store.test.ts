@@ -196,3 +196,26 @@ test('Live fragments keep word boundaries intact and separate turns after pauses
   state = processEvent(state, { type: 'session.input_transcript.delta', delta: 'Thanks' }).state;
   expect(state.captions.user).toBe('Hello\nAgain\nThanks');
 });
+
+test('timed fragments stay together when the other speaker interleaves', () => {
+  let state = processEvent(initialLiveState(), {
+    type: 'session.input_transcript.delta',
+    delta: 'Bye-b',
+    start_ms: 100,
+    end_ms: 200,
+  }).state;
+  state = processEvent(state, {
+    type: 'session.output_transcript.delta',
+    delta: 'Goodbye',
+    start_ms: 150,
+    end_ms: 250,
+  }).state;
+  state = processEvent(state, {
+    type: 'session.input_transcript.delta',
+    delta: 'ye',
+    start_ms: 200,
+    end_ms: 300,
+  }).state;
+  expect(state.captions.user).toBe('Bye-bye');
+  expect(workerState(state, 'failed').workerMessage).not.toContain('completed');
+});

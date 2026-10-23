@@ -110,7 +110,7 @@ class Jobs:
                     max_bytes=COMMENTARY_MAX_BYTES,
                 )
                 job.source_ids = tuple(s.id for s in result.sources)
-                job.status = "completed"
+                job.status = result.status
         except asyncio.CancelledError:
             job.status = "cancelled"
             raise

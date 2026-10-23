@@ -239,7 +239,8 @@ export function processEvent(
       tail?.key === undefined &&
       sameTransport &&
       !tail.complete &&
-      state.lastSpeaker === speaker &&
+      (state.lastSpeaker === speaker ||
+        (start !== undefined && tail.end !== undefined && start >= tail.end)) &&
       !gap);
   const prior = state.captions[speaker];
   const replace = complete && continuation;

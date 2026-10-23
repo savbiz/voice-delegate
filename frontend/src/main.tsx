@@ -82,10 +82,10 @@ function Live({ code }: { code: string }) {
               checked={debugRecording}
               onChange={(event) => setDebugRecording(event.target.checked)}
             />
-            Record this session for local debugging. I consent to saving transcripts, session events
-            and selected audio connection statistics on this backend for up to 24 hours while it is
-            running. No audio recording, request credentials or network addresses. Requires server
-            debug mode.
+            Record this session for local debugging. I consent to saving transcripts, bounded worker
+            results, session events and selected audio connection statistics on this backend for up
+            to 24 hours while it is running. No audio recording, request credentials or network
+            addresses. Requires server debug mode.
           </label>
         )}
         <label>

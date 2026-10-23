@@ -13,7 +13,7 @@ from voice_delegate.api.app import create_app
 from voice_delegate.config import Settings
 from voice_delegate.debug import MAX_BYTES, RETENTION_SECONDS, DebugRecording, purge_recordings
 from voice_delegate.providers.fake import FakeProvider
-from voice_delegate.providers.models import Transcript
+from voice_delegate.providers.models import DelegationRequested, Transcript
 
 from test_support import eventually
 
@@ -57,6 +57,10 @@ async def test_recording_requires_both_gates_and_ownership(
         assert sample.status_code == (200 if consent else 403)
         assert (await client.post(path + "/offer", json={"sdp": "v=0\r\n"})).status_code == 200
         provider.connections[0].queue.put_nowait(Transcript("user", "test conversation", 1, 10))
+        provider.connections[0].queue.put_nowait(
+            DelegationRequested("debug-task", goal="calculate 4+4")
+        )
+        await eventually(lambda: bool(provider.connections[0].commands))
         if consent:
             target = tmp_path / f"{data['id']}.jsonl"
             await eventually(lambda: "test conversation" in target.read_text())
@@ -68,6 +72,10 @@ async def test_recording_requires_both_gates_and_ownership(
             rows = [json.loads(line) for line in text.splitlines()]
             assert rows[0]["event"] == "consent"
             assert rows[-1]["event"] == "closed"
+            finished = [row for row in rows if row["event"] == "delegation_finished"]
+            assert len(finished) == 1
+            assert finished[0]["status"] == "completed"
+            assert finished[0]["text"]
             assert "local-placeholder" not in text and data["key"] not in text
             assert files[0].stat().st_mode & 0o777 == 0o600
 
