@@ -33,3 +33,13 @@ The [voice experience and scaling verification record](milestones/m7-m8-verifica
 the successful Docker rerun, separately from the live and hosted acceptance still required.
 
 Amended 2026-10-05: v0.x tags are implementation releases; acceptance-gated tags begin at v1.0.
+
+## Live demonstration preparation
+
+Audio playback instrumentation is opt-in (`VOICE_AUDIO_TIMING`), with deterministic
+energy/state tests and bounded numeric telemetry. The expanded
+[live checklist](milestones/live-verification.md) covers GPT-Live, audio measurements,
+Azure recovery and existing hosted invitation flows. No paid calls or new live
+results were collected for this change. Formal live/hosted acceptance remains pending.
+The [two-minute storyboard](demo-video.md) marks continued speech during delegated work
+and silence-gated delivery as dependent on the planned cancellation redesign.

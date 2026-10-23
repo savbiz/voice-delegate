@@ -212,6 +212,15 @@ function Live({ code }: { code: string }) {
       </details>
       <details className="secondary-panel">
         <summary>Connection timings</summary>
+        <p>{state.audioTimingStatus}</p>
+        <ol aria-label="Audio playback measurements">
+          {state.audioTimings.map((sample, index) => (
+            <li key={index}>
+              {sample.kind === 'setup' ? 'Offer to first audio' : 'Speech end to audio'}:{' '}
+              {Math.round(sample.milliseconds)} ms (browser playback)
+            </li>
+          ))}
+        </ol>
         <p className="muted">
           Transcript timestamp gap: a proxy, not measured audio latency. May be negative during
           overlap.

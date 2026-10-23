@@ -37,6 +37,7 @@ class Session:
     generation: int = 0
     fallback_used: bool = False
     previous_finalized: bool = True
+    audio_timing_samples: int = 0
     sealed_index: int = 0
     committed_history: History = field(default_factory=History)
     history: History = field(default_factory=History)

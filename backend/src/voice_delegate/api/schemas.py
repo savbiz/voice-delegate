@@ -66,3 +66,12 @@ class Closed(BaseModel):
     """Whether provider finalization was confirmed before cleanup."""
 
     finalized: bool
+
+
+class AudioTiming(BaseModel):
+    """Bounded, untrusted browser measurements with no conversation content."""
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    kind: Literal["setup", "turn"]
+    seconds: float = Field(ge=0, le=120)
+    generation: int = Field(ge=0)
