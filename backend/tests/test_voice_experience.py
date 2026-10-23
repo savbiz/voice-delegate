@@ -103,3 +103,16 @@ async def test_interrupt_marks_recap_only_for_running_delegation(
     assert session.recap.interrupted is (status == "running")
     assert session.recap.latest_reply == ("" if status == "running" else "Previous answer")
     await manager.aclose()
+
+
+def test_recap_assembles_live_reply_fragments_and_resets_for_next_request() -> None:
+    recap = Recap()
+    recap.observe(Transcript("user", "question", 0, 10), "question")
+    for index, text in enumerate(["The answer", " is eight", "."]):
+        recap.observe(Transcript("assistant", text, 20 + index, 21 + index), "question")
+    assert recap.latest_reply == "The answer is eight."
+    recap.observe(Transcript("assistant", "The answer is eight.", 0, 0, True), "question")
+    assert recap.latest_reply == "The answer is eight."
+    recap.observe(Transcript("user", "next", 30, 40), "next")
+    recap.observe(Transcript("assistant", "New reply", 41, 50), "next")
+    assert recap.latest_reply == "New reply"

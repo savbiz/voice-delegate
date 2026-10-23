@@ -5,13 +5,15 @@
   background: #0b1120;
   color-scheme: dark;
 }
-button {
+button,
+.download-button {
   padding: 0.7rem 1.1rem;
   border: 1px solid #334155;
   border-radius: 0.65rem;
   background: #172338;
   cursor: pointer;
 }
+.download-button:hover,
 button:hover:not(:disabled),
 button[aria-pressed='true'] {
   border-color: #34d399;
@@ -112,4 +114,20 @@ fieldset {
     animation: none !important;
     transition: none !important;
   }
+}
+
+.download-button {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-weight: 600;
+  border-color: #34d399;
+}
+#voice-preferences label {
+  display: block;
+  margin-top: 0.75rem;
+}
+#voice-preferences input[type='checkbox'] {
+  display: inline-block;
+  width: auto;
+  margin-right: 0.5rem;
 }

@@ -220,7 +220,11 @@ export function createLiveSession(
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         cleanup();
-        reject(new Error('ICE gathering timed out'));
+        reject(
+          new Error(
+            'Microphone connection setup timed out (ICE). Check browser permissions, VPN or network, then retry.',
+          ),
+        );
       }, 10000);
       function cleanup(): void {
         clearTimeout(timer);

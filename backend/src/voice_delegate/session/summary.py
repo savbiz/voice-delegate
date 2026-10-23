@@ -19,7 +19,9 @@ class Recap:
             self.latest_reply = ""
             self.revision += 1
         elif not self.interrupted:
-            self.latest_reply = truncate(event.text, 128, max_bytes=600)
+            if event.committed or not self.latest_reply.endswith("…"):
+                text = event.text if event.committed else self.latest_reply + event.text
+                self.latest_reply = truncate(text, 128, max_bytes=600)
 
     def interrupt(self) -> None:
         self.interrupted = True

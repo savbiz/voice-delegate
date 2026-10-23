@@ -4,8 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-// Vite 8 makes esbuild optional; preserve this policy if its compatibility path is used.
-const esbuild = { include: /\.[jt]sx?$/, legalComments: 'eof' as const };
 
 export default defineConfig({
   plugins: [
@@ -21,7 +19,6 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  esbuild,
   build: { rolldownOptions: { output: { comments: { legal: true } } } },
   server: {
     host: '127.0.0.1',
