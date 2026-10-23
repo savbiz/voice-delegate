@@ -1,3 +1,4 @@
+import { AudioTimingMeter } from './audio-timing';
 /** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
 import type { Source } from '../reference';
 import { watchSpeech } from './vad';
@@ -317,6 +318,7 @@ export function createLiveSession(
         captionTails: {},
         lastSpeaker: undefined,
         timings: [],
+        audioTimings: [],
         sources: [],
         recap: 'No conversation yet.',
       });
@@ -345,6 +347,7 @@ export function createLiveSession(
     try {
       const config = await request<{
         voice_available: boolean;
+        audio_timing_available?: boolean;
         debug_recording_available?: boolean;
       }>('/config');
       if (attempt !== attemptId) return;
@@ -484,6 +487,14 @@ export function createLiveSession(
             });
         }, 2000);
       }
+      let audioMeter: AudioTimingMeter | undefined;
+      let timingBusy = false;
+      let timingCount = 0;
+      store.update({
+        audioTimingStatus: config.audio_timing_available
+          ? 'Waiting for audio playback.'
+          : 'Audio measurement disabled.',
+      });
       try {
         stopVad = watchSpeech(
           stream,
@@ -493,8 +504,53 @@ export function createLiveSession(
             void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
           },
           audio,
+          config.audio_timing_available
+            ? (now, local, remote, playing) => {
+                if (attempt !== attemptId || timingCount >= 120) return;
+                const samples = audioMeter?.sample(now, local, remote, playing) ?? [];
+                for (const sample of samples) {
+                  timingCount += 1;
+                  store.update({
+                    audioTimings: [...store.getSnapshot().audioTimings, sample].slice(-40),
+                    audioTimingStatus: 'Browser playback observations; not acoustic latency.',
+                  });
+                }
+                if (samples.length === 0) return;
+                if (timingBusy) {
+                  store.update({
+                    audioTimingStatus: 'Audio measured locally; metric upload busy.',
+                  });
+                  return;
+                }
+                timingBusy = true;
+                void Promise.all(
+                  samples.map((sample) =>
+                    request(
+                      `/sessions/${created.id}/audio-timing`,
+                      created,
+                      {
+                        kind: sample.kind,
+                        seconds: sample.milliseconds / 1000,
+                        generation: serverGeneration,
+                      },
+                      2000,
+                    ),
+                  ),
+                )
+                  .catch(() => {
+                    if (attempt === attemptId)
+                      store.update({
+                        audioTimingStatus: 'Audio measured locally; metric upload failed.',
+                      });
+                  })
+                  .finally(() => {
+                    timingBusy = false;
+                  });
+              }
+            : undefined,
         );
       } catch {
+        store.update({ audioTimingStatus: 'Audio measurement unavailable in this browser.' });
         /* Provider-side speech detection remains authoritative without local analysis. */
       }
       heartbeat = setInterval(() => {
@@ -532,6 +588,7 @@ export function createLiveSession(
       startup = setTimeout(() => {
         void finish('Voice startup timed out.');
       }, 40000);
+      if (config.audio_timing_available) audioMeter = new AudioTimingMeter(performance.now());
       const result = await request<{ sdp: string }>(
         `/sessions/${created.id}/${existing ? 'reconnect' : 'offer'}`,
         created,

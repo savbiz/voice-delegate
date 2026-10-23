@@ -59,3 +59,13 @@ invitation, 403 wrong origin or missing recording consent, 404 absent/not-owned 
 422 invalid/extra fields, and the normal body/rate limits (413/429).
 There is no HTTP recording-download endpoint; recordings stay on the backend, including its persistent volume in production.
 See [operations](operations.md#opt-in-server-session-recording).
+
+### Browser audio measurement
+
+`POST /api/config` includes `audio_timing_available` (default false).
+`POST /api/sessions/{id}/audio-timing` accepts `{kind: "setup" | "turn", seconds: number,
+generation: integer}` with no extra fields. It requires the existing Origin, invitation
+and X-Session-Key checks. Returns 200 on recording, 403 when disabled, 404 for ownership
+failure, 409 for stale transport/non-connected state, 422 for invalid values and 429
+after 120 accepted samples per session. Durations must be finite and in [0, 120].
+These are untrusted client observations, not billing or acceptance evidence by themselves.

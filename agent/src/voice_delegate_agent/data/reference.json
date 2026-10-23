@@ -206,5 +206,21 @@
     "section": "Worker, fallback and admission contracts",
     "text": "The offline planner is deterministic, not a free language model. It exercises the real\nLangGraph graph and read-only tools with English commands, without provider calls.\nNatural-language planning requires the separately configured paid text model.",
     "digest": "fd3ebd44d09bb660bd0f1d0f239152f6133314a5e4c4e08cf0acd4af65b70fed"
+  },
+  {
+    "id": "0015ca08b96d3aec",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Browser audio observations",
+    "text": "With `VOICE_AUDIO_TIMING=true` (default false), the existing WebRTC stream analyser\nobserves local and remote energy every 20 ms. Remote energy is accepted only while\nplayback is active and unmuted. Offer-to-first-audio includes setup; speech-end-to-audio\nuses the last local energy observation followed by at least 300 ms of silence.\nOverlap and interrupted sampling are excluded. These browser observations do not\nmeasure acoustic output or provider-only generation latency and use no transcript timestamps.",
+    "digest": "0015ca08b96d3aec954979753db56086b77a2cf7523bf12476bb3f793dad68c2"
+  },
+  {
+    "id": "176be03310916ca7",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Browser audio observations",
+    "text": "The browser sends numeric samples to the owned session's `/audio-timing` route with\nits transport generation. The backend validates the connected state, generation,\nfinite duration (0–120 s) and a 120-sample session cap. Only the fixed setup/turn label\nis exported to OTel; no session identifiers or conversation content are metric labels.\nUploads time out after two seconds, are not retried, and never end the call. If Web Audio\nis unavailable, conversation continues with the existing transcript diagnostics.\nSee the [measurement procedure](milestones/live-verification.md) for exclusions and\n[video storyboard](demo-video.md) for the pending cancellation-design dependency.",
+    "digest": "176be03310916ca76bc447121dcd85a95fb9b3bb706086c7987aed345b4c1457"
   }
 ]

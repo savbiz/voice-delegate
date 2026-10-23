@@ -202,3 +202,40 @@ flowchart TB
 ```
 
 The gateway's dedicated `/healthz` location bypasses its request limiter; application middleware still applies. This topology does not migrate live sessions after an owner crash. See [architecture](../docs/architecture.md), [operations](../docs/operations.md) and [production scope](../docs/production.md).
+
+## Live acceptance
+
+Use the existing Railway service `voice-delegate-api-production.up.railway.app` and
+Vercel frontend `voice-delegate.vercel.app`. This procedure does not create services.
+Follow the shared Variables table above, retaining invitation and database settings.
+Set `VOICE_AUDIO_TIMING=true` for the authorized run and `VOICE_DEBUG_RECORDING=false`.
+Enable OTLP only if the existing collector is reachable; no new public collector is
+required. Restart/redeploy the existing backend after changing environment variables.
+On Vercel retain `VITE_API_BASE_URL=https://voice-delegate-api-production.up.railway.app`.
+Never place provider keys or invitation mappings in frontend variables.
+
+Read-only readiness check (no provider charge):
+
+```sh
+curl --fail --silent --show-error https://voice-delegate-api-production.up.railway.app/healthz
+```
+
+For a local authorized run, inject the provider key and invitation settings through
+process environment, without writing them into a file. Then run from the repository:
+
+```sh
+VOICE_ALLOWED_ORIGIN=http://127.0.0.1:5173 VOICE_AUDIO_TIMING=true VOICE_DEBUG_RECORDING=false uv run uvicorn voice_delegate.api.app:create_app --factory --host 127.0.0.1 --port 8000
+```
+
+From `frontend/`, in another terminal:
+
+```sh
+VITE_API_BASE_URL='' pnpm dev
+```
+
+Retain the configured local origin expected by the backend. For Azure also configure
+`VOICE_FALLBACK_ENABLED=true`, `VOICE_AZURE_ENDPOINT`, `VOICE_AZURE_API_KEY`,
+`VOICE_AZURE_DEPLOYMENT` and `VOICE_AZURE_VOICE` on the backend only; see
+[Azure setup](../docs/azure-setup.md). Authorization for a GPT-Live run does not authorize
+an Azure run. Execute the [acceptance checklist](../docs/milestones/live-verification.md)
+and reset `VOICE_AUDIO_TIMING=false` afterwards. No live success is claimed by this runbook.

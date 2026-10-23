@@ -1,4 +1,5 @@
 /** Immutable display state and pure provider-event transitions. */
+import type { AudioTiming } from './audio-timing';
 import type { Source } from '../reference';
 
 const TRANSCRIPT_GAP_MS = 800;
@@ -43,6 +44,8 @@ export type LiveState = {
   audioBlocked: boolean;
   captionTails: Partial<Record<'user' | 'assistant', CaptionTail>>;
   lastSpeaker?: 'user' | 'assistant';
+  audioTimings: AudioTiming[];
+  audioTimingStatus: string;
   timings: TurnTiming[];
   timingTransportId: number;
   sources: Source[];
@@ -84,6 +87,8 @@ export function initialLiveState(): LiveState {
     messages: [],
     audioBlocked: false,
     captionTails: {},
+    audioTimings: [],
+    audioTimingStatus: 'Audio measurement disabled.',
     timings: [],
     timingTransportId: 0,
     sources: [],

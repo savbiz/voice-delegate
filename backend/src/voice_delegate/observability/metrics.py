@@ -34,6 +34,12 @@ class Metrics:
             description="First assistant transcript arrival minus first user transcript arrival",
             explicit_bucket_boundaries_advisory=SECOND_BUCKETS,
         )
+        self.audio_playback = meter.create_histogram(
+            "voice.browser.audio_playback",
+            unit="s",
+            description="Client-reported time to first audio playback; not acoustic latency",
+            explicit_bucket_boundaries_advisory=SECOND_BUCKETS,
+        )
         self.interruptions = meter.create_counter("voice.interruptions", unit="1")
 
     @contextmanager
