@@ -17,3 +17,13 @@
 | Busy | Worker capacity was exhausted; the request was not queued or silently retried. |
 
 See [architecture](architecture.md) for flow diagrams and [API](api.md) for wire contracts.
+
+- **Browser time to first audio:** offer dispatch to first remote audio energy during
+  active playback. Includes setup and possible user wait; not acoustic latency.
+- **Speech-end-to-audio:** last detected local speech energy to a fresh remote playback
+  onset after at least 300 ms silence. A threshold-based browser observation, distinct
+  from transcript timing and provider-only generation time.
+
+- **Offline stack:** opt-in local containers exercising the session API and remote
+  LangGraph worker through a deterministic fake voice provider. It generates no audio
+  and supplies no evidence of live provider behavior or voice latency.

@@ -43,13 +43,22 @@ async def test_shutdown_is_bounded_with_uncooperative_worker() -> None:
                     continue
             return WorkerResult("stale")
 
+    events: list[tuple[str, str]] = []
     runner = DelegationRunner(StubbornWorker())
     state, connection = DelegationState(), FakeConnection()
-    runner.start(state, "job", DelegationInput(goal="wait"), connection, lambda: True)
+    runner.start(
+        state,
+        "job",
+        DelegationInput(goal="wait"),
+        connection,
+        lambda: True,
+        on_finished=lambda status, text: events.append((status, text)),
+    )
     await started.wait()
     runner.cancel(state)
     assert state.task is not None
     await asyncio.gather(state.task, return_exceptions=True)
+    assert events == [("cancelled", "")]
     try:
         async with asyncio.timeout(2):
             await runner.aclose()
@@ -75,3 +84,29 @@ def test_truncate_caps_processing_of_oversized_text() -> None:
 @pytest.mark.parametrize("max_bytes", [0, 1, 2])
 def test_truncate_returns_empty_when_marker_cannot_fit(max_bytes: int) -> None:
     assert truncate("long text", 1, max_bytes=max_bytes) == ""
+
+
+async def test_worker_rejection_is_failed_and_debug_receives_bounded_narration() -> None:
+    class RejectedWorker:
+        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
+            return WorkerResult("Task incomplete. " * 100, status="failed")
+
+    events: list[tuple[str, str]] = []
+    runner = DelegationRunner(RejectedWorker())
+    state, connection = DelegationState(), FakeConnection()
+    runner.start(
+        state,
+        "job",
+        DelegationInput(goal="test"),
+        connection,
+        lambda: True,
+        on_finished=lambda status, text: events.append((status, text)),
+    )
+    assert state.task is not None
+    await state.task
+    assert state.status == "failed"
+    assert len(events) == 1
+    assert events[0][0] == "failed"
+    assert 0 < len(events[0][1].encode()) <= 500
+    assert connection.commands
+    await runner.aclose()

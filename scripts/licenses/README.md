@@ -42,5 +42,5 @@ file, rather than relying on the single file selected by pip-licenses.
 The build copies the root document to `frontend/public/third-party-notices.txt` and then
 into `dist/`; the generated copy is ignored by Git. Playwright checks the served copy
 against the source and checks React legal comments in the production JavaScript.
-Vite's esbuild compatibility option uses `legalComments: 'eof'`; Vite 8's active Rolldown
+Vite 8's active Rolldown
 output also explicitly preserves legal comments.

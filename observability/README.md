@@ -45,3 +45,15 @@ this project does not export invented values for them. Fake runs measure orchest
 OTel is disabled by default. Tests inject in-memory exporters and do not use network services.
 Metrics export additionally requires `VOICE_OTEL_METRICS_ENDPOINT`; there is no public
 application metrics endpoint. Collector buffers and container memory are bounded.
+
+### Browser audio playback
+
+Enable `VOICE_AUDIO_TIMING=true` for explicit measurement runs. The post-collector
+Prometheus histogram `voice_browser_audio_playback_seconds` has only `kind="setup"`
+or `kind="turn"`; values are seconds, with the standard second-shaped buckets.
+It measures client-reported playback energy timing, not transcript gaps, provider TTFB
+or acoustic latency. No transcript, invitation, session ID or network address is a label.
+Uploads are bounded, best effort and not retried; failed uploads remain visible as local
+measurements in Connection timings. No Web Audio support means no audio samples, not zero
+latency. See [live measurement](../docs/milestones/live-verification.md) before interpreting
+percentiles; current live measurements remain pending.

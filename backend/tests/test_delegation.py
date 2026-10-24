@@ -331,6 +331,7 @@ async def test_graph_distinguishes_invalid_input_from_tool_failure(
             )
 
     result = await LangGraphWorker(Planner()).delegate_task("test", "")
+    assert result.status == "failed"
     assert result.text == (
         "Tool input invalid; no action taken."
         if failure == "validation"
@@ -391,3 +392,53 @@ async def test_untimed_user_transcript_resumes_interrupted_recap() -> None:
     await eventually(lambda: session.recap.latest_reply == "new answer")
     assert not session.recap.interrupted
     await manager.aclose()
+
+
+async def test_paid_planner_disables_parallel_calls_without_network() -> None:
+    from langchain_core.runnables import RunnableBinding
+    from voice_delegate_agent.graph import OpenAIPlanner
+
+    planner = OpenAIPlanner("test-placeholder", "test-model")
+    try:
+        assert isinstance(planner.model, RunnableBinding)
+        assert planner.model.kwargs["parallel_tool_calls"] is False
+    finally:
+        await planner.aclose()
+
+
+async def test_worker_can_use_two_tools_sequentially() -> None:
+    from langchain_core.messages import ToolMessage
+
+    class SequentialPlanner:
+        async def respond(self, messages: list[AnyMessage]) -> AIMessage:
+            results = [message for message in messages if isinstance(message, ToolMessage)]
+            if len(results) == 2:
+                assert results[0].content == "8"
+                assert '"sources"' in str(results[1].content)
+                return AIMessage(content="8. Documentation found [1].")
+            name, args = (
+                ("calculate", {"expression": "4+4"})
+                if not results
+                else ("search_documentation", {"query": "fallback history"})
+            )
+            return AIMessage(content="", tool_calls=[{"name": name, "args": args, "id": name}])
+
+    result = await LangGraphWorker(SequentialPlanner()).delegate_task("Calculate and search", "")
+    assert result.status == "completed"
+    assert result.sources
+
+
+async def test_parallel_rejection_is_not_a_completed_task() -> None:
+    class ParallelPlanner:
+        async def respond(self, messages: list[AnyMessage]) -> AIMessage:
+            return AIMessage(
+                content="",
+                tool_calls=[
+                    {"name": "calculate", "args": {"expression": "4+4"}, "id": str(i)}
+                    for i in range(2)
+                ],
+            )
+
+    result = await LangGraphWorker(ParallelPlanner()).delegate_task("Calculate", "")
+    assert result.status == "failed"
+    assert "rejected parallel" in result.text

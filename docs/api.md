@@ -42,3 +42,30 @@ Body limits also return 413. The worker's framework documentation routes are ena
 Job states are `running`, `completed`, `cancelled`, `timeout`, `failed`. Results carry text and source IDs separately. The API polls every 200 ms and resolves IDs against its matching bundled corpus. Default capacity is 4 and the ledger holds 128 records. Jobs/tombstones are ephemeral with 180-second retention; active expired jobs are cancelled before removal. A repeated ID with the same fingerprint returns its existing state, including cancellation. Restart loses this ledger. No automatic execution retry is promised.
 
 See [configuration](configuration.md), [operations](operations.md) and [architecture](architecture.md).
+
+## Development session diagnostics
+
+`POST /api/config` includes `debug_recording_available` (false by default).
+`POST /api/sessions` accepts optional `debug_recording: true` consent alongside voice
+preferences; it returns 403 if the server has not enabled debug recording, or 503
+if the recording cannot be created. No consent means no recording.
+
+`POST /api/sessions/{id}/debug` accepts only the allowlisted `DebugSample` schema:
+`event` (`stats`, `local_onset`, `client_stop`, `peer_state`, `channel_closed`), optional
+`peer_state`, and numeric `packets_lost`, `packets_received`, `jitter_seconds`,
+`concealed_samples`, `audio_level`. It uses the same origin, invitation and `X-Session-Key`
+checks as other session routes. Responses: 200 with `recording` boolean, 401 invalid
+invitation, 403 wrong origin or missing recording consent, 404 absent/not-owned session,
+422 invalid/extra fields, and the normal body/rate limits (413/429).
+There is no HTTP recording-download endpoint; recordings stay on the backend, including its persistent volume in production.
+See [operations](operations.md#opt-in-server-session-recording).
+
+### Browser audio measurement
+
+`POST /api/config` includes `audio_timing_available` (default false).
+`POST /api/sessions/{id}/audio-timing` accepts `{kind: "setup" | "turn", seconds: number,
+generation: integer}` with no extra fields. It requires the existing Origin, invitation
+and X-Session-Key checks. Returns 200 on recording, 403 when disabled, 404 for ownership
+failure, 409 for stale transport/non-connected state, 422 for invalid values and 429
+after 120 accepted samples per session. Durations must be finite and in [0, 120].
+These are untrusted client observations, not billing or acceptance evidence by themselves.

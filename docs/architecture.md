@@ -253,3 +253,37 @@ Reviewed public documentation on 2026-09-20:
 - [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
 
 Application limits and ownership rules are first-principles design choices, not upstream service guarantees.
+
+## Browser audio observations
+
+With `VOICE_AUDIO_TIMING=true` (default false), the existing WebRTC stream analyser
+observes local and remote energy every 20 ms. Remote energy is accepted only while
+playback is active and unmuted. Offer-to-first-audio includes setup; speech-end-to-audio
+uses the last local energy observation followed by at least 300 ms of silence.
+Overlap and interrupted sampling are excluded. These browser observations do not
+measure acoustic output or provider-only generation latency and use no transcript timestamps.
+
+The browser sends numeric samples to the owned session's `/audio-timing` route with
+its transport generation. The backend validates the connected state, generation,
+finite duration (0–120 s) and a 120-sample session cap. Only the fixed setup/turn label
+is exported to OTel; no session identifiers or conversation content are metric labels.
+Uploads time out after two seconds, are not retried, and never end the call. If Web Audio
+is unavailable, conversation continues with the existing transcript diagnostics.
+See the [measurement procedure](milestones/live-verification.md) for exclusions and
+[video storyboard](demo-video.md) for the pending cancellation-design dependency.
+
+## Isolated offline stack
+
+The optional demo Compose stack runs a static frontend proxy, the session API with an
+explicit fake-provider factory, a separate private worker using OfflinePlanner, and
+the existing collector/Prometheus/Grafana stack. A fixed fake transcript triggers
+`delegate_task`; worker commentary returns as a synthetic transcript and heartbeat recap.
+The browser uses owned HTTP sessions rather than pretending the fake SDP is playable
+WebRTC. There is no microphone, generated audio or measured voice latency in this mode.
+
+Production factories and the public static demo remain unchanged. The demo factory
+requires `VOICE_OFFLINE_DEMO=1` and rejects provider keys, paid planning, fallback and
+transcript recording. The frontend build opts in with `VITE_OFFLINE_STACK=true`.
+Only loopback frontend and monitoring ports are published. A known fixture bearer value
+protects the private worker interface from accidental unauthenticated calls; it is not
+production authentication. See [offline deployment](../deployment/README.md#offline-stack-in-one-command).

@@ -8,13 +8,14 @@ from pydantic import BaseModel, Field
 from voice_delegate_agent.limits import QUERY_MAX_CHARS
 from voice_delegate_agent.reference import search, source_by_id
 
+from voice_delegate.debug import DebugSample
 from voice_delegate.feedback import FeedbackInput, FeedbackStore
 from voice_delegate.providers.models import UnsupportedCapability
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import Session
 from voice_delegate.session.preferences import VoicePreferences
 
-from .schemas import Answer, Closed, Created, Offer, Reconnect, Status
+from .schemas import Answer, AudioTiming, Closed, Created, Offer, Reconnect, Status
 
 
 class ReferenceQuery(BaseModel):
@@ -45,6 +46,8 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
     @router.post("/config")
     async def configuration() -> dict[str, bool]:
         return {
+            "debug_recording_available": manager.settings.debug_recording,
+            "audio_timing_available": manager.settings.audio_timing,
             "feedback_available": feedback is not None,
             "requires_access_code": bool(
                 manager.settings.invite_tokens or manager.settings.access_token.get_secret_value()
@@ -93,6 +96,33 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
         return Created(
             id=session.id, key=session.key, ttl_seconds=manager.settings.session_ttl_seconds
         )
+
+    @router.post("/sessions/{session_id}/debug")
+    async def record_debug(
+        body: DebugSample, session: Annotated[Session, Depends(owned)]
+    ) -> dict[str, bool]:
+        if session.debug is None:
+            raise HTTPException(403, "Debug recording was not enabled for this session")
+        session.debug.write(
+            "browser_" + body.event,
+            worker_state=session.delegation.status,
+            **body.model_dump(exclude={"event"}),
+        )
+        return {"recording": not session.debug.stopped}
+
+    @router.post("/sessions/{session_id}/audio-timing")
+    async def audio_timing(
+        body: AudioTiming, session: Annotated[Session, Depends(owned)]
+    ) -> dict[str, bool]:
+        if not manager.settings.audio_timing:
+            raise HTTPException(403, "Audio timing is disabled")
+        if session.state != "connected" or body.generation != session.generation:
+            raise HTTPException(409, "Audio timing requires the current connected transport")
+        if session.audio_timing_samples >= 120:
+            raise HTTPException(429, "Audio timing sample limit reached")
+        session.audio_timing_samples += 1
+        manager.metrics.audio_playback.record(body.seconds, {"kind": body.kind})
+        return {"recorded": True}
 
     @router.post("/sessions/{session_id}/offer")
     async def offer(body: Offer, session: Annotated[Session, Depends(owned)]) -> Answer:

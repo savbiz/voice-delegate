@@ -33,7 +33,7 @@ from .models import (
     UnsupportedCapability,
     WebRTCAnswer,
 )
-from .openai import OpenAILiveConnection, WireError
+from .openai import EventEnvelope, OpenAILiveConnection, WireError
 
 DELEGATE_TASK_TOOL = DELEGATE_TOOL
 
@@ -69,6 +69,16 @@ class TaskArguments(BaseModel):
 
 
 def normalize_event(raw: str | bytes) -> ProviderEvent | None:
+    kind = EventEnvelope.model_validate_json(raw).type
+    if kind not in {
+        "session.created",
+        "input_audio_buffer.speech_started",
+        "error",
+        "response.function_call_arguments.done",
+        "conversation.item.input_audio_transcription.completed",
+        "response.output_audio_transcript.done",
+    }:
+        return None
     event = WireEvent.model_validate_json(raw)
     if event.type == "session.created":
         return SessionStarted()

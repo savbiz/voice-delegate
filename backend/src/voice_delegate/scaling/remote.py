@@ -45,11 +45,13 @@ class RemoteWorker:
                 response = await self.http.get(url, headers=self.headers)
                 response.raise_for_status()
                 result = JobOutput.model_validate_json(response.content)
-                if result.status == "completed":
+                if result.status == "completed" or (result.status == "failed" and result.text):
                     sources = tuple(
                         s for key in result.source_ids if (s := source_by_id(key)) is not None
                     )
-                    return WorkerResult(result.text, sources)
+                    return WorkerResult(
+                        result.text, sources, "failed" if result.status == "failed" else "completed"
+                    )
                 if result.status != "running":
                     message = "Remote worker did not complete"
                     raise RuntimeError(message)

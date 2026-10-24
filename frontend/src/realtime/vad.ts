@@ -47,6 +47,7 @@ export function watchSpeech(
   stream: MediaStream,
   onset: () => void,
   remoteAudio?: HTMLAudioElement,
+  observe?: (now: number, local: number, remote: number, playing: boolean) => void,
 ): () => void {
   const context = new AudioContext();
   try {
@@ -89,7 +90,10 @@ export function watchSpeech(
         remoteAudio.volume > 0;
       const remoteRms =
         playing && remoteSource ? energy(remoteAnalyser, remoteSamples) * remoteAudio.volume : 0;
-      if (gate.update(energy(analyser, samples), remoteRms, performance.now())) onset();
+      const localRms = energy(analyser, samples);
+      const now = performance.now();
+      if (context.state === 'running') observe?.(now, localRms, remoteRms, Boolean(playing));
+      if (gate.update(localRms, remoteRms, now)) onset();
     }, 20);
     return () => {
       clearInterval(timer);

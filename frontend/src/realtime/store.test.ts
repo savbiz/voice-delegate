@@ -142,3 +142,120 @@ test('running heartbeats retain cancellation until the worker changes state', ()
   expect(cancelled.workerMessage).toContain('Task cancelled');
   expect(workerState(running, 'completed').cancelPending).toBe(false);
 });
+
+test('completed user turns are separated, including identical repeated words', () => {
+  const event = {
+    type: 'conversation.item.input_audio_transcription.completed',
+    transcript: 'Hello',
+  };
+  let state = processEvent(initialLiveState(), { ...event, item_id: 'one' }).state;
+  state = processEvent(state, { ...event, item_id: 'two' }).state;
+  expect(state.captions.user).toBe('Hello\nHello');
+  expect(processEvent(state, { ...event, item_id: 'two' }).state).toBe(state);
+});
+
+test('assistant final transcript replaces fragments and next response starts a line', () => {
+  let state = initialLiveState();
+  for (const delta of ['Hel', 'lo'])
+    state = processEvent(state, {
+      type: 'response.output_audio_transcript.delta',
+      item_id: 'one',
+      delta,
+    }).state;
+  expect(state.captions.assistant).toBe('Hello');
+  state = processEvent(state, {
+    type: 'response.output_audio_transcript.done',
+    item_id: 'one',
+    transcript: 'Hello!',
+  }).state;
+  expect(state.captions.assistant).toBe('Hello!');
+  state = processEvent(state, {
+    type: 'response.output_audio_transcript.delta',
+    item_id: 'two',
+    delta: 'Next',
+  }).state;
+  expect(state.captions.assistant).toBe('Hello!\nNext');
+});
+
+test('Live fragments keep word boundaries intact and separate turns after pauses', () => {
+  let state = initialLiveState();
+  for (const [delta, start_ms, end_ms] of [
+    ['Hel', 10, 20],
+    ['lo', 20, 30],
+    ['Again', 1000, 1100],
+  ] as const) {
+    state = processEvent(state, {
+      type: 'session.input_transcript.delta',
+      delta,
+      start_ms,
+      end_ms,
+    }).state;
+  }
+  expect(state.captions.user).toBe('Hello\nAgain');
+  state = processEvent(state, { type: 'session.output_transcript.delta', delta: 'Yes' }).state;
+  state = processEvent(state, { type: 'session.input_transcript.delta', delta: 'Thanks' }).state;
+  expect(state.captions.user).toBe('Hello\nAgain\nThanks');
+});
+
+test('timed fragments stay together when the other speaker interleaves', () => {
+  let state = processEvent(initialLiveState(), {
+    type: 'session.input_transcript.delta',
+    delta: 'Bye-b',
+    start_ms: 100,
+    end_ms: 200,
+  }).state;
+  state = processEvent(state, {
+    type: 'session.output_transcript.delta',
+    delta: 'Goodbye',
+    start_ms: 150,
+    end_ms: 250,
+  }).state;
+  state = processEvent(state, {
+    type: 'session.input_transcript.delta',
+    delta: 'ye',
+    start_ms: 200,
+    end_ms: 300,
+  }).state;
+  expect(state.captions.user).toBe('Bye-bye');
+  expect(workerState(state, 'failed').workerMessage).not.toContain('completed');
+});
+
+test('chat retains chronological turns and merges overlapping speaker fragments', () => {
+  let state = initialLiveState();
+  for (const [type, delta, start_ms, end_ms] of [
+    ['session.input_transcript.delta', 'Hel', 0, 100],
+    ['session.output_transcript.delta', 'Hi', 100, 200],
+    ['session.input_transcript.delta', 'lo', 100, 200],
+    ['session.input_transcript.delta', 'Next question', 2000, 2200],
+  ] as const)
+    state = processEvent(state, { type, delta, start_ms, end_ms }).state;
+  expect(state.messages.map(({ speaker, text }) => ({ speaker, text }))).toEqual([
+    { speaker: 'user', text: 'Hello' },
+    { speaker: 'assistant', text: 'Hi' },
+    { speaker: 'user', text: 'Next question' },
+  ]);
+});
+
+test('chat replaces finalized text and bounds retained content', () => {
+  let state = processEvent(initialLiveState(), {
+    type: 'response.output_audio_transcript.delta',
+    item_id: 'one',
+    delta: 'Par',
+  }).state;
+  state = processEvent(state, {
+    type: 'response.output_audio_transcript.done',
+    item_id: 'one',
+    transcript: 'Partial answer.',
+  }).state;
+  expect(state.messages.map((message) => message.text)).toEqual(['Partial answer.']);
+  for (let i = 0; i < 60; i++)
+    state = processEvent(state, {
+      type: 'conversation.item.input_audio_transcription.completed',
+      item_id: String(i),
+      transcript: 'x'.repeat(500),
+    }).state;
+  expect(state.messages.length).toBeLessThanOrEqual(40);
+  expect(
+    state.messages.reduce((total, message) => total + message.text.length, 0),
+  ).toBeLessThanOrEqual(12000);
+});

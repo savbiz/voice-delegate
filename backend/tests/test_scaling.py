@@ -232,3 +232,22 @@ async def test_worker_janitor_recovers_after_sweep_failure(
         await asyncio.wait_for(recovered.wait(), 3)
     assert attempts >= 2
     assert "Worker janitor failed; retrying" in caplog.text
+
+
+async def test_remote_worker_preserves_failure_result() -> None:
+    from voice_delegate_agent.reference import WorkerResult
+
+    class FailedWorker:
+        async def delegate_task(self, goal: str, context: str) -> WorkerResult:
+            return WorkerResult("Tool input invalid; no action taken.", status="failed")
+
+    settings = Settings(worker_service_token=SecretStr(TOKEN), worker_service_url="http://worker")
+    app = create_worker_app(settings, FailedWorker())
+    async with app.router.lifespan_context(app):
+        remote = RemoteWorker(settings, httpx.AsyncClient(transport=httpx.ASGITransport(app=app)))
+        try:
+            result = await remote.delegate_task("test", "")
+            assert result.status == "failed"
+            assert result.text == "Tool input invalid; no action taken."
+        finally:
+            await remote.aclose()

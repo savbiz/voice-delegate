@@ -3,6 +3,12 @@
 Version 0.1.0 is a reference implementation; implementation and release acceptance are separate. Passing offline tests is not proof of
 live voice quality, provider access, acoustic latency or production readiness.
 
+On 2026-10-23, the maintainer reported successful local GPT-Live conversations,
+English/Italian transcripts and spoken arithmetic responses after the worker fixes.
+This is a partial local smoke test, not completion of the live acceptance checklist.
+Azure recovery, measured latency and hosted end-to-end acceptance remain pending.
+No recordings or conversation content are published as release evidence.
+
 | Feature | Scope | Acceptance | Current status |
 |---|---|---|---|
 | Voice and sessions | FastAPI, GPT-Live, WebRTC, React, session cleanup | Real microphone conversation and resource cleanup | Implemented; live verification pending |
@@ -27,3 +33,23 @@ The [voice experience and scaling verification record](milestones/m7-m8-verifica
 the successful Docker rerun, separately from the live and hosted acceptance still required.
 
 Amended 2026-10-05: v0.x tags are implementation releases; acceptance-gated tags begin at v1.0.
+
+## Live demonstration preparation
+
+Audio playback instrumentation is opt-in (`VOICE_AUDIO_TIMING`), with deterministic
+energy/state tests and bounded numeric telemetry. The expanded
+[live checklist](milestones/live-verification.md) covers GPT-Live, audio measurements,
+Azure recovery and existing hosted invitation flows. No paid calls or new live
+results were collected for this change. Formal live/hosted acceptance remains pending.
+The [two-minute storyboard](demo-video.md) marks continued speech during delegated work
+and silence-gated delivery as dependent on the planned cancellation redesign.
+
+## One-command offline demonstration
+
+The demo stack combines the frontend, fake-provider session API, separate OfflinePlanner
+worker and observability in one Compose command. The container smoke verifies a delegated
+calculation and its exported metric without provider keys or paid calls. Browser tests
+verify display and ownership cleanup with deterministic responses. Cold builds require
+registry access; the 60-second goal applies to a warm cache, not initial provisioning.
+Codespaces configuration is supplied; hosted Codespaces acceptance remains pending.
+Live voice, Azure recovery and hosted invitation acceptance retain their existing status.

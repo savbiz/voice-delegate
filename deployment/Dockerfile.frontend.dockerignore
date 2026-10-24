@@ -1,0 +1,15 @@
+**
+!frontend
+!frontend/**
+!THIRD_PARTY_NOTICES.md
+!deployment
+!deployment/demo
+!deployment/demo/nginx.conf
+frontend/node_modules
+frontend/dist
+frontend/test-results
+frontend/playwright-report
+frontend/.env*
+frontend/**/.env*
+frontend/**/*.pem
+frontend/**/*.key

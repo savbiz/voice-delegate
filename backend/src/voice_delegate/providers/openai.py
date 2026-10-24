@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import suppress
 from urllib.parse import quote
 from uuid import uuid4
@@ -11,7 +11,7 @@ from uuid import uuid4
 import httpx
 from pydantic import BaseModel, Field, ValidationError
 from websockets.asyncio.client import connect
-from websockets.exceptions import WebSocketException
+from websockets.exceptions import ConnectionClosed, WebSocketException
 
 from .base import SidebandSocket
 from .models import (
@@ -58,6 +58,12 @@ class WireError(BaseModel):
     type: str = ""
 
 
+class EventEnvelope(BaseModel):
+    """Inspect the event kind before validating fields we actually consume."""
+
+    type: str
+
+
 class _WireEvent(BaseModel):
     type: str
     error: WireError | None = None
@@ -71,6 +77,16 @@ class _WireEvent(BaseModel):
 
 def normalize_event(raw: str | bytes) -> ProviderEvent | None:
     """Validate events and immediately discard reflected audio and unknown events."""
+    kind = EventEnvelope.model_validate_json(raw).type
+    if kind not in {
+        "session.started",
+        "session.closed",
+        "error",
+        "session.delegation.created",
+        "session.input_transcript.delta",
+        "session.output_transcript.delta",
+    }:
+        return None
     event = _WireEvent.model_validate_json(raw)
     match event.type:
         case "session.started":
@@ -104,6 +120,7 @@ class OpenAILiveConnection:
         self._finalized = asyncio.Event()
         self._closed = False
         self._failed = False
+        self._failure_kind = "unexpected_end"
         self._close_lock = asyncio.Lock()
         self._reader = asyncio.create_task(self._read(), name="live-sideband-reader")
 
@@ -119,13 +136,22 @@ class OpenAILiveConnection:
                     self._queue.put_nowait(event)
                 if self._finalized.is_set():
                     return
-        except (WebSocketException, OSError, ValidationError, asyncio.QueueFull):
+        except (WebSocketException, OSError, ValidationError, asyncio.QueueFull) as exc:
             self._failed = True
+            self._failure_kind = type(exc).__name__
+            # Exception messages and close reasons can contain reflected conversation data.
+            code = exc.rcvd.code if isinstance(exc, ConnectionClosed) and exc.rcvd else None
+            logger.warning(
+                "Provider sideband failed: kind=%s close_code=%s", self._failure_kind, code
+            )
+        else:
+            if not self._finalized.is_set() and not self._closed:
+                logger.warning("Provider sideband ended without session finalization")
         finally:
             if not self._finalized.is_set():
                 self._failed = True
 
-    async def events(self) -> AsyncIterator[ProviderEvent]:
+    async def events(self) -> AsyncGenerator[ProviderEvent]:
         """Drain without unbounded polling or a second WebSocket consumer."""
         while True:
             if not self._queue.empty():
@@ -133,7 +159,7 @@ class OpenAILiveConnection:
                 continue
             if self._reader.done():
                 if self._failed:
-                    message = "Provider event stream ended unexpectedly"
+                    message = f"Provider event stream ended unexpectedly ({self._failure_kind})"
                     raise ProviderError(message)
                 return
             pending = asyncio.create_task(self._queue.get())

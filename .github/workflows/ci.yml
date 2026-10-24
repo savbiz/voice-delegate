@@ -43,6 +43,9 @@ jobs:
       - name: Build backend container
         if: matrix.python == '3.12'
         run: docker build -f deployment/Dockerfile.backend -t voice-delegate:ci .
+      - name: Smoke test offline demo stack
+        if: matrix.python == '3.12'
+        run: uv run python scripts/smoke_container.py --demo
       - name: Smoke test backend container
         if: matrix.python == '3.12'
         run: uv run python scripts/smoke_container.py
@@ -76,3 +79,4 @@ jobs:
       - run: pnpm build && pnpm test
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      - run: pnpm test:stack

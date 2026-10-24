@@ -51,3 +51,83 @@ Check backend health, worker busy/timeouts, provider error/cancelled outcomes, l
 ## Temporary API documentation
 
 Set `VOICE_API_DOCS=true` temporarily to expose Swagger; default off in production. Restart the backend to apply it. This also exposes ReDoc and the OpenAPI schema without invitation authentication, subject to host and rate middleware. Restore `false` and restart after inspection. Development exposes these routes by default.
+
+## Investigating interrupted audio locally
+
+For a local Live test, set `VOICE_VOICE_PROVIDER=live` and `VOICE_MODEL=gpt-live-1`
+in the untracked root `.env`, keep the project key on the backend, and restart Python.
+The existing Realtime adapter remains available through `VOICE_VOICE_PROVIDER=realtime`.
+Provider access and audible playback still require a live test; a successful SDP exchange
+alone does not establish audio quality.
+
+Sideband warnings record an exception category and, when available, a numeric WebSocket
+close code. They omit raw events, exception messages and close reasons because these can
+contain conversation content. A normal stream end without finalization is reported separately.
+At INFO level, delegation interruption logs distinguish client requests, provider speech
+and timed provider transcripts. These describe worker cancellation, not every audio interruption.
+
+Feedback remains limited to category, diagnostic ID, interface state, provider and version,
+with a pseudonymous quota identity and seven-day retention. It does not save conversations,
+audio or transcripts, and its ID is not a session-log correlation key. Use the report time
+alongside local server logs. Do not paste keys or invitation codes into bug reports.
+
+## Opt-in server session recording
+
+Recording is off by default in every environment. Set `VOICE_DEBUG_RECORDING=true`
+on the backend and restart it, then select Live voice and check **Record this session
+for server debugging** before starting. The checkbox is available in production builds
+as well as development. Consent is unchecked initially and resets when the session ends;
+server permission alone never records a conversation. If recording is disabled on the
+server, uncheck the option to start a normal session.
+
+For Railway, keep `VOICE_ENVIRONMENT=production` and set
+`VOICE_DEBUG_DIRECTORY=/app/.local/debug` on the existing persistent volume.
+Deploy the supporting backend and frontend commits before enabling the setting.
+The service operator can read these files; there is no public download route.
+For local development, the default directory is `.local/debug` in the repository.
+
+This is separate from feedback. With consent, the backend writes transcripts, normalized
+provider-event categories, worker interruptions, consent and close events. The browser
+uploads selected incoming-audio WebRTC counters every two seconds (lost/received packets,
+jitter, concealed samples and audio level where supported), peer-state changes, local
+worker-interruption requests and explicit stop events. A timestamp accompanies each record.
+Statistics are browser-reported observations, not proof of provider latency or audio quality.
+Tab closure, network failure or a full file can leave gaps; this is not a complete traffic capture.
+
+Files are stored under `VOICE_DEBUG_DIRECTORY` (default `.local/debug`) as
+`<session-id>.jsonl`; the interface shows the filename. The directory has mode 0700 and files
+0600. Read the JSONL locally with your editor; do not commit or post it publicly. Spoken
+personal information can appear in transcripts. No audio, SDP, candidate addresses, device
+identifiers, request credentials or raw provider payloads are collected. Feedback remains
+content-free even when this separate recorder is enabled.
+
+Each file is capped at 2 MiB and at most 20 files are retained. Recording stops on a storage
+error or size limit. The running debug-enabled backend removes files older than 24 hours;
+cleanup also runs when creating a recording. If the backend is stopped, files remain until
+it runs again or you delete them. Delete individual recordings in `.local/debug` whenever
+finished. Uncheck recording for the next session or set `VOICE_DEBUG_RECORDING=false` and
+restart to disable the feature. Never enable broad HTTP/header/body debug logging.
+
+### Optional audio download
+
+The separate **Record audio locally** checkbox records microphone and assistant audio
+into one mixed track in the browser. It is unchecked initially and resets after the session.
+It does not enable transcript recording, upload the recording to the backend, or attach it to feedback.
+Live audio still travels to the voice provider as part of the normal conversation.
+After Stop, use **Download session audio** and keep the file locally for playback. The browser
+chooses WebM/Opus, Ogg/Opus or MP4 according to supported recording formats. A supported
+MediaRecorder and Web Audio implementation are required; failure is reported before the
+provider offer is sent when recording initialization fails.
+
+Capture stops at five minutes or approximately 20 MiB (checked at one-second chunk
+boundaries). The call may continue after capture stops. No recording is started unless you
+check the audio box. Both voices are included even if assistant playback is muted. Download
+before reloading, closing the tab, leaving Live voice or starting another recording: the
+unsaved blob is held only in browser memory and is not backed up. Browser crashes can lose it.
+Deleting a downloaded file is your responsibility; the backend's 24-hour cleanup does not
+apply to downloads. Do not record other people without their knowledge and agreement.
+
+Consented debug recordings also include `delegation_finished`: the final worker status
+and bounded narration text. Rejected tool calls and execution failures are reported as
+`failed`, not completed; cancelled work has no delivered result. The text planner requests
+one tool call per step and can run calculation and documentation search sequentially.

@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib.resources import files
+from typing import Literal
 
 from langchain_core.tools import tool
 
@@ -27,6 +28,7 @@ class WorkerResult:
 
     text: str
     sources: tuple[Source, ...] = ()
+    status: Literal["completed", "failed"] = "completed"
 
 
 @lru_cache(maxsize=1)

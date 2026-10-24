@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Literal
 
+from voice_delegate.debug import DebugRecording
 from voice_delegate.delegation.history import History
 from voice_delegate.delegation.runner import DelegationState
 from voice_delegate.observability.turns import Turn
@@ -27,6 +28,7 @@ class Session:
     preferences: VoicePreferences = field(default_factory=VoicePreferences)
     recap: Recap = field(default_factory=Recap)
     principal: str = field(default="local", repr=False)
+    debug: DebugRecording | None = field(default=None, repr=False)
     connection: RealtimeConnection | None = None
     watcher: asyncio.Task[None] | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -35,6 +37,7 @@ class Session:
     generation: int = 0
     fallback_used: bool = False
     previous_finalized: bool = True
+    audio_timing_samples: int = 0
     sealed_index: int = 0
     committed_history: History = field(default_factory=History)
     history: History = field(default_factory=History)

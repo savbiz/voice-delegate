@@ -36,3 +36,24 @@ def test_frontend_lockfile_has_no_duplicate_package_or_snapshot_keys() -> None:
         keys = re.findall(r"^  (\S.*?):(?: .*)?$", section, re.MULTILINE)
         assert keys
         assert len(keys) == len(set(keys)), "Duplicate package keys break frozen installs"
+
+
+def test_runtime_locks_exclude_compromised_roots_and_unbounded_trace_parsing() -> None:
+    lock = tomllib.loads((ROOT / "uv.lock").read_text())
+    versions = {
+        package["name"]: package["version"] for package in lock["package"] if "version" in package
+    }
+    notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text()
+    for package, minimum in {"certifi": "2026.10.19", "opentelemetry-api": "1.45.1"}.items():
+        assert Version(versions[package]) >= Version(minimum)
+        assert f"### `{package}` {versions[package]}\n" in notices
+
+
+def test_vite_copies_include_development_server_security_fixes() -> None:
+    lock = (ROOT / "frontend/pnpm-lock.yaml").read_text()
+    versions = set(re.findall(r"^  vite@([^:(]+)", lock, re.MULTILINE))
+    assert versions
+    notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text()
+    for version in versions:
+        assert Version(version) >= Version("8.3.3")
+        assert f"### `vite` {version}\n" in notices
