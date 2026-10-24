@@ -7,6 +7,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
+import yaml  # type: ignore[import-untyped]
 
 from scripts.build_notices import block, frontend_texts, section
 
@@ -41,6 +42,17 @@ def test_every_declared_direct_dependency_has_an_attribution() -> None:
     for key in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies"):
         required.update(normalize(name) for name in frontend.get(key, {}))
     assert required <= included, f"Missing attributions: {sorted(required - included)}"
+
+
+def test_frontend_direct_dependency_versions_match_lockfile() -> None:
+    notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text()
+    included = set(re.findall(r"^### `([^`]+)` ([^\n]+)$", notices, re.M))
+    lock = yaml.safe_load((ROOT / "frontend/pnpm-lock.yaml").read_text())
+    importer = lock["importers"]["."]
+    for group in ("dependencies", "devDependencies", "optionalDependencies"):
+        for name, entry in importer.get(group, {}).items():
+            version = entry["version"].split("(", 1)[0]
+            assert (name, version) in included, f"Stale attribution: {name}@{version}"
 
 
 def test_bundled_tokenizer_attribution_matches_distributed_bytes() -> None:
