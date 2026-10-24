@@ -175,7 +175,9 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
                     id=j.id,
                     goal=j.goal,
                     status=j.status,
-                    elapsed_seconds=max(0, manager.clock() - j.started),
+                    elapsed_seconds=max(
+                        0, (j.finished if j.finished is not None else manager.clock()) - j.started
+                    ),
                 )
                 for j in session.portfolio.jobs.values()
             ],

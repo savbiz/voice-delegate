@@ -30,6 +30,7 @@ class Job:
     status: str = "running"
     result: WorkerResult | None = None
     ready: float = 0
+    finished: float | None = None
     settled: bool = False
     task: asyncio.Task[None] | None = None
     delivery: asyncio.Task[None] | None = None
@@ -92,6 +93,7 @@ class IntentRunner:
         state.jobs[identity] = job
         if len(state.active) > self.settings.max_inflight_tasks:
             job.status = "busy"
+            job.finished = self.clock()
             return Commentary(identity, "Worker busy; task was not started.")
         job.task = asyncio.create_task(self._work(job, request), name="intent-worker")
         return None
@@ -184,6 +186,7 @@ class IntentRunner:
         state.generation += 1
         for job in selected:
             job.status = "cancelled"
+            job.finished = self.clock()
             job.result = None
             if job.task is not None:
                 job.task.cancel()
@@ -220,6 +223,7 @@ class IntentRunner:
                 continue
             if now - job.ready >= self.settings.delivery_timeout_seconds:
                 job.status = "expired"
+                job.finished = self.clock()
                 job.result = None
                 self.runner.metrics.deliveries.add(1, {"outcome": "expired"})
                 continue
@@ -244,6 +248,7 @@ class IntentRunner:
                     await job.delivery
                 if job.status == "delivering":
                     job.status = result.status
+                    job.finished = self.clock()
                     state.sources = result.sources
                     state.awaiting_playback = True
                     self.runner.metrics.deliveries.add(1, {"outcome": "delayed"})
@@ -254,6 +259,7 @@ class IntentRunner:
             except Exception:
                 if job.status == "delivering":
                     job.status = "delivery_failed"
+                    job.finished = self.clock()
             finally:
                 job.result = None
             # Never queue two narrations into the same silence window.

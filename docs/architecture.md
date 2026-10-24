@@ -263,6 +263,12 @@ are delivered through the new connection; a detached Realtime result uses a text
 not an old function-call ID. See [ADR 009](decisions/009-cancellation-is-intent.md) for budgets,
 terminal acknowledgements, pricing caveats and the default-off rollout.
 
+Task duration includes waiting for delivery and stops at the terminal state. A `completed`
+task means the result was sent to the voice provider, not that its narration was fully heard.
+The UI retains last-reported task states after session end; interrupted narration is not
+automatically repeated. Transcript bubbles group consecutive segments from the same speaker
+without changing the underlying provider transcript events.
+
 ## Sources
 
 Reviewed public documentation on 2026-09-20:

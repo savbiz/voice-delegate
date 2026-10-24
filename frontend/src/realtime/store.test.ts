@@ -1,5 +1,8 @@
 import { expect, test, vi } from 'vitest';
 import {
+  chatBubbles,
+  endedWorkerState,
+  taskLabel,
   createLiveStore,
   initialLiveState,
   processEvent,
@@ -267,4 +270,38 @@ test('intent mode describes continuing work and allows cancelling another task',
   );
   expect(state.workerMessage).toContain('continue while you speak');
   expect(state.cancelPending).toBe(false);
+});
+
+test('chat hides empty segments and groups consecutive speaker segments without mutating data', () => {
+  const messages = [
+    { id: 1, speaker: 'user' as const, text: ' Dimmi' },
+    { id: 2, speaker: 'assistant' as const, text: ' ' },
+    { id: 3, speaker: 'user' as const, text: ' come ' },
+    { id: 4, speaker: 'user' as const, text: 'funziona' },
+    { id: 5, speaker: 'assistant' as const, text: 'Certo.' },
+    { id: 6, speaker: 'user' as const, text: 'Grazie.' },
+  ];
+  expect(chatBubbles(messages)).toEqual([
+    { id: 1, speaker: 'user', text: 'Dimmi come funziona' },
+    { id: 5, speaker: 'assistant', text: 'Certo.' },
+    { id: 6, speaker: 'user', text: 'Grazie.' },
+  ]);
+  expect(messages[0]?.text).toBe(' Dimmi');
+});
+
+test('ending keeps last reported tasks and does not imply playback completion or readiness', () => {
+  const state = {
+    ...initialLiveState(),
+    intentCancellation: true,
+    tasks: [{ id: 'one', goal: 'Calculate', status: 'completed', elapsed_seconds: 3 }],
+    cancelPending: true,
+  };
+  const ended = endedWorkerState(state);
+  expect(ended.tasks).toBe(state.tasks);
+  expect(ended.workerMessage).toContain('last reported');
+  expect(ended.workerMessage).not.toContain('ready');
+  expect(ended.cancelPending).toBe(false);
+  expect(workerState(state, 'completed').workerMessage).toContain('full playback is not confirmed');
+  expect(taskLabel('completed')).toBe('Result sent to voice provider');
+  expect(taskLabel('pending')).toBe('Waiting for silence');
 });

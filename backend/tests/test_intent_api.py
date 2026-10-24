@@ -4,12 +4,13 @@ import json
 
 import httpx
 import pytest
-from conftest import ASGIClientFactory, BlockingWorker
+from conftest import ASGIClientFactory, BlockingWorker, FakeClock
 from fastapi import FastAPI
 from test_provider import MemorySocket
 from voice_delegate.api.routes import build_router
 from voice_delegate.config import Settings
 from voice_delegate.delegation.contracts import DelegationInput
+from voice_delegate.delegation.intent import Job
 from voice_delegate.providers.fake import FakeProvider
 from voice_delegate.providers.models import Commentary, WebRTCAnswer
 from voice_delegate.providers.realtime import OpenAIRealtimeProvider
@@ -96,3 +97,27 @@ async def test_realtime_detached_delivery_and_terminal_ack_wire_contract() -> No
     finally:
         await connection.aclose()
         await provider.aclose()
+
+
+async def test_heartbeat_freezes_terminal_task_duration(
+    asgi_client: ASGIClientFactory, fake_clock: FakeClock
+) -> None:
+    manager = SessionManager(FakeProvider(), Settings(intent_cancellation=True), clock=fake_clock)
+    app = FastAPI()
+    app.include_router(build_router(manager))
+    session = manager.create()
+    start = fake_clock()
+    session.portfolio.jobs["done"] = Job(
+        "done", "Calculate", start, 0, status="completed", finished=start + 3
+    )
+    session.portfolio.jobs["active"] = Job("active", "Search", start, 0)
+    try:
+        async with asgi_client(app) as client:
+            client.headers.update({"Origin": "http://localhost:5173", "X-Session-Key": session.key})
+            for elapsed in (5, 12):
+                fake_clock.advance(elapsed - (fake_clock() - start))
+                result = await client.post(f"/api/sessions/{session.id}/heartbeat")
+                assert result.status_code == 200
+                assert [task["elapsed_seconds"] for task in result.json()["tasks"]] == [3, elapsed]
+    finally:
+        await manager.aclose()

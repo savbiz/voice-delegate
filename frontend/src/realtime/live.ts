@@ -9,7 +9,7 @@ import type { AudioRecording } from './recording';
 import type { DebugSample } from './debug';
 import { shouldRecover } from './recovery';
 
-import { processEvent, workerState } from './store';
+import { endedWorkerState, processEvent, workerState } from './store';
 import type { LiveStore, Phase } from './store';
 export type Preferences = { language: string; mode: string; debug_recording?: boolean };
 export function createLiveSession(
@@ -171,7 +171,7 @@ export function createLiveSession(
         ? 'Select Start conversation when you want a new session.'
         : 'Check your connection or access code, then select Start conversation to begin a new session. Previous tasks will not be replayed.',
     );
-    showWorker('idle');
+    store.update(endedWorkerState(store.getSnapshot()));
     if (owner) {
       const close = () =>
         request<{ finalized: boolean }>(`/sessions/${owner.id}/close`, owner, undefined, 5000);
@@ -213,7 +213,7 @@ export function createLiveSession(
         'Conversation ended. Provider finalization confirmed.',
         'Select Start conversation when you want a new session.',
       );
-      showWorker('idle');
+      store.update(endedWorkerState(store.getSnapshot()));
     }
   }
 

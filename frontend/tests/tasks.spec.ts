@@ -25,6 +25,12 @@ test('two tasks display independently and cancellation targets the selected id',
               elapsed_seconds: 2,
             },
             { id: 'second', goal: 'Find documentation', status: 'pending', elapsed_seconds: 1 },
+            {
+              id: 'previous',
+              goal: 'Earlier calculation',
+              status: 'completed',
+              elapsed_seconds: 3,
+            },
           ],
         },
       });
@@ -39,10 +45,18 @@ test('two tasks display independently and cancellation targets the selected id',
   await expect(page.getByRole('list', { name: 'Delegated tasks' })).toContainText(
     'Find documentation',
   );
+  await expect(page.getByRole('list', { name: 'Delegated tasks' })).toContainText(
+    'Result sent to voice provider',
+  );
   await page.getByRole('button', { name: 'Cancel first', exact: true }).click();
   await expect.poll(() => cancellations).toEqual([{ task_id: 'first' }]);
   await page.clock.runFor(2100);
   await expect(page.getByRole('button', { name: 'Cancel first', exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Cancel second', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Stop', exact: true }).click();
+  await expect(page.locator('#task-status')).toContainText('last reported');
+  await expect(page.getByRole('list', { name: 'Delegated tasks' })).toContainText(
+    'Waiting for silence',
+  );
+  await expect(page.getByText('Result sent means accepted', { exact: false })).toBeVisible();
 });

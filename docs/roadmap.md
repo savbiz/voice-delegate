@@ -62,3 +62,9 @@ disabled by default; fake classifications verify control behavior, not semantic 
 Offline tests cover speech during work, cancellation races, freshness, expiry and classifier
 failures. No new paid calls or measured live results are claimed. See
 [ADR 009](decisions/009-cancellation-is-intent.md). Both flags remain off in the hosted configuration.
+
+A user-reported local conversation showed a calculation result arriving after continued
+speech. This is exploratory evidence, not a measured acceptance run. Follow-up offline
+regressions cover frozen terminal task durations, grouped transcript bubbles and explicit
+provider-delivery wording. Full playback, concurrent-task and cancellation acceptance
+remain to be recorded with the live checklist.

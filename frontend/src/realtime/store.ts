@@ -129,9 +129,11 @@ export function workerState(state: LiveState, worker: string): LiveState {
     workerMessage:
       state.intentCancellation && worker === 'running'
         ? 'Tasks continue while you speak. Use Cancel to stop work.'
-        : cancelPending
-          ? state.workerMessage
-          : (workerMessages[worker] ?? 'Waiting for worker status.'),
+        : state.intentCancellation && worker === 'completed'
+          ? 'Result sent to the voice provider; full playback is not confirmed.'
+          : cancelPending
+            ? state.workerMessage
+            : (workerMessages[worker] ?? 'Waiting for worker status.'),
   };
 }
 export function updateTurnTiming(
@@ -343,3 +345,44 @@ export function createLiveStore() {
   };
 }
 export type LiveStore = ReturnType<typeof createLiveStore>;
+
+/** Group consecutive visible speaker segments without changing provider transcript data. */
+export function chatBubbles(messages: ChatMessage[]): ChatMessage[] {
+  const bubbles: ChatMessage[] = [];
+  for (const message of messages) {
+    const text = message.text.trim();
+    if (!text) continue;
+    const previous = bubbles.at(-1);
+    if (previous?.speaker === message.speaker) previous.text += ' ' + text;
+    else bubbles.push({ ...message, text });
+  }
+  return bubbles;
+}
+
+export function taskLabel(status: string): string {
+  return (
+    {
+      running: 'Working',
+      pending: 'Waiting for silence',
+      delivering: 'Sending result',
+      completed: 'Result sent to voice provider',
+      failed: 'Task failed',
+      cancelled: 'Cancelled',
+      expired: 'Result expired',
+      busy: 'Not started: worker busy',
+      delivery_failed: 'Result delivery failed',
+    }[status] ?? status
+  );
+}
+
+export function endedWorkerState(state: LiveState): LiveState {
+  return {
+    ...state,
+    worker: 'idle',
+    cancelPending: false,
+    workerMessage:
+      state.intentCancellation && state.tasks.length
+        ? 'Session ended. Task states below are the last reported states.'
+        : 'Session ended. No further work will be delivered.',
+  };
+}

@@ -34,3 +34,7 @@ See [architecture](architecture.md) for flow diagrams and [API](api.md) for wire
   cancellation of computation; a selected job can stop without invalidating another.
 - **Decider:** typed probability classifier. Its uncertainty or failure preserves work;
   relevance is advisory and cannot independently cancel a task.
+
+A completed task in the optional task portfolio has sent its result to the voice provider;
+this does not confirm complete audio playback. Its displayed duration includes the wait for
+delivery and freezes at the terminal state. After session end, task rows are last-reported states.

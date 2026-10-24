@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createLiveSession } from './realtime/live';
 import type { LiveController } from './realtime/live';
-import { createLiveStore } from './realtime/store';
+import { createLiveStore, taskLabel } from './realtime/store';
 import { runStackDemo, scenario, visibleScenario } from './demo';
 import { Reference } from './reference';
 import { Transcript } from './Transcript';
@@ -78,24 +78,30 @@ function Live({ code }: { code: string }) {
           </button>
         )}
         {state.intentCancellation && state.tasks.length > 0 && (
-          <ul aria-label="Delegated tasks">
-            {state.tasks.map((task) => (
-              <li key={task.id}>
-                <strong>{task.goal.slice(0, 100)}</strong>{' '}
-                <small>
-                  {task.id} · {task.status} · {Math.floor(task.elapsed_seconds)} s
-                </small>{' '}
-                {['running', 'pending', 'delivering'].includes(task.status) && (
-                  <button
-                    disabled={!state.active || state.ending || state.recovering}
-                    onClick={() => controller.current?.cancel(task.id)}
-                  >
-                    Cancel {task.id}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+          <div>
+            <p className="muted">
+              Result sent means accepted by the voice provider, not fully played. Audio interrupted
+              by speech is not automatically repeated.
+            </p>
+            <ul aria-label="Delegated tasks">
+              {state.tasks.map((task) => (
+                <li key={task.id}>
+                  <strong>{task.goal.slice(0, 100)}</strong>{' '}
+                  <small>
+                    {task.id} · {taskLabel(task.status)} · {Math.floor(task.elapsed_seconds)} s
+                  </small>{' '}
+                  {['running', 'pending', 'delivering'].includes(task.status) && (
+                    <button
+                      disabled={!state.active || state.ending || state.recovering}
+                      onClick={() => controller.current?.cancel(task.id)}
+                    >
+                      Cancel {task.id}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
         <p id="recovery-help">{state.help}</p>
         <div className="actions">

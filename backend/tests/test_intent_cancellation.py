@@ -8,7 +8,7 @@ from pydantic import SecretStr
 from voice_delegate.config import Settings
 from voice_delegate.decisions import Decision, FakeDecider, Predicate
 from voice_delegate.delegation.contracts import DelegationInput
-from voice_delegate.delegation.intent import IntentRunner, Portfolio
+from voice_delegate.delegation.intent import IntentRunner, Job, Portfolio
 from voice_delegate.delegation.runner import DelegationRunner
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate.providers.models import (
@@ -20,6 +20,7 @@ from voice_delegate.providers.models import (
     Transcript,
 )
 from voice_delegate.session.manager import SessionManager
+from voice_delegate_agent.reference import WorkerResult
 
 from test_support import eventually
 
@@ -39,6 +40,7 @@ async def test_speech_preserves_two_tasks_and_delivery_requires_fresh_silence(
             connection.queue.put_nowait(DelegationRequested(identity, goal="calculate 2+2"))
         await eventually(lambda: blocking_worker.calls == 2)
         assert session.portfolio.jobs["three"].status == "busy"
+        assert session.portfolio.jobs["three"].finished == fake_clock()
         assert len(connection.commands) == 1
         connection.queue.put_nowait(SpeechStarted())
         connection.queue.put_nowait(Transcript("user", "Tell me something else", 100, 200))
@@ -62,8 +64,11 @@ async def test_speech_preserves_two_tasks_and_delivery_requires_fresh_silence(
         assert connection.commands[-1].content == "About your request calculate 2+2: done"
         assert session.portfolio.jobs["one"].status == "completed"
         assert session.portfolio.jobs["two"].status == "pending"
+        assert session.portfolio.jobs["one"].finished == fake_clock()
+        assert [session.portfolio.jobs["two"].finished] == [None]
         manager.interrupt(session, task_id="two")
         assert session.portfolio.jobs["two"].status == "cancelled"
+        assert session.portfolio.jobs["two"].finished == fake_clock()
         assert session.portfolio.jobs["one"].status == "completed"
         assert session.portfolio.generation == 1
     finally:
@@ -89,6 +94,7 @@ async def test_explicit_cancel_invalidates_uncooperative_result_only_for_selecte
         fake_clock.advance(31)
         await runner.deliver(state, FakeConnection(), 0)
         assert state.jobs["b"].status == "expired"
+        assert state.jobs["b"].finished == fake_clock()
         assert state.jobs["b"].result is None
         assert state.generation == 1
     finally:
@@ -339,6 +345,44 @@ async def test_two_results_require_separate_playback_and_silence_windows(
         await runner.deliver(state, connection, 0)
         assert [c.delegation_id for c in connection.commands] == ["one", "two"]
         assert state.status == "completed"
+    finally:
+        await runner.close(state)
+        await base.aclose()
+
+
+@pytest.mark.parametrize("send_fails", [False, True])
+async def test_failed_results_and_send_failures_freeze_duration(
+    blocking_worker: BlockingWorker, fake_clock: FakeClock, send_fails: bool
+) -> None:
+    class DeliveryConnection(FakeConnection):
+        async def send(self, command: Commentary) -> None:
+            if send_fails:
+                raise RuntimeError("fixture delivery failure")
+            self.commands.append(command)
+
+    base = DelegationRunner(blocking_worker)
+    runner = IntentRunner(base, Settings(intent_cancellation=True), fake_clock, None)
+    state = Portfolio()
+    job = Job(
+        "task",
+        "Calculate",
+        fake_clock(),
+        0,
+        status="pending",
+        ready=fake_clock(),
+        result=WorkerResult("Task failed", status="failed"),
+    )
+    state.jobs[job.id] = job
+    try:
+        runner.activity(state, 0, speaking=False)
+        fake_clock.advance(0.7)
+        await runner.deliver(state, DeliveryConnection(), 0)
+        assert job.status == ("delivery_failed" if send_fails else "failed")
+        finished = fake_clock()
+        assert job.finished == finished
+        fake_clock.advance(10)
+        await runner.deliver(state, None, 0)
+        assert job.finished == finished
     finally:
         await runner.close(state)
         await base.aclose()

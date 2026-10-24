@@ -28,7 +28,9 @@ for (const width of [390, 1100]) {
         ['session.input_transcript.delta', 'Can you calculate ', 0, 200],
         ['session.input_transcript.delta', 'ten plus ten?', 200, 400],
         ['session.output_transcript.delta', 'Twenty.', 1000, 1500],
-        ['session.input_transcript.delta', 'Thank you.', 3000, 3500],
+        ['session.input_transcript.delta', 'Thank', 3000, 3500],
+        ['session.output_transcript.delta', ' ', 3500, 3600],
+        ['session.input_transcript.delta', 'you.', 5000, 5500],
       ])
         peer.channel.dispatchEvent(
           new MessageEvent('message', { data: JSON.stringify({ type, delta, start_ms, end_ms }) }),

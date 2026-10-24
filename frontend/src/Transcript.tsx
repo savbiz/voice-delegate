@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { chatBubbles } from './realtime/store';
 import type { ChatMessage } from './realtime/store';
 
 export function Transcript({ messages }: { messages: ChatMessage[] }) {
+  const bubbles = chatBubbles(messages);
   const viewport = useRef<HTMLDivElement>(null);
   const following = useRef(true);
   const [showLatest, setShowLatest] = useState(false);
@@ -25,14 +27,14 @@ export function Transcript({ messages }: { messages: ChatMessage[] }) {
           setShowLatest(!following.current);
         }}
       >
-        {messages.length === 0 ? (
+        {bubbles.length === 0 ? (
           <div className="chat-empty">
             <p>Your conversation will appear here.</p>
             <small>Start a conversation and speak naturally.</small>
           </div>
         ) : (
           <ol className="chat-messages" aria-label="Transcript messages" aria-live="off">
-            {messages.map((message) => (
+            {bubbles.map((message) => (
               <li key={message.id} className={`chat-message ${message.speaker}`}>
                 <span className="chat-speaker">
                   {message.speaker === 'user' ? 'You' : 'Assistant'}
