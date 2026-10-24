@@ -9,3 +9,6 @@ Decision: reserve capacity before setup; accept one offer per session; use absol
 Consequences: local overload rejects admission and event overload fails the session. Remote cleanup cannot be guaranteed when control cannot be recovered. Each API instance uses one process; distributed ownership is deferred. The browser owns actual media playback; transcripts alone do not prove audio delivery.
 
 Source: [public session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations). Budget values are project choices documented in architecture.md.
+
+Amended 2026-10-24: [ADR 009](009-cancellation-is-intent.md) adds opt-in independent
+tasks and intent cancellation. The behavior above remains the default with the flag off.

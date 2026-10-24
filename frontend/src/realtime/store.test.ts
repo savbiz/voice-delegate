@@ -259,3 +259,12 @@ test('chat replaces finalized text and bounds retained content', () => {
     state.messages.reduce((total, message) => total + message.text.length, 0),
   ).toBeLessThanOrEqual(12000);
 });
+
+test('intent mode describes continuing work and allows cancelling another task', () => {
+  const state = workerState(
+    { ...initialLiveState(), active: true, intentCancellation: true, cancelPending: true },
+    'running',
+  );
+  expect(state.workerMessage).toContain('continue while you speak');
+  expect(state.cancelPending).toBe(false);
+});

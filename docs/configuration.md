@@ -26,6 +26,16 @@ Declared defaults below never read your environment or reveal configured secrets
 | `environment` | `VOICE_ENVIRONMENT` | `"development"` | `{"type": "string"}` |
 | `api_docs` | `VOICE_API_DOCS` | `false` | `{"type": "boolean"}` |
 | `audio_timing` | `VOICE_AUDIO_TIMING` | `false` | `{"type": "boolean"}` |
+| `intent_cancellation` | `VOICE_INTENT_CANCELLATION` | `false` | `{"type": "boolean"}` |
+| `max_inflight_tasks` | `VOICE_MAX_INFLIGHT_TASKS` | `2` | `{"type": "integer", "minimum": 1, "maximum": 2}` |
+| `delivery_timeout_seconds` | `VOICE_DELIVERY_TIMEOUT_SECONDS` | `30` | `{"type": "number", "maximum": 120, "exclusiveMinimum": 0}` |
+| `delivery_silence_seconds` | `VOICE_DELIVERY_SILENCE_SECONDS` | `0.6` | `{"type": "number", "minimum": 0.3, "maximum": 5}` |
+| `delivery_preamble` | `VOICE_DELIVERY_PREAMBLE` | `"About your request"` | `{"type": "string"}` |
+| `decisions_cancel` | `VOICE_DECISIONS_CANCEL` | `false` | `{"type": "boolean"}` |
+| `decisions_threshold` | `VOICE_DECISIONS_THRESHOLD` | `0.85` | `{"type": "number", "minimum": 0.5, "maximum": 1}` |
+| `decisions_timeout_seconds` | `VOICE_DECISIONS_TIMEOUT_SECONDS` | `1` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
+| `decisions_max_calls` | `VOICE_DECISIONS_MAX_CALLS` | `60` | `{"type": "integer", "minimum": 1, "maximum": 300}` |
+| `decisions_input_usd_per_million` | `VOICE_DECISIONS_INPUT_USD_PER_MILLION` | `0.1` | `{"type": "number", "minimum": 0, "maximum": 100}` |
 | `debug_recording` | `VOICE_DEBUG_RECORDING` | `false` | `{"type": "boolean"}` |
 | `debug_directory` | `VOICE_DEBUG_DIRECTORY` | `".local/debug"` | `{"type": "string"}` |
 | `access_token` | `VOICE_ACCESS_TOKEN` | `""` | `{"type": "string"}` |
@@ -72,6 +82,11 @@ Field types use Pydantic's normal environment parsing; this is not strict JSON t
 @model_validator(mode="after")
 def validate_production(self) -> "Settings":
     """Require an explicit browser origin and access gate on public deployments."""
+    if self.decisions_cancel and (
+        not self.intent_cancellation or not self.openai_api_key.get_secret_value()
+    ):
+        message = "Decisions cancellation requires intent cancellation and OPENAI_API_KEY"
+        raise ValueError(message)
     if self.instance_id and not self.public_demo:
         message = "Multiple API instances require public-demo identity and quota controls"
         raise ValueError(message)

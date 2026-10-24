@@ -6,6 +6,7 @@ from typing import Literal
 
 from voice_delegate.debug import DebugRecording
 from voice_delegate.delegation.history import History
+from voice_delegate.delegation.intent import Portfolio
 from voice_delegate.delegation.runner import DelegationState
 from voice_delegate.observability.turns import Turn
 from voice_delegate.providers.base import RealtimeConnection
@@ -41,6 +42,7 @@ class Session:
     sealed_index: int = 0
     committed_history: History = field(default_factory=History)
     history: History = field(default_factory=History)
+    portfolio: Portfolio = field(default_factory=Portfolio)
     delegation: DelegationState = field(default_factory=DelegationState)
 
 

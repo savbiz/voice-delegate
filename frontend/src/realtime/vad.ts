@@ -47,7 +47,13 @@ export function watchSpeech(
   stream: MediaStream,
   onset: () => void,
   remoteAudio?: HTMLAudioElement,
-  observe?: (now: number, local: number, remote: number, playing: boolean) => void,
+  observe?: (
+    now: number,
+    local: number,
+    remote: number,
+    playing: boolean,
+    remoteEnergy: number,
+  ) => void,
 ): () => void {
   const context = new AudioContext();
   try {
@@ -88,11 +94,12 @@ export function watchSpeech(
         !remoteAudio.ended &&
         !remoteAudio.muted &&
         remoteAudio.volume > 0;
-      const remoteRms =
-        playing && remoteSource ? energy(remoteAnalyser, remoteSamples) * remoteAudio.volume : 0;
+      const remoteEnergy = remoteSource ? energy(remoteAnalyser, remoteSamples) : 0;
+      const remoteRms = playing ? remoteEnergy * remoteAudio.volume : 0;
       const localRms = energy(analyser, samples);
       const now = performance.now();
-      if (context.state === 'running') observe?.(now, localRms, remoteRms, Boolean(playing));
+      if (context.state === 'running')
+        observe?.(now, localRms, remoteRms, Boolean(playing), remoteEnergy);
       if (gate.update(localRms, remoteRms, now)) onset();
     }, 20);
     return () => {
@@ -106,5 +113,27 @@ export function watchSpeech(
   } catch (error) {
     void context.close().catch(() => undefined);
     throw error;
+  }
+}
+
+/** Only bounded booleans leave the browser; muted assistant audio still pauses delivery. */
+export class ActivityReporter {
+  private user = new SpeechGate();
+  private assistant = new SpeechGate();
+  private last = -Infinity;
+  private previous = '';
+  private sequence = 0;
+  sample(now: number, local: number, remote: number) {
+    this.user.update(local);
+    this.assistant.update(remote);
+    const key = `${this.user.active}:${this.assistant.active}`;
+    if (now - this.last < 500 && key === this.previous) return undefined;
+    this.last = now;
+    this.previous = key;
+    return {
+      sequence: this.sequence++,
+      user_speaking: this.user.active,
+      assistant_speaking: this.assistant.active,
+    };
   }
 }

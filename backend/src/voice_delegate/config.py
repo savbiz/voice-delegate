@@ -32,6 +32,16 @@ class Settings(BaseSettings):
     environment: str = "development"
     api_docs: bool = False
     audio_timing: bool = False
+    intent_cancellation: bool = False
+    max_inflight_tasks: int = Field(default=2, ge=1, le=2)
+    delivery_timeout_seconds: float = Field(default=30, gt=0, le=120)
+    delivery_silence_seconds: float = Field(default=0.6, ge=0.3, le=5)
+    delivery_preamble: str = Field(default="About your request", min_length=1, max_length=80)
+    decisions_cancel: bool = False
+    decisions_threshold: float = Field(default=0.85, ge=0.5, le=1)
+    decisions_timeout_seconds: float = Field(default=1, gt=0, le=5)
+    decisions_max_calls: int = Field(default=60, ge=1, le=300)
+    decisions_input_usd_per_million: float = Field(default=0.1, ge=0, le=100)
     debug_recording: bool = False
     debug_directory: str = ".local/debug"
     access_token: SecretStr = SecretStr("")
@@ -70,6 +80,11 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production(self) -> "Settings":
         """Require an explicit browser origin and access gate on public deployments."""
+        if self.decisions_cancel and (
+            not self.intent_cancellation or not self.openai_api_key.get_secret_value()
+        ):
+            message = "Decisions cancellation requires intent cancellation and OPENAI_API_KEY"
+            raise ValueError(message)
         if self.instance_id and not self.public_demo:
             message = "Multiple API instances require public-demo identity and quota controls"
             raise ValueError(message)

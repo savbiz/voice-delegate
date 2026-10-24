@@ -208,6 +208,30 @@
     "digest": "fd3ebd44d09bb660bd0f1d0f239152f6133314a5e4c4e08cf0acd4af65b70fed"
   },
   {
+    "id": "105d5ff8fa3a2f07",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional intent cancellation",
+    "text": "With `VOICE_INTENT_CANCELLATION=true`, speaking pauses narration while independent worker\njobs continue. Up to two running or pending jobs occupy bounded slots. Only explicit task\ncancellation, session end, or an enabled semantic decision cancels work. The existing\ninterruption path and diagrams describe the default mode; this optional path amends it.",
+    "digest": "105d5ff8fa3a2f075031d310644468f5b0ec4d4419c218363d5a0ba4de9b8575"
+  },
+  {
+    "id": "5196a28d1a83764e",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional intent cancellation",
+    "text": "The browser sends owner-authenticated `/activity` reports with boolean microphone/remote\nenergy states, sequence and transport generation. Fresh observed silence releases one\nbounded pending result with a request preamble. Stale reports hold delivery; missing audio\nanalysis eventually expires the result. Another result waits until assistant audio has been\nobserved. Provider speech events reset the gate, and provider VAD remains authoritative for\ninterrupting audio already playing. This is not an acoustic guarantee; live validation is pending.",
+    "digest": "5196a28d1a83764eef4d80972b7964a2bddcac331e4e17a5c941098f97f10af1"
+  },
+  {
+    "id": "8afe0c7f90d7e32c",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional intent cancellation",
+    "text": "The event reader never awaits a worker or classifier. An optional Decider classifies the\nlatest bounded utterance with cancellation and relevance predicates per active task. A\nclassification timeout or error preserves work. Jobs survive a transport replacement and\nare delivered through the new connection; a detached Realtime result uses a text item,\nnot an old function-call ID. See [ADR 009](decisions/009-cancellation-is-intent.md) for budgets,\nterminal acknowledgements, pricing caveats and the default-off rollout.",
+    "digest": "8afe0c7f90d7e32cf30628fbce49b2a0876b1eaa6b6e019cb866f78c1dfe11c5"
+  },
+  {
     "id": "0015ca08b96d3aec",
     "title": "Architecture",
     "path": "docs/architecture.md",
@@ -238,6 +262,118 @@
     "section": "Isolated offline stack",
     "text": "Production factories and the public static demo remain unchanged. The demo factory\nrequires `VOICE_OFFLINE_DEMO=1` and rejects provider keys, paid planning, fallback and\ntranscript recording. The frontend build opts in with `VITE_OFFLINE_STACK=true`.\nOnly loopback frontend and monitoring ports are published. A known fixture bearer value\nprotects the private worker interface from accidental unauthenticated calls; it is not\nproduction authentication. See [offline deployment](../deployment/README.md#offline-stack-in-one-command).",
     "digest": "420224ec752363131c044e8e7e186eab791a3e4d69e21f652994cd0e57393692"
+  },
+  {
+    "id": "c95e177cccf46e9f",
+    "title": "ADR 002: Explicit lifecycle ownership and finite budgets",
+    "path": "docs/decisions/002-lifecycle-and-bounds.md",
+    "section": "ADR 002: Explicit lifecycle ownership and finite budgets",
+    "text": "Amended 2026-10-24: [ADR 009](009-cancellation-is-intent.md) adds opt-in independent\ntasks and intent cancellation. The behavior above remains the default with the flag off.",
+    "digest": "c95e177cccf46e9f94343ab0b453b79e13571828e5e51cc99ff51b107197e9cd"
+  },
+  {
+    "id": "f8fbd4da36cc91b0",
+    "title": "ADR 005: Bounded worker execution with generation-based cancellation",
+    "path": "docs/decisions/005-bounded-delegation.md",
+    "section": "ADR 005: Bounded worker execution with generation-based cancellation",
+    "text": "Amended 2026-10-24: [ADR 009](009-cancellation-is-intent.md) adds opt-in independent\ntasks and intent cancellation. The behavior above remains the default with the flag off.",
+    "digest": "f8fbd4da36cc91b08c39847bf7d157d6dcef401db1d1db944ca8ce0c38006f01"
+  },
+  {
+    "id": "7410651dbd79a357",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Context",
+    "text": "Cancelling a worker whenever the user speaks prevents useful conversation during slow\nwork. A second request need not replace the first. Classification mistakes are asymmetric:\nkeeping an unwanted calculation costs time, while cancelling wanted work loses its result.",
+    "digest": "7410651dbd79a357d01871bf404a2cb2f03edfdc79268650608f51e9fc0f2c2c"
+  },
+  {
+    "id": "1d9f655a23e65705",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Decision",
+    "text": "`VOICE_INTENT_CANCELLATION=false` retains the existing single-task behavior. When enabled,\nup to `VOICE_MAX_INFLIGHT_TASKS` (default and maximum two) jobs occupy independent slots.\nRunning, pending and delivering jobs count towards this bound; rejected IDs are remembered\nwithin the existing per-session request budget. A new request never cancels an existing job.\nThe voice model still has only `delegate_task`.",
+    "digest": "1d9f655a23e65705ece55a3a7195e8029814fe3d24d03404459ebf61b8f8939f"
+  },
+  {
+    "id": "5cd77567dd9d0547",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Decision",
+    "text": "Speech interrupts provider narration, not worker execution. Explicit `/interrupt` cancels\nall tasks, or just the optional `task_id`. Session termination cancels all work. A portfolio\ncancellation generation advances only when active work is cancelled; per-job state prevents\ncancelling one job from invalidating another. Noncooperative workers retain global capacity\nuntil they actually finish. No result is retried after an ambiguous provider send.",
+    "digest": "5cd77567dd9d0547c75fc1db466d9f4b033e5294c08e3d64aa771d685109476c"
+  },
+  {
+    "id": "9acd114ac047abdc",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Decision",
+    "text": "Completed results become bounded pending deliverables. The preamble includes a bounded\nexcerpt of the original goal; the complete commentary remains within the existing token\nand 500-byte limits. Delivery requires fresh browser audio-activity reports and at least\n`VOICE_DELIVERY_SILENCE_SECONDS` (default 0.6) seconds of observed silence. Reports contain\nonly booleans, sequence and transport generation. They expire after one second. Missing\nanalysis or a suspended browser holds results; it never implies silence. After delivery,\nan assistant-audio observation is required before another result is narrated. Muting playback\ndoes not hide remote stream energy. Undelivered results expire after\n`VOICE_DELIVERY_TIMEOUT_SECONDS` (default 30) and increment an expiry metric.",
+    "digest": "9acd114ac047abdc55c0c448662878de0908fdd13620dfcdaa42472adfd5d014"
+  },
+  {
+    "id": "60c6f22b86897903",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Decision",
+    "text": "A provider speech-start or transcript event also resets the silence window. Browser energy\nis a delivery heuristic, not proof of physical silence or an atomic provider playback lock.\nSpeech can start after a send; the provider's own interruption handling remains authoritative.\nCancellation cannot retract audio or commands already accepted upstream.",
+    "digest": "60c6f22b868979031084fa7ececcda93fd59dc50033543d21b5ea5b99f9727d7"
+  },
+  {
+    "id": "ddf175d201932618",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Decision",
+    "text": "Transport failure alone preserves work. A reconnect retains jobs, clears stale activity,\nand uses the new connection for pending delivery. Realtime receives an untrusted text item\nfor a result from the old transport instead of an invalid old function-call output. Cancelled\nor expired Realtime calls receive a terminal output without a new `response.create`; Live\nneeds no corresponding function-call output. Terminal acknowledgements are best effort and\nnever retried if delivery was ambiguous.",
+    "digest": "ddf175d2019326186fef43f90f009a42c9270070f78c077e16a963840c20921d"
+  },
+  {
+    "id": "2399c757fca62862",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Optional semantic decisions",
+    "text": "`VOICE_DECISIONS_CANCEL=false` makes no Decisions calls. Enabling it requires intent mode\nand an environment-supplied OpenAI key. `OpenAIDecider` uses `POST /v1/decisions`, model\n`gpt-6-luna`, with named `predicate` questions (`type`, `name`, `instructions`). A plain-text\nJSON rendering supplies the last assistant excerpt, current user utterance and indexed goals\nas evidence. The API also accepts role-based messages; those are unnecessary for this classifier.\nTwo questions per task ask about cancellation intent and continued relevance. Only cancellation\nprobability at or above `VOICE_DECISIONS_THRESHOLD` (default 0.85) triggers cancellation.\nRelevance alone never cancels. This threshold is a policy default, not a calibrated live result.",
+    "digest": "2399c757fca62862efa4575a3e10bbfc154b158d1d36a86bd1ef1e3c45317fc6"
+  },
+  {
+    "id": "44747e5d4540905b",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Optional semantic decisions",
+    "text": "Classification runs separately from the event reader. Fragment bursts coalesce into the latest\nbounded utterance, with one request in flight per session; stale decisions cannot cancel work.\nThe timeout defaults to one second, with at most 60 requests/session, at most four questions,\n32 KiB input and 64 KiB response. Errors, malformed output, refusals and exhausted budgets\npreserve work. There are no retries, new dependencies, or conversation/credential log fields.",
+    "digest": "44747e5d4540905b6f495e644a8474a16134d33b42aeeedf65759da3849a303d"
+  },
+  {
+    "id": "ae20059ed382411c",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Optional semantic decisions",
+    "text": "Estimated cost counts successful responses' input tokens at a configurable rate, initially\nUSD 0.10/million (public Decisions pricing checked 2026-10-24). It is not billing: failed\nrequests, cache write/read differences, regional premiums and long-context adjustments are\nnot included. Automatic provider caching may apply; no identity-bearing cache key is sent.",
+    "digest": "ae20059ed382411c5080e92c1f67512166dd9453e253b45f0e2f7b4b53d21d0a"
+  },
+  {
+    "id": "3e00da6945e92573",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Consequences and verification",
+    "text": "This amends [lifecycle ownership](002-lifecycle-and-bounds.md) and\n[worker cancellation](005-bounded-delegation.md) only when the opt-in flag is enabled.\nThe default remains compatible with existing deployments. The UI exposes IDs, abbreviated\ngoals, elapsed time and per-task cancellation; it does not introduce another voice tool.",
+    "digest": "3e00da6945e9257366fd3f7bbe416f18ca4e36b1966b79f427b1e0ec472a2a85"
+  },
+  {
+    "id": "cbed2db49e216b0a",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Consequences and verification",
+    "text": "Deterministic fake workers, classifiers, sockets, clocks and browser tests cover continued\nspeech, parallel work, explicit/semantic cancellation, stale decisions, timeout, expiry and\nreconnect. No paid calls were made. Classifier accuracy, audible silence delivery and cross-provider continuity remain live pending; the live checklist must measure those separately.",
+    "digest": "cbed2db49e216b0aa1a610f1bc30ea88aa71bc5962b8f974377bfdc8fa36b1e4"
+  },
+  {
+    "id": "61dfe122ffe8e470",
+    "title": "ADR 009: Cancellation is intent; speech pauses narration",
+    "path": "docs/decisions/009-cancellation-is-intent.md",
+    "section": "Consequences and verification",
+    "text": "Sources: [Decisions reference](https://developers.openai.com/api/reference/resources/decisions/methods/create),\n[Decisions guide and pricing](https://developers.openai.com/api/docs/guides/decisions),\n[Live delegation](https://developers.openai.com/api/docs/guides/live-delegation),\n[Realtime conversations](https://developers.openai.com/api/docs/guides/realtime-conversations).",
+    "digest": "61dfe122ffe8e470400d03498954098f192c00078e72735ab0107eebbc8443ae"
   },
   {
     "id": "c38bee83afe223be",

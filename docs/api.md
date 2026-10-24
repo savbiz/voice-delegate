@@ -69,3 +69,19 @@ and X-Session-Key checks. Returns 200 on recording, 403 when disabled, 404 for o
 failure, 409 for stale transport/non-connected state, 422 for invalid values and 429
 after 120 accepted samples per session. Durations must be finite and in [0, 120].
 These are untrusted client observations, not billing or acceptance evidence by themselves.
+
+## Optional task controls
+
+`POST /api/config` exposes `intent_cancellation` (default false). With it enabled,
+`POST /api/sessions/{id}/heartbeat` includes `tasks` (id, goal capped at 512 characters,
+status, elapsed_seconds) and `decision_cost_usd` (estimated successful-input cost only).
+`delegation` remains `running` while any job is running, pending or delivering.
+
+`POST /api/sessions/{id}/interrupt` accepts an optional `{ "task_id": "..." }` body;
+an omitted body cancels all active jobs. Unknown or terminal IDs are idempotent no-ops.
+Legacy mode retains its existing cancel-all behavior. `POST /api/sessions/{id}/activity`
+accepts `{ "generation": 0, "sequence": 0, "user_speaking": false,
+"assistant_speaking": false }`. It requires the same invitation, Origin and session key
+as heartbeat. Responses: 200 accepted, 403 feature off, 404 ownership mismatch, 409 stale
+transport or disconnected session, 422 invalid fields, 429 shared IP limit. Old sequence
+numbers are ignored. It never refreshes the session lifetime and contains no audio or text.

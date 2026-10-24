@@ -1,7 +1,8 @@
 import { AudioTimingMeter } from './audio-timing';
 /** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
 import type { Source } from '../reference';
-import { watchSpeech } from './vad';
+import { ActivityReporter, watchSpeech } from './vad';
+import type { TaskStatus } from './store';
 import { audioSample } from './debug';
 import { recordAudio } from './recording';
 import type { AudioRecording } from './recording';
@@ -242,11 +243,15 @@ export function createLiveSession(
     });
   }
 
-  const onCancelTask = () => {
+  const onCancelTask = (taskId?: string) => {
     const owner = session;
     store.update({ cancelPending: true });
     if (owner)
-      void request(`/sessions/${owner.id}/interrupt`, owner)
+      void request(
+        `/sessions/${owner.id}/interrupt`,
+        owner,
+        taskId ? { task_id: taskId } : undefined,
+      )
         .then(() => {
           if (session === owner && !ending)
             store.update({
@@ -319,6 +324,8 @@ export function createLiveSession(
         lastSpeaker: undefined,
         timings: [],
         audioTimings: [],
+        tasks: [],
+        decisionCostUsd: 0,
         sources: [],
         recap: 'No conversation yet.',
       });
@@ -348,9 +355,11 @@ export function createLiveSession(
       const config = await request<{
         voice_available: boolean;
         audio_timing_available?: boolean;
+        intent_cancellation?: boolean;
         debug_recording_available?: boolean;
       }>('/config');
       if (attempt !== attemptId) return;
+      store.update({ intentCancellation: Boolean(config.intent_cancellation) });
       if (requestedPreferences.debug_recording && !config.debug_recording_available)
         throw new Error(
           'Server debugging is disabled. Uncheck recording to continue, or ask the operator to enable it.',
@@ -490,6 +499,8 @@ export function createLiveSession(
       let audioMeter: AudioTimingMeter | undefined;
       let timingBusy = false;
       let timingCount = 0;
+      const activityReporter = new ActivityReporter();
+      let activityBusy = false;
       store.update({
         audioTimingStatus: config.audio_timing_available
           ? 'Waiting for audio playback.'
@@ -499,14 +510,36 @@ export function createLiveSession(
         stopVad = watchSpeech(
           stream,
           () => {
-            if (attempt !== attemptId || store.getSnapshot().worker !== 'running') return;
+            if (
+              attempt !== attemptId ||
+              config.intent_cancellation ||
+              store.getSnapshot().worker !== 'running'
+            )
+              return;
             void recordDebug(created, { event: 'local_onset' });
             void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
           },
           audio,
-          config.audio_timing_available
-            ? (now, local, remote, playing) => {
-                if (attempt !== attemptId || timingCount >= 120) return;
+          config.audio_timing_available || config.intent_cancellation
+            ? (now, local, remote, playing, remoteEnergy) => {
+                if (attempt !== attemptId) return;
+                if (config.intent_cancellation && !activityBusy) {
+                  const activity = activityReporter.sample(now, local, remoteEnergy);
+                  if (activity) {
+                    activityBusy = true;
+                    void request(
+                      `/sessions/${created.id}/activity`,
+                      created,
+                      { ...activity, generation: serverGeneration },
+                      1000,
+                    )
+                      .catch(() => undefined)
+                      .finally(() => {
+                        activityBusy = false;
+                      });
+                  }
+                }
+                if (timingCount >= 120) return;
                 const samples = audioMeter?.sample(now, local, remote, playing) ?? [];
                 for (const sample of samples) {
                   timingCount += 1;
@@ -553,38 +586,47 @@ export function createLiveSession(
         store.update({ audioTimingStatus: 'Audio measurement unavailable in this browser.' });
         /* Provider-side speech detection remains authoritative without local analysis. */
       }
-      heartbeat = setInterval(() => {
-        if (attempt !== attemptId) return;
-        void request<{
-          delegation: string;
-          state: string;
-          sources?: Source[];
-          recap?: { latest_request: string; latest_reply: string; interrupted: boolean };
-        }>(`/sessions/${created.id}/heartbeat`, created, undefined, 8000)
-          .then((state) => {
-            if (attempt === attemptId) {
-              heartbeatFailures = 0;
-              renderSources(state.sources ?? []);
-              if (state.recap) {
-                const recap =
-                  `${state.recap.interrupted ? 'Interrupted task. ' : ''}Latest request: ${state.recap.latest_request || '—'}` +
-                  (state.recap.latest_reply
-                    ? ` · Latest reply excerpt: ${state.recap.latest_reply}`
-                    : '');
-                store.update({ recap });
+      heartbeat = setInterval(
+        () => {
+          if (attempt !== attemptId) return;
+          void request<{
+            delegation: string;
+            tasks?: TaskStatus[];
+            decision_cost_usd?: number;
+            state: string;
+            sources?: Source[];
+            recap?: { latest_request: string; latest_reply: string; interrupted: boolean };
+          }>(`/sessions/${created.id}/heartbeat`, created, undefined, 8000)
+            .then((state) => {
+              if (attempt === attemptId) {
+                heartbeatFailures = 0;
+                store.update({
+                  tasks: state.tasks ?? [],
+                  decisionCostUsd: state.decision_cost_usd ?? 0,
+                });
+                renderSources(state.sources ?? []);
+                if (state.recap) {
+                  const recap =
+                    `${state.recap.interrupted ? 'Interrupted task. ' : ''}Latest request: ${state.recap.latest_request || '—'}` +
+                    (state.recap.latest_reply
+                      ? ` · Latest reply excerpt: ${state.recap.latest_reply}`
+                      : '');
+                  store.update({ recap });
+                }
+                showWorker(state.delegation);
+                if (state.state === 'closed' || state.state === 'closing')
+                  void finish('Conversation ended.');
+                if (shouldRecover('heartbeat', state.state))
+                  void recover('Provider connection lost.');
               }
-              showWorker(state.delegation);
-              if (state.state === 'closed' || state.state === 'closing')
-                void finish('Conversation ended.');
-              if (shouldRecover('heartbeat', state.state))
-                void recover('Provider connection lost.');
-            }
-          })
-          .catch(() => {
-            if (attempt === attemptId && ++heartbeatFailures >= 3)
-              void finish('Server connection lost or session expired.');
-          });
-      }, 10000);
+            })
+            .catch(() => {
+              if (attempt === attemptId && ++heartbeatFailures >= 3)
+                void finish('Server connection lost or session expired.');
+            });
+        },
+        config.intent_cancellation ? 2000 : 10000,
+      );
       startup = setTimeout(() => {
         void finish('Voice startup timed out.');
       }, 40000);

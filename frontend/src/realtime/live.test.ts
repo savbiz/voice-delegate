@@ -4,7 +4,10 @@ import type { LiveController } from './live';
 import { createLiveStore } from './store';
 import { watchSpeech } from './vad';
 
-vi.mock('./vad', () => ({ watchSpeech: vi.fn(() => vi.fn()) }));
+vi.mock('./vad', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./vad')>()),
+  watchSpeech: vi.fn(() => vi.fn()),
+}));
 class FakeChannel extends EventTarget {
   close = vi.fn();
 }
@@ -38,6 +41,7 @@ let controller: LiveController | undefined;
 let stopTrack = vi.fn();
 let responses: number[];
 let delegation: string;
+let intentCancellation = false;
 let transportState: string;
 let closeResponse: Promise<Response> | undefined;
 const source = {
@@ -57,6 +61,7 @@ beforeEach(() => {
   FakePeer.instances = [];
   responses = [];
   delegation = 'idle';
+  intentCancellation = false;
   transportState = 'connected';
   closeResponse = undefined;
   sources = [source];
@@ -80,7 +85,8 @@ beforeEach(() => {
           { status },
         );
       }
-      if (path.endsWith('/config')) return Response.json({ voice_available: true });
+      if (path.endsWith('/config'))
+        return Response.json({ voice_available: true, intent_cancellation: intentCancellation });
       if (path.endsWith('/sessions')) return Response.json({ id: 'session', key: 'key' });
       return Response.json({ sdp: 'sdp', finalized: true });
     }),
@@ -392,4 +398,27 @@ test('autoplay rejection exposes an audio action and stopping clears it', async 
   expect(store.getSnapshot().status).toContain('Enable audio');
   controller.stop();
   expect(store.getSnapshot().audioBlocked).toBe(false);
+});
+
+test('intent mode reports activity and explicit task cancellation without cancelling on onset', async () => {
+  intentCancellation = true;
+  const store = await start();
+  store.update({ worker: 'running' });
+  const args = vi.mocked(watchSpeech).mock.calls.at(-1)!;
+  args[1]();
+  expect(requests.filter((r) => r.path.endsWith('/interrupt'))).toHaveLength(0);
+  args[3]?.(0, 0, 0, false, 0);
+  await vi.advanceTimersByTimeAsync(1);
+  const activity = requests.find((r) => r.path.endsWith('/activity'))!;
+  expect(JSON.parse(String(activity.init.body))).toEqual({
+    generation: 0,
+    sequence: 0,
+    user_speaking: false,
+    assistant_speaking: false,
+  });
+  controller!.cancel('first');
+  await vi.advanceTimersByTimeAsync(1);
+  expect(
+    JSON.parse(String(requests.find((r) => r.path.endsWith('/interrupt'))!.init.body)),
+  ).toEqual({ task_id: 'first' });
 });

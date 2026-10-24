@@ -119,6 +119,8 @@ class Commentary:
 
     delegation_id: str
     content: str
+    detached: bool = False
+    settle_only: bool = False
 
 
 type ProviderCommand = Commentary

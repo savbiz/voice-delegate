@@ -15,7 +15,18 @@ from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import Session
 from voice_delegate.session.preferences import VoicePreferences
 
-from .schemas import Answer, AudioTiming, Closed, Created, Offer, Reconnect, Status
+from .schemas import (
+    Activity,
+    Answer,
+    AudioTiming,
+    Cancellation,
+    Closed,
+    Created,
+    Offer,
+    Reconnect,
+    Status,
+    TaskStatus,
+)
 
 
 class ReferenceQuery(BaseModel):
@@ -48,6 +59,7 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
         return {
             "debug_recording_available": manager.settings.debug_recording,
             "audio_timing_available": manager.settings.audio_timing,
+            "intent_cancellation": manager.settings.intent_cancellation,
             "feedback_available": feedback is not None,
             "requires_access_code": bool(
                 manager.settings.invite_tokens or manager.settings.access_token.get_secret_value()
@@ -124,6 +136,22 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
         manager.metrics.audio_playback.record(body.seconds, {"kind": body.kind})
         return {"recorded": True}
 
+    @router.post("/sessions/{session_id}/activity")
+    async def activity(
+        body: Activity, session: Annotated[Session, Depends(owned)]
+    ) -> dict[str, bool]:
+        if not manager.settings.intent_cancellation:
+            raise HTTPException(403, "Intent cancellation is disabled")
+        if session.state != "connected" or body.generation != session.generation:
+            raise HTTPException(409, "Activity requires the current connected transport")
+        manager.intent.activity(
+            session.portfolio,
+            body.sequence,
+            speaking=body.user_speaking or body.assistant_speaking,
+            assistant_speaking=body.assistant_speaking,
+        )
+        return {"recorded": True}
+
     @router.post("/sessions/{session_id}/offer")
     async def offer(body: Offer, session: Annotated[Session, Depends(owned)]) -> Answer:
         result = await manager.connect(session, body.sdp)
@@ -139,9 +167,23 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
         manager.heartbeat(session)
         return Status(
             state=session.state,
-            delegation=session.delegation.status,
+            delegation=session.portfolio.status
+            if manager.settings.intent_cancellation
+            else session.delegation.status,
+            tasks=[
+                TaskStatus(
+                    id=j.id,
+                    goal=j.goal,
+                    status=j.status,
+                    elapsed_seconds=max(0, manager.clock() - j.started),
+                )
+                for j in session.portfolio.jobs.values()
+            ],
+            decision_cost_usd=session.portfolio.decision_cost,
             generation=session.generation,
-            sources=session.delegation.sources,
+            sources=session.portfolio.sources
+            if manager.settings.intent_cancellation
+            else session.delegation.sources,
             recap=session.recap,
             fallback_available=manager.fallback is not None and not session.fallback_used,
         )
@@ -151,9 +193,15 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
         return Closed(finalized=await manager.close(session))
 
     @router.post("/sessions/{session_id}/interrupt")
-    async def interrupt(session: Annotated[Session, Depends(owned)]) -> dict[str, str]:
-        manager.interrupt(session)
-        return {"delegation": session.delegation.status}
+    async def interrupt(
+        session: Annotated[Session, Depends(owned)], body: Cancellation | None = None
+    ) -> dict[str, str]:
+        manager.interrupt(session, task_id=body.task_id if body else None)
+        return {
+            "delegation": session.portfolio.status
+            if manager.settings.intent_cancellation
+            else session.delegation.status
+        }
 
     @router.post("/sessions/{session_id}/token")
     async def token(_session: Annotated[Session, Depends(owned)]) -> None:

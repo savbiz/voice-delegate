@@ -242,6 +242,27 @@ The offline planner is deterministic, not a free language model. It exercises th
 LangGraph graph and read-only tools with English commands, without provider calls.
 Natural-language planning requires the separately configured paid text model.
 
+## Optional intent cancellation
+
+With `VOICE_INTENT_CANCELLATION=true`, speaking pauses narration while independent worker
+jobs continue. Up to two running or pending jobs occupy bounded slots. Only explicit task
+cancellation, session end, or an enabled semantic decision cancels work. The existing
+interruption path and diagrams describe the default mode; this optional path amends it.
+
+The browser sends owner-authenticated `/activity` reports with boolean microphone/remote
+energy states, sequence and transport generation. Fresh observed silence releases one
+bounded pending result with a request preamble. Stale reports hold delivery; missing audio
+analysis eventually expires the result. Another result waits until assistant audio has been
+observed. Provider speech events reset the gate, and provider VAD remains authoritative for
+interrupting audio already playing. This is not an acoustic guarantee; live validation is pending.
+
+The event reader never awaits a worker or classifier. An optional Decider classifies the
+latest bounded utterance with cancellation and relevance predicates per active task. A
+classification timeout or error preserves work. Jobs survive a transport replacement and
+are delivered through the new connection; a detached Realtime result uses a text item,
+not an old function-call ID. See [ADR 009](decisions/009-cancellation-is-intent.md) for budgets,
+terminal acknowledgements, pricing caveats and the default-off rollout.
+
 ## Sources
 
 Reviewed public documentation on 2026-09-20:

@@ -4,7 +4,7 @@
 |---|---|
 | Sideband | Server WebSocket control/event connection accompanying browser-to-provider WebRTC audio. |
 | Commentary | Bounded worker result sent to the voice provider for narration; it is untrusted data, not instructions. |
-| Generation | Monotonically increasing version used to reject obsolete work. Delegation generation changes on new work/cancellation; transport generation changes on fallback. |
+| Generation | Monotonically increasing version used to reject obsolete work. Legacy delegation generation changes on new work/cancellation; intent-mode cancellation generation changes only on cancellation. Transport generation changes on fallback. |
 | Lease | Durable admission record reserving an active session slot until release or expiry. It is not ownership of the provider connection. |
 | Sealed segment | Transcript text committed for fallback replay. Reconnect seals remaining in-flight text before clamping history. |
 | Principal | Stable pseudonymous invitation name, hashed before quota/feedback storage. It does not establish a verified human identity. |
@@ -27,3 +27,10 @@ See [architecture](architecture.md) for flow diagrams and [API](api.md) for wire
 - **Offline stack:** opt-in local containers exercising the session API and remote
   LangGraph worker through a deterministic fake voice provider. It generates no audio
   and supplies no evidence of live provider behavior or voice latency.
+
+- **Pending deliverable:** a bounded worker result retained until fresh audio activity
+  indicates silence, or the delivery deadline expires. It still occupies a task slot.
+- **Intent cancellation:** opt-in policy that separates interruption of narration from
+  cancellation of computation; a selected job can stop without invalidating another.
+- **Decider:** typed probability classifier. Its uncertainty or failure preserves work;
+  relevance is advisory and cannot independently cancel a task.

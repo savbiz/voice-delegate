@@ -1,7 +1,9 @@
 """Read-only retrieval from a reviewed bundled corpus; no URL fetching or model claims."""
 
 import json
+import math
 import re
+from collections import Counter
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib.resources import files
@@ -61,16 +63,28 @@ def search(query: str) -> tuple[Source, ...]:
     if not query.strip() or len(query) > QUERY_MAX_CHARS:
         return ()
     words = terms(query)
-    ranked = []
-    for source in corpus():
-        body = terms(source.text)
-        score = len(words & body) * 3 + len(words & terms(source.section))
-        if words & body:
+    sources = corpus()
+    bodies = [
+        Counter(
+            ALIASES.get(word, word)
+            for word in re.findall(r"[\w-]+", source.text.lower())
+            if len(word) > 2 and word not in STOP
+        )
+        for source in sources
+    ]
+    vocabulary = set().union(*(set(body) for body in bodies))
+    # A single generic overlap does not support a mostly out-of-corpus question.
+    if len(words) >= 3 and len(words & vocabulary) * 2 < len(words):
+        return ()
+    ranked: list[tuple[float, Source]] = []
+    for source, body in zip(sources, bodies, strict=True):
+        # Sublinear repetition rewards focused evidence without letting long sections dominate.
+        score = sum(1 + math.log(body[word]) for word in words & body.keys())
+        if score:
             ranked.append((score, source))
     if not ranked:
-        # A heading-only query still has evidence: preserve document order for its overview.
         return tuple(
-            source for source in corpus() if words & (terms(source.title) | terms(source.section))
+            source for source in sources if words & (terms(source.title) | terms(source.section))
         )[:3]
     ranked.sort(key=lambda item: (-item[0], item[1].id))
     return tuple(source for _, source in ranked[:3])

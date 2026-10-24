@@ -62,7 +62,7 @@ function Live({ code }: { code: string }) {
         <p id="task-status" className="muted" aria-live="polite">
           {state.workerMessage}
         </p>
-        {state.worker === 'running' && (
+        {state.worker === 'running' && !state.intentCancellation && (
           <button
             id="cancel-task"
             disabled={
@@ -76,6 +76,26 @@ function Live({ code }: { code: string }) {
           >
             Cancel task
           </button>
+        )}
+        {state.intentCancellation && state.tasks.length > 0 && (
+          <ul aria-label="Delegated tasks">
+            {state.tasks.map((task) => (
+              <li key={task.id}>
+                <strong>{task.goal.slice(0, 100)}</strong>{' '}
+                <small>
+                  {task.id} · {task.status} · {Math.floor(task.elapsed_seconds)} s
+                </small>{' '}
+                {['running', 'pending', 'delivering'].includes(task.status) && (
+                  <button
+                    disabled={!state.active || state.ending || state.recovering}
+                    onClick={() => controller.current?.cancel(task.id)}
+                  >
+                    Cancel {task.id}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
         <p id="recovery-help">{state.help}</p>
         <div className="actions">
@@ -203,8 +223,8 @@ function Live({ code }: { code: string }) {
       <details className="secondary-panel">
         <summary>Conversation recap</summary>
         <p className="muted">
-          Live transcript excerpts, refreshed every 10 seconds; not an AI summary. Interruption does
-          not mean completion.
+          Live transcript excerpts, refreshed with each heartbeat; not an AI summary. Interruption
+          does not mean completion.
         </p>
         <p id="recap" aria-live="off">
           {state.recap}
@@ -213,6 +233,12 @@ function Live({ code }: { code: string }) {
       <details className="secondary-panel">
         <summary>Connection timings</summary>
         <p>{state.audioTimingStatus}</p>
+        {state.intentCancellation && (
+          <p>
+            Estimated Decisions input cost: ${state.decisionCostUsd.toFixed(6)} (configured rate;
+            excludes failed requests and pricing adjustments).
+          </p>
+        )}
         <ol aria-label="Audio playback measurements">
           {state.audioTimings.map((sample, index) => (
             <li key={index}>

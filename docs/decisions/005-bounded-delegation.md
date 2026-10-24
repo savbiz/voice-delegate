@@ -9,3 +9,6 @@ Decision: assemble a bounded goal/context from transcripts and start a separate 
 Consequences: cancellation does not undo already-sent results or external effects. Initial tools are read-only and computationally bounded. A cooperative worker stops promptly; a noncooperative extension retains capacity until completion. Speech detection is heuristic and must be measured with real microphones. Context truncation may lose needed facts, so the worker must request clarification instead of guessing. Offline scripted model tests prove control behavior, not model quality. Task context is constructed from transcripts and application state, rather than delegation metadata alone. Worker instructions remain separate from voice instructions. Cancellation suppresses late results after registration but cannot undo already-completed external effects.
 
 Source: [public Live delegation guide](https://developers.openai.com/api/docs/guides/live-delegation). Limits and cancellation semantics are application design choices.
+
+Amended 2026-10-24: [ADR 009](009-cancellation-is-intent.md) adds opt-in independent
+tasks and intent cancellation. The behavior above remains the default with the flag off.
