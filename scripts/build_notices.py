@@ -123,6 +123,7 @@ def main() -> None:
         "Redistributed unmodified under the terms of the tiktoken MIT licence.\n\n"
         + block(data.with_name("LICENSE.tiktoken").read_text())
     )
+    parts.append((ROOT / "scripts/licenses/container-tooling.md").read_text())
     args.output.write_text("\n".join(parts))
 
 

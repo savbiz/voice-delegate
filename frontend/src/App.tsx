@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createLiveSession } from './realtime/live';
 import type { LiveController } from './realtime/live';
 import { createLiveStore } from './realtime/store';
-import { scenario, visibleScenario } from './demo';
+import { runStackDemo, scenario, visibleScenario } from './demo';
 import { Reference } from './reference';
 import { Transcript } from './Transcript';
 import { version } from '../package.json';
@@ -274,7 +274,65 @@ function Live({ code }: { code: string }) {
     </div>
   );
 }
-function Demo() {
+function StackDemo() {
+  const [staticDemo, setStaticDemo] = useState(false);
+  const [result, setResult] = useState('Ready to run 2 + 2 through the offline worker.');
+  const [busy, setBusy] = useState(false);
+  const pending = useRef<AbortController | undefined>(undefined);
+  useEffect(() => () => pending.current?.abort(), []);
+  if (staticDemo) return <StaticDemo />;
+  return (
+    <>
+      <p className="notice">
+        Offline stack · Fake voice provider, real backend and LangGraph worker. No microphone,
+        generated audio or paid calls.
+      </p>
+      <div className="actions">
+        <button
+          disabled={busy}
+          onClick={() => {
+            const controller = new AbortController();
+            pending.current = controller;
+            setBusy(true);
+            setResult('Delegating 2 + 2 to the worker…');
+            void runStackDemo(controller.signal)
+              .then((text) => {
+                if (!controller.signal.aborted) setResult(`Worker result: ${text}`);
+              })
+              .catch((error: unknown) => {
+                if (!controller.signal.aborted)
+                  setResult(error instanceof Error ? error.message : 'Offline stack unavailable.');
+              })
+              .finally(() => {
+                if (pending.current === controller) setBusy(false);
+              });
+          }}
+        >
+          Run offline worker
+        </button>
+        <button
+          disabled={!busy}
+          onClick={() => {
+            pending.current?.abort();
+            setResult('Demo stopped.');
+          }}
+        >
+          Stop demo
+        </button>
+      </div>
+      <p role="status">{result}</p>
+      <button disabled={busy} onClick={() => setStaticDemo(true)}>
+        Use static demo instead
+      </button>
+      <p>
+        Open Grafana on port 3000 to inspect backend metrics. No audio latency is measured in this
+        demo.
+      </p>
+    </>
+  );
+}
+
+function StaticDemo() {
   const [step, setStep] = useState(0);
   const [running, setRunning] = useState(false);
   useEffect(() => {
@@ -390,7 +448,11 @@ export default function App() {
           </label>
         )}
         {mode === 'demo' ? (
-          <Demo />
+          import.meta.env.VITE_OFFLINE_STACK === 'true' ? (
+            <StackDemo />
+          ) : (
+            <StaticDemo />
+          )
         ) : mode === 'reference' ? (
           <Reference code={code} />
         ) : (
