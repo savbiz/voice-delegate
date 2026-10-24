@@ -16,7 +16,8 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
     "lint": "eslint . && prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:stack": "playwright test -c playwright.stack.config.ts"
   },
   "dependencies": {
     "react": "^19.3.0",

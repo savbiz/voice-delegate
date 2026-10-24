@@ -3,10 +3,12 @@
 import argparse
 import json
 import logging
+import os
 import secrets
 import subprocess
 import time
 from collections.abc import Callable
+from pathlib import Path
 
 import httpx
 
@@ -45,10 +47,79 @@ def wait_ready(
     raise SystemExit(message)
 
 
+def smoke_demo() -> None:
+    """Build and exercise the private fake-provider stack and exported worker metrics."""
+    root = Path(__file__).resolve().parents[1]
+    command = [
+        "docker",
+        "compose",
+        "-p",
+        "voice-offline-smoke",
+        "-f",
+        str(root / "deployment/demo/compose.yaml"),
+    ]
+    env = dict(os.environ, DEMO_ORIGIN="http://localhost:8080")
+    try:
+        subprocess.run(
+            [*command, "up", "--build", "-d", "--wait", "--wait-timeout", "120"],
+            check=True,
+            env=env,
+        )
+        with httpx.Client(base_url="http://127.0.0.1:8080", timeout=3) as client:
+            wait_ready(client)
+            require("voice-delegate" in client.get("/").text, "Frontend did not load")
+            client.headers["Origin"] = "https://untrusted.example"
+            require(client.post("/api/sessions").status_code == 403, "Origin guard missing")
+            client.headers["Origin"] = "http://localhost:8080"
+            owner = client.post("/api/sessions").json()
+            path = "/api/sessions/" + owner["id"]
+            client.headers["X-Session-Key"] = owner["key"]
+            require(
+                client.post(path + "/offer", json={"sdp": "v=0\r\n"}).status_code == 200,
+                "Fake offer failed",
+            )
+            deadline = time.monotonic() + 20
+            while time.monotonic() < deadline:
+                status = client.post(path + "/heartbeat").json()
+                if status["delegation"] == "completed" and "4" in status["recap"]["latest_reply"]:
+                    break
+                time.sleep(0.2)
+            else:
+                require(False, "Remote offline delegation did not finish")
+            require(client.post(path + "/close").json()["finalized"], "Fake close failed")
+        with httpx.Client(timeout=3) as client:
+            require(
+                client.get("http://127.0.0.1:3000/api/health").status_code == 200,
+                "Grafana unavailable",
+            )
+            deadline = time.monotonic() + 60
+            while time.monotonic() < deadline:
+                response = client.get(
+                    "http://127.0.0.1:9090/api/v1/query",
+                    params={
+                        "query": 'voice_operation_duration_seconds_count{operation="delegate_task"}'
+                    },
+                )
+                if response.status_code == 200 and response.json()["data"]["result"]:
+                    break
+                time.sleep(1)
+            else:
+                require(False, "Worker duration metric did not reach Prometheus")
+        print("Offline stack smoke passed: frontend, fake voice, worker, metrics; no paid calls.")
+    finally:
+        cleanup([*command, "down", "--volumes", "--remove-orphans"], env)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", default="voice-delegate:ci")
+    parser.add_argument(
+        "--demo", action="store_true", help="Build and test the offline compose stack"
+    )
     options = parser.parse_args()
+    if options.demo:
+        smoke_demo()
+        return
     name = "voice-delegate-check-" + secrets.token_hex(3)
     token = secrets.token_urlsafe(32)
     env = {

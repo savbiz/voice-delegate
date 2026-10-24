@@ -1,0 +1,15 @@
+{
+  "name": "voice-delegate offline demo",
+  "build": { "dockerfile": "Dockerfile" },
+  "features": { "ghcr.io/devcontainers/features/docker-in-docker:2": {} },
+  "remoteUser": "vscode",
+  "postCreateCommand": "bash .devcontainer/start-demo.sh",
+  "forwardPorts": [8080, 3000, 9090],
+  "portsAttributes": {
+    "8080": { "label": "Offline demo", "onAutoForward": "notify" },
+    "3000": { "label": "Grafana (viewer)", "onAutoForward": "silent" },
+    "9090": { "label": "Prometheus", "onAutoForward": "silent" }
+  },
+  "otherPortsAttributes": { "onAutoForward": "ignore" },
+  "hostRequirements": { "cpus": 4, "memory": "8gb", "storage": "16gb" }
+}

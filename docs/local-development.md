@@ -49,3 +49,25 @@ Dependency and browser installation require internet; Python tests use no networ
 If your environment already provides Chromium, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/absolute/path/to/chromium pnpm --dir frontend test:e2e` can use it instead of downloading Playwright's browser. The default CI path uses Playwright's own installation.
 
 Container and same-host scaling checks are recorded in [Docker verification](milestones/m7-m8-verification.md#docker-acceptance-exercise). They exercise authentication, quotas and simulated orchestration without paid voice calls.
+
+## Codespaces and Dev Containers
+
+Open the repository in GitHub Codespaces, or select **Reopen in Container** with a
+Dev Containers editor. `.devcontainer/devcontainer.json` builds a development image,
+installs Docker-in-Docker and starts the same [offline stack](../deployment/README.md#offline-stack-in-one-command).
+No provider key or invitation is needed. Keep all forwarded ports **private**.
+Open forwarded port 8080 for the app, 3000 for Grafana and 9090 for Prometheus.
+
+The startup script computes the exact Codespaces frontend origin from the platform's
+`CODESPACE_NAME` and `GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN` variables. The frontend
+uses same-origin `/api` requests; its private proxy preserves Origin for backend
+validation. Locally the expected origin is `http://localhost:8080`. Re-running the
+startup script recreates changed services. Do not make the Codespaces ports public.
+
+The first build may take several minutes. This is a convenience environment, not a
+claim that cold provisioning completes in 60 seconds. Local Docker smoke is verified
+separately from Codespaces provisioning, which requires a hosted manual check.
+
+```sh
+bash .devcontainer/start-demo.sh
+```

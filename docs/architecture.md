@@ -271,3 +271,19 @@ Uploads time out after two seconds, are not retried, and never end the call. If 
 is unavailable, conversation continues with the existing transcript diagnostics.
 See the [measurement procedure](milestones/live-verification.md) for exclusions and
 [video storyboard](demo-video.md) for the pending cancellation-design dependency.
+
+## Isolated offline stack
+
+The optional demo Compose stack runs a static frontend proxy, the session API with an
+explicit fake-provider factory, a separate private worker using OfflinePlanner, and
+the existing collector/Prometheus/Grafana stack. A fixed fake transcript triggers
+`delegate_task`; worker commentary returns as a synthetic transcript and heartbeat recap.
+The browser uses owned HTTP sessions rather than pretending the fake SDP is playable
+WebRTC. There is no microphone, generated audio or measured voice latency in this mode.
+
+Production factories and the public static demo remain unchanged. The demo factory
+requires `VOICE_OFFLINE_DEMO=1` and rejects provider keys, paid planning, fallback and
+transcript recording. The frontend build opts in with `VITE_OFFLINE_STACK=true`.
+Only loopback frontend and monitoring ports are published. A known fixture bearer value
+protects the private worker interface from accidental unauthenticated calls; it is not
+production authentication. See [offline deployment](../deployment/README.md#offline-stack-in-one-command).

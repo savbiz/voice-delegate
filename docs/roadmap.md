@@ -43,3 +43,13 @@ Azure recovery and existing hosted invitation flows. No paid calls or new live
 results were collected for this change. Formal live/hosted acceptance remains pending.
 The [two-minute storyboard](demo-video.md) marks continued speech during delegated work
 and silence-gated delivery as dependent on the planned cancellation redesign.
+
+## One-command offline demonstration
+
+The demo stack combines the frontend, fake-provider session API, separate OfflinePlanner
+worker and observability in one Compose command. The container smoke verifies a delegated
+calculation and its exported metric without provider keys or paid calls. Browser tests
+verify display and ownership cleanup with deterministic responses. Cold builds require
+registry access; the 60-second goal applies to a warm cache, not initial provisioning.
+Codespaces configuration is supplied; hosted Codespaces acceptance remains pending.
+Live voice, Azure recovery and hosted invitation acceptance retain their existing status.

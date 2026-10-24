@@ -15,5 +15,12 @@
     "types": ["node", "vite/client"],
     "jsx": "react-jsx"
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "tests", "src/**/*.test.ts"]
+  "include": [
+    "vite.config.ts",
+    "playwright.config.ts",
+    "playwright.stack.config.ts",
+    "stack-tests",
+    "tests",
+    "src/**/*.test.ts"
+  ]
 }
