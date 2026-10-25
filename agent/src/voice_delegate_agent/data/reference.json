@@ -240,6 +240,14 @@
     "digest": "420224ec752363131c044e8e7e186eab791a3e4d69e21f652994cd0e57393692"
   },
   {
+    "id": "a49e6f09ff6a0779",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Isolated offline stack",
+    "text": "The private Codespaces proxy may rewrite same-origin browser requests to\n`Origin: https://localhost:8080`. The demo persists an exact origin list including\nboth localhost schemes and its forwarded URL. Route checks, CORS and limiter\nrejections use the same `VOICE_ALLOWED_ORIGINS` list; the deprecated singular alias\nis used only when no list is configured. nginx continues to set the backend Host\nto localhost. See the [measured procedure](local-development.md#measured-codespaces-proxy-behaviour).",
+    "digest": "a49e6f09ff6a0779cb79c1f6c0bc5f8c0b5f1e325ae63df0948f5d68f7712b50"
+  },
+  {
     "id": "c38bee83afe223be",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
@@ -248,19 +256,67 @@
     "digest": "c38bee83afe223be4eee092854daaa2fa1d98549fcd3db3cd45071071a004a54"
   },
   {
-    "id": "d6cc8a7ec23b2c7b",
+    "id": "409dcd0ad3d8e88a",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Codespaces and Dev Containers",
-    "text": "The startup script computes the exact Codespaces frontend origin from the platform's\n`CODESPACE_NAME` and `GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN` variables. The frontend\nuses same-origin `/api` requests; its private proxy preserves Origin for backend\nvalidation. Locally the expected origin is `http://localhost:8080`. Re-running the\nstartup script recreates changed services. Do not make the Codespaces ports public.",
-    "digest": "d6cc8a7ec23b2c7be230d4e3d5652bfd5a0c0cb212a5eaa665014f524fe2845f"
+    "text": "The post-start hook waits up to 120 seconds for Docker-in-Docker before starting\nCompose. It runs after creation and after a stopped devcontainer is restarted.\nIf startup fails, it prints recent Compose logs and the inspection commands:",
+    "digest": "409dcd0ad3d8e88aceb041bcb29ffee3a4bb454dee75d47ebf73bf2ebc1386ad"
   },
   {
-    "id": "63f34d148e69f06e",
+    "id": "86d8e5a888fbd742",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Codespaces and Dev Containers",
-    "text": "The first build may take several minutes. This is a convenience environment, not a\nclaim that cold provisioning completes in 60 seconds. Local Docker smoke is verified\nseparately from Codespaces provisioning, which requires a hosted manual check.",
-    "digest": "63f34d148e69f06e47084dba3895bb9275d39b14fa8bb249830a82ce4066b6d1"
+    "text": "The script persists `DEMO_ALLOWED_ORIGINS` in ignored `deployment/demo/.env`, which\nCompose reloads for subsequent commands with the same Compose file. No provider\ncredentials are written. Locally the list contains only `http://localhost:8080`.\nIn Codespaces it also contains `https://localhost:8080` and the public forwarded\norigin derived from `CODESPACE_NAME` and `GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN`.\nThe backend uses `VOICE_ALLOWED_ORIGINS`; `VOICE_ALLOWED_ORIGIN` remains a deprecated\nsingle-origin alias. An explicit list takes precedence over the alias.",
+    "digest": "86d8e5a888fbd74285b9a6621d24df40675735c1aef81525dc58516829715990"
+  },
+  {
+    "id": "c1ade21e0b7c09e0",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Measured Codespaces proxy behaviour",
+    "text": "Hosted acceptance on 2026-10-25 found that the port-forwarding proxy rewrites\n`Origin` to `https://localhost:8080` on requests to the page's own forwarded port,\nand `Host` to `localhost:8080`. Requests to a different forwarded port retained\nthe original Origin. Setting the rewritten HTTPS origin allowed an offline\nsession, completed delegation and exported metrics. This is observed platform\nbehaviour, not a guarantee that the proxy will always rewrite headers.",
+    "digest": "c1ade21e0b7c09e091d91fb91df2eb8445e9e19128bce2315bddfc45990881b5"
+  },
+  {
+    "id": "c3732b9bded00532",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Measured Codespaces proxy behaviour",
+    "text": "To repeat the measurement, stop the frontend container, start a small HTTP echo\nserver on port 8080 that prints only `Origin` and `Host`, open its private forwarded\nURL and send a same-origin fetch from the browser console. Compare a fetch from a\nsecond private forwarded port. Do not print authorization or cookie headers. Stop\nthe echo server before restarting the stack. nginx still passes `Host: localhost`\nto the backend; no allowed-host change is required.",
+    "digest": "c3732b9bded0053217564e0f80cd0bbcfe139aa20d193786b61e43286486e3b9"
+  },
+  {
+    "id": "7d494812bd129ef6",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Measured Codespaces proxy behaviour",
+    "text": "For example, run this probe instead of the stopped frontend, then execute\n`fetch('/probe', {method: 'POST'})` from its forwarded page's browser console:",
+    "digest": "7d494812bd129ef6ccbdcf30721b7cebc44f3634ac8a334ab323f48924a51af0"
+  },
+  {
+    "id": "e990e28f9ce93551",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Measured Codespaces proxy behaviour",
+    "text": "Stop the probe with Ctrl-C and run `bash .devcontainer/start-demo.sh` to restore\nthe frontend. For the cross-port comparison, forward another private echo-server\nport and fetch the port-8080 URL from that page; a CORS error can occur after the\nrequest reaches the probe, but the printed Origin remains useful evidence.",
+    "digest": "e990e28f9ce93551121331aec6a69dace51f6b594b92c36cf0ecbf05dcb971f5"
+  },
+  {
+    "id": "c20a0ba6e60c8e5b",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Measured Codespaces proxy behaviour",
+    "text": "The offline demo populates operation duration, operations by outcome and\n**Delegations by outcome**. Transcript wait, worker cancellations and browser\naudio playback require live voice; an empty panel is expected offline.",
+    "digest": "c20a0ba6e60c8e5b249993b210f3c9e19db143d937cec5dc7d8d31bdac493bfd"
+  },
+  {
+    "id": "65afc9304f0d877b",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Measured Codespaces proxy behaviour",
+    "text": "The first build may take several minutes; the warm-cache goal excludes cold\nprovisioning. The reported run did not record creation/build timings or its commit.\nIf a measured cold start exceeds four minutes, enable a Codespaces prebuild in\nrepository Settings → Codespaces → Prebuilds, select this devcontainer and branch,\nand rerun the timing from a newly created codespace. Prebuilds consume the account's\nCodespaces allowance; check that allowance before enabling them. Keep ports private.",
+    "digest": "65afc9304f0d877b5ea7bce7467973827c5eb18e78ed5aa8eb2074c3684ccd04"
   }
 ]

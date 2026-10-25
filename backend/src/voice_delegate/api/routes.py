@@ -26,7 +26,7 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
     """Bind a router to one lifecycle-owned manager, avoiding untyped app state."""
 
     async def check_origin(request: Request, response: Response) -> None:
-        if request.headers.get("origin") != manager.settings.allowed_origin:
+        if request.headers.get("origin") not in manager.settings.allowed_origins:
             raise HTTPException(403, "Unexpected request origin")
         response.headers["Cache-Control"] = "no-store"
 

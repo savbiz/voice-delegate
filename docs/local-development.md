@@ -58,16 +58,77 @@ installs Docker-in-Docker and starts the same [offline stack](../deployment/READ
 No provider key or invitation is needed. Keep all forwarded ports **private**.
 Open forwarded port 8080 for the app, 3000 for Grafana and 9090 for Prometheus.
 
-The startup script computes the exact Codespaces frontend origin from the platform's
-`CODESPACE_NAME` and `GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN` variables. The frontend
-uses same-origin `/api` requests; its private proxy preserves Origin for backend
-validation. Locally the expected origin is `http://localhost:8080`. Re-running the
-startup script recreates changed services. Do not make the Codespaces ports public.
-
-The first build may take several minutes. This is a convenience environment, not a
-claim that cold provisioning completes in 60 seconds. Local Docker smoke is verified
-separately from Codespaces provisioning, which requires a hosted manual check.
+The post-start hook waits up to 120 seconds for Docker-in-Docker before starting
+Compose. It runs after creation and after a stopped devcontainer is restarted.
+If startup fails, it prints recent Compose logs and the inspection commands:
 
 ```sh
 bash .devcontainer/start-demo.sh
+docker compose -f deployment/demo/compose.yaml ps
+docker compose -f deployment/demo/compose.yaml logs --tail 30
 ```
+
+The script persists `DEMO_ALLOWED_ORIGINS` in ignored `deployment/demo/.env`, which
+Compose reloads for subsequent commands with the same Compose file. No provider
+credentials are written. Locally the list contains only `http://localhost:8080`.
+In Codespaces it also contains `https://localhost:8080` and the public forwarded
+origin derived from `CODESPACE_NAME` and `GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN`.
+The backend uses `VOICE_ALLOWED_ORIGINS`; `VOICE_ALLOWED_ORIGIN` remains a deprecated
+single-origin alias. An explicit list takes precedence over the alias.
+
+### Measured Codespaces proxy behaviour
+
+Hosted acceptance on 2026-10-25 found that the port-forwarding proxy rewrites
+`Origin` to `https://localhost:8080` on requests to the page's own forwarded port,
+and `Host` to `localhost:8080`. Requests to a different forwarded port retained
+the original Origin. Setting the rewritten HTTPS origin allowed an offline
+session, completed delegation and exported metrics. This is observed platform
+behaviour, not a guarantee that the proxy will always rewrite headers.
+
+To repeat the measurement, stop the frontend container, start a small HTTP echo
+server on port 8080 that prints only `Origin` and `Host`, open its private forwarded
+URL and send a same-origin fetch from the browser console. Compare a fetch from a
+second private forwarded port. Do not print authorization or cookie headers. Stop
+the echo server before restarting the stack. nginx still passes `Host: localhost`
+to the backend; no allowed-host change is required.
+
+For example, run this probe instead of the stopped frontend, then execute
+`fetch('/probe', {method: 'POST'})` from its forwarded page's browser console:
+
+```sh
+docker compose -f deployment/demo/compose.yaml stop frontend
+uv run python - <<'PY'
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+class Echo(BaseHTTPRequestHandler):
+    def do_GET(self):
+        print({name: self.headers.get(name) for name in ("Origin", "Host")}, flush=True)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html")
+        self.end_headers()
+        self.wfile.write(b"<title>Private origin probe</title>Origin probe")
+
+    do_POST = do_GET
+
+    def log_message(self, *args):
+        pass
+
+HTTPServer(("0.0.0.0", 8080), Echo).serve_forever()
+PY
+```
+
+Stop the probe with Ctrl-C and run `bash .devcontainer/start-demo.sh` to restore
+the frontend. For the cross-port comparison, forward another private echo-server
+port and fetch the port-8080 URL from that page; a CORS error can occur after the
+request reaches the probe, but the printed Origin remains useful evidence.
+
+The offline demo populates operation duration, operations by outcome and
+**Delegations by outcome**. Transcript wait, worker cancellations and browser
+audio playback require live voice; an empty panel is expected offline.
+
+The first build may take several minutes; the warm-cache goal excludes cold
+provisioning. The reported run did not record creation/build timings or its commit.
+If a measured cold start exceeds four minutes, enable a Codespaces prebuild in
+repository Settings → Codespaces → Prebuilds, select this devcontainer and branch,
+and rerun the timing from a newly created codespace. Prebuilds consume the account's
+Codespaces allowance; check that allowance before enabling them. Keep ports private.

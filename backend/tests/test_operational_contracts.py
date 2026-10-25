@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def test_production_rejects_default_hosts_and_accepts_explicit_hosts() -> None:
     values = {
         "environment": "production",
-        "allowed_origin": "https://demo.example",
+        "allowed_origins": ["https://demo.example"],
         "access_token": "a" * 32,
     }
     with pytest.raises(ValidationError, match="VOICE_ALLOWED_HOSTS without testserver"):

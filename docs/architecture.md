@@ -287,3 +287,10 @@ transcript recording. The frontend build opts in with `VITE_OFFLINE_STACK=true`.
 Only loopback frontend and monitoring ports are published. A known fixture bearer value
 protects the private worker interface from accidental unauthenticated calls; it is not
 production authentication. See [offline deployment](../deployment/README.md#offline-stack-in-one-command).
+
+The private Codespaces proxy may rewrite same-origin browser requests to
+`Origin: https://localhost:8080`. The demo persists an exact origin list including
+both localhost schemes and its forwarded URL. Route checks, CORS and limiter
+rejections use the same `VOICE_ALLOWED_ORIGINS` list; the deprecated singular alias
+is used only when no list is configured. nginx continues to set the backend Host
+to localhost. See the [measured procedure](local-development.md#measured-codespaces-proxy-behaviour).

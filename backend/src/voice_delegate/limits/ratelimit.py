@@ -29,13 +29,13 @@ class RateLimitMiddleware:
         max_clients: int = 10000,
         clock: Callable[[], float] = time.monotonic,
         trusted_proxy_hops: int = 1,
-        allowed_origin: str | None = None,
+        allowed_origins: list[str] | None = None,
     ) -> None:
         if rate <= 0 or burst < 1 or max_clients < 1 or trusted_proxy_hops < 1:
             message = "Rate limiter budgets must be positive"
             raise ValueError(message)
         self.app = app
-        self.allowed_origin = allowed_origin
+        self.allowed_origins = allowed_origins or []
         self.trusted_proxy_hops = trusted_proxy_hops
         self.trust_proxy = trust_proxy
         self.rate = rate
@@ -96,10 +96,9 @@ class RateLimitMiddleware:
         if scope["type"] == "http" and not self.allow(self.client(scope)):
             headers = {"Cache-Control": "no-store"}
             # Rejections bypass inner CORS; keep them readable only by the configured frontend.
-            if self.allowed_origin and Headers(scope=scope).get("origin") == self.allowed_origin:
-                headers.update(
-                    {"Access-Control-Allow-Origin": self.allowed_origin, "Vary": "Origin"}
-                )
+            origin = Headers(scope=scope).get("origin")
+            if origin is not None and origin in self.allowed_origins:
+                headers.update({"Access-Control-Allow-Origin": origin, "Vary": "Origin"})
             await JSONResponse(
                 {"detail": "Request rate limit exceeded"},
                 status_code=429,

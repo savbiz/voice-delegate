@@ -16,7 +16,7 @@ services:
     command: ["/app/.venv/bin/uvicorn", "voice_delegate.scaling.scripted_app:create_demo_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "--no-proxy-headers"]
     environment:
       VOICE_OFFLINE_DEMO: "1"
-      VOICE_ALLOWED_ORIGIN: ${DEMO_ORIGIN:-http://localhost:8080}
+      VOICE_ALLOWED_ORIGINS: '${DEMO_ALLOWED_ORIGINS:-["http://localhost:8080"]}'
       VOICE_ALLOWED_HOSTS: '["localhost"]'
       VOICE_WORKER_MODE: offline
       VOICE_WORKER_EXECUTION: remote
