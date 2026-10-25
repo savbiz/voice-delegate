@@ -393,3 +393,16 @@ export function endedWorkerState(state: LiveState): LiveState {
         : 'Session ended. No further work will be delivered.',
   };
 }
+
+export function recapText(recap: {
+  latest_request: string;
+  latest_reply: string;
+  interrupted: boolean;
+}): string {
+  return (
+    `${recap.interrupted ? 'Interrupted task. ' : ''}Latest request: ${recap.latest_request || '—'}` +
+    (recap.latest_reply
+      ? ` · Latest assistant transcript (may precede this request): ${recap.latest_reply}`
+      : '')
+  );
+}

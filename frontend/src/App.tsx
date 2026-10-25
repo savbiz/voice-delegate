@@ -88,8 +88,7 @@ function Live({ code }: { code: string }) {
                 <li key={task.id}>
                   <strong>{task.goal.slice(0, 100)}</strong>{' '}
                   <small>
-                    {task.id} · {taskLabel(task.status)} · {Math.floor(task.elapsed_seconds)} s
-                    total
+                    {task.id} · {taskLabel(task.status)} · {task.elapsed_seconds.toFixed(1)} s total
                     {task.work_seconds !== undefined &&
                       task.delivery_wait_seconds !== undefined && (
                         <>

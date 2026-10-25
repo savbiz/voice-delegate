@@ -3,6 +3,7 @@ import {
   chatBubbles,
   endedWorkerState,
   taskLabel,
+  recapText,
   createLiveStore,
   initialLiveState,
   processEvent,
@@ -304,4 +305,19 @@ test('ending keeps last reported tasks and does not imply playback completion or
   expect(workerState(state, 'completed').workerMessage).toContain('full playback is not confirmed');
   expect(taskLabel('completed')).toBe('Result sent to voice provider');
   expect(taskLabel('pending')).toBe('Waiting for silence');
+});
+
+test('recap never implies the latest assistant excerpt answers the latest request', () => {
+  expect(
+    recapText({
+      latest_request: 'Stop that topic',
+      latest_reply: 'Earlier answer',
+      interrupted: false,
+    }),
+  ).toBe(
+    'Latest request: Stop that topic · Latest assistant transcript (may precede this request): Earlier answer',
+  );
+  expect(recapText({ latest_request: '', latest_reply: '', interrupted: true })).toBe(
+    'Interrupted task. Latest request: —',
+  );
 });

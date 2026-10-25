@@ -1,5 +1,6 @@
 """Bounded transcript context for client delegation, not a durable conversation log."""
 
+import json
 from dataclasses import dataclass, field
 
 from voice_delegate.limits.defaults import TRANSCRIPT_GAP_MS
@@ -50,6 +51,23 @@ class History:
     def context(self) -> str:
         """Render speaker labels as untrusted user data."""
         return self._render(self.turns or self.entries)
+
+    def delegation_context(self) -> str:
+        """Identify the preceding user turn without inferring the intent of a correction."""
+        users = [
+            item.text
+            for item in (self.turns or self.entries)
+            if item.speaker == "user" and item.text.strip()
+        ]
+        return json.dumps(
+            {
+                "previous_user_turn": truncate(users[-2], 256, max_bytes=2048)
+                if len(users) > 1
+                else "",
+                "conversation": truncate(self.context(), 1536, max_bytes=12000),
+            },
+            ensure_ascii=False,
+        )
 
     def goal(self) -> str:
         """Use the latest user utterance; never synthesize a task from metadata."""

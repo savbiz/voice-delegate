@@ -9,7 +9,7 @@ import type { AudioRecording } from './recording';
 import type { DebugSample } from './debug';
 import { shouldRecover } from './recovery';
 
-import { endedWorkerState, processEvent, workerState } from './store';
+import { endedWorkerState, processEvent, recapText, workerState } from './store';
 import type { LiveStore, Phase } from './store';
 export type Preferences = { language: string; mode: string; debug_recording?: boolean };
 export function createLiveSession(
@@ -606,12 +606,7 @@ export function createLiveSession(
                 });
                 renderSources(state.sources ?? []);
                 if (state.recap) {
-                  const recap =
-                    `${state.recap.interrupted ? 'Interrupted task. ' : ''}Latest request: ${state.recap.latest_request || '—'}` +
-                    (state.recap.latest_reply
-                      ? ` · Latest reply excerpt: ${state.recap.latest_reply}`
-                      : '');
-                  store.update({ recap });
+                  store.update({ recap: recapText(state.recap) });
                 }
                 showWorker(state.delegation);
                 if (state.state === 'closed' || state.state === 'closing')

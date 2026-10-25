@@ -162,7 +162,10 @@ class SessionManager:
             "Do not claim a spoken cancellation stopped the worker; the Cancel button stops work. "
             "When asked to use the calculator, delegate rather than answering from memory. "
             "For a correction or a reference to an earlier request, use the conversation context; "
-            "do not ask again for operands that are already present."
+            "do not ask again for operands that are already present. "
+            "A request to use a tool refers "
+            "to the latest user topic unless the user explicitly names an older request. "
+            "Never revive an older calculation just because it used a tool."
         )
 
     async def connect(self, session: Session, offer_sdp: str) -> WebRTCAnswer:
@@ -299,7 +302,7 @@ class SessionManager:
                                     event.goal if event.goal is not None else session.history.goal()
                                 )
                                 or " ",
-                                context=session.history.context(),
+                                context=session.history.delegation_context(),
                             ),
                             session.generation,
                         )
@@ -314,7 +317,7 @@ class SessionManager:
                         DelegationInput(
                             goal=(event.goal if event.goal is not None else session.history.goal())
                             or " ",
-                            context=session.history.context(),
+                            context=session.history.delegation_context(),
                         ),
                         connection,
                         lambda: session.state == "connected",

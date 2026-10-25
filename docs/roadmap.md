@@ -75,3 +75,9 @@ debugging now records portfolio lifecycle events and the correct worker state. L
 for context-dependent calculations and suppressing unwanted parts of compound results still
 needs verification. Spoken cancellation remains advisory only when its Decisions flag is enabled;
 with that flag off, use the task Cancel control to stop work.
+
+The correction path now explicitly supplies the previous user turn to the worker, with
+instructions to prefer the recent topic over an unrelated older tool result. Offline tests
+verify this input contract; semantic reference resolution still requires live validation.
+Task durations display one decimal place, and recap labels no longer imply that the latest
+assistant excerpt answers the latest user request.
