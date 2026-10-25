@@ -44,6 +44,7 @@ let delegation: string;
 let intentCancellation = false;
 let transportState: string;
 let closeResponse: Promise<Response> | undefined;
+let heartbeatResponse: Promise<Response> | undefined;
 const source = {
   id: 's1',
   title: 'Architecture',
@@ -64,6 +65,7 @@ beforeEach(() => {
   intentCancellation = false;
   transportState = 'connected';
   closeResponse = undefined;
+  heartbeatResponse = undefined;
   sources = [source];
   stopTrack = vi.fn();
   vi.stubGlobal('window', new EventTarget());
@@ -79,6 +81,7 @@ beforeEach(() => {
       requests.push({ path, init });
       if (path.endsWith('/close') && closeResponse) return closeResponse;
       if (path.endsWith('/heartbeat')) {
+        if (heartbeatResponse) return heartbeatResponse;
         const status = responses.shift() ?? 200;
         return Response.json(
           { state: transportState, delegation, sources, generation: 0, fallback_available: true },
@@ -421,4 +424,40 @@ test('intent mode reports activity and explicit task cancellation without cancel
   expect(
     JSON.parse(String(requests.find((r) => r.path.endsWith('/interrupt'))!.init.body)),
   ).toEqual({ task_id: 'first' });
+});
+
+test('intent heartbeat preserves thirty seconds of consecutive failure tolerance', async () => {
+  intentCancellation = true;
+  const store = await start();
+  responses = Array<number>(15).fill(500);
+  await vi.advanceTimersByTimeAsync(28000);
+  expect(store.getSnapshot().active).toBe(true);
+  expect(requests.filter((r) => r.path.endsWith('/heartbeat'))).toHaveLength(14);
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(store.getSnapshot().phase).toBe('ended');
+  expect(stopTrack).toHaveBeenCalledOnce();
+});
+
+test('slow intent heartbeat prevents overlapping requests and updates tasks when it finishes', async () => {
+  intentCancellation = true;
+  const store = await start();
+  let resolve: (response: Response) => void = () => undefined;
+  heartbeatResponse = new Promise((complete) => {
+    resolve = complete;
+  });
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(requests.filter((r) => r.path.endsWith('/heartbeat'))).toHaveLength(1);
+  await vi.advanceTimersByTimeAsync(6000);
+  expect(requests.filter((r) => r.path.endsWith('/heartbeat'))).toHaveLength(1);
+  expect(store.getSnapshot().active).toBe(true);
+  const tasks = [{ id: 'pending', goal: 'Calculate', status: 'running', elapsed_seconds: 1 }];
+  resolve(
+    Response.json({ state: 'connected', delegation: 'running', tasks, decision_cost_usd: 0.25 }),
+  );
+  heartbeatResponse = undefined;
+  await vi.advanceTimersByTimeAsync(1);
+  expect(store.getSnapshot().tasks).toEqual(tasks);
+  expect(store.getSnapshot().decisionCostUsd).toBe(0.25);
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(requests.filter((r) => r.path.endsWith('/heartbeat'))).toHaveLength(2);
 });

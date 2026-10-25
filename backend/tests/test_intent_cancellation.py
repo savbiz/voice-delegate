@@ -386,3 +386,55 @@ async def test_failed_results_and_send_failures_freeze_duration(
     finally:
         await runner.close(state)
         await base.aclose()
+
+
+async def test_new_task_during_cancel_settlement_does_not_break_delivery(
+    blocking_worker: BlockingWorker, fake_clock: FakeClock
+) -> None:
+    class BlockingSend(FakeConnection):
+        def __init__(self) -> None:
+            super().__init__()
+            self.started = asyncio.Event()
+            self.release = asyncio.Event()
+
+        async def send(self, command: Commentary) -> None:
+            self.started.set()
+            await self.release.wait()
+            await super().send(command)
+
+    base = DelegationRunner(blocking_worker)
+    runner = IntentRunner(base, Settings(intent_cancellation=True), fake_clock, None)
+    state = Portfolio(jobs={"old": Job("old", "Earlier task", 0, 0, status="cancelled")})
+    connection = BlockingSend()
+    delivery = asyncio.create_task(runner.deliver(state, connection, 0))
+    try:
+        await connection.started.wait()
+        runner.start(state, "new", DelegationInput(goal="calculate 2+2"), 0)
+        connection.release.set()
+        await delivery
+        assert state.jobs["old"].settled
+        assert state.jobs["new"].status == "running"
+        assert len(connection.commands) == 1
+        assert connection.commands[0].delegation_id == "old"
+    finally:
+        connection.release.set()
+        await delivery
+        await runner.close(state)
+        await base.aclose()
+
+
+@pytest.mark.parametrize("semantic", [False, True])
+async def test_cancellation_guidance_matches_enabled_policy(semantic: bool) -> None:
+    settings = Settings(
+        intent_cancellation=True,
+        decisions_cancel=semantic,
+        openai_api_key=SecretStr("offline-fixture"),
+    )
+    manager = SessionManager(FakeProvider(), settings, decider=FakeDecider())
+    try:
+        instructions = manager.config().instructions
+        assert ("the Cancel button stops work" in instructions) is not semantic
+        assert ("after confirmation from its current task state" in instructions) is semantic
+        assert ("cancellation as requested, not completed" in instructions) is semantic
+    finally:
+        await manager.aclose()

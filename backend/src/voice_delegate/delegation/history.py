@@ -103,7 +103,12 @@ class History:
             and not event.committed
             and not previous.committed
             and (
-                index == len(self.turns) - 1
+                (
+                    index == len(self.turns) - 1
+                    and (
+                        event.start_ms <= 0 or event.start_ms - previous.end_ms <= TRANSCRIPT_GAP_MS
+                    )
+                )
                 or (
                     event.start_ms > 0
                     and self.turns[-1].start_ms <= previous.end_ms

@@ -153,14 +153,24 @@ class SessionManager:
     def _instructions(self) -> str:
         if not self.settings.intent_cancellation:
             return VOICE_INSTRUCTIONS
+        cancellation = (
+            "Spoken requests may trigger semantic cancellation. Report a task as cancelled only "
+            "after confirmation from its current task state or a backend cancellation message; "
+            "until then, describe cancellation as requested, not completed. "
+            if self.settings.decisions_cancel
+            else (
+                "Do not claim a spoken cancellation stopped the worker; "
+                "the Cancel button stops work. "
+            )
+        )
         return VOICE_INSTRUCTIONS + (
             " Speaking does not cancel delegated work. Continue the conversation while work runs. "
             "A new request does not replace earlier work. Only an explicit cancellation stops it. "
             "Delayed worker results include the original request; "
             "acknowledge that request naturally. If the user no longer wants a topic narrated, "
             "omit that topic from delayed commentary while retaining any still-requested result. "
-            "Do not claim a spoken cancellation stopped the worker; the Cancel button stops work. "
-            "When asked to use the calculator, delegate rather than answering from memory. "
+            + cancellation
+            + "When asked to use the calculator, delegate rather than answering from memory. "
             "For a correction or a reference to an earlier request, use the conversation context; "
             "do not ask again for operands that are already present. "
             "A request to use a tool refers "

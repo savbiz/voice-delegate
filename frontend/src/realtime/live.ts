@@ -594,42 +594,45 @@ export function createLiveSession(
         store.update({ audioTimingStatus: 'Audio measurement unavailable in this browser.' });
         /* Provider-side speech detection remains authoritative without local analysis. */
       }
-      heartbeat = setInterval(
-        () => {
-          if (attempt !== attemptId) return;
-          void request<{
-            delegation: string;
-            tasks?: TaskStatus[];
-            decision_cost_usd?: number;
-            state: string;
-            sources?: Source[];
-            recap?: { latest_request: string; latest_reply: string; interrupted: boolean };
-          }>(`/sessions/${created.id}/heartbeat`, created, undefined, 8000)
-            .then((state) => {
-              if (attempt === attemptId) {
-                heartbeatFailures = 0;
-                store.update({
-                  tasks: state.tasks ?? [],
-                  decisionCostUsd: state.decision_cost_usd ?? 0,
-                });
-                renderSources(state.sources ?? []);
-                if (state.recap) {
-                  store.update({ recap: recapText(state.recap) });
-                }
-                showWorker(state.delegation);
-                if (state.state === 'closed' || state.state === 'closing')
-                  void finish('Conversation ended.');
-                if (shouldRecover('heartbeat', state.state))
-                  void recover('Provider connection lost.');
+      const heartbeatMs = config.intent_cancellation ? 2000 : 10000;
+      let heartbeatPending = false;
+      heartbeat = setInterval(() => {
+        if (attempt !== attemptId || heartbeatPending) return;
+        heartbeatPending = true;
+        void request<{
+          delegation: string;
+          tasks?: TaskStatus[];
+          decision_cost_usd?: number;
+          state: string;
+          sources?: Source[];
+          recap?: { latest_request: string; latest_reply: string; interrupted: boolean };
+        }>(`/sessions/${created.id}/heartbeat`, created, undefined, 8000)
+          .then((state) => {
+            if (attempt === attemptId) {
+              heartbeatFailures = 0;
+              store.update({
+                tasks: state.tasks ?? [],
+                decisionCostUsd: state.decision_cost_usd ?? 0,
+              });
+              renderSources(state.sources ?? []);
+              if (state.recap) {
+                store.update({ recap: recapText(state.recap) });
               }
-            })
-            .catch(() => {
-              if (attempt === attemptId && ++heartbeatFailures >= 3)
-                void finish('Server connection lost or session expired.');
-            });
-        },
-        config.intent_cancellation ? 2000 : 10000,
-      );
+              showWorker(state.delegation);
+              if (state.state === 'closed' || state.state === 'closing')
+                void finish('Conversation ended.');
+              if (shouldRecover('heartbeat', state.state))
+                void recover('Provider connection lost.');
+            }
+          })
+          .catch(() => {
+            if (attempt === attemptId && ++heartbeatFailures >= Math.ceil(30000 / heartbeatMs))
+              void finish('Server connection lost or session expired.');
+          })
+          .finally(() => {
+            heartbeatPending = false;
+          });
+      }, heartbeatMs);
       startup = setTimeout(() => {
         void finish('Voice startup timed out.');
       }, 40000);

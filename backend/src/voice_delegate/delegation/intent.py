@@ -223,7 +223,7 @@ class IntentRunner:
         self, state: Portfolio, connection: RealtimeConnection | None, transport: int
     ) -> None:
         now = self.clock()
-        for job in state.jobs.values():
+        for job in list(state.jobs.values()):
             if (
                 job.status in {"cancelled", "expired"}
                 and not job.settled

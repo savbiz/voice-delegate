@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
+import pytest
 from conftest import ASGIClientFactory, FakeClock
 from fastapi import FastAPI
 from voice_delegate.api.routes import build_router
@@ -179,3 +180,14 @@ def test_delegation_context_escapes_untrusted_fields_and_handles_missing_prior_t
     context = json.loads(history.delegation_context())
     assert context["previous_user_turn"] == ""
     assert '"override"' in context["conversation"]
+
+
+@pytest.mark.parametrize(("start_ms", "merged"), [(0, True), (1000, True), (1001, False)])
+def test_same_speaker_turns_respect_timestamp_gap(start_ms: int, merged: bool) -> None:
+    history = History()
+    history.append(Transcript("user", "First request", 100, 200))
+    history.append(Transcript("user", " second request", start_ms, max(start_ms, 1100)))
+    assert len(history.turns) == (1 if merged else 2)
+    assert history.goal() == ("First request second request" if merged else "second request")
+    if not merged:
+        assert json.loads(history.delegation_context())["previous_user_turn"] == "First request"

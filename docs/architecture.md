@@ -245,8 +245,9 @@ Natural-language planning requires the separately configured paid text model.
 ## Optional intent cancellation
 
 With `VOICE_INTENT_CANCELLATION=true`, speaking pauses narration while independent worker
-jobs continue. Up to two running or pending jobs occupy bounded slots. Only explicit task
-cancellation, session end, or an enabled semantic decision cancels work. The existing
+jobs continue. Up to two running or pending jobs occupy bounded slots. Speech alone no
+longer cancels work. Explicit task cancellation, session end, enabled semantic decisions
+and the existing worker execution timeouts still cancel work. The existing
 interruption path and diagrams describe the default mode; this optional path amends it.
 
 The browser sends owner-authenticated `/activity` reports with boolean microphone/remote

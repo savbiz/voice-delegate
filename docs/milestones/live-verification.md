@@ -15,6 +15,10 @@ transcripts or private audio to the repository or PR.
   recording for this run. Keep only numeric measurements and pass/fail observations.
 - Follow [deployment commands and variables](../../deployment/README.md#live-acceptance).
   Enable `VOICE_AUDIO_TIMING=true`; keep it false outside the measurement run.
+- For the continued-work check in smoke step 6, enable `VOICE_INTENT_CANCELLATION=true`
+  on the backend, restart it and start a new session. The flag defaults to false;
+  without it, speech uses the original task-cancellation behaviour. Record the flag
+  value with the results; do not treat a default-mode run as intent-mode acceptance.
 - Use the existing Vercel frontend and Railway backend, not a new deployment.
 - Confirm `/healthz` succeeds and authenticated session creation accepts the intended
   invitation. Do not infer voice readiness from health alone.

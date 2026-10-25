@@ -208,12 +208,12 @@
     "digest": "fd3ebd44d09bb660bd0f1d0f239152f6133314a5e4c4e08cf0acd4af65b70fed"
   },
   {
-    "id": "105d5ff8fa3a2f07",
+    "id": "a19a3339e61fe81a",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Optional intent cancellation",
-    "text": "With `VOICE_INTENT_CANCELLATION=true`, speaking pauses narration while independent worker\njobs continue. Up to two running or pending jobs occupy bounded slots. Only explicit task\ncancellation, session end, or an enabled semantic decision cancels work. The existing\ninterruption path and diagrams describe the default mode; this optional path amends it.",
-    "digest": "105d5ff8fa3a2f075031d310644468f5b0ec4d4419c218363d5a0ba4de9b8575"
+    "text": "With `VOICE_INTENT_CANCELLATION=true`, speaking pauses narration while independent worker\njobs continue. Up to two running or pending jobs occupy bounded slots. Speech alone no\nlonger cancels work. Explicit task cancellation, session end, enabled semantic decisions\nand the existing worker execution timeouts still cancel work. The existing\ninterruption path and diagrams describe the default mode; this optional path amends it.",
+    "digest": "a19a3339e61fe81a43fa87d5ecb8aff9de57f25c14ca11df64e777df6d9e3271"
   },
   {
     "id": "5196a28d1a83764e",
