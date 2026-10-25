@@ -1,3 +1,4 @@
+import { ConnectionSounds } from './connection-sounds';
 import { AudioTimingMeter } from './audio-timing';
 /** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
 import type { Source } from '../reference';
@@ -18,7 +19,9 @@ export function createLiveSession(
   getAccessCode: () => string,
   getPreferences: () => Preferences,
   getAudioConsent: () => boolean = () => false,
+  getConnectionSounds: () => boolean = () => false,
 ) {
+  const sounds = new ConnectionSounds();
   let diagnosticId = crypto.randomUUID();
   let reportBody: { diagnostic_id: string; category: string; state: string } | undefined;
   let reportSent = false;
@@ -160,6 +163,7 @@ export function createLiveSession(
   async function finish(message: string, userStopped = false): Promise<void> {
     if (ending) return;
     ending = true;
+    sounds.ended();
     store.update({ ending: true });
     const closedAttempt = ++attemptId;
     const owner = session;
@@ -204,8 +208,12 @@ export function createLiveSession(
   function receiveEvent(raw: unknown): void {
     const result = processEvent(store.getSnapshot(), raw, performance.now());
     store.update(result.state);
-    if (result.effect === 'started') clearTimeout(startup);
+    if (result.effect === 'started') {
+      clearTimeout(startup);
+      sounds.established();
+    }
     if (result.effect === 'closed' && !ending) {
+      sounds.ended();
       attemptId += 1;
       release();
       showState(
@@ -667,6 +675,7 @@ export function createLiveSession(
   };
 
   const onPageHide = () => {
+    sounds.dispose();
     if (session) {
       void fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/sessions/${session.id}/close`, {
         ...requestOptions(session, undefined, 5000),
@@ -681,7 +690,10 @@ export function createLiveSession(
   window.addEventListener('pagehide', onPageHide);
   return {
     start: () => {
-      if (!store.getSnapshot().active && !ending && !recovering) void begin();
+      if (!store.getSnapshot().active && !ending && !recovering) {
+        sounds.arm(getConnectionSounds());
+        void begin();
+      }
     },
     stop: () => {
       void finish('Conversation ended.', true);
@@ -690,6 +702,7 @@ export function createLiveSession(
     feedback: onFeedback,
     dispose: () => {
       disposed = true;
+      sounds.dispose();
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       window.removeEventListener('pagehide', onPageHide);
       onPageHide();

@@ -22,3 +22,10 @@ Vercel's project root is `frontend`, preset Vite, output `dist`, install command
 The invitation entered in the UI authorizes API requests and is retained for that session's cleanup. Do not embed invitations in source code or build variables. Provider-side speech detection is authoritative; local onset detection is a latency optimisation. Transcript gaps are estimates, not measured audio playback latency.
 
 See [architecture](../docs/architecture.md), [API](../docs/api.md), [configuration](../docs/configuration.md) and [deployment](../deployment/README.md).
+
+In Live voice, **Voice settings & recording → Connection sounds** enables brief local
+ascending/descending tones on confirmed connection and session closure. The preference
+is off by default. Tones are generated in the browser without external audio assets and
+are not routed into the app's recording graph. Speakers can still leak sound into a microphone;
+use headphones when recording. Browser audio restrictions may prevent the cues; visual status
+remains authoritative. Page navigation tears down audio without guaranteeing a closing cue.

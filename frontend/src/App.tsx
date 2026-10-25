@@ -18,6 +18,9 @@ function Live({ code }: { code: string }) {
   const codeRef = useRef(code);
   codeRef.current = code;
   const [language, setLanguage] = useState('auto');
+  const [connectionSounds, setConnectionSounds] = useState(false);
+  const soundsRef = useRef(connectionSounds);
+  soundsRef.current = connectionSounds;
   const [voiceMode, setVoiceMode] = useState('conversation');
   const [debugRecording, setDebugRecording] = useState(false);
   const [audioRecording, setAudioRecording] = useState(false);
@@ -36,6 +39,7 @@ function Live({ code }: { code: string }) {
       () => codeRef.current,
       () => preferences.current,
       () => recordingRef.current,
+      () => soundsRef.current,
     );
     controller.current = session;
     return () => {
@@ -160,6 +164,14 @@ function Live({ code }: { code: string }) {
         <summary>Voice settings &amp; recording</summary>
         <fieldset id="voice-preferences" disabled={state.active}>
           <legend>Voice preferences (before starting)</legend>
+          <label>
+            <input
+              type="checkbox"
+              checked={connectionSounds}
+              onChange={(event) => setConnectionSounds(event.target.checked)}
+            />
+            Connection sounds
+          </label>
           <label>
             Response language{' '}
             <select id="language" value={language} onChange={(e) => setLanguage(e.target.value)}>

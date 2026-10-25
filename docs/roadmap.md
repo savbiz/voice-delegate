@@ -81,3 +81,9 @@ instructions to prefer the recent topic over an unrelated older tool result. Off
 verify this input contract; semantic reference resolution still requires live validation.
 Task durations display one decimal place, and recap labels no longer imply that the latest
 assistant excerpt answers the latest user request.
+
+A [four-call live Decisions smoke](milestones/decisions-live-smoke.md) on 2026-10-25
+returned two valid non-cancellation decisions and two one-second timeouts. Explicit
+semantic cancellation remains unverified; the feature stays off by default.
+Optional browser connection sounds are available behind an unchecked preference;
+offline tests cover connection, closure, repeated events and unavailable audio.
