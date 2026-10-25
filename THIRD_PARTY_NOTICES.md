@@ -13792,7 +13792,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@playwright/test` 1.63.0
+### `@playwright/test` 1.64.1
 
 Licence: Apache-2.0.
 
@@ -14347,7 +14347,7 @@ Source: LICENSE
     SOFTWARE
 ````
 
-### `@types/node` 24.19.1
+### `@types/node` 24.19.2
 
 Licence: MIT.
 
@@ -14437,7 +14437,7 @@ Source: LICENSE
     SOFTWARE
 ````
 
-### `@typescript-eslint/eslint-plugin` 8.71.0
+### `@typescript-eslint/eslint-plugin` 8.72.0
 
 Licence: MIT.
 
@@ -14467,7 +14467,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/parser` 8.71.0
+### `@typescript-eslint/parser` 8.72.0
 
 Licence: MIT.
 
@@ -14497,7 +14497,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/project-service` 8.71.0
+### `@typescript-eslint/project-service` 8.72.0
 
 Licence: MIT.
 
@@ -14527,7 +14527,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/scope-manager` 8.71.0
+### `@typescript-eslint/scope-manager` 8.72.0
 
 Licence: MIT.
 
@@ -14557,7 +14557,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/tsconfig-utils` 8.71.0
+### `@typescript-eslint/tsconfig-utils` 8.72.0
 
 Licence: MIT.
 
@@ -14587,7 +14587,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/type-utils` 8.71.0
+### `@typescript-eslint/type-utils` 8.72.0
 
 Licence: MIT.
 
@@ -14617,7 +14617,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/types` 8.71.0
+### `@typescript-eslint/types` 8.72.0
 
 Licence: MIT.
 
@@ -14647,7 +14647,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/typescript-estree` 8.71.0
+### `@typescript-eslint/typescript-estree` 8.72.0
 
 Licence: MIT.
 
@@ -14677,7 +14677,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/utils` 8.71.0
+### `@typescript-eslint/utils` 8.72.0
 
 Licence: MIT.
 
@@ -14707,7 +14707,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/visitor-keys` 8.71.0
+### `@typescript-eslint/visitor-keys` 8.72.0
 
 Licence: MIT.
 
@@ -14737,7 +14737,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@vitejs/plugin-react` 6.1.1
+### `@vitejs/plugin-react` 6.1.2
 
 Licence: MIT.
 
@@ -14767,7 +14767,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@vitest/mocker` 5.0.3
+### `@vitest/mocker` 5.0.5
 
 Licence: MIT.
 
@@ -14797,7 +14797,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@vitest/spy` 5.0.3
+### `@vitest/spy` 5.0.5
 
 Licence: MIT.
 
@@ -14827,7 +14827,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `acorn` 8.18.0
+### `acorn` 8.19.0
 
 Licence: MIT.
 
@@ -16167,7 +16167,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `eslint` 10.12.0
+### `eslint` 10.13.0
 
 Licence: MIT.
 
@@ -17575,7 +17575,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `ignore` 7.0.10
+### `ignore` 7.0.13
 
 Licence: MIT.
 
@@ -19743,7 +19743,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `obug` 2.2.1
+### `obug` 3.0.0
 
 Licence: MIT.
 
@@ -19932,7 +19932,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `playwright` 1.63.0
+### `playwright` 1.64.1
 
 Licence: Apache-2.0.
 
@@ -20153,7 +20153,7 @@ This software contains code derived from the Puppeteer project (https://github.c
 available under the Apache 2.0 license (https://github.com/puppeteer/puppeteer/blob/master/LICENSE).
 ````
 
-### `playwright-core` 1.63.0
+### `playwright-core` 1.64.1
 
 Licence: Apache-2.0.
 
@@ -20434,7 +20434,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `prettier` 3.9.9
+### `prettier` 3.9.10
 
 Licence: MIT.
 
@@ -20507,7 +20507,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `react` 19.3.0
+### `react` 19.3.1
 
 Licence: MIT.
 
@@ -20537,7 +20537,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `react-dom` 19.3.0
+### `react-dom` 19.3.1
 
 Licence: MIT.
 
@@ -20842,7 +20842,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `tinybench` 6.2.0
+### `tinybench` 6.2.2
 
 Licence: MIT.
 
@@ -21056,7 +21056,7 @@ If the Work includes a "NOTICE" text file as part of its distribution, then any 
 END OF TERMS AND CONDITIONS
 ````
 
-### `typescript-eslint` 8.71.0
+### `typescript-eslint` 8.72.0
 
 Licence: MIT.
 
@@ -23258,7 +23258,7 @@ Repository: https://github.com/sveltejs/zimmerframe
 > SOFTWARE.
 ````
 
-### `vitest` 5.0.3
+### `vitest` 5.0.5
 
 Licence: MIT.
 
@@ -23672,7 +23672,7 @@ Repository: lydell/js-tokens
 
 > The MIT License (MIT)
 >
-> Copyright (c) 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024 Simon Lydell
+> Copyright (c) 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025 Simon Lydell
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
