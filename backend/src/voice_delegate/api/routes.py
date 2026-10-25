@@ -117,7 +117,9 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
             raise HTTPException(403, "Debug recording was not enabled for this session")
         session.debug.write(
             "browser_" + body.event,
-            worker_state=session.delegation.status,
+            worker_state=session.portfolio.status
+            if manager.settings.intent_cancellation
+            else session.delegation.status,
             **body.model_dump(exclude={"event"}),
         )
         return {"recording": not session.debug.stopped}
@@ -175,6 +177,8 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
                     id=j.id,
                     goal=j.goal,
                     status=j.status,
+                    work_seconds=j.durations(manager.clock())[0],
+                    delivery_wait_seconds=j.durations(manager.clock())[1],
                     elapsed_seconds=max(
                         0, (j.finished if j.finished is not None else manager.clock()) - j.started
                     ),

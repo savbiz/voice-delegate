@@ -89,6 +89,15 @@ function Live({ code }: { code: string }) {
                   <strong>{task.goal.slice(0, 100)}</strong>{' '}
                   <small>
                     {task.id} · {taskLabel(task.status)} · {Math.floor(task.elapsed_seconds)} s
+                    total
+                    {task.work_seconds !== undefined &&
+                      task.delivery_wait_seconds !== undefined && (
+                        <>
+                          {' '}
+                          · worker {task.work_seconds.toFixed(1)} s · delivery wait{' '}
+                          {task.delivery_wait_seconds.toFixed(1)} s
+                        </>
+                      )}
                   </small>{' '}
                   {['running', 'pending', 'delivering'].includes(task.status) && (
                     <button

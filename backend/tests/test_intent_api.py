@@ -108,7 +108,13 @@ async def test_heartbeat_freezes_terminal_task_duration(
     session = manager.create()
     start = fake_clock()
     session.portfolio.jobs["done"] = Job(
-        "done", "Calculate", start, 0, status="completed", finished=start + 3
+        "done",
+        "Calculate",
+        start,
+        0,
+        status="completed",
+        finished=start + 3,
+        work_finished=start + 1,
     )
     session.portfolio.jobs["active"] = Job("active", "Search", start, 0)
     try:
@@ -119,5 +125,8 @@ async def test_heartbeat_freezes_terminal_task_duration(
                 result = await client.post(f"/api/sessions/{session.id}/heartbeat")
                 assert result.status_code == 200
                 assert [task["elapsed_seconds"] for task in result.json()["tasks"]] == [3, elapsed]
+                done = result.json()["tasks"][0]
+                assert done["work_seconds"] == 1
+                assert done["delivery_wait_seconds"] == 2
     finally:
         await manager.aclose()

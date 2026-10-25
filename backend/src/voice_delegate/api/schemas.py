@@ -53,6 +53,8 @@ class TaskStatus(BaseModel):
     goal: str
     status: str
     elapsed_seconds: float
+    work_seconds: float = 0
+    delivery_wait_seconds: float = 0
 
 
 class Activity(BaseModel):

@@ -232,12 +232,12 @@
     "digest": "8afe0c7f90d7e32cf30628fbce49b2a0876b1eaa6b6e019cb866f78c1dfe11c5"
   },
   {
-    "id": "693f064c4d571270",
+    "id": "f8216658876b9d81",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Optional intent cancellation",
-    "text": "Task duration includes waiting for delivery and stops at the terminal state. A `completed`\ntask means the result was sent to the voice provider, not that its narration was fully heard.\nThe UI retains last-reported task states after session end; interrupted narration is not\nautomatically repeated. Transcript bubbles group consecutive segments from the same speaker\nwithout changing the underlying provider transcript events.",
-    "digest": "693f064c4d571270eefe55b2c7bd5e7f865b6755eacea0c8a7543d9b1d564e31"
+    "text": "Task duration includes waiting for delivery and stops at the terminal state. The owner heartbeat\nseparates worker execution time from delivery wait. Consent-based debug files record task\nlifecycle timestamps and durations; normal application logs do not contain task text. A `completed`\ntask means the result was sent to the voice provider, not that its narration was fully heard.\nThe UI retains last-reported task states after session end; interrupted narration is not\nautomatically repeated. Transcript bubbles group consecutive segments from the same speaker\nwithout changing the underlying provider transcript events. The backend separately reconstructs\nbounded conversational turns across overlapping speakers for recap and worker context, while\nkeeping sealed provider segments for fallback replay.",
+    "digest": "f8216658876b9d81f38397abe8381c1033ef0f060c9092940167b7ba86303664"
   },
   {
     "id": "0015ca08b96d3aec",

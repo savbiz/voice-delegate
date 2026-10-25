@@ -85,3 +85,9 @@ accepts `{ "generation": 0, "sequence": 0, "user_speaking": false,
 as heartbeat. Responses: 200 accepted, 403 feature off, 404 ownership mismatch, 409 stale
 transport or disconnected session, 422 invalid fields, 429 shared IP limit. Old sequence
 numbers are ignored. It never refreshes the session lifetime and contains no audio or text.
+
+In intent-cancellation mode, each heartbeat task includes `elapsed_seconds`, `work_seconds`
+and `delivery_wait_seconds`. Terminal durations stop increasing. These are backend lifecycle
+durations, not confirmation of audio playback. With session debug consent, `task_started`,
+`task_ready`, `task_sent`, cancellation, rejection, expiry and delivery-failure events record
+task IDs, states and durations without adding goals or context to those lifecycle records.

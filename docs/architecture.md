@@ -263,11 +263,15 @@ are delivered through the new connection; a detached Realtime result uses a text
 not an old function-call ID. See [ADR 009](decisions/009-cancellation-is-intent.md) for budgets,
 terminal acknowledgements, pricing caveats and the default-off rollout.
 
-Task duration includes waiting for delivery and stops at the terminal state. A `completed`
+Task duration includes waiting for delivery and stops at the terminal state. The owner heartbeat
+separates worker execution time from delivery wait. Consent-based debug files record task
+lifecycle timestamps and durations; normal application logs do not contain task text. A `completed`
 task means the result was sent to the voice provider, not that its narration was fully heard.
 The UI retains last-reported task states after session end; interrupted narration is not
 automatically repeated. Transcript bubbles group consecutive segments from the same speaker
-without changing the underlying provider transcript events.
+without changing the underlying provider transcript events. The backend separately reconstructs
+bounded conversational turns across overlapping speakers for recap and worker context, while
+keeping sealed provider segments for fallback replay.
 
 ## Sources
 

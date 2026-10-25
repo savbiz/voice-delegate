@@ -68,3 +68,10 @@ speech. This is exploratory evidence, not a measured acceptance run. Follow-up o
 regressions cover frozen terminal task durations, grouped transcript bubbles and explicit
 provider-delivery wording. Full playback, concurrent-task and cancellation acceptance
 remain to be recorded with the live checklist.
+
+Further offline regressions reconstruct overlapping transcript fragments for recap and
+context-dependent requests, and separate worker execution from delivery wait. Opted-in
+debugging now records portfolio lifecycle events and the correct worker state. Live behavior
+for context-dependent calculations and suppressing unwanted parts of compound results still
+needs verification. Spoken cancellation remains advisory only when its Decisions flag is enabled;
+with that flag off, use the task Cancel control to stop work.

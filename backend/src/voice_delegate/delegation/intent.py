@@ -9,6 +9,7 @@ from typing import Literal
 from voice_delegate_agent.reference import Source, WorkerResult
 
 from voice_delegate.config import Settings
+from voice_delegate.debug import DebugRecording
 from voice_delegate.decisions import Decider, Predicate
 from voice_delegate.limits.tokens import truncate
 from voice_delegate.providers.base import RealtimeConnection
@@ -31,13 +32,32 @@ class Job:
     result: WorkerResult | None = None
     ready: float = 0
     finished: float | None = None
+    work_finished: float | None = None
+    debug: DebugRecording | None = None
     settled: bool = False
     task: asyncio.Task[None] | None = None
     delivery: asyncio.Task[None] | None = None
 
+    def durations(self, now: float) -> tuple[float, float]:
+        end = self.finished if self.finished is not None else now
+        work_end = self.work_finished if self.work_finished is not None else end
+        return max(0, work_end - self.started), max(0, end - work_end)
+
+    def record(self, event: str, now: float) -> None:
+        if self.debug is not None:
+            work, wait = self.durations(now)
+            self.debug.write(
+                event,
+                task_id=self.id,
+                status=self.status,
+                work_seconds=work,
+                delivery_wait_seconds=wait,
+            )
+
 
 @dataclass
 class Portfolio:
+    debug: DebugRecording | None = None
     jobs: dict[str, Job] = field(default_factory=dict)
     generation: int = 0
     sources: tuple[Source, ...] = ()
@@ -89,12 +109,14 @@ class IntentRunner:
             return None
         if len(state.jobs) >= self.runner.request_limit:
             return Commentary(identity, "Delegation limit reached")
-        job = Job(identity, request.goal[:512], self.clock(), transport)
+        job = Job(identity, request.goal[:512], self.clock(), transport, debug=state.debug)
         state.jobs[identity] = job
         if len(state.active) > self.settings.max_inflight_tasks:
             job.status = "busy"
             job.finished = self.clock()
+            job.record("task_rejected", self.clock())
             return Commentary(identity, "Worker busy; task was not started.")
+        job.record("task_started", self.clock())
         job.task = asyncio.create_task(self._work(job, request), name="intent-worker")
         return None
 
@@ -159,7 +181,9 @@ class IntentRunner:
             result.status,
         )
         job.ready = self.clock()
+        job.work_finished = job.ready
         job.status = "pending"
+        job.record("task_ready", self.clock())
 
     def activity(
         self, state: Portfolio, sequence: int, *, speaking: bool, assistant_speaking: bool = False
@@ -187,6 +211,7 @@ class IntentRunner:
         for job in selected:
             job.status = "cancelled"
             job.finished = self.clock()
+            job.record("task_cancelled", self.clock())
             job.result = None
             if job.task is not None:
                 job.task.cancel()
@@ -224,6 +249,7 @@ class IntentRunner:
             if now - job.ready >= self.settings.delivery_timeout_seconds:
                 job.status = "expired"
                 job.finished = self.clock()
+                job.record("task_expired", self.clock())
                 job.result = None
                 self.runner.metrics.deliveries.add(1, {"outcome": "expired"})
                 continue
@@ -249,6 +275,7 @@ class IntentRunner:
                 if job.status == "delivering":
                     job.status = result.status
                     job.finished = self.clock()
+                    job.record("task_sent", self.clock())
                     state.sources = result.sources
                     state.awaiting_playback = True
                     self.runner.metrics.deliveries.add(1, {"outcome": "delayed"})
@@ -260,6 +287,7 @@ class IntentRunner:
                 if job.status == "delivering":
                     job.status = "delivery_failed"
                     job.finished = self.clock()
+                    job.record("task_delivery_failed", self.clock())
             finally:
                 job.result = None
             # Never queue two narrations into the same silence window.

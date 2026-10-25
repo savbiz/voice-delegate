@@ -38,3 +38,6 @@ See [architecture](architecture.md) for flow diagrams and [API](api.md) for wire
 A completed task in the optional task portfolio has sent its result to the voice provider;
 this does not confirm complete audio playback. Its displayed duration includes the wait for
 delivery and freezes at the terminal state. After session end, task rows are last-reported states.
+
+Worker time measures task start to worker result readiness (or cancellation). Delivery wait
+measures result readiness to send completion or expiry; it is not provider audio latency.

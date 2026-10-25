@@ -30,6 +30,8 @@ test('two tasks display independently and cancellation targets the selected id',
               goal: 'Earlier calculation',
               status: 'completed',
               elapsed_seconds: 3,
+              work_seconds: 1,
+              delivery_wait_seconds: 2,
             },
           ],
         },
@@ -47,6 +49,9 @@ test('two tasks display independently and cancellation targets the selected id',
   );
   await expect(page.getByRole('list', { name: 'Delegated tasks' })).toContainText(
     'Result sent to voice provider',
+  );
+  await expect(page.getByRole('list', { name: 'Delegated tasks' })).toContainText(
+    'worker 1.0 s · delivery wait 2.0 s',
   );
   await page.getByRole('button', { name: 'Cancel first', exact: true }).click();
   await expect.poll(() => cancellations).toEqual([{ task_id: 'first' }]);

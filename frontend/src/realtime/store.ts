@@ -29,7 +29,14 @@ type CaptionTail = {
   end?: number;
   transportId: number;
 };
-export type TaskStatus = { id: string; goal: string; status: string; elapsed_seconds: number };
+export type TaskStatus = {
+  id: string;
+  goal: string;
+  status: string;
+  elapsed_seconds: number;
+  work_seconds?: number;
+  delivery_wait_seconds?: number;
+};
 export type LiveState = {
   intentCancellation: boolean;
   tasks: TaskStatus[];
