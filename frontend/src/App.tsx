@@ -18,7 +18,7 @@ function Live({ code }: { code: string }) {
   const codeRef = useRef(code);
   codeRef.current = code;
   const [language, setLanguage] = useState('auto');
-  const [connectionSounds, setConnectionSounds] = useState(false);
+  const [connectionSounds, setConnectionSounds] = useState(true);
   const soundsRef = useRef(connectionSounds);
   soundsRef.current = connectionSounds;
   const [voiceMode, setVoiceMode] = useState('conversation');

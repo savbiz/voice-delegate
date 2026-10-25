@@ -25,7 +25,7 @@ See [architecture](../docs/architecture.md), [API](../docs/api.md), [configurati
 
 In Live voice, **Voice settings & recording → Connection sounds** enables brief local
 ascending/descending tones on confirmed connection and session closure. The preference
-is off by default. Tones are generated in the browser without external audio assets and
+is on by default and can be disabled before starting. Tones are generated in the browser without external audio assets and
 are not routed into the app's recording graph. Speakers can still leak sound into a microphone;
 use headphones when recording. Browser audio restrictions may prevent the cues; visual status
 remains authoritative. Page navigation tears down audio without guaranteeing a closing cue.

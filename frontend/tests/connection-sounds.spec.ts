@@ -47,8 +47,7 @@ test('optional connection sounds follow confirmed connection and explicit stop',
   await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
   await page.getByText('Voice settings & recording', { exact: true }).click();
   const option = page.getByRole('checkbox', { name: 'Connection sounds', exact: true });
-  await expect(option).not.toBeChecked();
-  await option.check();
+  await expect(option).toBeChecked();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.getByRole('status')).toContainText('Connected');
   const notes = () =>
@@ -56,4 +55,11 @@ test('optional connection sounds follow confirmed connection and explicit stop',
   await expect.poll(notes).toEqual([440, 660]);
   await page.getByRole('button', { name: 'Stop', exact: true }).click();
   await expect.poll(notes).toEqual([440, 660, 660, 440]);
+  await expect(page.getByRole('button', { name: 'Start conversation' })).toBeEnabled();
+  await option.uncheck();
+  await page.getByRole('button', { name: 'Start conversation' }).click();
+  await expect(page.getByRole('status')).toContainText('Connected');
+  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('ended');
+  expect(await notes()).toEqual([440, 660, 660, 440]);
 });
