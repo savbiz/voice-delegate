@@ -90,3 +90,33 @@ async def test_limiter_only_reflects_configured_origins(origin: str) -> None:
             origin if origin in ORIGINS else None
         )
         assert response.headers["Cache-Control"] == "no-store"
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "https://DEMO.example",
+        "https://demo.example:443",
+        "http://demo.example:80",
+        "https://demo.example:invalid",
+        "https://*.example",
+    ],
+)
+def test_noncanonical_origins_are_rejected_before_serving(origin: str) -> None:
+    with pytest.raises(ValidationError):
+        Settings(allowed_origins=[origin])
+    with pytest.raises(ValidationError):
+        Settings(allowed_origin=origin)
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "https://demo.example",
+        "https://demo.example:8443",
+        "http://[::1]:8080",
+        "https://xn--bcher-kva.example",
+    ],
+)
+def test_browser_serialized_origins_keep_nondefault_ports_and_idna(origin: str) -> None:
+    assert Settings(allowed_origins=[origin]).allowed_origins == [origin]

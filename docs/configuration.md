@@ -85,9 +85,14 @@ def validate_origins(self) -> "Settings":
             or parsed.path
             or parsed.query
             or parsed.fragment
+            or "*" in parsed.netloc
             or origin != f"{parsed.scheme}://{parsed.netloc}"
+            or origin != str(HttpUrl(origin)).removesuffix("/")
         ):
-            message = "Allowed origins must be exact HTTP(S) origins without paths"
+            message = (
+                "Allowed origins must be canonical HTTP(S) origins: "
+                "lowercase hosts, no paths or default ports"
+            )
             raise ValueError(message)
     return self
 
@@ -176,6 +181,9 @@ Use `VOICE_ALLOWED_ORIGINS` as a JSON array of exact origins. The deprecated
 `VOICE_ALLOWED_ORIGIN` accepts one origin only when no list was supplied.
 The list takes precedence if both variables are configured. Production requires
 HTTPS for every allowed origin. Routes, CORS and limiter responses share the list.
+Origins must use browser serialization: lowercase/punycode hostnames and no
+explicit default ports (`:443` for HTTPS or `:80` for HTTP). Noncanonical values
+are rejected at startup; non-default ports and canonical IPv6 origins are allowed.
 
 ## Hosting configuration
 

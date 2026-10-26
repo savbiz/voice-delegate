@@ -4,7 +4,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from voice_delegate.limits.defaults import WORKER_PORT
@@ -86,9 +86,14 @@ class Settings(BaseSettings):
                 or parsed.path
                 or parsed.query
                 or parsed.fragment
+                or "*" in parsed.netloc
                 or origin != f"{parsed.scheme}://{parsed.netloc}"
+                or origin != str(HttpUrl(origin)).removesuffix("/")
             ):
-                message = "Allowed origins must be exact HTTP(S) origins without paths"
+                message = (
+                    "Allowed origins must be canonical HTTP(S) origins: "
+                    "lowercase hosts, no paths or default ports"
+                )
                 raise ValueError(message)
         return self
 
