@@ -1,9 +1,10 @@
 """Load validated server settings without exposing credentials to clients."""
 
 from typing import Literal
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, HttpUrl, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from voice_delegate.limits.defaults import WORKER_PORT
@@ -25,7 +26,10 @@ class Settings(BaseSettings):
     realtime_model: str = "gpt-realtime"
     model: str = "gpt-live-1"
     voice: str = "marin"
-    allowed_origin: str = "http://localhost:5173"
+    allowed_origins: list[str] = Field(default=["http://localhost:5173"], min_length=1)
+    allowed_origin: str | None = Field(
+        default=None, description="Deprecated: use VOICE_ALLOWED_ORIGINS"
+    )
     allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
     trust_proxy: bool = False
     trusted_proxy_hops: int = Field(default=1, ge=1, le=32)
@@ -76,6 +80,32 @@ class Settings(BaseSettings):
     connect_timeout_seconds: float = Field(default=20, gt=0)
     close_timeout_seconds: float = Field(default=5, gt=0)
     max_body_bytes: int = Field(default=65536, ge=1024, le=1048576)
+
+    @model_validator(mode="after")
+    def validate_origins(self) -> "Settings":
+        """Accept the deprecated singular setting only when no list was supplied."""
+        if self.allowed_origin is not None and "allowed_origins" not in self.model_fields_set:
+            self.allowed_origins = [self.allowed_origin]
+        for origin in self.allowed_origins:
+            parsed = urlsplit(origin)
+            if (
+                parsed.scheme not in {"http", "https"}
+                or not parsed.hostname
+                or parsed.username
+                or parsed.password
+                or parsed.path
+                or parsed.query
+                or parsed.fragment
+                or "*" in parsed.netloc
+                or origin != f"{parsed.scheme}://{parsed.netloc}"
+                or origin != str(HttpUrl(origin)).removesuffix("/")
+            ):
+                message = (
+                    "Allowed origins must be canonical HTTP(S) origins: "
+                    "lowercase hosts, no paths or default ports"
+                )
+                raise ValueError(message)
+        return self
 
     @model_validator(mode="after")
     def validate_production(self) -> "Settings":
@@ -154,7 +184,7 @@ class Settings(BaseSettings):
             if not self.invite_tokens and len(self.access_token.get_secret_value()) < 24:
                 message = "Production requires VOICE_ACCESS_TOKEN of at least 24 characters"
                 raise ValueError(message)
-            if not self.allowed_origin.startswith("https://"):
+            if any(not origin.startswith("https://") for origin in self.allowed_origins):
                 message = "Production requires an HTTPS frontend origin"
                 raise ValueError(message)
         return self

@@ -91,7 +91,8 @@
           "unit": "s"
         },
         "overrides": []
-      }
+      },
+      "description": "Populates only with live voice sessions; the offline demo does not emit these observations."
     },
     {
       "id": 4,
@@ -119,7 +120,8 @@
           "unit": "ops"
         },
         "overrides": []
-      }
+      },
+      "description": "Populates only with live voice sessions; the offline demo does not emit these observations."
     },
     {
       "id": 5,
@@ -142,15 +144,45 @@
           "unit": "s"
         },
         "overrides": []
-      }
+      },
+      "description": "Populates only with live voice sessions; the offline demo does not emit these observations."
     },
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Intent task cancellations",
+      "title": "Delegations by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "gridPos": {
         "x": 0,
         "y": 24,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (increase(voice_operation_duration_seconds_count{operation=\"delegate_task\"}[$__range]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "description": "Completed offline worker calls and live delegations, grouped by operation outcome."
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Intent task cancellations",
+      "gridPos": {
+        "x": 0,
+        "y": 32,
         "w": 12,
         "h": 8
       },
@@ -163,12 +195,12 @@
       ]
     },
     {
-      "id": 7,
+      "id": 8,
       "type": "timeseries",
       "title": "Pending deliveries and expiries",
       "gridPos": {
         "x": 12,
-        "y": 24,
+        "y": 32,
         "w": 12,
         "h": 8
       },
@@ -181,12 +213,12 @@
       ]
     },
     {
-      "id": 8,
+      "id": 9,
       "type": "timeseries",
       "title": "Decision duration p95",
       "gridPos": {
         "x": 0,
-        "y": 32,
+        "y": 40,
         "w": 12,
         "h": 8
       },
@@ -199,12 +231,12 @@
       ]
     },
     {
-      "id": 9,
+      "id": 10,
       "type": "timeseries",
       "title": "Estimated successful Decisions input cost",
       "gridPos": {
         "x": 12,
-        "y": 32,
+        "y": 40,
         "w": 12,
         "h": 8
       },

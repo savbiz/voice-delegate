@@ -58,7 +58,12 @@ def smoke_demo() -> None:
         "-f",
         str(root / "deployment/demo/compose.yaml"),
     ]
-    env = dict(os.environ, DEMO_ORIGIN="http://localhost:8080")
+    origins = [
+        "http://localhost:8080",
+        "https://localhost:8080",
+        "https://smoke-8080.app.github.dev",
+    ]
+    env = dict(os.environ, DEMO_ALLOWED_ORIGINS=json.dumps(origins))
     try:
         subprocess.run(
             [*command, "up", "--build", "-d", "--wait", "--wait-timeout", "120"],
@@ -68,25 +73,37 @@ def smoke_demo() -> None:
         with httpx.Client(base_url="http://127.0.0.1:8080", timeout=3) as client:
             wait_ready(client)
             require("voice-delegate" in client.get("/").text, "Frontend did not load")
+            require(client.post("/api/sessions").status_code == 403, "nginx Origin guard missing")
             client.headers["Origin"] = "https://untrusted.example"
-            require(client.post("/api/sessions").status_code == 403, "Origin guard missing")
-            client.headers["Origin"] = "http://localhost:8080"
-            owner = client.post("/api/sessions").json()
-            path = "/api/sessions/" + owner["id"]
-            client.headers["X-Session-Key"] = owner["key"]
+            rejected = client.post("/api/sessions")
+            require(rejected.status_code == 403, "Origin guard missing")
             require(
-                client.post(path + "/offer", json={"sdp": "v=0\r\n"}).status_code == 200,
-                "Fake offer failed",
+                rejected.json() == {"detail": "Unexpected request origin"},
+                "Backend JSON rejection missing",
             )
-            deadline = time.monotonic() + 20
-            while time.monotonic() < deadline:
-                status = client.post(path + "/heartbeat").json()
-                if status["delegation"] == "completed" and "4" in status["recap"]["latest_reply"]:
-                    break
-                time.sleep(0.2)
-            else:
-                require(False, "Remote offline delegation did not finish")
-            require(client.post(path + "/close").json()["finalized"], "Fake close failed")
+            for origin in origins:
+                client.headers["Origin"] = origin
+                created = client.post("/api/sessions")
+                require(created.status_code == 201, f"Configured origin rejected: {origin}")
+                owner = created.json()
+                path = "/api/sessions/" + owner["id"]
+                client.headers["X-Session-Key"] = owner["key"]
+                require(
+                    client.post(path + "/offer", json={"sdp": "v=0\r\n"}).status_code == 200,
+                    "Fake offer failed",
+                )
+                deadline = time.monotonic() + 20
+                while time.monotonic() < deadline:
+                    status = client.post(path + "/heartbeat").json()
+                    if (
+                        status["delegation"] == "completed"
+                        and "4" in status["recap"]["latest_reply"]
+                    ):
+                        break
+                    time.sleep(0.2)
+                else:
+                    require(False, "Remote offline delegation did not finish")
+                require(client.post(path + "/close").json()["finalized"], "Fake close failed")
         with httpx.Client(timeout=3) as client:
             require(
                 client.get("http://127.0.0.1:3000/api/health").status_code == 200,

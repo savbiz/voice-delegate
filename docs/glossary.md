@@ -41,3 +41,7 @@ delivery and freezes at the terminal state. After session end, task rows are las
 
 Worker time measures task start to worker result readiness (or cancellation). Delivery wait
 measures result readiness to send completion or expiry; it is not provider audio latency.
+
+- **Allowed origins**: exact browser scheme, hostname and optional port values in
+  `VOICE_ALLOWED_ORIGINS`. They govern route access and CORS, independently of the
+  backend's allowed Host headers. Codespaces may rewrite the browser Origin.

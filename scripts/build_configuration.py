@@ -17,11 +17,13 @@ OUTPUT = ROOT / "docs/configuration.md"
 def validator_source() -> str:
     source = inspect.getsource(Settings)
     tree = ast.parse(source)
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef) and node.name == "validate_production":
-            return textwrap.dedent(
-                "\n".join(source.splitlines()[node.lineno - 2 : node.end_lineno])
-            )
+    validators = [
+        textwrap.dedent("\n".join(source.splitlines()[node.lineno - 2 : node.end_lineno]))
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("validate_")
+    ]
+    if validators:
+        return "\n\n\n".join(validators)
     message = "Settings validator not found"
     raise ValueError(message)
 
@@ -35,7 +37,7 @@ def build() -> str:
         "Run `uv run python scripts/build_configuration.py`; pytest checks for drift.",
         "",
         "Settings load at process startup. Process environment overrides root `.env`; restart",
-        "after changes. JSON arrays/objects are required for hosts and invitation mappings.",
+        "after changes. JSON arrays/objects are required for origins, hosts and invitations.",
         "Declared defaults below never read your environment or reveal configured secrets.",
         "",
         "| Field | Environment variable | Default | Field validation |",
@@ -72,6 +74,16 @@ def build() -> str:
         "```python",
         validator_source(),
         "```",
+        "",
+        "## Browser origin compatibility",
+        "",
+        "Use `VOICE_ALLOWED_ORIGINS` as a JSON array of exact origins. The deprecated",
+        "`VOICE_ALLOWED_ORIGIN` accepts one origin only when no list was supplied.",
+        "The list takes precedence if both variables are configured. Production requires",
+        "HTTPS for every allowed origin. Routes, CORS and limiter responses share the list.",
+        "Origins must use browser serialization: lowercase/punycode hostnames and no",
+        "explicit default ports (`:443` for HTTPS or `:80` for HTTP). Noncanonical values",
+        "are rejected at startup; non-default ports and canonical IPv6 origins are allowed.",
         "",
         "## Hosting configuration",
         "",
