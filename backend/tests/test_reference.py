@@ -163,3 +163,14 @@ async def test_architecture_command_retrieves_the_document_overview() -> None:
     assert search("architettura") == search("architecture")
     assert search("boundaries")[0].section == "Boundaries"
     assert search("zzzzunfindable") == ()
+
+
+def test_expanded_corpus_keeps_focused_evidence_and_rejects_incidental_matches() -> None:
+    # New operational prose must not turn an unrelated phrase into supporting evidence.
+    assert search("Martian banana insurance premiums") == ()
+    evidence = search("Can abandoned computation still be narrated?")
+    assert any("Results from workers" in source.text for source in evidence)
+    assert any(
+        "browser owns microphone" in source.text
+        for source in search("Which component handles microphone input?")
+    )

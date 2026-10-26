@@ -29,7 +29,18 @@ type CaptionTail = {
   end?: number;
   transportId: number;
 };
+export type TaskStatus = {
+  id: string;
+  goal: string;
+  status: string;
+  elapsed_seconds: number;
+  work_seconds?: number;
+  delivery_wait_seconds?: number;
+};
 export type LiveState = {
+  intentCancellation: boolean;
+  tasks: TaskStatus[];
+  decisionCostUsd: number;
   phase: Phase;
   status: string;
   help: string;
@@ -65,6 +76,7 @@ export const workerMessages: Record<string, string> = {
   busy: 'Worker busy. Your task was not started. Repeat your request later if you still need it.',
   completed: 'Task completed.',
   cancelled: 'Task cancelled. You can give a new request.',
+  expired: 'The result expired before a safe delivery window. You can give a new request.',
   timeout: 'The task took too long and was stopped. You can give a new request.',
   failed: 'The task failed. You can give a new request; nothing is retried automatically.',
   request_limit:
@@ -74,6 +86,9 @@ export const workerMessages: Record<string, string> = {
 };
 export function initialLiveState(): LiveState {
   return {
+    intentCancellation: false,
+    tasks: [],
+    decisionCostUsd: 0,
     phase: 'ready',
     status: 'Ready to connect',
     help: 'Start a conversation when you are ready.',
@@ -117,10 +132,15 @@ export function workerState(state: LiveState, worker: string): LiveState {
     ...state,
     phase,
     worker,
-    cancelPending,
-    workerMessage: cancelPending
-      ? state.workerMessage
-      : (workerMessages[worker] ?? 'Waiting for worker status.'),
+    cancelPending: state.intentCancellation ? false : cancelPending,
+    workerMessage:
+      state.intentCancellation && worker === 'running'
+        ? 'Tasks continue while you speak. Use Cancel to stop work.'
+        : state.intentCancellation && worker === 'completed'
+          ? 'Result sent to the voice provider; full playback is not confirmed.'
+          : cancelPending
+            ? state.workerMessage
+            : (workerMessages[worker] ?? 'Waiting for worker status.'),
   };
 }
 export function updateTurnTiming(
@@ -200,7 +220,9 @@ export function processEvent(
         ...state,
         phase: 'connected',
         status: 'Connected. Speak naturally.',
-        help: 'Speak to give a request or interrupt. Select Stop to end the conversation.',
+        help: state.intentCancellation
+          ? 'Speaking pauses audio; tasks continue. Use Cancel to stop work, or Stop to end the session.'
+          : 'Speak to give a request or interrupt. Select Stop to end the conversation.',
       },
     };
   }
@@ -330,3 +352,57 @@ export function createLiveStore() {
   };
 }
 export type LiveStore = ReturnType<typeof createLiveStore>;
+
+/** Group consecutive visible speaker segments without changing provider transcript data. */
+export function chatBubbles(messages: ChatMessage[]): ChatMessage[] {
+  const bubbles: ChatMessage[] = [];
+  for (const message of messages) {
+    const text = message.text.trim();
+    if (!text) continue;
+    const previous = bubbles.at(-1);
+    if (previous?.speaker === message.speaker) previous.text += ' ' + text;
+    else bubbles.push({ ...message, text });
+  }
+  return bubbles;
+}
+
+export function taskLabel(status: string): string {
+  return (
+    {
+      running: 'Working',
+      pending: 'Waiting for silence',
+      delivering: 'Sending result',
+      completed: 'Result sent to voice provider',
+      failed: 'Task failed',
+      cancelled: 'Cancelled',
+      expired: 'Result expired',
+      busy: 'Not started: worker busy',
+      delivery_failed: 'Result delivery failed',
+    }[status] ?? status
+  );
+}
+
+export function endedWorkerState(state: LiveState): LiveState {
+  return {
+    ...state,
+    worker: 'idle',
+    cancelPending: false,
+    workerMessage:
+      state.intentCancellation && state.tasks.length
+        ? 'Session ended. Task states below are the last reported states.'
+        : 'Session ended. No further work will be delivered.',
+  };
+}
+
+export function recapText(recap: {
+  latest_request: string;
+  latest_reply: string;
+  interrupted: boolean;
+}): string {
+  return (
+    `${recap.interrupted ? 'Interrupted task. ' : ''}Latest request: ${recap.latest_request || '—'}` +
+    (recap.latest_reply
+      ? ` · Latest assistant transcript (may precede this request): ${recap.latest_reply}`
+      : '')
+  );
+}

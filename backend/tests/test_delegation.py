@@ -170,7 +170,7 @@ async def test_failure_is_redacted_and_result_is_truncated(
         assert state.task is not None
         await state.task
     assert "Delegated worker failed" in caplog.text
-    assert "PRIVATE ERROR DETAIL" in caplog.text
+    assert "PRIVATE ERROR DETAIL" not in caplog.text
     assert "PRIVATE" not in connection.commands[0].content
     assert state.status == "completed"
     assert count_tokens(connection.commands[-1].content) <= 16

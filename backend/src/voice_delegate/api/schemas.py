@@ -46,11 +46,39 @@ class Answer(BaseModel):
     sdp: str
 
 
+class TaskStatus(BaseModel):
+    """Bounded task information, returned only to the session owner."""
+
+    id: str
+    goal: str
+    status: str
+    elapsed_seconds: float
+    work_seconds: float = 0
+    delivery_wait_seconds: float = 0
+
+
+class Activity(BaseModel):
+    """Fresh, ordered audio activity from the current browser transport."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+    generation: int = Field(ge=0)
+    sequence: int = Field(ge=0, le=1000000)
+    user_speaking: bool
+    assistant_speaking: bool
+
+
+class Cancellation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    task_id: str | None = Field(default=None, min_length=1, max_length=256)
+
+
 class Status(BaseModel):
     """Transport status; browser session.started confirms actual voice readiness."""
 
     state: Literal["created", "connecting", "connected", "reconnecting", "closing", "closed"]
     delegation: str = "idle"
+    tasks: list[TaskStatus] = Field(default_factory=list)
+    decision_cost_usd: float = 0
     generation: int = 0
     fallback_available: bool = False
     sources: tuple[Source, ...] = ()

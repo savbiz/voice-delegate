@@ -1,14 +1,16 @@
+import { ConnectionSounds } from './connection-sounds';
 import { AudioTimingMeter } from './audio-timing';
 /** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
 import type { Source } from '../reference';
-import { watchSpeech } from './vad';
+import { ActivityReporter, watchSpeech } from './vad';
+import type { TaskStatus } from './store';
 import { audioSample } from './debug';
 import { recordAudio } from './recording';
 import type { AudioRecording } from './recording';
 import type { DebugSample } from './debug';
 import { shouldRecover } from './recovery';
 
-import { processEvent, workerState } from './store';
+import { endedWorkerState, processEvent, recapText, workerState } from './store';
 import type { LiveStore, Phase } from './store';
 export type Preferences = { language: string; mode: string; debug_recording?: boolean };
 export function createLiveSession(
@@ -17,7 +19,9 @@ export function createLiveSession(
   getAccessCode: () => string,
   getPreferences: () => Preferences,
   getAudioConsent: () => boolean = () => false,
+  getConnectionSounds: () => boolean = () => false,
 ) {
+  const sounds = new ConnectionSounds();
   let diagnosticId = crypto.randomUUID();
   let reportBody: { diagnostic_id: string; category: string; state: string } | undefined;
   let reportSent = false;
@@ -159,6 +163,7 @@ export function createLiveSession(
   async function finish(message: string, userStopped = false): Promise<void> {
     if (ending) return;
     ending = true;
+    sounds.ended();
     store.update({ ending: true });
     const closedAttempt = ++attemptId;
     const owner = session;
@@ -170,7 +175,7 @@ export function createLiveSession(
         ? 'Select Start conversation when you want a new session.'
         : 'Check your connection or access code, then select Start conversation to begin a new session. Previous tasks will not be replayed.',
     );
-    showWorker('idle');
+    store.update(endedWorkerState(store.getSnapshot()));
     if (owner) {
       const close = () =>
         request<{ finalized: boolean }>(`/sessions/${owner.id}/close`, owner, undefined, 5000);
@@ -203,8 +208,12 @@ export function createLiveSession(
   function receiveEvent(raw: unknown): void {
     const result = processEvent(store.getSnapshot(), raw, performance.now());
     store.update(result.state);
-    if (result.effect === 'started') clearTimeout(startup);
+    if (result.effect === 'started') {
+      clearTimeout(startup);
+      sounds.established();
+    }
     if (result.effect === 'closed' && !ending) {
+      sounds.ended();
       attemptId += 1;
       release();
       showState(
@@ -212,7 +221,7 @@ export function createLiveSession(
         'Conversation ended. Provider finalization confirmed.',
         'Select Start conversation when you want a new session.',
       );
-      showWorker('idle');
+      store.update(endedWorkerState(store.getSnapshot()));
     }
   }
 
@@ -242,11 +251,15 @@ export function createLiveSession(
     });
   }
 
-  const onCancelTask = () => {
+  const onCancelTask = (taskId?: string) => {
     const owner = session;
     store.update({ cancelPending: true });
     if (owner)
-      void request(`/sessions/${owner.id}/interrupt`, owner)
+      void request(
+        `/sessions/${owner.id}/interrupt`,
+        owner,
+        taskId ? { task_id: taskId } : undefined,
+      )
         .then(() => {
           if (session === owner && !ending)
             store.update({
@@ -319,6 +332,8 @@ export function createLiveSession(
         lastSpeaker: undefined,
         timings: [],
         audioTimings: [],
+        tasks: [],
+        decisionCostUsd: 0,
         sources: [],
         recap: 'No conversation yet.',
       });
@@ -348,9 +363,11 @@ export function createLiveSession(
       const config = await request<{
         voice_available: boolean;
         audio_timing_available?: boolean;
+        intent_cancellation?: boolean;
         debug_recording_available?: boolean;
       }>('/config');
       if (attempt !== attemptId) return;
+      store.update({ intentCancellation: Boolean(config.intent_cancellation) });
       if (requestedPreferences.debug_recording && !config.debug_recording_available)
         throw new Error(
           'Server debugging is disabled. Uncheck recording to continue, or ask the operator to enable it.',
@@ -490,6 +507,8 @@ export function createLiveSession(
       let audioMeter: AudioTimingMeter | undefined;
       let timingBusy = false;
       let timingCount = 0;
+      const activityReporter = new ActivityReporter();
+      let activityBusy = false;
       store.update({
         audioTimingStatus: config.audio_timing_available
           ? 'Waiting for audio playback.'
@@ -499,14 +518,36 @@ export function createLiveSession(
         stopVad = watchSpeech(
           stream,
           () => {
-            if (attempt !== attemptId || store.getSnapshot().worker !== 'running') return;
+            if (
+              attempt !== attemptId ||
+              config.intent_cancellation ||
+              store.getSnapshot().worker !== 'running'
+            )
+              return;
             void recordDebug(created, { event: 'local_onset' });
             void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
           },
           audio,
-          config.audio_timing_available
-            ? (now, local, remote, playing) => {
-                if (attempt !== attemptId || timingCount >= 120) return;
+          config.audio_timing_available || config.intent_cancellation
+            ? (now, local, remote, playing, remoteEnergy) => {
+                if (attempt !== attemptId) return;
+                if (config.intent_cancellation && !activityBusy) {
+                  const activity = activityReporter.sample(now, local, remoteEnergy);
+                  if (activity) {
+                    activityBusy = true;
+                    void request(
+                      `/sessions/${created.id}/activity`,
+                      created,
+                      { ...activity, generation: serverGeneration },
+                      1000,
+                    )
+                      .catch(() => undefined)
+                      .finally(() => {
+                        activityBusy = false;
+                      });
+                  }
+                }
+                if (timingCount >= 120) return;
                 const samples = audioMeter?.sample(now, local, remote, playing) ?? [];
                 for (const sample of samples) {
                   timingCount += 1;
@@ -553,10 +594,15 @@ export function createLiveSession(
         store.update({ audioTimingStatus: 'Audio measurement unavailable in this browser.' });
         /* Provider-side speech detection remains authoritative without local analysis. */
       }
+      const heartbeatMs = config.intent_cancellation ? 2000 : 10000;
+      let heartbeatPending = false;
       heartbeat = setInterval(() => {
-        if (attempt !== attemptId) return;
+        if (attempt !== attemptId || heartbeatPending) return;
+        heartbeatPending = true;
         void request<{
           delegation: string;
+          tasks?: TaskStatus[];
+          decision_cost_usd?: number;
           state: string;
           sources?: Source[];
           recap?: { latest_request: string; latest_reply: string; interrupted: boolean };
@@ -564,14 +610,13 @@ export function createLiveSession(
           .then((state) => {
             if (attempt === attemptId) {
               heartbeatFailures = 0;
+              store.update({
+                tasks: state.tasks ?? [],
+                decisionCostUsd: state.decision_cost_usd ?? 0,
+              });
               renderSources(state.sources ?? []);
               if (state.recap) {
-                const recap =
-                  `${state.recap.interrupted ? 'Interrupted task. ' : ''}Latest request: ${state.recap.latest_request || '—'}` +
-                  (state.recap.latest_reply
-                    ? ` · Latest reply excerpt: ${state.recap.latest_reply}`
-                    : '');
-                store.update({ recap });
+                store.update({ recap: recapText(state.recap) });
               }
               showWorker(state.delegation);
               if (state.state === 'closed' || state.state === 'closing')
@@ -581,10 +626,13 @@ export function createLiveSession(
             }
           })
           .catch(() => {
-            if (attempt === attemptId && ++heartbeatFailures >= 3)
+            if (attempt === attemptId && ++heartbeatFailures >= Math.ceil(30000 / heartbeatMs))
               void finish('Server connection lost or session expired.');
+          })
+          .finally(() => {
+            heartbeatPending = false;
           });
-      }, 10000);
+      }, heartbeatMs);
       startup = setTimeout(() => {
         void finish('Voice startup timed out.');
       }, 40000);
@@ -630,6 +678,7 @@ export function createLiveSession(
   };
 
   const onPageHide = () => {
+    sounds.dispose();
     if (session) {
       void fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/sessions/${session.id}/close`, {
         ...requestOptions(session, undefined, 5000),
@@ -644,7 +693,10 @@ export function createLiveSession(
   window.addEventListener('pagehide', onPageHide);
   return {
     start: () => {
-      if (!store.getSnapshot().active && !ending && !recovering) void begin();
+      if (!store.getSnapshot().active && !ending && !recovering) {
+        sounds.arm(getConnectionSounds());
+        void begin();
+      }
     },
     stop: () => {
       void finish('Conversation ended.', true);
@@ -653,6 +705,7 @@ export function createLiveSession(
     feedback: onFeedback,
     dispose: () => {
       disposed = true;
+      sounds.dispose();
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       window.removeEventListener('pagehide', onPageHide);
       onPageHide();

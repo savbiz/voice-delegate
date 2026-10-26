@@ -16,7 +16,10 @@ from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 from voice_delegate.admission.policy import Admission
 from voice_delegate.config import Settings
 from voice_delegate.debug import DebugRecording, purge_recordings
+from voice_delegate.decisions import Decider
+from voice_delegate.decisions.openai import OpenAIDecider
 from voice_delegate.delegation.contracts import DelegationInput, Worker
+from voice_delegate.delegation.intent import IntentRunner
 from voice_delegate.delegation.runner import DelegationRunner
 from voice_delegate.observability.metrics import Metrics
 from voice_delegate.observability.turns import observe
@@ -62,6 +65,7 @@ class SessionManager:
         fallback: RealtimeProvider | None = None,
         metrics: Metrics | None = None,
         admission_clock: Callable[[], float] = time.time,
+        decider: Decider | None = None,
     ) -> None:
         # Persistent leases use epoch time independently of monotonic session deadlines.
         self.admission = Admission(settings, clock=admission_clock)
@@ -71,11 +75,19 @@ class SessionManager:
             worker or LangGraphWorker(OfflinePlanner(), settings.worker_max_steps),
             timeout=settings.delegation_timeout_seconds,
             budget=settings.delegation_result_tokens,
-            capacity=settings.max_sessions,
+            capacity=settings.max_sessions
+            * (settings.max_inflight_tasks if settings.intent_cancellation else 1),
             request_limit=settings.max_delegations_per_session,
             tracer=self.tracer,
             metrics=self.metrics,
         )
+        self.decider = decider
+        if settings.decisions_cancel and self.decider is None:
+            self.decider = OpenAIDecider(
+                settings.openai_api_key.get_secret_value(),
+                timeout=settings.decisions_timeout_seconds,
+            )
+        self.intent = IntentRunner(self.delegator, settings, clock, self.decider)
         self.provider = provider
         self.fallback = fallback
         self.settings = settings
@@ -118,6 +130,7 @@ class SessionManager:
             except OSError as exc:
                 self.admission.release(session.id)
                 raise SessionError(503, "Debug recording unavailable") from exc
+        session.portfolio.debug = session.debug
         self.sessions[session.id] = session
         return session
 
@@ -135,7 +148,35 @@ class SessionManager:
     def config(self, session: Session | None = None) -> SessionConfig:
         """Build trusted provider configuration."""
         preferences = session.preferences if session else VoicePreferences()
-        return self.provider.default_config(VOICE_INSTRUCTIONS + " " + preferences.instructions())
+        return self.provider.default_config(self._instructions() + " " + preferences.instructions())
+
+    def _instructions(self) -> str:
+        if not self.settings.intent_cancellation:
+            return VOICE_INSTRUCTIONS
+        cancellation = (
+            "Spoken requests may trigger semantic cancellation. Report a task as cancelled only "
+            "after confirmation from its current task state or a backend cancellation message; "
+            "until then, describe cancellation as requested, not completed. "
+            if self.settings.decisions_cancel
+            else (
+                "Do not claim a spoken cancellation stopped the worker; "
+                "the Cancel button stops work. "
+            )
+        )
+        return VOICE_INSTRUCTIONS + (
+            " Speaking does not cancel delegated work. Continue the conversation while work runs. "
+            "A new request does not replace earlier work. Only an explicit cancellation stops it. "
+            "Delayed worker results include the original request; "
+            "acknowledge that request naturally. If the user no longer wants a topic narrated, "
+            "omit that topic from delayed commentary while retaining any still-requested result. "
+            + cancellation
+            + "When asked to use the calculator, delegate rather than answering from memory. "
+            "For a correction or a reference to an earlier request, use the conversation context; "
+            "do not ask again for operands that are already present. "
+            "A request to use a tool refers "
+            "to the latest user topic unless the user explicitly names an older request. "
+            "Never revive an older calculation just because it used a tool."
+        )
 
     async def connect(self, session: Session, offer_sdp: str) -> WebRTCAnswer:
         """Prevent duplicate offers from creating multiple billable calls."""
@@ -162,9 +203,26 @@ class SessionManager:
                     raise SessionError(504, "Provider connection timed out") from exc
                 raise
             session.state = "connected"
+            if self.settings.intent_cancellation:
+                session.portfolio.pump = asyncio.create_task(
+                    self._deliver(session), name="pending-delivery"
+                )
             session.watcher = asyncio.create_task(self._watch(session), name="session-events")
             session.watcher.add_done_callback(self._watch_finished)
             return session.connection.answer
+
+    async def _deliver(self, session: Session) -> None:
+        while session.state not in {"closing", "closed"}:
+            try:
+                await self.intent.deliver(
+                    session.portfolio,
+                    session.connection if session.state == "connected" else None,
+                    session.generation,
+                )
+            except Exception:
+                logger.error("Pending delivery cycle failed")  # noqa: TRY400 - redact extension payloads
+                self.intent.pause(session.portfolio)
+            await asyncio.sleep(0.1)
 
     @staticmethod
     def _watch_finished(task: asyncio.Task[None]) -> None:
@@ -200,16 +258,39 @@ class SessionManager:
                     continue
                 if isinstance(event, ProviderFailure):
                     break
-                if isinstance(event, SpeechStarted) and session.delegation.status == "running":
-                    self.interrupt(session, source="provider_speech")
+                if isinstance(event, SpeechStarted):
+                    if self.settings.intent_cancellation:
+                        self.intent.pause(session.portfolio)
+                    elif session.delegation.status == "running":
+                        self.interrupt(session, source="provider_speech")
                 if isinstance(event, Transcript):
                     session.turn = observe(session.turn, event, self.tracer, self.metrics)
                     session.history.append(event)
                     self._seal_history(session, include_latest=event.committed)
-                    session.recap.observe(event, session.history.goal())
+                    session.recap.observe(
+                        event, session.history.goal(), session.history.latest_reply()
+                    )
+                    if self.settings.intent_cancellation and event.text.strip():
+                        self.intent.pause(session.portfolio)
+                        if event.speaker == "user":
+                            assistant = next(
+                                (
+                                    e.text
+                                    for e in reversed(session.history.entries)
+                                    if e.speaker == "assistant"
+                                ),
+                                "",
+                            )
+                            self.intent.transcript(
+                                session.portfolio, session.history.goal(), assistant
+                            )
                     if event.speaker == "user" and event.text.strip():
-                        if session.delegation.status != "running":
-                            session.recap.resume()
+                        if (
+                            self.settings.intent_cancellation
+                            or session.delegation.status != "running"
+                        ):
+                            if session.recap.interrupted:
+                                session.recap.resume()
                         elif (
                             event.start_ms > 0 or provider.capabilities.transcript_timing
                         ) and event.start_ms >= session.delegation.offset_ms:
@@ -222,6 +303,22 @@ class SessionManager:
                             )
                         )
                         continue
+                    if self.settings.intent_cancellation:
+                        rejection = self.intent.start(
+                            session.portfolio,
+                            event.delegation_id,
+                            DelegationInput(
+                                goal=(
+                                    event.goal if event.goal is not None else session.history.goal()
+                                )
+                                or " ",
+                                context=session.history.delegation_context(),
+                            ),
+                            session.generation,
+                        )
+                        if rejection is not None:
+                            await connection.send(rejection)
+                        continue
                     if event.delegation_id in session.delegation.seen:
                         continue
                     rejection = self.delegator.start(
@@ -230,7 +327,7 @@ class SessionManager:
                         DelegationInput(
                             goal=(event.goal if event.goal is not None else session.history.goal())
                             or " ",
-                            context=session.history.context(),
+                            context=session.history.delegation_context(),
                         ),
                         connection,
                         lambda: session.state == "connected",
@@ -253,7 +350,9 @@ class SessionManager:
                     and not session.fallback_used
                     and not session.finalized
                 ):
-                    self.delegator.cancel(session.delegation)
+                    if not self.settings.intent_cancellation:
+                        self.delegator.cancel(session.delegation)
+                    self.intent.pause(session.portfolio)
                     session.state = "reconnecting"
                     try:
                         session.previous_finalized = await connection.aclose()
@@ -279,7 +378,16 @@ class SessionManager:
         session: Session,
         *,
         source: Literal["client", "provider_speech", "provider_transcript"] = "client",
+        task_id: str | None = None,
     ) -> None:
+        if self.settings.intent_cancellation:
+            if source == "client":
+                if any(task_id is None or job.id == task_id for job in session.portfolio.active):
+                    self.metrics.interruptions.add(1)
+                self.intent.cancel(session.portfolio, "explicit", task_id)
+            else:
+                self.intent.pause(session.portfolio)
+            return
         if session.delegation.status == "running":
             if session.debug:
                 session.debug.write("delegation_interrupted", source=source)
@@ -312,7 +420,11 @@ class SessionManager:
                 session.state = "reconnecting"
                 session.fallback_used = True
                 session.generation += 1
-                self.delegator.cancel(session.delegation)
+                if not self.settings.intent_cancellation:
+                    self.delegator.cancel(session.delegation)
+                self.intent.pause(session.portfolio)
+                session.portfolio.sequence = -1
+                session.portfolio.awaiting_playback = False
                 # Set "reconnecting" first: the watcher's finally must not re-enter close()
                 # while this task holds session.lock, which would deadlock.
                 if session.watcher is not None:
@@ -331,7 +443,7 @@ class SessionManager:
                         session.connection = None
                         self._seal_history(session, include_latest=True)
                         config = self.fallback.default_config(
-                            VOICE_INSTRUCTIONS + " " + session.preferences.instructions(),
+                            self._instructions() + " " + session.preferences.instructions(),
                             tuple((e.speaker, e.text) for e in session.committed_history.entries),
                         )
                         session.connection = await self.fallback.connect(
@@ -343,6 +455,7 @@ class SessionManager:
                     )
                     session.watcher.add_done_callback(self._watch_finished)
                 except BaseException as exc:
+                    await self.intent.close(session.portfolio)
                     if session.debug:
                         session.debug.close(session.finalized and session.previous_finalized)
                     session.state = "closed"
@@ -360,6 +473,7 @@ class SessionManager:
             if session.state == "closed":
                 return session.finalized and session.previous_finalized
             session.state = "closing"
+            await self.intent.close(session.portfolio)
             self.delegator.cancel(session.delegation)
             try:
                 if session.connection is not None:
@@ -418,6 +532,8 @@ class SessionManager:
             if isinstance(result, BaseException):
                 logger.error("Session shutdown cleanup failed", exc_info=result)
         await self.delegator.aclose()
+        if self.decider is not None:
+            await self.decider.aclose()
         await self.provider.aclose()
         self.admission.close()
         if self.fallback is not None:

@@ -13,9 +13,9 @@ invitation without revealing it. Hide credentials and private browser tabs.
 | 1:20–1:40 | Start another slow task, then press Cancel task. | Cancelled state; no late result narration |
 | 1:40–2:00 | Show audio timing, stop the call, state verification limits. | Browser measurement label, released microphone, verification link |
 
-The middle two scenes depend on the pending cancellation redesign. The current
-implementation can cancel work on speech or a replacement delegation. Do not splice
+The middle two scenes require `VOICE_INTENT_CANCELLATION=true`. The default
+mode still cancels work on speech or a replacement delegation. Do not splice
 recordings to imply that this behavior already works. Capture them only after the
-redesign is merged and verified. If the worker finishes too quickly, use a clearly
+opt-in path is merged and verified live. If the worker finishes too quickly, use a clearly
 labelled deterministic offline slow-worker demonstration rather than hiding a delay
 in a live provider call. Do not publish measured latency from the offline demonstration.

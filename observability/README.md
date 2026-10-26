@@ -57,3 +57,15 @@ Uploads are bounded, best effort and not retried; failed uploads remain visible 
 measurements in Connection timings. No Web Audio support means no audio samples, not zero
 latency. See [live measurement](../docs/milestones/live-verification.md) before interpreting
 percentiles; current live measurements remain pending.
+
+## Intent-mode task measurements
+
+With the optional intent-cancellation path enabled, `voice_task_cancellations_total` has
+finite `reason` labels (`explicit`, `semantic`, `session_end`).
+`voice_task_deliveries_total` uses `outcome=delayed|expired`; delayed means released from
+the pending queue, not proof that the user heard it. `decision.cancel` in operation duration
+records classifier success/error/cancelled latency. `voice_decision_estimated_cost_USD_total`
+counts successful input usage at the configured per-million rate. The owner-only heartbeat
+also returns the session estimate. Failed/ambiguous requests, caching price differences and
+processing premiums are excluded: this is not a provider invoice. No task IDs, goals, user
+identities or transcripts are metric labels. Names here are post-collector Prometheus names.

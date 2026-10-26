@@ -10,5 +10,7 @@ Documentation retrieval uses [demo aliases (en, it)](src/voice_delegate_agent/da
 and [stop words](src/voice_delegate_agent/data/stopwords.json), loaded from bundled JSON data
 at import. These retrieval hints do not add translated commands to the offline planner.
 
-Search ranks excerpt text first. When only a document title or section heading matches,
+Search ranks excerpt text by sublinear term frequency, without a heading bonus.
+Queries of three or more content terms require at least half their terms in the corpus,
+so an incidental match does not manufacture evidence for an unrelated question. When only a document title or section heading matches,
 it returns matching excerpts in document order, so `architecture` opens the architecture overview.

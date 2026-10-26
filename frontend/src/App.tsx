@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createLiveSession } from './realtime/live';
 import type { LiveController } from './realtime/live';
-import { createLiveStore } from './realtime/store';
+import { createLiveStore, taskLabel } from './realtime/store';
 import { runStackDemo, scenario, visibleScenario } from './demo';
 import { Reference } from './reference';
 import { Transcript } from './Transcript';
@@ -18,6 +18,9 @@ function Live({ code }: { code: string }) {
   const codeRef = useRef(code);
   codeRef.current = code;
   const [language, setLanguage] = useState('auto');
+  const [connectionSounds, setConnectionSounds] = useState(true);
+  const soundsRef = useRef(connectionSounds);
+  soundsRef.current = connectionSounds;
   const [voiceMode, setVoiceMode] = useState('conversation');
   const [debugRecording, setDebugRecording] = useState(false);
   const [audioRecording, setAudioRecording] = useState(false);
@@ -36,6 +39,7 @@ function Live({ code }: { code: string }) {
       () => codeRef.current,
       () => preferences.current,
       () => recordingRef.current,
+      () => soundsRef.current,
     );
     controller.current = session;
     return () => {
@@ -62,7 +66,7 @@ function Live({ code }: { code: string }) {
         <p id="task-status" className="muted" aria-live="polite">
           {state.workerMessage}
         </p>
-        {state.worker === 'running' && (
+        {state.worker === 'running' && !state.intentCancellation && (
           <button
             id="cancel-task"
             disabled={
@@ -76,6 +80,40 @@ function Live({ code }: { code: string }) {
           >
             Cancel task
           </button>
+        )}
+        {state.intentCancellation && state.tasks.length > 0 && (
+          <div>
+            <p className="muted">
+              Result sent means accepted by the voice provider, not fully played. Audio interrupted
+              by speech is not automatically repeated.
+            </p>
+            <ul aria-label="Delegated tasks">
+              {state.tasks.map((task) => (
+                <li key={task.id}>
+                  <strong>{task.goal.slice(0, 100)}</strong>{' '}
+                  <small>
+                    {task.id} · {taskLabel(task.status)} · {task.elapsed_seconds.toFixed(1)} s total
+                    {task.work_seconds !== undefined &&
+                      task.delivery_wait_seconds !== undefined && (
+                        <>
+                          {' '}
+                          · worker {task.work_seconds.toFixed(1)} s · delivery wait{' '}
+                          {task.delivery_wait_seconds.toFixed(1)} s
+                        </>
+                      )}
+                  </small>{' '}
+                  {['running', 'pending', 'delivering'].includes(task.status) && (
+                    <button
+                      disabled={!state.active || state.ending || state.recovering}
+                      onClick={() => controller.current?.cancel(task.id)}
+                    >
+                      Cancel {task.id}
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
         <p id="recovery-help">{state.help}</p>
         <div className="actions">
@@ -126,6 +164,14 @@ function Live({ code }: { code: string }) {
         <summary>Voice settings &amp; recording</summary>
         <fieldset id="voice-preferences" disabled={state.active}>
           <legend>Voice preferences (before starting)</legend>
+          <label>
+            <input
+              type="checkbox"
+              checked={connectionSounds}
+              onChange={(event) => setConnectionSounds(event.target.checked)}
+            />
+            Connection sounds
+          </label>
           <label>
             Response language{' '}
             <select id="language" value={language} onChange={(e) => setLanguage(e.target.value)}>
@@ -203,8 +249,8 @@ function Live({ code }: { code: string }) {
       <details className="secondary-panel">
         <summary>Conversation recap</summary>
         <p className="muted">
-          Live transcript excerpts, refreshed every 10 seconds; not an AI summary. Interruption does
-          not mean completion.
+          Live transcript excerpts, refreshed with each heartbeat; not an AI summary. Interruption
+          does not mean completion.
         </p>
         <p id="recap" aria-live="off">
           {state.recap}
@@ -213,6 +259,12 @@ function Live({ code }: { code: string }) {
       <details className="secondary-panel">
         <summary>Connection timings</summary>
         <p>{state.audioTimingStatus}</p>
+        {state.intentCancellation && (
+          <p>
+            Estimated Decisions input cost: ${state.decisionCostUsd.toFixed(6)} (configured rate;
+            excludes failed requests and pricing adjustments).
+          </p>
+        )}
         <ol aria-label="Audio playback measurements">
           {state.audioTimings.map((sample, index) => (
             <li key={index}>

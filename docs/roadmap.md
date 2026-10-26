@@ -42,7 +42,7 @@ energy/state tests and bounded numeric telemetry. The expanded
 Azure recovery and existing hosted invitation flows. No paid calls or new live
 results were collected for this change. Formal live/hosted acceptance remains pending.
 The [two-minute storyboard](demo-video.md) marks continued speech during delegated work
-and silence-gated delivery as dependent on the planned cancellation redesign.
+and silence-gated delivery as dependent on enabling and live-validating the optional intent-cancellation path.
 
 ## One-command offline demonstration
 
@@ -59,3 +59,37 @@ list and explicit delegation panel address those failures; hosted rerun of these
 remains pending. Tested commit, codespace creation minutes and cold Compose minutes
 were not recorded. No cold-start duration or new live-voice result is claimed.
 Live voice, Azure recovery and hosted invitation acceptance retain their existing status.
+
+## Intent cancellation and pending delivery
+
+The optional task portfolio supports two jobs, explicit per-task cancellation, silence-gated
+bounded delivery and preservation through reconnect. Decisions cancellation is independently
+disabled by default; fake classifications verify control behavior, not semantic accuracy.
+Offline tests cover speech during work, cancellation races, freshness, expiry and classifier
+failures. No new paid calls or measured live results are claimed. See
+[ADR 009](decisions/009-cancellation-is-intent.md). Both flags remain off in the hosted configuration.
+
+A user-reported local conversation showed a calculation result arriving after continued
+speech. This is exploratory evidence, not a measured acceptance run. Follow-up offline
+regressions cover frozen terminal task durations, grouped transcript bubbles and explicit
+provider-delivery wording. Full playback, concurrent-task and cancellation acceptance
+remain to be recorded with the live checklist.
+
+Further offline regressions reconstruct overlapping transcript fragments for recap and
+context-dependent requests, and separate worker execution from delivery wait. Opted-in
+debugging now records portfolio lifecycle events and the correct worker state. Live behavior
+for context-dependent calculations and suppressing unwanted parts of compound results still
+needs verification. Spoken cancellation remains advisory only when its Decisions flag is enabled;
+with that flag off, use the task Cancel control to stop work.
+
+The correction path now explicitly supplies the previous user turn to the worker, with
+instructions to prefer the recent topic over an unrelated older tool result. Offline tests
+verify this input contract; semantic reference resolution still requires live validation.
+Task durations display one decimal place, and recap labels no longer imply that the latest
+assistant excerpt answers the latest user request.
+
+A [four-call live Decisions smoke](milestones/decisions-live-smoke.md) on 2026-10-25
+returned two valid non-cancellation decisions and two one-second timeouts. Explicit
+semantic cancellation remains unverified; the feature stays off by default.
+Browser connection sounds are enabled by default with a preference to disable them;
+offline tests cover connection, closure, repeated events and unavailable audio.

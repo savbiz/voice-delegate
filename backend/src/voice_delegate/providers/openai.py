@@ -176,6 +176,8 @@ class OpenAILiveConnection:
 
     async def send(self, command: ProviderCommand) -> None:
         """Send worker commentary with a conservative provider wire budget."""
+        if command.settle_only:
+            return
         if self._closed:
             message = "Connection is closing"
             raise ProviderError(message)

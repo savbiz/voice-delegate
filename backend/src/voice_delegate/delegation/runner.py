@@ -102,7 +102,7 @@ class DelegationRunner:
     def _finished(self, task: asyncio.Task[WorkerResult]) -> None:
         self.work.discard(task)
         if not task.cancelled() and (error := task.exception()) is not None:
-            logger.debug("Delegated worker failed", exc_info=error)
+            logger.debug("Delegated worker failed: %s", type(error).__name__)
 
     async def _run(
         self,

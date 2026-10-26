@@ -15,6 +15,10 @@ transcripts or private audio to the repository or PR.
   recording for this run. Keep only numeric measurements and pass/fail observations.
 - Follow [deployment commands and variables](../../deployment/README.md#live-acceptance).
   Enable `VOICE_AUDIO_TIMING=true`; keep it false outside the measurement run.
+- For the continued-work check in smoke step 6, enable `VOICE_INTENT_CANCELLATION=true`
+  on the backend, restart it and start a new session. The flag defaults to false;
+  without it, speech uses the original task-cancellation behaviour. Record the flag
+  value with the results; do not treat a default-mode run as intent-mode acceptance.
 - Use the existing Vercel frontend and Railway backend, not a new deployment.
 - Confirm `/healthz` succeeds and authenticated session creation accepts the intended
   invitation. Do not infer voice readiness from health alone.
@@ -28,7 +32,7 @@ transcripts or private audio to the repository or PR.
 | 3 | Ask for a calculation, then a documentation lookup | Worker state changes; correct calculation and cited documentation result | |
 | 4 | Request an unsupported external action | No false claim of completing that action | |
 | 5 | Speak over an answer | Conversation responds naturally; record actual playback behavior | |
-| 6 | Start delegated work, then speak again | Record current cancellation behavior; preserving work is pending the cancellation redesign | |
+| 6 | Start delegated work, then speak again | With intent mode enabled, work continues; its result waits for observed silence | |
 | 7 | Start another delegation, press Cancel task while it runs | Explicit cancellation and no later worker narration | |
 | 8 | Press Stop | Microphone indicator clears; confirmed close or explicit unconfirmed-close message | |
 | 9 | Repeat with denied microphone, tab close, network loss and short TTL | Bounded cleanup, useful errors, no orphaned active lease after expiry | |
@@ -117,4 +121,18 @@ an unauthenticated production fault-injection endpoint to complete this checklis
 - Azure recovery with live audio.
 - Hosted invitation end-to-end acceptance.
 - Continued conversation without cancelling delegated work and silence-gated delivery
-  (pending cancellation redesign; see the [video script](../demo-video.md)).
+  (implemented behind `VOICE_INTENT_CANCELLATION`, live pending; see the [video script](../demo-video.md)).
+
+## Optional intent-cancellation acceptance
+
+Set `VOICE_INTENT_CANCELLATION=true` in the backend environment and restart. Leave
+`VOICE_DECISIONS_CANCEL=false` for the initial voice test. Record the active flags alongside
+the model names. Verify two tasks can remain running/pending, a third is rejected without
+cancelling either, each result is introduced during observed silence, and Cancel targets only
+the selected task. Check that backgrounding the browser holds delivery and eventually shows
+expiry; a reconnect must preserve work and never reuse an old Realtime function-call identity.
+
+Only after explicit approval for paid semantic testing, enable `VOICE_DECISIONS_CANCEL=true`.
+Try an unambiguous cancellation and a continuation such as “while you work, explain something
+else”. Record false cancellations and missed cancellations separately. A classifier failure
+must leave the work running. Do not use the input-cost estimate as billing evidence.

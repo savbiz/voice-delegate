@@ -1,6 +1,6 @@
 /** Check onset hysteresis without microphones or browser audio devices. */
 import { expect, test, vi } from 'vitest';
-import { LocalInterruptGate, SpeechGate, watchSpeech } from './vad';
+import { ActivityReporter, LocalInterruptGate, SpeechGate, watchSpeech } from './vad';
 test('cancels once per speech onset and rearms after silence', () => {
   const gate = new SpeechGate();
   expect(gate.update(0.1)).toBe(false);
@@ -62,4 +62,20 @@ test('speech analysis setup closes its context when initialization fails', () =>
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+test('activity reports transitions and renews silence every 500 ms', () => {
+  const reporter = new ActivityReporter();
+  expect(reporter.sample(0, 0, 0)).toEqual({
+    sequence: 0,
+    user_speaking: false,
+    assistant_speaking: false,
+  });
+  expect(reporter.sample(20, 0, 0)).toBeUndefined();
+  reporter.sample(40, 0, 0.1);
+  reporter.sample(60, 0, 0.1);
+  expect(reporter.sample(80, 0, 0.1)?.assistant_speaking).toBe(true);
+  for (let now = 100; now < 380; now += 20) reporter.sample(now, 0, 0);
+  expect(reporter.sample(380, 0, 0)?.assistant_speaking).toBe(false);
+  expect(reporter.sample(880, 0, 0)?.sequence).toBe(3);
 });

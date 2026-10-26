@@ -40,6 +40,9 @@ class Metrics:
             description="Client-reported time to first audio playback; not acoustic latency",
             explicit_bucket_boundaries_advisory=SECOND_BUCKETS,
         )
+        self.task_cancellations = meter.create_counter("voice.task.cancellations", unit="1")
+        self.deliveries = meter.create_counter("voice.task.deliveries", unit="1")
+        self.decision_cost = meter.create_counter("voice.decision.estimated_cost", unit="USD")
         self.interruptions = meter.create_counter("voice.interruptions", unit="1")
 
     @contextmanager
