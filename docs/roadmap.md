@@ -51,5 +51,11 @@ worker and observability in one Compose command. The container smoke verifies a 
 calculation and its exported metric without provider keys or paid calls. Browser tests
 verify display and ownership cleanup with deterministic responses. Cold builds require
 registry access; the 60-second goal applies to a warm cache, not initial provisioning.
-Codespaces configuration is supplied; hosted Codespaces acceptance remains pending.
+Hosted Codespaces acceptance was performed by the maintainer on 2026-10-25:
+manual startup with `https://localhost:8080` completed an offline delegation;
+Prometheus and Grafana operation panels received metrics. The automatic hook and
+single-origin configuration failed in that run. The readiness wait, persisted origin
+list and explicit delegation panel address those failures; hosted rerun of these fixes
+remains pending. Tested commit, codespace creation minutes and cold Compose minutes
+were not recorded. No cold-start duration or new live-voice result is claimed.
 Live voice, Azure recovery and hosted invitation acceptance retain their existing status.

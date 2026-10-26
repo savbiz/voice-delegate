@@ -91,7 +91,8 @@
           "unit": "s"
         },
         "overrides": []
-      }
+      },
+      "description": "Populates only with live voice sessions; the offline demo does not emit these observations."
     },
     {
       "id": 4,
@@ -119,7 +120,8 @@
           "unit": "ops"
         },
         "overrides": []
-      }
+      },
+      "description": "Populates only with live voice sessions; the offline demo does not emit these observations."
     },
     {
       "id": 5,
@@ -142,7 +144,37 @@
           "unit": "s"
         },
         "overrides": []
-      }
+      },
+      "description": "Populates only with live voice sessions; the offline demo does not emit these observations."
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Delegations by outcome",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (increase(voice_operation_duration_seconds_count{operation=\"delegate_task\"}[$__range]))",
+          "legendFormat": "{{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops"
+        },
+        "overrides": []
+      },
+      "description": "Completed offline worker calls and live delegations, grouped by operation outcome."
     }
   ]
 }

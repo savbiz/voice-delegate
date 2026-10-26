@@ -66,7 +66,7 @@ async def test_feedback_api_auth_schema_and_private_storage(
     async with asgi_client(app) as client:
         body = report().model_dump(mode="json")
         assert (await client.post("/api/feedback", json=body)).status_code == 403
-        client.headers["Origin"] = settings.allowed_origin
+        client.headers["Origin"] = settings.allowed_origins[0]
         assert (await client.post("/api/feedback", json=body)).status_code == 401
         client.headers["Authorization"] = "Bearer " + secret
         for field in ("transcript", "audio", "message", "provider", "session_key"):

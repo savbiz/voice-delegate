@@ -51,7 +51,7 @@ def public_settings() -> PublicSettingsFactory:
             "environment": "production",
             "allowed_hosts": ["localhost", "127.0.0.1"],
             "public_demo": True,
-            "allowed_origin": "https://demo.example",
+            "allowed_origins": ["https://demo.example"],
             "quota_database": str(path / "quotas.sqlite3"),
             "invite_tokens": {"alice": "a" * 32, "bob": "b" * 32},
             "session_ttl_seconds": 10,

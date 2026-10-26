@@ -27,3 +27,7 @@ See [architecture](architecture.md) for flow diagrams and [API](api.md) for wire
 - **Offline stack:** opt-in local containers exercising the session API and remote
   LangGraph worker through a deterministic fake voice provider. It generates no audio
   and supplies no evidence of live provider behavior or voice latency.
+
+- **Allowed origins**: exact browser scheme, hostname and optional port values in
+  `VOICE_ALLOWED_ORIGINS`. They govern route access and CORS, independently of the
+  backend's allowed Host headers. Codespaces may rewrite the browser Origin.

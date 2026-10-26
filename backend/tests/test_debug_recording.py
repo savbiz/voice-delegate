@@ -36,7 +36,7 @@ async def test_recording_requires_both_gates_and_ownership(
         debug_directory=str(tmp_path),
         environment=environment,
         allowed_hosts=["localhost"],
-        allowed_origin="https://frontend.example",
+        allowed_origins=["https://frontend.example"],
         public_demo=environment == "production",
         quota_database=str(tmp_path / "quotas.sqlite3"),
         feedback_database=str(tmp_path / "feedback.sqlite3"),
@@ -45,7 +45,7 @@ async def test_recording_requires_both_gates_and_ownership(
     async with asgi_client(create_app(settings, provider)) as client:
         client.headers.update(
             {
-                "Origin": settings.allowed_origin,
+                "Origin": settings.allowed_origins[0],
                 "Authorization": "Bearer local-placeholder-invitation-32-characters",
             }
         )

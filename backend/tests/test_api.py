@@ -78,7 +78,7 @@ async def test_deployment_gate_and_cors(asgi_client: ASGIClientFactory, tmp_path
     settings = Settings(
         environment="production",
         allowed_hosts=["localhost", "127.0.0.1"],
-        allowed_origin="https://voice.example",
+        allowed_origins=["https://voice.example"],
         access_token=SecretStr("a-test-access-code-long-enough"),
         feedback_database=str(tmp_path / "feedback.sqlite3"),
     )
@@ -303,7 +303,7 @@ async def test_reconnect_http_errors(
     provider = FakeProvider()
     app = create_app(settings, provider)
     async with asgi_client(app) as client:
-        client.headers["Origin"] = settings.allowed_origin
+        client.headers["Origin"] = settings.allowed_origins[0]
         created = (await client.post("/api/sessions")).json()
         client.headers["X-Session-Key"] = created["key"]
         path = f"/api/sessions/{created['id']}"

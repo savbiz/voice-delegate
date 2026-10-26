@@ -136,7 +136,7 @@ def create_app(
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.allowed_origin],
+        allow_origins=settings.allowed_origins,
         allow_methods=["POST"],
         allow_headers=["Content-Type", "X-Session-Key", "Authorization"],
     )
@@ -146,7 +146,7 @@ def create_app(
         RateLimitMiddleware,
         trust_proxy=settings.trust_proxy,
         trusted_proxy_hops=settings.trusted_proxy_hops,
-        allowed_origin=settings.allowed_origin,
+        allowed_origins=settings.allowed_origins,
     )
 
     @app.exception_handler(SessionError)
