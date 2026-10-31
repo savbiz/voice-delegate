@@ -354,6 +354,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=["offline", "openai"], default="offline")
     parser.add_argument("--model", default="gpt-4.1-mini")
+    parser.add_argument("--compare-planners", action="store_true")
+    parser.add_argument("--text-input-usd-per-million", type=float)
+    parser.add_argument("--text-output-usd-per-million", type=float)
+    parser.add_argument("--decision-input-usd-per-million", type=float, default=0.1)
     parser.add_argument("--allow-paid", action="store_true")
     parser.add_argument("--max-model-calls", type=int, default=0)
     parser.add_argument("--limit", type=int, default=40)
@@ -368,8 +372,20 @@ def main() -> None:
     load_dotenv(ROOT / ".env", override=False)
     if not 1 <= args.limit <= 40:
         parser.error("--limit must be between 1 and 40")
-    if not 0 <= args.max_model_calls <= 200:
-        parser.error("--max-model-calls must be between 0 and 200")
+    ceiling = 1000 if args.compare_planners else 200
+    if not 0 <= args.max_model_calls <= ceiling:
+        parser.error(f"--max-model-calls must be between 0 and {ceiling}")
+    if args.compare_planners and (args.upload or args.judge_model):
+        parser.error("Planner comparisons use local reports without judge or upload")
+    rates = (
+        args.text_input_usd_per_million,
+        args.text_output_usd_per_million,
+        args.decision_input_usd_per_million,
+    )
+    if any(
+        rate is not None and (not math.isfinite(rate) or not 0 <= rate <= 1000) for rate in rates
+    ):
+        parser.error("Token rates must be finite values between 0 and 1000")
     if args.judge_model and args.mode != "openai":
         parser.error("AI judging requires --mode openai; offline remains free")
     cases = json.loads(DATASET.read_text())["cases"]
@@ -378,7 +394,11 @@ def main() -> None:
             parser.error("Unknown --case ID")
         cases = [c for c in cases if c["id"] in args.case_ids]
     cases = cases[: args.limit]
-    required = len(cases) * (4 + bool(args.judge_model)) if args.mode == "openai" else 0
+    required = (
+        len(cases) * (12 if args.compare_planners else 4 + bool(args.judge_model))
+        if args.mode == "openai"
+        else 0
+    )
     if required and (not args.allow_paid or args.max_model_calls < required):
         parser.error(f"This run requires --allow-paid and --max-model-calls >= {required}")
     if required and not os.environ.get("OPENAI_API_KEY"):
@@ -390,9 +410,26 @@ def main() -> None:
             __import__("braintrust")
         except ImportError:
             parser.error("Install optional dependencies: uv sync --group eval --locked")
-    report = asyncio.run(
-        run_cases(cases, args.mode, args.model, args.max_model_calls, args.judge_model)
-    )
+    if args.compare_planners:
+        from .planner_comparison import compare_planners, markdown
+
+        report = asyncio.run(
+            compare_planners(
+                cases,
+                paid=args.mode == "openai",
+                key=os.environ.get("OPENAI_API_KEY", ""),
+                model=args.model,
+                maximum=args.max_model_calls,
+                input_rate=args.text_input_usd_per_million,
+                output_rate=args.text_output_usd_per_million,
+                decision_rate=args.decision_input_usd_per_million,
+            )
+        )
+        print(markdown(report))
+    else:
+        report = asyncio.run(
+            run_cases(cases, args.mode, args.model, args.max_model_calls, args.judge_model)
+        )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report["summary"], indent=2))

@@ -129,3 +129,89 @@ async def test_cloud_upload_is_explicit_and_uses_only_curated_rows(
     assert len(logged) == 1
     assert logged[0]["input"] == {"goal": CASES[0]["goal"], "context": ""}
     assert "test-private-key" not in json.dumps(logged)
+
+
+async def test_planner_comparison_is_offline_and_reports_per_case_steps(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from evals import planner_comparison as comparison
+
+    monkeypatch.setenv("OPENAI_API_KEY", "must-not-be-used")
+
+    def forbidden(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("Offline comparison created a paid client")
+
+    monkeypatch.setattr(comparison, "OpenAIDecider", forbidden)
+    report = await comparison.compare_planners(CASES)
+    assert report["metadata"]["model"] == "scripted-stand-ins"
+    assert report["summary"]["model_calls"] == 0
+    for result in report["planners"].values():
+        assert result["summary"]["executed"] == 36
+        assert result["summary"]["skipped"] == 4
+        assert result["summary"]["tool_selection_accuracy"] == 1
+        assert result["summary"]["estimated_cost_usd"] == 0
+        rows = [row for row in result["rows"] if row["status"] != "skipped"]
+        assert all(row["steps"] == 2 for row in rows)
+        assert all(row["worker_seconds"] >= 0 for row in rows)
+    assert "decisions" in comparison.markdown(report)
+
+
+async def test_comparison_budget_counts_each_text_and_decision_call() -> None:
+    from voice_delegate.decisions import Choice, FakeDecider, Option
+
+    from evals.planner_comparison import CallBudget, ObservedDecider, ObservedText, Usage, estimate
+
+    class Text:
+        calls = 0
+
+        async def respond(self, messages: object) -> AIMessage:
+            self.calls += 1
+            return AIMessage(
+                content="Four",
+                usage_metadata={"input_tokens": 100, "output_tokens": 10, "total_tokens": 110},
+            )
+
+    text = Text()
+    budget, usage = CallBudget(2), Usage()
+    observed = ObservedText(text, text.respond, usage, budget, True)
+    await observed.respond([])
+    classifier = ObservedDecider(FakeDecider(), usage, budget, True)
+    await classifier.decide(
+        "data", (Choice("action", "Choose", (Option("direct"), Option("refuse"))),)
+    )
+    with pytest.raises(RuntimeError, match="budget exhausted"):
+        await observed.respond_final([])
+    assert text.calls == 1 and budget.calls == 2
+    assert usage.decision_calls == usage.text_calls == 1
+    assert estimate(usage.snapshot(), True, 1, 2, 0.1) == pytest.approx(0.00012)
+    assert estimate(usage.snapshot(), True, None, None, 0.1) is None
+    usage.unknown = 1
+    assert estimate(usage.snapshot(), True, 1, 2, 0.1) is None
+
+
+def test_comparison_cli_gates_paid_runs_and_validates_rates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from evals import worker_eval
+
+    monkeypatch.setattr(worker_eval, "load_dotenv", lambda *a, **k: None)
+    for arguments in [
+        ["--mode", "openai", "--compare-planners"],
+        [
+            "--mode",
+            "openai",
+            "--compare-planners",
+            "--allow-paid",
+            "--max-model-calls",
+            "11",
+            "--limit",
+            "1",
+        ],
+        ["--compare-planners", "--text-input-usd-per-million", "nan"],
+        ["--compare-planners", "--decision-input-usd-per-million", "-1"],
+        ["--compare-planners", "--judge-model", "fake"],
+    ]:
+        monkeypatch.setattr("sys.argv", ["eval", *arguments])
+        with pytest.raises(SystemExit) as exc:
+            worker_eval.main()
+        assert exc.value.code == 2

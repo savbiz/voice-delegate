@@ -12,10 +12,11 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
-from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner, OpenAIPlanner
+from voice_delegate_agent.graph import LangGraphWorker
 
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.delegation.contracts import Worker
+from voice_delegate.delegation.planner import build_planner
 from voice_delegate.limits.http import BodyLimitMiddleware
 from voice_delegate.limits.tokens import truncate
 from voice_delegate.providers.models import COMMENTARY_MAX_BYTES
@@ -133,14 +134,10 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
     if len(settings.worker_service_token.get_secret_value()) < 32:
         message = "Private worker service requires a token of at least 32 characters"
         raise ValueError(message)
-    planner = None
+    runtime = None
     if worker is None:
-        planner = (
-            OpenAIPlanner(settings.openai_api_key.get_secret_value(), settings.worker_model)
-            if settings.worker_mode == "openai"
-            else OfflinePlanner()
-        )
-        worker = LangGraphWorker(planner, settings.worker_max_steps)
+        runtime = build_planner(settings)
+        worker = LangGraphWorker(runtime.planner, settings.worker_max_steps)
     jobs = Jobs(worker, settings)
 
     async def janitor() -> None:
@@ -161,8 +158,8 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
             with suppress(asyncio.CancelledError):
                 await sweep
             await jobs.aclose()
-            if isinstance(planner, OpenAIPlanner):
-                await planner.aclose()
+            if runtime is not None:
+                await runtime.aclose()
 
     async def authorized(authorization: str = Header(default="")) -> None:
         expected = "Bearer " + settings.worker_service_token.get_secret_value()

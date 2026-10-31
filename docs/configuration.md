@@ -59,7 +59,7 @@ Declared defaults below never read your environment or reveal configured secrets
 | `worker_service_token` | `VOICE_WORKER_SERVICE_TOKEN` | `""` | `{"type": "string"}` |
 | `worker_service_capacity` | `VOICE_WORKER_SERVICE_CAPACITY` | `4` | `{"type": "integer", "minimum": 1, "maximum": 32}` |
 | `worker_max_records` | `VOICE_WORKER_MAX_RECORDS` | `128` | `{"type": "integer", "minimum": 32, "maximum": 1024}` |
-| `worker_mode` | `VOICE_WORKER_MODE` | `"offline"` | `{"type": "string", "enum": ["offline", "openai"]}` |
+| `worker_mode` | `VOICE_WORKER_MODE` | `"offline"` | `{"type": "string", "enum": ["offline", "openai", "decisions"]}` |
 | `worker_model` | `VOICE_WORKER_MODEL` | `"gpt-4.1-mini"` | `{"type": "string"}` |
 | `delegation_timeout_seconds` | `VOICE_DELEGATION_TIMEOUT_SECONDS` | `15` | `{"type": "number", "maximum": 120, "exclusiveMinimum": 0}` |
 | `delegation_result_tokens` | `VOICE_DELEGATION_RESULT_TOKENS` | `120` | `{"type": "integer", "minimum": 8, "maximum": 480}` |
@@ -174,8 +174,8 @@ def validate_production(self) -> "Settings":
     if self.fallback_enabled and self.voice_provider == "azure":
         message = "Azure cannot be both primary and fallback"
         raise ValueError(message)
-    if self.worker_mode == "openai" and not self.openai_api_key.get_secret_value():
-        message = "VOICE_WORKER_MODE=openai requires OPENAI_API_KEY"
+    if self.worker_mode != "offline" and not self.openai_api_key.get_secret_value():
+        message = "Paid worker modes require OPENAI_API_KEY"
         raise ValueError(message)
     if self.environment == "production":
         if "testserver" in self.allowed_hosts:

@@ -11,9 +11,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner, OpenAIPlanner
+from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 
 from voice_delegate.config import Settings, load_settings
+from voice_delegate.delegation.planner import build_planner
 from voice_delegate.feedback import FeedbackStore
 from voice_delegate.limits.http import BodyLimitMiddleware
 from voice_delegate.limits.ratelimit import RateLimitMiddleware
@@ -64,15 +65,8 @@ def create_app(
         fallback.model, fallback.voice = settings.azure_deployment, settings.azure_voice
     telemetry = configure_tracing(settings)
     meter_provider = configure_metrics(settings)
-    planner = (
-        None
-        if settings.worker_execution == "remote"
-        else (
-            OpenAIPlanner(settings.openai_api_key.get_secret_value(), settings.worker_model)
-            if settings.worker_mode == "openai"
-            else OfflinePlanner()
-        )
-    )
+    runtime = build_planner(settings) if settings.worker_execution == "local" else None
+    planner = runtime.planner if runtime is not None else None
     remote = RemoteWorker(settings) if settings.worker_execution == "remote" else None
     # SQLite calls are synchronous by design for the single-process demo.
     feedback = (
@@ -117,8 +111,8 @@ def create_app(
             await manager.aclose()
             if remote is not None:
                 await remote.aclose()
-            if isinstance(planner, OpenAIPlanner):
-                await planner.aclose()
+            if runtime is not None:
+                await runtime.aclose()
             if meter_provider is not None:
                 await asyncio.to_thread(meter_provider.shutdown)
             if telemetry is not None:
