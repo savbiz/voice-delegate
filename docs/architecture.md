@@ -328,3 +328,22 @@ both localhost schemes and its forwarded URL. Route checks, CORS and limiter
 rejections use the same `VOICE_ALLOWED_ORIGINS` list; the deprecated singular alias
 is used only when no list is configured. nginx continues to set the backend Host
 to localhost. See the [measured procedure](local-development.md#measured-codespaces-proxy-behaviour).
+
+## Optional Decisions worker planning
+
+`VOICE_WORKER_MODE=decisions` selects DecisionsPlanner inside the same bounded LangGraph
+worker. Each step classifies the next action against current tool names/descriptions,
+`direct` and `refuse`. Server code builds tool arguments; an unbound text model generates
+final prose. The voice adapter continues to expose only `delegate_task`.
+
+The shared agent-level `Decider` contract supports predicates and choices without an
+agent-to-backend dependency. The backend provides the bounded HTTP implementation;
+local and private worker factories own and close the planner clients. Cancellation
+classification remains independently controlled by its existing opt-in flag.
+
+A failed classification uses the existing text planner for that step. Refusals stop
+without fallback, cancellation propagates, and ambiguous tool arguments require
+clarification. Input/output caps, classification and task deadlines, and the graph's
+step limit bound both paths. This is verified offline with deterministic fakes;
+live semantic accuracy and cost remain pending. See [worker limits](worker.md#decisions-worker-planner)
+and the [reproducible comparison](../evals/README.md#planner-comparison).

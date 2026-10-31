@@ -6,7 +6,7 @@ import pytest
 from conftest import BlockingWorker, FakeClock
 from pydantic import SecretStr
 from voice_delegate.config import Settings
-from voice_delegate.decisions import Decision, FakeDecider, Predicate
+from voice_delegate.decisions import Decision, FakeDecider, Question
 from voice_delegate.delegation.contracts import DelegationInput
 from voice_delegate.delegation.intent import IntentRunner, Job, Portfolio
 from voice_delegate.delegation.runner import DelegationRunner
@@ -165,7 +165,7 @@ async def test_stale_decision_does_not_cancel_and_timeout_preserves_work(
             self.started = asyncio.Event()
             self.release = asyncio.Event()
 
-        async def decide(self, text: str, questions: tuple[Predicate, ...]) -> Decision:
+        async def decide(self, text: str, questions: tuple[Question, ...]) -> Decision:
             self.started.set()
             await self.release.wait()
             return Decision({"cancel_0": 0 if "Actually" in text else 1, "relevant_0": 0}, 100)

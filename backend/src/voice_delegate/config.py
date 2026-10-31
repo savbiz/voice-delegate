@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     worker_service_token: SecretStr = SecretStr("")
     worker_service_capacity: int = Field(default=4, ge=1, le=32)
     worker_max_records: int = Field(default=128, ge=32, le=1024)
-    worker_mode: Literal["offline", "openai"] = "offline"
+    worker_mode: Literal["offline", "openai", "decisions"] = "offline"
     worker_model: str = "gpt-4.1-mini"
     delegation_timeout_seconds: float = Field(default=15, gt=0, le=120)
     delegation_result_tokens: int = Field(default=120, ge=8, le=480)
@@ -174,8 +174,8 @@ class Settings(BaseSettings):
         if self.fallback_enabled and self.voice_provider == "azure":
             message = "Azure cannot be both primary and fallback"
             raise ValueError(message)
-        if self.worker_mode == "openai" and not self.openai_api_key.get_secret_value():
-            message = "VOICE_WORKER_MODE=openai requires OPENAI_API_KEY"
+        if self.worker_mode != "offline" and not self.openai_api_key.get_secret_value():
+            message = "Paid worker modes require OPENAI_API_KEY"
             raise ValueError(message)
         if self.environment == "production":
             if "testserver" in self.allowed_hosts:
