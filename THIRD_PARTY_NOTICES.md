@@ -2,6 +2,10 @@
 
 Generated from pip-licenses and pnpm licenses list --long. This inventory covers the installed Python runtime and frontend dependencies, It also includes development, build, test and optional evaluation tools for transparency. Listing a tool does not mean it is shipped in the browser or backend container. Native build-tool bindings reflect the inventory platform (macOS arm64). Upstream licence and NOTICE texts are reproduced below without modification. See scripts/licenses/README.md for regeneration and supplemental sources.
 
+The optional worker web-search adapter uses `httpx` 0.28.1 (BSD-3-Clause),
+also declared directly by the agent package. Its full licence text is included below;
+no Tavily SDK is distributed.
+
 ## Python
 
 ### `annotated-doc` 0.0.5

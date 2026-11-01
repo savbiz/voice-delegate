@@ -1,0 +1,76 @@
+{
+  "version": "web-v1",
+  "mode": "offline synthetic search fixtures, not current facts",
+  "cases": [
+    {
+      "id": "release",
+      "goal": "web What is the latest public Python release?",
+      "url": "https://example.org/release",
+      "title": "Release notice",
+      "content": "A new public release is available."
+    },
+    {
+      "id": "weather",
+      "goal": "web What is the current weather warning for Rome?",
+      "url": "https://example.org/weather",
+      "title": "Weather notice",
+      "content": "A public weather warning is in effect."
+    },
+    {
+      "id": "train",
+      "goal": "web Are there public rail service disruptions today?",
+      "url": "https://example.org/train",
+      "title": "Train notice",
+      "content": "A rail service notice lists scheduled disruption."
+    },
+    {
+      "id": "security",
+      "goal": "web What does the latest public security advisory recommend?",
+      "url": "https://example.org/security",
+      "title": "Security notice",
+      "content": "The advisory recommends installing the security update."
+    },
+    {
+      "id": "conference",
+      "goal": "web When is the next public developer conference?",
+      "url": "https://example.org/conference",
+      "title": "Conference notice",
+      "content": "The conference announcement lists the event date."
+    },
+    {
+      "id": "library",
+      "goal": "web What changed in the latest public library release?",
+      "url": "https://example.org/library",
+      "title": "Library notice",
+      "content": "The release notes list API improvements."
+    },
+    {
+      "id": "holiday",
+      "goal": "web Is there a public holiday next week?",
+      "url": "https://example.org/holiday",
+      "title": "Holiday notice",
+      "content": "The public calendar lists a holiday."
+    },
+    {
+      "id": "museum",
+      "goal": "web What are the museum opening hours this weekend?",
+      "url": "https://example.org/museum",
+      "title": "Museum notice",
+      "content": "The public notice lists weekend opening hours."
+    },
+    {
+      "id": "space",
+      "goal": "web What is the next announced space launch?",
+      "url": "https://example.org/space",
+      "title": "Space notice",
+      "content": "The launch notice lists a provisional launch window."
+    },
+    {
+      "id": "accessibility",
+      "goal": "web What are the latest public accessibility guidelines?",
+      "url": "https://example.org/accessibility",
+      "title": "Accessibility notice",
+      "content": "The guideline update describes accessibility requirements."
+    }
+  ]
+}

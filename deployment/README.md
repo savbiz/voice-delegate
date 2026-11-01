@@ -293,3 +293,9 @@ existing no-network illustration. Stack requests have a two-second timeout (thre
 seconds for create/cleanup), an 8 KiB response cap and a 15-second overall work budget.
 Stop or leaving the tab cancels polling and attempts session close; normal server TTL
 still bounds cleanup if the connection is lost before ownership is received.
+
+Optional worker web search uses `VOICE_WEB_SEARCH=true` and `TAVILY_API_KEY` on the
+process that executes tools. The key is never a Vercel frontend variable. In private
+worker mode also enable the flag on the API so its advertised capabilities match.
+See [worker search setup and data flow](../docs/worker.md#optional-public-web-search).
+Default deployments and the offline demo continue without external search.

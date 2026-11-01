@@ -292,6 +292,23 @@ local-asset CSP, keeps native HTTP overrides disabled, and preserves server-side
 session expiry as the final cleanup boundary. Offline fake/API checks do not verify
 native WebRTC or device audio. See the [mobile preview guide](mobile.md).
 
+## Optional public web evidence
+
+With `VOICE_WEB_SEARCH=true`, the worker registry adds a bounded Tavily `web_search`
+tool. The voice model still sees only `delegate_task`. Calculation and project
+retrieval remain local. The HTTP search adapter owns a total deadline and response
+cap; it does not fetch pages from returned URLs. Failure discloses a fallback to the
+bundled documentation. See [worker configuration](worker.md#optional-public-web-search)
+and [ADR 011](decisions/011-read-only-web-search.md).
+
+Web search is a terminal evidence step: the graph rejects any subsequent tool call.
+Sources receive stable URL-derived IDs and validated citation indices. Private worker
+job responses include a bounded `web_sources` collection; the API validates these
+before exposing them through the normal session source panel. Transport validation
+and citations do not establish that the external text is true or safe to repeat.
+System prompts ship as Markdown resources inside the backend and agent packages,
+with server-selected variants matching enabled tools and cancellation behavior.
+
 ## Sources
 
 Reviewed public documentation on 2026-09-20:

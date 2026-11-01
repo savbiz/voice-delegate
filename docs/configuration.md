@@ -61,6 +61,10 @@ Declared defaults below never read your environment or reveal configured secrets
 | `worker_service_capacity` | `VOICE_WORKER_SERVICE_CAPACITY` | `4` | `{"type": "integer", "minimum": 1, "maximum": 32}` |
 | `worker_max_records` | `VOICE_WORKER_MAX_RECORDS` | `128` | `{"type": "integer", "minimum": 32, "maximum": 1024}` |
 | `worker_mode` | `VOICE_WORKER_MODE` | `"offline"` | `{"type": "string", "enum": ["offline", "openai", "decisions"]}` |
+| `web_search` | `VOICE_WEB_SEARCH` | `false` | `{"type": "boolean"}` |
+| `tavily_api_key` | `TAVILY_API_KEY` | `""` | `{"type": "string"}` |
+| `web_search_domains` | `VOICE_WEB_SEARCH_DOMAINS` | `[]` | `{"type": "array"}` |
+| `web_search_timeout_seconds` | `VOICE_WEB_SEARCH_TIMEOUT_SECONDS` | `3` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
 | `worker_model` | `VOICE_WORKER_MODEL` | `"gpt-4.1-mini"` | `{"type": "string"}` |
 | `delegation_timeout_seconds` | `VOICE_DELEGATION_TIMEOUT_SECONDS` | `15` | `{"type": "number", "maximum": 120, "exclusiveMinimum": 0}` |
 | `delegation_result_tokens` | `VOICE_DELEGATION_RESULT_TOKENS` | `120` | `{"type": "integer", "minimum": 8, "maximum": 480}` |
@@ -81,6 +85,21 @@ The code is generated verbatim so changes to any validator fail the drift test.
 Field types use Pydantic's normal environment parsing; this is not strict JSON typing.
 
 ```python
+@model_validator(mode="after")
+def validate_web_search(self) -> "Settings":
+    self.web_search_domains = list(
+        dict.fromkeys(domain_name(value) for value in self.web_search_domains)
+    )
+    if (
+        self.web_search
+        and self.worker_execution == "local"
+        and not self.tavily_api_key.get_secret_value()
+    ):
+        message = "Web search requires TAVILY_API_KEY on the worker host"
+        raise ValueError(message)
+    return self
+
+
 @model_validator(mode="after")
 def validate_origins(self) -> "Settings":
     """Accept the deprecated singular setting only when no list was supplied."""

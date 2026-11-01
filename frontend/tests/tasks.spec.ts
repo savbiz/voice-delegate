@@ -65,3 +65,45 @@ test('two tasks display independently and cancellation targets the selected id',
   );
   await expect(page.getByText('Result sent means accepted', { exact: false })).toBeVisible();
 });
+
+test('web evidence is shown as an external HTTPS link in the live source panel', async ({
+  page,
+}) => {
+  await page.addInitScript(installFakePeers);
+  await page.clock.install();
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/config')) return route.fulfill({ json: { voice_available: true } });
+    if (path.endsWith('/sessions')) return route.fulfill({ json: { id: 'owned', key: 'key' } });
+    if (path.endsWith('/heartbeat'))
+      return route.fulfill({
+        json: {
+          state: 'connected',
+          delegation: 'completed',
+          sources: [
+            {
+              id: 'web-fixture',
+              title: 'Public notice',
+              section: 'Web search',
+              path: 'https://example.org/news',
+              text: 'A cited public update.',
+              digest: 'fixture',
+            },
+          ],
+        },
+      });
+    return route.fulfill({ json: { sdp: 'v=0\r\n', finalized: true } });
+  });
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('button', { name: 'Start conversation' }).click();
+  await expect(page.getByRole('status')).toContainText('Connected');
+  await page.clock.runFor(2100);
+  await page.getByText('[1] Public notice — Web search', { exact: true }).click();
+  const link = page.getByRole('link', { name: 'https://example.org/news' });
+  await expect(link).toHaveAttribute('href', 'https://example.org/news');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(page.getByText('A cited public update.')).toBeVisible();
+  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+});

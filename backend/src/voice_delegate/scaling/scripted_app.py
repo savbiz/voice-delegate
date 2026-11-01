@@ -47,6 +47,7 @@ def create_demo_app() -> FastAPI:
     settings = load_settings()
     if (
         settings.worker_mode != "offline"
+        or settings.web_search
         or settings.fallback_enabled
         or settings.openai_api_key.get_secret_value()
         or settings.azure_api_key.get_secret_value()

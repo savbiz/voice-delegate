@@ -207,3 +207,12 @@ unknown if text rates or returned usage are missing, or a request fails before u
 is available. Estimates exclude cache discounts and billing adjustments. Offline
 cost is zero because both clients are fakes. See the [worker guide](../docs/worker.md#decisions-worker-planner)
 for the explicit-expression limitation and refusal/fallback policy.
+
+## Web search contract cases
+
+`data/web-v1.json` adds ten external-information questions with synthetic response
+fixtures. Run `uv run pytest backend/tests/test_web_eval.py` from the repository root.
+The real graph and HTTP adapter run against a deterministic transport; each case
+asserts the search query, labelled source and final citation. These tests establish
+routing and evidence preservation, not live relevance, current facts, LLM tool-choice
+accuracy or provider latency. The existing forty-case worker evaluation is unchanged.

@@ -96,6 +96,14 @@
     "digest": "558836e5b8cc2d87e4b0a674394bd30bb981b88424f0892f3c4f8c5a9ea1024e"
   },
   {
+    "id": "16b9322710eed58f",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Documentation map",
+    "text": "Optional [public web search](docs/worker.md#optional-public-web-search) runs in the\nworker behind the same `delegate_task` entry point. It is disabled by default and\nrequires a server-side Tavily key. Offline contracts are verified; live search\nquality and spoken delivery remain pending.",
+    "digest": "16b9322710eed58f19ca6c31f9641ff1029addb4092d75220ab230cd1a415940"
+  },
+  {
     "id": "4c84eddd371969c3",
     "title": "Architecture",
     "path": "docs/architecture.md",
@@ -254,6 +262,22 @@
     "section": "Native client preview",
     "text": "Native backgrounding releases local media and requests session close. Calls do not\ncontinue in the background or automatically resume. The native build has its own\nlocal-asset CSP, keeps native HTTP overrides disabled, and preserves server-side\nsession expiry as the final cleanup boundary. Offline fake/API checks do not verify\nnative WebRTC or device audio. See the [mobile preview guide](mobile.md).",
     "digest": "de0461f972daecd14953cf1b250fb7117458919822aa25c8ef1bc7f61085325a"
+  },
+  {
+    "id": "48b406ecc24137f4",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional public web evidence",
+    "text": "With `VOICE_WEB_SEARCH=true`, the worker registry adds a bounded Tavily `web_search`\ntool. The voice model still sees only `delegate_task`. Calculation and project\nretrieval remain local. The HTTP search adapter owns a total deadline and response\ncap; it does not fetch pages from returned URLs. Failure discloses a fallback to the\nbundled documentation. See [worker configuration](worker.md#optional-public-web-search)\nand [ADR 011](decisions/011-read-only-web-search.md).",
+    "digest": "48b406ecc24137f4dc3ad85a4e0d62f4b9d8ad411bcd0b618d7d3060db85ebe2"
+  },
+  {
+    "id": "2c107b8aca3dabd6",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional public web evidence",
+    "text": "Web search is a terminal evidence step: the graph rejects any subsequent tool call.\nSources receive stable URL-derived IDs and validated citation indices. Private worker\njob responses include a bounded `web_sources` collection; the API validates these\nbefore exposing them through the normal session source panel. Transport validation\nand citations do not establish that the external text is true or safe to repeat.\nSystem prompts ship as Markdown resources inside the backend and agent packages,\nwith server-selected variants matching enabled tools and cancellation behavior.",
+    "digest": "2c107b8aca3dabd68b3279e1716622f493e5b122604bab74a204334b9316e18f"
   },
   {
     "id": "0015ca08b96d3aec",
@@ -446,6 +470,86 @@
     "section": "Consequences and verification",
     "text": "Sources: [Decisions reference](https://developers.openai.com/api/reference/resources/decisions/methods/create),\n[Decisions guide and pricing](https://developers.openai.com/api/docs/guides/decisions),\n[Live delegation](https://developers.openai.com/api/docs/guides/live-delegation),\n[Realtime conversations](https://developers.openai.com/api/docs/guides/realtime-conversations).",
     "digest": "61dfe122ffe8e470400d03498954098f192c00078e72735ab0107eebbc8443ae"
+  },
+  {
+    "id": "98442652154f254f",
+    "title": "ADR 011: Read-only web search in the delegated worker",
+    "path": "docs/decisions/011-read-only-web-search.md",
+    "section": "ADR 011: Read-only web search in the delegated worker",
+    "text": "Date: 2026-11-01\nStatus: accepted",
+    "digest": "98442652154f254fc9e8f83d613828f9f51d35a2f5a1c370f5ff459c55515d30"
+  },
+  {
+    "id": "6896d6f5cd02a98b",
+    "title": "ADR 011: Read-only web search in the delegated worker",
+    "path": "docs/decisions/011-read-only-web-search.md",
+    "section": "Context",
+    "text": "The voice model retains its single `delegate_task` entry point. The worker needs a\nbounded source of current public information alongside calculation and bundled\nproject documentation. External search results are untrusted evidence. The default\noffline demo must continue to work without credentials or network requests.",
+    "digest": "6896d6f5cd02a98bc103df79eb6e4b3110113fd8aac2deb33c61a79af6f8614d"
+  },
+  {
+    "id": "315c5531de790711",
+    "title": "ADR 011: Read-only web search in the delegated worker",
+    "path": "docs/decisions/011-read-only-web-search.md",
+    "section": "Decision",
+    "text": "Use Tavily Basic Search through a small HTTP adapter, without a search SDK. It\nreturns structured URLs, titles and excerpts and supports an optional domain filter.\nDisable generated answers, raw page content, images and automatic search-depth\nselection. Use the existing `httpx` dependency, now explicitly declared by the agent\npackage; its BSD-3-Clause attribution is already in THIRD_PARTY_NOTICES.md.",
+    "digest": "315c5531de79071116cea530c8dc08d463a0780fc7a59820a40f33d13c403fb3"
+  },
+  {
+    "id": "f602098fbaedcde1",
+    "title": "ADR 011: Read-only web search in the delegated worker",
+    "path": "docs/decisions/011-read-only-web-search.md",
+    "section": "Decision",
+    "text": "Brave offers structured web results and Exa offers search with selectable content.\nTavily is the initial integration choice for the bounded excerpt contract and direct\ndomain filtering. No comparative live quality, latency or cost benchmark establishes\nit as the best provider. The adapter is separate from the planner and voice provider.",
+    "digest": "f602098fbaedcde1e7501011b36aa2131b1e6801ea5f52110b8b2bf30b9fb686"
+  },
+  {
+    "id": "0aa8c181382c65fe",
+    "title": "ADR 011: Read-only web search in the delegated worker",
+    "path": "docs/decisions/011-read-only-web-search.md",
+    "section": "Decision",
+    "text": "One request has a configurable total deadline, at most five seconds, a 64 KiB\nresponse limit, three results and no retries, redirects or local fetching of result\nURLs. URLs must be public-form HTTPS DNS names without credentials or custom ports;\nlinks are not proof of a site's trustworthiness. Optional allowlisting matches exact\ndomains and their subdomains. Excerpts are clipped to the existing 400-character\nsource budget, titles to 160 characters and URLs to 2048 characters.",
+    "digest": "0aa8c181382c65fe1aba2500a3a4981d2eacc981d69e2974ccb0eb2c13e51727"
+  },
+  {
+    "id": "6f05c8d813cbb3af",
+    "title": "ADR 011: Read-only web search in the delegated worker",
+    "path": "docs/decisions/011-read-only-web-search.md",
+    "section": "Decision",
+    "text": "`VOICE_WEB_SEARCH` defaults to false. Enabling it requires `TAVILY_API_KEY` on the\nworker host. Transport, status, deadline and malformed-response failures explicitly\nfall back to bundled project documentation, with a disclosure in the worker result.\nNo results means no supported web answer. Task cancellation propagates rather than\nbeing turned into a fallback answer.",
+    "digest": "6f05c8d813cbb3af464224e25d15004a5e32c9f1d114b19d705a62a76a54a61f"
+  },
+  {
+    "id": "e74d1a2616eac148",
+    "title": "ADR 011: Read-only web search in the delegated worker",
+    "path": "docs/decisions/011-read-only-web-search.md",
+    "section": "Decision",
+    "text": "After web evidence is read, the graph allows only a final answer: further tool calls\nare rejected in code. Calculation or project search can precede web search within\nthe existing step budget. This limits the first implementation's multi-step workflows\nand prevents search-result instructions from launching another tool. Final web\nanswers need valid source indices; citations do not prove semantic accuracy. This is\nnot a replacement for the planned moderation extension or a guarantee that an LLM\nwill never repeat malicious text.",
+    "digest": "e74d1a2616eac1483a6919c1d2a4b48aba23958ca6d9a103772fa3e569497ecd"
+  },
+  {
+    "id": "bdc47c09ce09259e",
+    "title": "ADR 011: Read-only web search in the delegated worker",
+    "path": "docs/decisions/011-read-only-web-search.md",
+    "section": "Consequences",
+    "text": "Both local and private workers use the same configured tool registry. Private job\nresults carry up to three validated web sources so cited evidence reaches the UI.\nThe browser receives sources through the existing authenticated API; it never\nreceives the search key. Voice providers continue to see only `delegate_task`.",
+    "digest": "bdc47c09ce09259e09cc5d6c5c70a7b13878c3afc8d8ada11c6a14982d471821"
+  },
+  {
+    "id": "e4cc3d0c7771ef7d",
+    "title": "ADR 011: Read-only web search in the delegated worker",
+    "path": "docs/decisions/011-read-only-web-search.md",
+    "section": "Consequences",
+    "text": "Queries are sent to Tavily and selected excerpts enter the configured worker and\nvoice provider flows. No full conversation is sent by the search adapter, but a\nmodel-generated query can contain user-supplied details. Operators should enable\nsearch only when that data flow and their provider plan are acceptable. Free\ncredits are an account allowance, not an application spending guarantee.",
+    "digest": "e4cc3d0c7771ef7df330ba656a4ab5c9872532024630995bdc3d3db445939f67"
+  },
+  {
+    "id": "375fd28b9c5385d4",
+    "title": "ADR 011: Read-only web search in the delegated worker",
+    "path": "docs/decisions/011-read-only-web-search.md",
+    "section": "Consequences",
+    "text": "Offline HTTP fakes verify routing, budgets, failures, citations and blocked follow-up\ntool execution. Live relevance, answer grounding, paid account behavior and narration\nremain pending. The existing offline demo keeps search disabled.",
+    "digest": "375fd28b9c5385d42b2344129793fe9479f1262c517bda00091b633453a6c0b1"
   },
   {
     "id": "c38bee83afe223be",

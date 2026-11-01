@@ -67,3 +67,11 @@ transcript arrival, provider setup and acoustic speaker latency.
 **Censored benchmark observation:** an attempted case with overlap, timeout, missing
 evidence or transport failure. It remains in outcome and accuracy denominators and
 does not become a zero-millisecond latency sample.
+
+**Web evidence:** up to three HTTPS sources returned by the opt-in worker search
+adapter, identified by canonical URL and clipped to the existing excerpt budget.
+It differs from the bundled project documentation and is untrusted input.
+
+**Terminal evidence step:** a web search after which the graph permits a final answer
+but rejects additional tool calls. It limits injection-driven tool execution while
+leaving semantic answer quality subject to separate evaluation.

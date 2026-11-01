@@ -81,3 +81,61 @@ The [offline comparison](../evals/README.md#planner-comparison) exercises contra
 local execution only. Real planner accuracy, latency and cost remain live pending.
 
 Contract source: [OpenAI Decisions API reference](https://developers.openai.com/api/reference/resources/decisions/methods/create).
+
+## Optional public web search
+
+The voice model still delegates through `delegate_task`. The worker has calculation,
+project documentation search and, when enabled, `web_search`. Project questions use
+the bundled corpus; external-information questions can use Tavily. See
+[the provider decision and trust limits](decisions/011-read-only-web-search.md).
+
+Set these variables on the backend for local worker execution, or on the private
+worker service for remote execution, then restart that process:
+
+```sh
+VOICE_WEB_SEARCH=true
+TAVILY_API_KEY=<set privately in the process environment>
+VOICE_WEB_SEARCH_TIMEOUT_SECONDS=3
+VOICE_WEB_SEARCH_DOMAINS='["example.org"]'
+```
+
+The domain list is optional; its default is empty. Do not put the key in frontend
+variables, source files or logs. In remote mode enable `VOICE_WEB_SEARCH=true` on the
+API too, so its voice instructions and result validation match the worker. The key
+is required only on the process that executes the search. Keep the existing service
+authentication and private networking. Hosted deployments continue to use the
+existing Railway backend and Vercel frontend; no new deployment is provisioned.
+
+The adapter makes one Tavily Basic Search request with up to three results, a 64 KiB
+response cap and a total deadline of three seconds by default (maximum five).
+It clips excerpts to 400 characters, follows no redirects and never downloads result
+pages. Unavailable search falls back to local documentation with an explicit notice.
+An empty result does not authorize an unsupported current-facts answer. Task
+cancellation remains cancellation. Existing delegation and session limits still apply.
+
+Search must be the last tool action in a task: after receiving web excerpts the graph
+rejects further tool calls and requires a cited final answer. This deliberately limits
+multi-step planning and blocks tool execution requested by injected search text;
+it does not establish semantic immunity to prompt injection. External source links
+appear in the live source panel; documentation sources remain bundled snapshots.
+
+Tavily provides a free account allowance; additional searches can incur charges
+according to the operator's plan. Voice and text-model charges are separate. Keep
+paid overage disabled in the provider account when testing within free credits.
+The adapter sends the query to Tavily; selected excerpts also reach the worker model
+and voice narration. Avoid submitting private information as search queries.
+
+`OfflinePlanner` supports explicit `web <query>` only when this tool is enabled.
+With a real key this command still makes a real external search: “offline planner”
+means no planning model, not an offline search service. The one-command demo rejects
+web search; automated tests use deterministic HTTP fakes with no provider calls.
+
+System instructions are editable packaged Markdown in the
+[worker prompts](../agent/src/voice_delegate_agent/prompts/worker.md) and
+[voice prompts](../backend/src/voice_delegate/prompts/voice-classic.md).
+Capability-specific variants are selected by server settings. Restart after editing.
+LangChain supplies interfaces; the project owns these prompts and the execution policy.
+
+Verification: `uv run pytest backend/tests/test_web_search.py
+backend/tests/test_adversarial_worker.py backend/tests/test_web_eval.py` runs offline.
+Live search quality and spoken citation delivery remain pending.

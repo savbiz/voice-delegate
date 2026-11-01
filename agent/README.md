@@ -22,3 +22,23 @@ code; ambiguous arithmetic requires clarification. Classification failure uses t
 existing OpenAIPlanner; refusals do not. See [configuration and limits](../docs/worker.md#decisions-worker-planner)
 and [offline comparison](../evals/README.md#planner-comparison). Offline fake results
 verify the control flow, not model quality; live planner comparison is pending.
+
+## System prompts
+
+The worker system prompt is [prompts/worker.md](src/voice_delegate_agent/prompts/worker.md).
+The optional web-search tool uses [worker-web.md](src/voice_delegate_agent/prompts/worker-web.md).
+These Markdown files ship inside the Python package; they are not loaded from the current
+working directory. Restart the backend or private worker after editing them.
+
+Voice system prompts live in
+[the backend prompts package](../backend/src/voice_delegate/prompts/voice-classic.md):
+`voice-classic.md` is the default; `voice-intent.md` separates speech interruption from task
+cancellation; `voice-semantic.md` also describes opt-in semantic cancellation. Each has a
+`-web.md` variant selected only when the server enables web search. Per-session language
+and conversation preferences are appended by server code. LangChain supplies message
+and tool interfaces; it does not supply a hidden project system prompt.
+
+The planner proposes an action; the graph validates and executes at most one registered
+tool per step. Deterministic `OfflinePlanner` needs no model. `OpenAIPlanner` uses a text
+model; `DecisionsPlanner` uses typed decisions for action selection and the text model for
+final prose. These are interchangeable planners within one worker, not extra voice tools.

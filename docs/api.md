@@ -91,3 +91,9 @@ and `delivery_wait_seconds`. Terminal durations stop increasing. These are backe
 durations, not confirmation of audio playback. With session debug consent, `task_started`,
 `task_ready`, `task_sent`, cancellation, rejection, expiry and delivery-failure events record
 task IDs, states and durations without adding goals or context to those lifecycle records.
+
+When web search is enabled, private worker job responses additionally carry
+`web_sources`: up to three source records (`id`, `title`, `path`, `section`, `text`,
+`digest`). The API verifies canonical HTTPS paths, URL-derived IDs, excerpt digests
+and source budgets. The search key is never included. Public session sources use
+the existing shape; web sources have `section="Web search"` and `path` is the URL.
