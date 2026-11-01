@@ -454,7 +454,7 @@ export default function App() {
           A fast voice conversation. A separate worker for the heavy lifting.
         </p>
       </header>
-      <nav className="actions" role="tablist" aria-label="Conversation mode">
+      <nav className="mode-tabs" role="tablist" aria-label="Conversation mode">
         {(['demo', 'live', 'reference'] as const).map((tab, index, tabs) => (
           <button
             key={tab}
