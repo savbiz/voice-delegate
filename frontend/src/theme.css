@@ -1,0 +1,24 @@
+:root {
+  --ink: #24344d;
+  --muted: #52647b;
+  --line: #dce6f1;
+  --page: #f5f8fc;
+  --surface: #ffffff;
+  --surface-soft: #f8fafc;
+  --accent-deep: #286b51;
+  --accent-soft: #e9f5ef;
+  --accent-line: #b4dac8;
+  --blue-soft: #edf5fc;
+  --blue-line: #d8e5f1;
+  --danger: #9c3544;
+  --danger-soft: #fff1f2;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --radius-control: 0.75rem;
+  --radius-panel: 1rem;
+  --shadow: 0 4px 16px rgb(36 52 77 / 4%);
+}

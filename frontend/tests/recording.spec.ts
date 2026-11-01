@@ -53,7 +53,8 @@ test('audio capture is explicit and produces a local download without uploading 
   const link = page.getByRole('link', { name: 'Download session audio' });
   await expect(link).toHaveAttribute('href', /^blob:/);
   await expect(link).toHaveCSS('border-top-style', 'solid');
-  await expect(link).toHaveCSS('display', 'inline-block');
+  await expect(link).toHaveCSS('cursor', 'pointer');
+  expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await expect(checkbox).not.toBeChecked();
   const duration = await page.evaluate(async () => {
     const link = document.querySelector('a[download]');

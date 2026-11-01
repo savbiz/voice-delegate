@@ -9,6 +9,7 @@ test('narrow mode tabs remain visible and keyboard focus has sufficient contrast
   for (const tab of await tabs.all()) {
     const bounds = await tab.boundingBox();
     expect(bounds).not.toBeNull();
+    expect(bounds!.height).toBeGreaterThanOrEqual(44);
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
   }
@@ -41,11 +42,19 @@ test('narrow mode tabs remain visible and keyboard focus has sufficient contrast
     const root = getComputedStyle(document.documentElement);
     const focus = getComputedStyle(document.activeElement!);
     return {
-      muted: contrast(root.getPropertyValue('--muted'), '#f5f8fc'),
-      accent: contrast(root.getPropertyValue('--accent-deep'), '#e9f5ef'),
-      pitch: contrast(getComputedStyle(document.querySelector('header p')!).color, '#f5f8fc'),
-      focus: contrast(focus.outlineColor, '#f5f8fc'),
+      muted: contrast(root.getPropertyValue('--muted'), root.getPropertyValue('--page')),
+      accent: contrast(
+        root.getPropertyValue('--accent-deep'),
+        root.getPropertyValue('--accent-soft'),
+      ),
+      pitch: contrast(
+        getComputedStyle(document.querySelector('header p')!).color,
+        root.getPropertyValue('--page'),
+      ),
+      focus: contrast(focus.outlineColor, root.getPropertyValue('--page')),
       focusStyle: focus.outlineStyle,
+      primary: contrast(root.getPropertyValue('--surface'), root.getPropertyValue('--accent-deep')),
+      danger: contrast(root.getPropertyValue('--danger'), root.getPropertyValue('--danger-soft')),
     };
   });
   expect(contrasts.muted).toBeGreaterThanOrEqual(4.5);
@@ -53,4 +62,6 @@ test('narrow mode tabs remain visible and keyboard focus has sufficient contrast
   expect(contrasts.pitch).toBeGreaterThanOrEqual(4.5);
   expect(contrasts.focus).toBeGreaterThanOrEqual(3);
   expect(contrasts.focusStyle).toBe('solid');
+  expect(contrasts.primary).toBeGreaterThanOrEqual(4.5);
+  expect(contrasts.danger).toBeGreaterThanOrEqual(4.5);
 });

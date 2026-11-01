@@ -1,3 +1,4 @@
+import { Button } from './components/Button';
 import { useEffect, useRef, useState } from 'react';
 import { chatBubbles } from './realtime/store';
 import type { ChatMessage } from './realtime/store';
@@ -46,7 +47,7 @@ export function Transcript({ messages }: { messages: ChatMessage[] }) {
         )}
       </div>
       {showLatest && (
-        <button
+        <Button
           onClick={() => {
             following.current = true;
             setShowLatest(false);
@@ -54,7 +55,7 @@ export function Transcript({ messages }: { messages: ChatMessage[] }) {
           }}
         >
           Latest messages ↓
-        </button>
+        </Button>
       )}
     </section>
   );

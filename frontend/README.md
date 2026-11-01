@@ -29,3 +29,18 @@ is on by default and can be disabled before starting. Tones are generated in the
 are not routed into the app's recording graph. Speakers can still leak sound into a microphone;
 use headphones when recording. Browser audio restrictions may prevent the cues; visual status
 remains authoritative. Page navigation tears down audio without guaranteeing a closing cue.
+
+## Shared UI styles
+
+`src/theme.css` defines semantic colors, spacing, radii and shadows. Change those values
+when adjusting the shared visual system; keep component-specific layout in `src/style.css`
+and existing Tailwind utilities where useful. No complete CSS migration is required.
+
+`src/components/Button.tsx` provides primary, secondary and danger actions while retaining
+native button attributes. Its default type is `button`; form actions explicitly use
+`type="submit"`. `ModeTabs.tsx` owns the accessible mode selector and keyboard navigation.
+Keep those components at module scope so rerenders preserve component identity.
+
+Playwright checks keyboard navigation, contrast, 44-pixel tab targets and conversation
+layouts at 320, 390, 768 and 1100 pixels. These are offline browser checks with fake media;
+real microphone, Bluetooth, mobile browser and background behaviour still require device tests.
