@@ -240,6 +240,22 @@
     "digest": "caad20e0f9608e7cc41174613144b68fb5045551a6a475f9b56e796a1b0e2e2d"
   },
   {
+    "id": "d20728028e4c4f04",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Native client preview",
+    "text": "The opt-in Capacitor client packages the React frontend as local iOS/iPadOS and\nAndroid assets; it uses the existing API, invitations, quotas and single voice\n`delegate_task` tool. It does not embed a provider key or load Vercel as a remote app.\nNative voice is disabled unless explicitly enabled in a test build. Its requests\nretain browser Origin checks: the exact iOS `capacitor://localhost` origin requires\n`VOICE_NATIVE_CLIENTS=true` and an explicit allowlist entry; Android uses\n`https://localhost`. Backend hosts remain unchanged.",
+    "digest": "d20728028e4c4f0425d794a3b95c06571613519d6fc6d125670e46483db34bb3"
+  },
+  {
+    "id": "de0461f972daecd1",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Native client preview",
+    "text": "Native backgrounding releases local media and requests session close. Calls do not\ncontinue in the background or automatically resume. The native build has its own\nlocal-asset CSP, keeps native HTTP overrides disabled, and preserves server-side\nsession expiry as the final cleanup boundary. Offline fake/API checks do not verify\nnative WebRTC or device audio. See the [mobile preview guide](mobile.md).",
+    "digest": "de0461f972daecd14953cf1b250fb7117458919822aa25c8ef1bc7f61085325a"
+  },
+  {
     "id": "0015ca08b96d3aec",
     "title": "Architecture",
     "path": "docs/architecture.md",

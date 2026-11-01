@@ -80,3 +80,11 @@ def test_all_licence_and_notice_files_are_reproduced(tmp_path: Path) -> None:
 def test_missing_licence_text_stops_generation() -> None:
     with pytest.raises(ValueError, match="Missing licence text"):
         section("example", "1.0", "MIT", {})
+
+
+@pytest.mark.parametrize("filename", ["UNLICENSE", "UNLICENCE"])
+def test_public_domain_licence_files_are_included(tmp_path: Path, filename: str) -> None:
+    (tmp_path / filename).write_text("Public-domain dedication and warranty disclaimer")
+    assert frontend_texts(tmp_path) == {
+        filename: "Public-domain dedication and warranty disclaimer"
+    }

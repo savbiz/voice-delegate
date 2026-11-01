@@ -1,3 +1,4 @@
+import { canStartVoice, isNativeClient } from '../native';
 import { ConnectionSounds } from './connection-sounds';
 import { AudioTimingMeter } from './audio-timing';
 /** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
@@ -688,11 +689,25 @@ export function createLiveSession(
     attemptId += 1;
     release();
     showState('ended', 'Conversation ended.', 'Select Start conversation to begin a new session.');
+    store.update(endedWorkerState(store.getSnapshot()));
   };
+  const onVisibilityChange = () => {
+    if (isNativeClient() && document.visibilityState === 'hidden' && store.getSnapshot().active)
+      onPageHide();
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
   showState('ready', 'Ready to connect', 'Start a conversation when you are ready.');
   window.addEventListener('pagehide', onPageHide);
   return {
     start: () => {
+      if (!canStartVoice()) {
+        showState(
+          'ready',
+          'Native live voice is disabled.',
+          'Use Free demo. Native voice requires an explicit test build and device verification.',
+        );
+        return;
+      }
       if (!store.getSnapshot().active && !ending && !recovering) {
         sounds.arm(getConnectionSounds());
         void begin();
@@ -708,6 +723,7 @@ export function createLiveSession(
       sounds.dispose();
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       window.removeEventListener('pagehide', onPageHide);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       onPageHide();
     },
   };

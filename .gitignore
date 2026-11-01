@@ -25,3 +25,15 @@ test-results/
 frontend/public/third-party-notices.txt
 frontend/.license-inventory/
 .pnpm-store/
+
+frontend/dist-native/
+frontend/android/.gradle/
+frontend/android/local.properties
+frontend/android/**/build/
+frontend/android/app/src/main/assets/public/
+frontend/android/app/src/main/assets/capacitor.config.json
+frontend/android/app/src/main/assets/capacitor.plugins.json
+frontend/ios/App/App/public/
+frontend/ios/App/App/capacitor.config.json
+frontend/ios/App/Pods/
+frontend/ios/**/xcuserdata/

@@ -44,3 +44,8 @@ into `dist/`; the generated copy is ignored by Git. Playwright checks the served
 against the source and checks React legal comments in the production JavaScript.
 Vite 8's active Rolldown
 output also explicitly preserves legal comments.
+
+Native scaffold/tooling attribution is kept in `native-tooling.md` and appended by
+the generator. `UNLICENSE`/`UNLICENCE` files are included as upstream legal texts.
+The npm inventory covers the new Capacitor packages and CLI dependencies; compiled
+Maven/SPM dependency inventories are a separate prerequisite for native distribution.

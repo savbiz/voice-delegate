@@ -276,6 +276,22 @@ keeping sealed provider segments for fallback replay. Delegation context explici
 the preceding user turn alongside bounded conversation text. Both are untrusted data; the worker
 uses the recent topic to resolve corrections and asks for clarification when ambiguous.
 
+## Native client preview
+
+The opt-in Capacitor client packages the React frontend as local iOS/iPadOS and
+Android assets; it uses the existing API, invitations, quotas and single voice
+`delegate_task` tool. It does not embed a provider key or load Vercel as a remote app.
+Native voice is disabled unless explicitly enabled in a test build. Its requests
+retain browser Origin checks: the exact iOS `capacitor://localhost` origin requires
+`VOICE_NATIVE_CLIENTS=true` and an explicit allowlist entry; Android uses
+`https://localhost`. Backend hosts remain unchanged.
+
+Native backgrounding releases local media and requests session close. Calls do not
+continue in the background or automatically resume. The native build has its own
+local-asset CSP, keeps native HTTP overrides disabled, and preserves server-side
+session expiry as the final cleanup boundary. Offline fake/API checks do not verify
+native WebRTC or device audio. See the [mobile preview guide](mobile.md).
+
 ## Sources
 
 Reviewed public documentation on 2026-09-20:

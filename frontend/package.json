@@ -17,13 +17,19 @@
     "typecheck": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
-    "test:stack": "playwright test -c playwright.stack.config.ts"
+    "test:stack": "playwright test -c playwright.stack.config.ts",
+    "native:build": "node scripts/native-build.ts build",
+    "native:sync": "node scripts/native-build.ts sync"
   },
   "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.6.0",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",

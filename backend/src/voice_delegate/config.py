@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     realtime_model: str = "gpt-realtime"
     model: str = "gpt-live-1"
     voice: str = "marin"
+    native_clients: bool = False
     allowed_origins: list[str] = Field(default=["http://localhost:5173"], min_length=1)
     allowed_origin: str | None = Field(
         default=None, description="Deprecated: use VOICE_ALLOWED_ORIGINS"
@@ -87,6 +88,8 @@ class Settings(BaseSettings):
         if self.allowed_origin is not None and "allowed_origins" not in self.model_fields_set:
             self.allowed_origins = [self.allowed_origin]
         for origin in self.allowed_origins:
+            if self.native_clients and origin == "capacitor://localhost":
+                continue
             parsed = urlsplit(origin)
             if (
                 parsed.scheme not in {"http", "https"}
@@ -184,7 +187,11 @@ class Settings(BaseSettings):
             if not self.invite_tokens and len(self.access_token.get_secret_value()) < 24:
                 message = "Production requires VOICE_ACCESS_TOKEN of at least 24 characters"
                 raise ValueError(message)
-            if any(not origin.startswith("https://") for origin in self.allowed_origins):
+            if any(
+                not origin.startswith("https://")
+                and not (self.native_clients and origin == "capacitor://localhost")
+                for origin in self.allowed_origins
+            ):
                 message = "Production requires an HTTPS frontend origin"
                 raise ValueError(message)
         return self
