@@ -450,7 +450,7 @@ export default function App() {
         <h1 className="mt-5 text-5xl font-semibold tracking-tight">
           voice-delegate<span className="text-emerald-400">.</span>
         </h1>
-        <p className="mt-4 text-lg text-slate-400">
+        <p className="mt-4 text-lg text-[var(--muted)]">
           A fast voice conversation. A separate worker for the heavy lifting.
         </p>
       </header>
