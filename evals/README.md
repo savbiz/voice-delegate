@@ -134,3 +134,63 @@ They now run as labelled regression tests and informed alias/stopword fixes; the
 scores are no longer an independent held-out estimate of retrieval quality.
 
 `worker-v4` updates the fallback-history source label after documenting replay of all trailing in-flight text. The 40 questions and rubrics are unchanged.
+
+## Planner comparison
+
+Run this free contract comparison, even if a provider key is present:
+
+```sh
+uv run python -m evals.worker_eval --compare-planners --output .local/evals/planner-offline.json
+```
+
+Both sides use scripted stand-ins for model inference. The baseline uses OfflinePlanner
+behind the OpenAIPlanner interface; DecisionsPlanner uses a scripted choice classifier
+and scripted final prose. Both execute the real graph and tools against the same unchanged
+`worker-v4` cases. No expected labels are supplied to either planner. Four cases marked
+live-only are skipped on both sides. Perfect offline selection is a harness check, not
+measured model quality or a prediction of live accuracy.
+
+Recorded local run on 2026-10-31, one trial, Python 3.12.14. The timing below is local
+graph/tool wall time, not model inference, audio latency or a provider comparison.
+The source tree is based on `adca4de` with this feature's tracked changes; prompt,
+corpus, dataset and choice-question hashes are recorded in the JSON report. Timing
+varies by machine and cache. Zero USD means no provider calls in this scripted run.
+
+| Planner | Executed | Labelled selection accuracy | Mean steps | p50 worker seconds | Estimated USD |
+|---|---:|---:|---:|---:|---:|
+| openai (scripted stand-in) | 36 | 1.000000 | 2.000000 | 0.003473 | 0.000000 |
+| decisions (scripted stand-in) | 36 | 1.000000 | 2.000000 | 0.003594 | 0.000000 |
+
+Every executed row records first-tool selection correctness when a tool label exists,
+graph steps, worker seconds, text/Decisions call counts, token usage and estimated cost.
+Failed workers count as zero selection correctness on labelled cases. Unlabelled refusal
+cases are retained but excluded from that denominator. Step count means planner responses,
+not model-generated reasoning steps. `n_trials=1` is explicit; repeat runs to measure variance.
+A shared call budget counts each Decisions call, text-tool-selection fallback and final
+text request, including failed attempts. The JSON retains failures instead of dropping them.
+
+Live comparison is pending for OpenAIPlanner and DecisionsPlanner. Do not run the following
+until paid authorization is given for this comparison. Set the two text rates from the
+chosen model's current pricing first; they are estimates, not provider billing access:
+
+```sh
+uv run python -m evals.worker_eval --compare-planners --mode openai --allow-paid \
+  --max-model-calls 24 --case math-01 --case docs-01 \
+  --text-input-usd-per-million "$TEXT_INPUT_USD_PER_MILLION" \
+  --text-output-usd-per-million "$TEXT_OUTPUT_USD_PER_MILLION" \
+  --output .local/evals/planner-live.json
+```
+
+The worst-case gate reserves 12 calls per selected case across both planners: four
+baseline steps plus up to two calls for each of four DecisionsPlanner steps. The live
+text model defaults to `gpt-4.1-mini` and the classifier is `gpt-6-luna`. Use `--model`
+to select the text model. This run has no AI judge or cloud upload. A case is bounded
+to 45 seconds and four steps. To compare all 40 cases, explicitly budget at least 480
+calls; do not do so merely to obtain an offline result.
+
+`--decision-input-usd-per-million` defaults to the existing configured estimate of 0.1,
+not a claim of current billing. Text rates are unset by default. Live costs remain
+unknown if text rates or returned usage are missing, or a request fails before usage
+is available. Estimates exclude cache discounts and billing adjustments. Offline
+cost is zero because both clients are fakes. See the [worker guide](../docs/worker.md#decisions-worker-planner)
+for the explicit-expression limitation and refusal/fallback policy.
