@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-LEGAL_NAME = re.compile(r"^(licen[sc]e|notice|copying|copyright)(?:[._-]|$)", re.I)
+LEGAL_NAME = re.compile(r"^((?:un)?licen[sc]e|notice|copying|copyright)(?:[._-]|$)", re.I)
 
 
 def block(text: str) -> str:
@@ -124,6 +124,7 @@ def main() -> None:
         + block(data.with_name("LICENSE.tiktoken").read_text())
     )
     parts.append((ROOT / "scripts/licenses/container-tooling.md").read_text())
+    parts.append((ROOT / "scripts/licenses/native-tooling.md").read_text())
     args.output.write_text("\n".join(parts))
 
 

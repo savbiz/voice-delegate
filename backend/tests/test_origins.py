@@ -120,3 +120,59 @@ def test_noncanonical_origins_are_rejected_before_serving(origin: str) -> None:
 )
 def test_browser_serialized_origins_keep_nondefault_ports_and_idna(origin: str) -> None:
     assert Settings(allowed_origins=[origin]).allowed_origins == [origin]
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_native_origin_is_exact_and_opt_in(enabled: bool) -> None:
+    values = {
+        "environment": "production",
+        "allowed_hosts": ["localhost"],
+        "access_token": "a" * 32,
+        "native_clients": enabled,
+        "allowed_origins": ["https://demo.example", "capacitor://localhost"],
+    }
+    if enabled:
+        assert Settings.model_validate(values).allowed_origins[-1] == "capacitor://localhost"
+    else:
+        with pytest.raises(ValidationError):
+            Settings.model_validate(values)
+    for origin in [
+        "capacitor://other",
+        "capacitor://localhost/",
+        "capacitor://localhost:80",
+        "null",
+    ]:
+        with pytest.raises(ValidationError):
+            Settings(native_clients=enabled, allowed_origins=[origin])
+
+
+async def test_native_origin_cors_and_routes_share_explicit_allowlist(
+    asgi_client: ASGIClientFactory, tmp_path: Path
+) -> None:
+    origins = ["capacitor://localhost", "https://localhost"]
+    app = create_app(
+        Settings(
+            native_clients=True,
+            allowed_origins=origins,
+            feedback_database=str(tmp_path / "feedback.sqlite3"),
+        ),
+        FakeProvider(),
+    )
+    async with asgi_client(app) as client:
+        for origin in origins:
+            headers = {"Origin": origin}
+            preflight = await client.options(
+                "/api/sessions", headers={**headers, "Access-Control-Request-Method": "POST"}
+            )
+            assert preflight.headers["Access-Control-Allow-Origin"] == origin
+            response = await client.post("/api/sessions", headers=headers)
+            assert response.status_code == 201
+            owner = response.json()
+            closed = await client.post(
+                f"/api/sessions/{owner['id']}/close",
+                headers={**headers, "X-Session-Key": owner["key"]},
+            )
+            assert closed.status_code == 200
+        response = await client.post("/api/sessions", headers={"Origin": "capacitor://other"})
+        assert response.status_code == 403
+        assert "Access-Control-Allow-Origin" not in response.headers

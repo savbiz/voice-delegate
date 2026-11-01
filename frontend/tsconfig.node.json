@@ -13,7 +13,8 @@
     "verbatimModuleSyntax": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node", "vite/client"],
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true
   },
   "include": [
     "vite.config.ts",
@@ -21,6 +22,8 @@
     "playwright.stack.config.ts",
     "stack-tests",
     "tests",
-    "src/**/*.test.ts"
+    "src/**/*.test.ts",
+    "capacitor.config.ts",
+    "scripts"
   ]
 }

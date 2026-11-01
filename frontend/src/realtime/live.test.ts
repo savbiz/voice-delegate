@@ -69,6 +69,7 @@ beforeEach(() => {
   sources = [source];
   stopTrack = vi.fn();
   vi.stubGlobal('window', new EventTarget());
+  vi.stubGlobal('document', Object.assign(new EventTarget(), { visibilityState: 'visible' }));
   vi.stubGlobal('RTCPeerConnection', FakePeer);
   vi.stubGlobal('navigator', {
     mediaDevices: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop: stopTrack }] })) },

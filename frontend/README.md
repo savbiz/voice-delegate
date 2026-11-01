@@ -44,3 +44,13 @@ Keep those components at module scope so rerenders preserve component identity.
 Playwright checks keyboard navigation, contrast, 44-pixel tab targets and conversation
 layouts at 320, 390, 768 and 1100 pixels. These are offline browser checks with fake media;
 real microphone, Bluetooth, mobile browser and background behaviour still require device tests.
+
+## Native preview
+
+An opt-in [Capacitor iOS/iPadOS and Android scaffold](../docs/mobile.md) reuses this
+frontend with local packaged assets. `VOICE_NATIVE_BUILD=true` and an explicit HTTPS
+`VITE_API_BASE_URL` are required for `pnpm native:build` / `pnpm native:sync`.
+Native voice additionally requires `VITE_NATIVE_LIVE=true` in a test build and an
+explicit backend Origin allowlist. It is off by default. Normal Vercel builds and
+existing web voice behaviour remain unchanged. An unsigned iOS Simulator build is
+verified; launch, physical-device, Android compilation and store acceptance remain pending; building assets is not an App Store or Google Play publication.

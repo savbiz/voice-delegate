@@ -19,6 +19,7 @@ Declared defaults below never read your environment or reveal configured secrets
 | `realtime_model` | `VOICE_REALTIME_MODEL` | `"gpt-realtime"` | `{"type": "string"}` |
 | `model` | `VOICE_MODEL` | `"gpt-live-1"` | `{"type": "string"}` |
 | `voice` | `VOICE_VOICE` | `"marin"` | `{"type": "string"}` |
+| `native_clients` | `VOICE_NATIVE_CLIENTS` | `false` | `{"type": "boolean"}` |
 | `allowed_origins` | `VOICE_ALLOWED_ORIGINS` | `["http://localhost:5173"]` | `{"type": "array"}` |
 | `allowed_origin` | `VOICE_ALLOWED_ORIGIN` | `null` | `{}` |
 | `allowed_hosts` | `VOICE_ALLOWED_HOSTS` | `["localhost", "127.0.0.1", "testserver"]` | `{"type": "array"}` |
@@ -86,6 +87,8 @@ def validate_origins(self) -> "Settings":
     if self.allowed_origin is not None and "allowed_origins" not in self.model_fields_set:
         self.allowed_origins = [self.allowed_origin]
     for origin in self.allowed_origins:
+        if self.native_clients and origin == "capacitor://localhost":
+            continue
         parsed = urlsplit(origin)
         if (
             parsed.scheme not in {"http", "https"}
@@ -184,7 +187,11 @@ def validate_production(self) -> "Settings":
         if not self.invite_tokens and len(self.access_token.get_secret_value()) < 24:
             message = "Production requires VOICE_ACCESS_TOKEN of at least 24 characters"
             raise ValueError(message)
-        if any(not origin.startswith("https://") for origin in self.allowed_origins):
+        if any(
+            not origin.startswith("https://")
+            and not (self.native_clients and origin == "capacitor://localhost")
+            for origin in self.allowed_origins
+        ):
             message = "Production requires an HTTPS frontend origin"
             raise ValueError(message)
     return self
@@ -195,7 +202,10 @@ def validate_production(self) -> "Settings":
 Use `VOICE_ALLOWED_ORIGINS` as a JSON array of exact origins. The deprecated
 `VOICE_ALLOWED_ORIGIN` accepts one origin only when no list was supplied.
 The list takes precedence if both variables are configured. Production requires
-HTTPS for every allowed origin. Routes, CORS and limiter responses share the list.
+HTTPS for every allowed browser origin. With `VOICE_NATIVE_CLIENTS=true`, the exact
+`capacitor://localhost` iOS origin may also be explicitly listed. Android uses
+`https://localhost`. Neither native origin is added automatically. Routes, CORS
+and limiter responses share the list.
 Origins must use browser serialization: lowercase/punycode hostnames and no
 explicit default ports (`:443` for HTTPS or `:80` for HTTP). Noncanonical values
 are rejected at startup; non-default ports and canonical IPv6 origins are allowed.

@@ -52,3 +52,10 @@ measures result readiness to send completion or expiry; it is not provider audio
 - **DecisionsPlanner:** opt-in worker planner that chooses a tool, final answer or
   refusal through the shared Decider. Classification failure uses the existing text
   planner; refusal does not. It is separate from semantic task cancellation.
+
+**Native origin:** the local web origin of packaged Capacitor content:
+`capacitor://localhost` on iOS and `https://localhost` on Android. This differs from
+both the public website and the backend host; it requires an explicit allowlist.
+
+**Capacitor preview:** the optional iOS/iPadOS and Android container for the React
+frontend. Local web-asset verification is separate from native-device and store acceptance.

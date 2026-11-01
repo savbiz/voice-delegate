@@ -8,6 +8,9 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      'dist-native/**',
+      'ios/**',
+      'android/**',
       'test-results/**',
       'playwright-report/**',
       '.vercel/**',

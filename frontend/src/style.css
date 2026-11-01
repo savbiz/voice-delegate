@@ -349,3 +349,11 @@ fieldset label {
     transition: none !important;
   }
 }
+
+/* Keep controls clear of native status bars and home indicators. */
+.native-app main {
+  padding-top: max(2rem, env(safe-area-inset-top, 0px));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+}

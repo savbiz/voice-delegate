@@ -80,3 +80,8 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - run: pnpm test:stack
+      - name: Build and sync opt-in native preview without SDK compilation
+        env:
+          VOICE_NATIVE_BUILD: "true"
+          VITE_API_BASE_URL: "https://voice-delegate-api-production.up.railway.app"
+        run: pnpm native:sync

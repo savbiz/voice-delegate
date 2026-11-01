@@ -1,5 +1,6 @@
 /** React shell separating a free scripted demo from the live WebRTC lifecycle. */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { canStartVoice } from './native';
 import { Button } from './components/Button';
 import { ModeTabs } from './components/ModeTabs';
 import type { Mode } from './components/ModeTabs';
@@ -58,6 +59,12 @@ function Live({ code }: { code: string }) {
   }, [state.phase]);
   return (
     <div className={largeCaptions ? 'large-captions' : undefined}>
+      {!canStartVoice() && (
+        <p className="notice">
+          Native preview: Free demo works offline. Live voice is disabled until explicitly enabled
+          in a test build; native microphone and playback acceptance are pending.
+        </p>
+      )}
       <p className="notice">
         Live voice requires a server API key and incurs provider usage charges. Your microphone is
         requested only when you start.

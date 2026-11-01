@@ -108,3 +108,13 @@ signals are harness checks, not evidence of live model quality. No paid planner 
 has been performed for this feature. Live comparison, billing validation and
 natural-language argument coverage remain pending. See [worker guide](worker.md#decisions-worker-planner)
 and [comparison procedure](../evals/README.md#planner-comparison).
+
+## Capacitor mobile preview
+
+The optional [mobile scaffold](mobile.md) packages local React assets for iOS/iPadOS
+and Android. Packaging and live voice require explicit opt-in; native voice is off by
+default. Deterministic tests cover build guards, native voice gating, background
+cleanup and native Origin policy. An unsigned iOS Simulator build was verified on
+2026-11-01 with Xcode 27.1 and iOS Simulator SDK 27.1. Android compilation, simulator launch,
+physical-device audio, Bluetooth, native recording export and store distribution
+remain pending. No live provider call or deployed configuration change is claimed.
