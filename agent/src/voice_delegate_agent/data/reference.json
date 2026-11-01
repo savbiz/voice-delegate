@@ -280,6 +280,30 @@
     "digest": "a49e6f09ff6a0779cb79c1f6c0bc5f8c0b5f1e325ae63df0948f5d68f7712b50"
   },
   {
+    "id": "a79ac2437c9cb400",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional Decisions worker planning",
+    "text": "`VOICE_WORKER_MODE=decisions` selects DecisionsPlanner inside the same bounded LangGraph\nworker. Each step classifies the next action against current tool names/descriptions,\n`direct` and `refuse`. Server code builds tool arguments; an unbound text model generates\nfinal prose. The voice adapter continues to expose only `delegate_task`.",
+    "digest": "a79ac2437c9cb400f78a48070f17e427ac02a9aaddce579845784064454f873c"
+  },
+  {
+    "id": "39d12e8157c2fa6d",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional Decisions worker planning",
+    "text": "The shared agent-level `Decider` contract supports predicates and choices without an\nagent-to-backend dependency. The backend provides the bounded HTTP implementation;\nlocal and private worker factories own and close the planner clients. Cancellation\nclassification remains independently controlled by its existing opt-in flag.",
+    "digest": "39d12e8157c2fa6de29f4e97f2429d2fa53793e4ddf45974a6bdb7955def2c89"
+  },
+  {
+    "id": "b602962bab4c7ad0",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional Decisions worker planning",
+    "text": "A failed classification uses the existing text planner for that step. Refusals stop\nwithout fallback, cancellation propagates, and ambiguous tool arguments require\nclarification. Input/output caps, classification and task deadlines, and the graph's\nstep limit bound both paths. This is verified offline with deterministic fakes;\nlive semantic accuracy and cost remain pending. See [worker limits](worker.md#decisions-worker-planner)\nand the [reproducible comparison](../evals/README.md#planner-comparison).",
+    "digest": "b602962bab4c7ad06c0b1e92173c8231bdd9500fb2242b01f7aadbe411afc240"
+  },
+  {
     "id": "c95e177cccf46e9f",
     "title": "ADR 002: Explicit lifecycle ownership and finite budgets",
     "path": "docs/decisions/002-lifecycle-and-bounds.md",

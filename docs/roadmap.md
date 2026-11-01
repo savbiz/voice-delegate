@@ -93,3 +93,18 @@ returned two valid non-cancellation decisions and two one-second timeouts. Expli
 semantic cancellation remains unverified; the feature stays off by default.
 Browser connection sounds are enabled by default with a preference to disable them;
 offline tests cover connection, closure, repeated events and unavailable audio.
+
+## Optional Decisions worker planner
+
+The experimental `VOICE_WORKER_MODE=decisions` adds dynamic tool selection through
+choice questions while retaining the existing voice tool and worker limits. Default
+worker execution remains offline. Deterministic tests cover selection, final-only text
+generation, refusal, malformed responses, timeout fallback, cancellation, client cleanup
+and the shared call budget in comparisons. The `worker-v4` comparison records per-case
+tool selection, steps, local worker duration and configured token-cost estimates.
+
+The offline run uses scripted stand-ins for both model paths; its perfect selection
+signals are harness checks, not evidence of live model quality. No paid planner run
+has been performed for this feature. Live comparison, billing validation and
+natural-language argument coverage remain pending. See [worker guide](worker.md#decisions-worker-planner)
+and [comparison procedure](../evals/README.md#planner-comparison).

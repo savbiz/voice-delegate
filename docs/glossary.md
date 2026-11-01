@@ -45,3 +45,10 @@ measures result readiness to send completion or expiry; it is not provider audio
 - **Allowed origins**: exact browser scheme, hostname and optional port values in
   `VOICE_ALLOWED_ORIGINS`. They govern route access and CORS, independently of the
   backend's allowed Host headers. Codespaces may rewrite the browser Origin.
+
+- **Choice question:** a classification over a server-supplied finite list of values,
+  with a selected value, confidence and probability distribution. It does not generate
+  free-form tool arguments.
+- **DecisionsPlanner:** opt-in worker planner that chooses a tool, final answer or
+  refusal through the shared Decider. Classification failure uses the existing text
+  planner; refusal does not. It is separate from semantic task cancellation.

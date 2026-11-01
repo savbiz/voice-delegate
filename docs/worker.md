@@ -38,3 +38,46 @@ Token clipping preserves valid Unicode and includes an ellipsis within the budge
 `VOICE_MAX_DELEGATIONS_PER_SESSION` defaults to 8 (maximum 64). Duplicate IDs do not dispatch work again. Running work is bounded by session capacity; a noncooperative worker retains capacity until it finishes. Cancellation invalidates the generation before cancelling the task, preventing late results from being narrated after the interruption is registered. Provider delivery has its own two-second deadline.
 
 Provider speech detection is authoritative. The local onset detector is a latency optimisation and is suppressed during measurable remote playback. See [architecture](architecture.md), [configuration](configuration.md), and [operations](operations.md).
+
+## Decisions worker planner
+
+`VOICE_WORKER_MODE=decisions` is an experimental paid alternative to `openai`;
+`offline` remains the default. Set it only on the existing backend or private worker,
+with `OPENAI_API_KEY`, then restart that process. No frontend variable is required.
+This mode is independent of `VOICE_DECISIONS_CANCEL`, which remains disabled by default.
+The voice model still knows only `delegate_task`.
+
+Each graph step asks `gpt-6-luna` one named `choice` question built from the current
+worker tool names/descriptions, plus `direct` and `refuse`. A selected tool returns
+one server-built call. `direct` invokes the configured text model without registered
+tools for final prose; unexpected final tool calls are rejected. An explicit refusal
+or an API refusal produces a bounded decline without a second model call.
+
+Decisions selects a finite label; it does not generate arbitrary tool arguments.
+Calculation currently requires an explicit expression such as `calculate (120+80)*1.22`
+or `18/3`. An ambiguous phrase, a natural-language calculation or an unsupported tool
+argument schema asks for clarification. Documentation search uses the goal as a bounded
+query. Future tools need a deterministic argument builder before they can execute.
+The current `openai` mode remains available for natural-language argument generation.
+
+The Decisions deadline reuses `VOICE_DECISIONS_TIMEOUT_SECONDS` (default one second).
+The adapter caps input text at 32 KiB, the serialized request and response at 64 KiB,
+questions at four and options per choice at 32. A worker reserves two options for
+`direct`/`refuse`, leaving at most 30 tool names. Refused, missing, malformed or unknown
+answers cannot become tool names. Timeouts and unavailable/malformed classifications
+fall back once for that step to the existing OpenAIPlanner. That fallback can select
+tool arguments as before; refusals never activate it. Cancellation propagates and
+never starts fallback work. There are no automatic HTTP retries.
+
+Text requests retain the existing 20-second timeout and 1,000-token output cap; final
+prose is additionally bounded to 8 KiB before the normal narration clipping. Model
+failure follows the existing worker-failure path. The graph step limit and outer task
+timeout also apply across classification and fallback. No keys or task text are logged.
+
+The shared `Decider` types live in the agent package; backend imports remain compatible.
+The API and private worker use the same planner factory and own their clients through
+shutdown. Predicate cancellation and choice planning use separate clients and lifetimes.
+The [offline comparison](../evals/README.md#planner-comparison) exercises contracts and
+local execution only. Real planner accuracy, latency and cost remain live pending.
+
+Contract source: [OpenAI Decisions API reference](https://developers.openai.com/api/reference/resources/decisions/methods/create).

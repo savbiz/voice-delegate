@@ -14,3 +14,11 @@ Search ranks excerpt text by sublinear term frequency, without a heading bonus.
 Queries of three or more content terms require at least half their terms in the corpus,
 so an incidental match does not manufacture evidence for an unrelated question. When only a document title or section heading matches,
 it returns matching excerpts in document order, so `architecture` opens the architecture overview.
+
+`DecisionsPlanner` is an optional worker mode: a shared `Decider` selects a tool,
+final response or refusal using a bounded choice question. The text model generates
+only final prose on the successful choice path. Tool arguments are built by server
+code; ambiguous arithmetic requires clarification. Classification failure uses the
+existing OpenAIPlanner; refusals do not. See [configuration and limits](../docs/worker.md#decisions-worker-planner)
+and [offline comparison](../evals/README.md#planner-comparison). Offline fake results
+verify the control flow, not model quality; live planner comparison is pending.
