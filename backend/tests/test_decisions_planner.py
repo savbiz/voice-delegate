@@ -80,6 +80,7 @@ async def test_refusal_does_not_invoke_text_or_fallback(choice: str) -> None:
     answer = await DecisionsPlanner(decider, final, fallback).respond(messages())
     assert "no action taken" in answer.content
     assert not answer.tool_calls
+    assert answer.response_metadata["decision"]["calls"] == 1
     final.assert_not_awaited()
     fallback.respond.assert_not_awaited()
 
@@ -112,6 +113,9 @@ async def test_decision_failure_uses_existing_planner_once(mode: str) -> None:
     )
     assert answer.content == "Current behaviour"
     assert answer.response_metadata["decision"]["fallback"] is True
+    assert answer.response_metadata["decision"]["calls"] == (0 if mode == "oversized" else 1)
+    if mode == "oversized":
+        assert decider.calls == 0
     fallback.respond.assert_awaited_once()
     final.assert_not_awaited()
 

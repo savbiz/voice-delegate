@@ -197,17 +197,20 @@ class DecisionsPlanner:
         schema.model_validate(arguments)
 
     @staticmethod
-    def _annotate(answer: AIMessage, tokens: int | None, fallback: bool = False) -> AIMessage:
+    def _annotate(
+        answer: AIMessage, tokens: int | None, fallback: bool = False, *, calls: int = 1
+    ) -> AIMessage:
         return answer.model_copy(
             update={
                 "response_metadata": {
                     **answer.response_metadata,
-                    "decision": {"calls": 1, "input_tokens": tokens, "fallback": fallback},
+                    "decision": {"calls": calls, "input_tokens": tokens, "fallback": fallback},
                 }
             }
         )
 
-    async def _decide(self, messages: list[AnyMessage]) -> Decision:
+    @staticmethod
+    def _decision_input(messages: list[AnyMessage]) -> str:
         text = json.dumps(
             [
                 {
@@ -222,6 +225,9 @@ class DecisionsPlanner:
         if len(text.encode()) > 32768:
             message = "Decision input exceeds budget"
             raise DecisionError(message)
+        return text
+
+    async def _decide(self, text: str) -> Decision:
         async with asyncio.timeout(self.timeout):
             decision = await self.decider.decide(text, (self.question,))
         selection = decision.choices.get(self.question.name)
@@ -236,10 +242,13 @@ class DecisionsPlanner:
         goal = self._goal(messages)
         if not goal:
             return AIMessage(content="Please repeat the task; no usable goal is available.")
+        calls = 0
         try:
-            decision = await self._decide(messages)
+            text = self._decision_input(messages)
+            calls = 1
+            decision = await self._decide(text)
         except Exception:
-            return self._annotate(await self.fallback.respond(messages), None, True)
+            return self._annotate(await self.fallback.respond(messages), None, True, calls=calls)
         if self.question.name in decision.refused:
             return self._annotate(
                 AIMessage(content="I cannot help with that request; no action taken."),
