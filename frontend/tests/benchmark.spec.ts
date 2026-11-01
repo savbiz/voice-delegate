@@ -64,6 +64,20 @@ test('benchmark connection errors expose no response content', async ({ page }) 
   });
 });
 
+test('benchmark timeout after connection is an unknown decision', async ({ page }) => {
+  await page.goto('/');
+  const result = await page.evaluate(probe, {
+    fake: true,
+    speechEndMs: 200,
+    timeoutMs: 1,
+  });
+  expect(result.outcome).toBe('timeout');
+  expect(result.delegated).toBeNull();
+  expect(result.setup_ms).toBeNull();
+  expect(result.first_audio_ms).toBeNull();
+  expect(result.turn_ms).toBeNull();
+});
+
 test('benchmark closes an owned session after offer rejection', async ({ page }) => {
   let closes = 0;
   await page.route('**/api/**', (route) => {

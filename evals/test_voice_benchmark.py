@@ -8,6 +8,21 @@ from pydantic import ValidationError
 from evals.voice_benchmark import DATASET, Capture, Dataset, offline_capture, summarize
 
 
+@pytest.mark.parametrize("outcome", ["timeout", "overlap", "error"])
+def test_censored_decisions_stay_unknown_unless_a_delegation_was_seen(outcome: str) -> None:
+    _, _, capture = fixture_capture()
+    body = capture.model_dump()
+    row = body["observations"][0]
+    row.update(outcome=outcome, delegated=False)
+    with pytest.raises(ValidationError, match="direct answer"):
+        Capture.model_validate(body)
+    row["delegated"] = True
+    assert Capture.model_validate(body).observations[0].delegated is True
+    row["setup_ms"] = 10.0
+    with pytest.raises(ValidationError, match="Censored"):
+        Capture.model_validate(body)
+
+
 def fixture_capture() -> tuple[Dataset, str, Capture]:
     dataset = Dataset.model_validate_json(DATASET.read_bytes())
     digest = hashlib.sha256(DATASET.read_bytes()).hexdigest()

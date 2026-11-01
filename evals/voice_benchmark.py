@@ -65,9 +65,12 @@ class Observation(StrictModel):
             message = "Completed observations require timing and delegation evidence"
             raise ValueError(message)
         if self.outcome != "completed" and (
-            self.first_audio_ms is not None or self.turn_ms is not None
+            self.setup_ms is not None or self.first_audio_ms is not None or self.turn_ms is not None
         ):
             message = "Censored observations must not contribute latency samples"
+            raise ValueError(message)
+        if self.outcome != "completed" and self.delegated is False:
+            message = "Censored attempts cannot establish a direct answer"
             raise ValueError(message)
         if (
             self.first_audio_ms is not None

@@ -320,12 +320,12 @@
     "digest": "b602962bab4c7ad06c0b1e92173c8231bdd9500fb2242b01f7aadbe411afc240"
   },
   {
-    "id": "cf18b6e074a48b33",
+    "id": "83a3995c533fdfcf",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Isolated voice measurement harness",
-    "text": "The opt-in [benchmark](benchmarks.md) runs outside the product UI. A local Playwright\npage sends fixed WAV input through the existing owned session/offer API and direct\nWebRTC connection. It observes received playback energy and delegation events, closes\neach session, and retains only case IDs, hashes, timings and outcomes. Provider keys\nremain on the backend; provider/model labels in the capture are operator declarations,\nnot browser configuration authority. No new application route or voice tool is added.",
-    "digest": "cf18b6e074a48b33a095c892b29dc40b72ee0b8ace70462d00febaa4109eb389"
+    "text": "The opt-in [benchmark](benchmarks.md) runs outside the product UI. A local Playwright\npage sends fixed WAV input through the existing owned session/offer API and direct\nWebRTC connection. It observes received playback energy and delegation events, closes\neach session, and retains case IDs, input hashes and speech-end offsets, timings, outcomes,\nprovider/model labels, browser version, run date and source revision/state. Provider keys\nremain on the backend; provider/model labels in the capture are operator declarations,\nnot browser configuration authority. No new application route or voice tool is added.",
+    "digest": "83a3995c533fdfcfa240d4899a2289fb15782ddc65b675fce9c279d106ccd474"
   },
   {
     "id": "5bbbd6cbe31b9310",

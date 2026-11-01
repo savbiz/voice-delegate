@@ -258,7 +258,6 @@ export async function probe(options: ProbeOptions): Promise<ProbeResult> {
       if (last !== undefined && now - last >= 1000 && now >= inputEnd) break;
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
-    result.delegated = observed ? delegated : null;
     result.outcome =
       failed || !observed
         ? 'error'
@@ -300,6 +299,12 @@ export async function probe(options: ProbeOptions): Promise<ProbeResult> {
         result.first_audio_ms = null;
         result.turn_ms = null;
       }
+    }
+    result.delegated = delegated ? true : result.outcome === 'completed' && observed ? false : null;
+    if (result.outcome !== 'completed') {
+      result.setup_ms = null;
+      result.first_audio_ms = null;
+      result.turn_ms = null;
     }
   }
 }

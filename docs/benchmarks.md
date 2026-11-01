@@ -179,7 +179,9 @@ uv run python -m evals.export_grafana \
 ```
 
 Set `GRAFANA_TOKEN` in the environment if read access requires authentication. The request
-has a five-second timeout, 2 MB cap and no redirects. Export keeps known operation names
+has a five-second total network deadline, a 2 MB cap and no redirects. Environment proxies
+and environment TLS overrides are ignored so a loopback bearer token stays on the direct
+connection. Export keeps known operation names
 and start/end times; attributes, events, resource data and arbitrary span names are
 discarded. Errors leave no successful artifact and never print the response body.
 Archive the exported projection beside the capture and run notes. Grafana/Tempo access

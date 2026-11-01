@@ -369,7 +369,8 @@ and the [reproducible comparison](../evals/README.md#planner-comparison).
 The opt-in [benchmark](benchmarks.md) runs outside the product UI. A local Playwright
 page sends fixed WAV input through the existing owned session/offer API and direct
 WebRTC connection. It observes received playback energy and delegation events, closes
-each session, and retains only case IDs, hashes, timings and outcomes. Provider keys
+each session, and retains case IDs, input hashes and speech-end offsets, timings, outcomes,
+provider/model labels, browser version, run date and source revision/state. Provider keys
 remain on the backend; provider/model labels in the capture are operator declarations,
 not browser configuration authority. No new application route or voice tool is added.
 

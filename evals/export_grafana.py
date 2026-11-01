@@ -1,6 +1,7 @@
 """Explicitly export timing-only trace evidence from an existing Grafana Tempo data source."""
 
 import argparse
+import asyncio
 import json
 import os
 import re
@@ -19,9 +20,12 @@ ALLOWED_NAMES = {
     "session.close",
 }
 MAX_BYTES = 2_000_000
+REQUEST_SECONDS = 5.0
 
 
-def export_trace(client: httpx.Client, origin: str, uid: str, trace_id: str) -> dict[str, object]:
+async def export_trace(
+    client: httpx.AsyncClient, origin: str, uid: str, trace_id: str
+) -> dict[str, object]:
     """Keep timings and known operation names; discard attributes, events and resource data."""
     url = urlsplit(origin)
     if (
@@ -40,13 +44,14 @@ def export_trace(client: httpx.Client, origin: str, uid: str, trace_id: str) -> 
         raise ValueError(message)
     endpoint = f"{origin}/api/datasources/proxy/uid/{uid}/api/traces/{trace_id}"
     raw = bytearray()
-    with client.stream("GET", endpoint, timeout=5, follow_redirects=False) as response:
-        response.raise_for_status()
-        for chunk in response.iter_bytes():
-            raw.extend(chunk)
-            if len(raw) > MAX_BYTES:
-                message = "Trace exceeds the export size limit"
-                raise ValueError(message)
+    async with asyncio.timeout(REQUEST_SECONDS):
+        async with client.stream("GET", endpoint, timeout=5, follow_redirects=False) as response:
+            response.raise_for_status()
+            async for chunk in response.aiter_bytes():
+                raw.extend(chunk)
+                if len(raw) > MAX_BYTES:
+                    message = "Trace exceeds the export size limit"
+                    raise ValueError(message)
     data: Any = json.loads(raw)
     if not isinstance(data, dict):
         message = "Expected a Tempo JSON object"
@@ -72,6 +77,14 @@ def export_trace(client: httpx.Client, origin: str, uid: str, trace_id: str) -> 
     return {"schema_version": 1, "trace_id": trace_id, "spans": spans}
 
 
+async def fetch_trace(origin: str, uid: str, trace_id: str, token: str) -> dict[str, object]:
+    headers = {"Accept": "application/json"}
+    if token:
+        headers["Authorization"] = "Bearer " + token
+    async with httpx.AsyncClient(headers=headers, trust_env=False) as client:
+        return await export_trace(client, origin, uid, trace_id)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--origin", required=True)
@@ -80,15 +93,19 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     token = os.environ.get("GRAFANA_TOKEN", "")
-    headers = {"Accept": "application/json"}
-    if token:
-        headers["Authorization"] = "Bearer " + token
     try:
-        with httpx.Client(headers=headers) as client:
-            report = export_trace(client, args.origin, args.datasource, args.trace_id)
+        report = asyncio.run(fetch_trace(args.origin, args.datasource, args.trace_id, token))
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(report, indent=2) + "\n")
-    except (httpx.HTTPError, ValueError, KeyError, TypeError, AttributeError, RecursionError):
+    except (
+        httpx.HTTPError,
+        TimeoutError,
+        ValueError,
+        KeyError,
+        TypeError,
+        AttributeError,
+        RecursionError,
+    ):
         parser.exit(1, "Trace export failed; check access, data source, format and size.\n")
 
 
