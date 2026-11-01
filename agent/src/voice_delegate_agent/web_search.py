@@ -80,7 +80,7 @@ def source_url(value: str) -> str | None:
 def clean(value: str, maximum: int) -> str:
     return " ".join(
         "".join(" " if unicodedata.category(c).startswith("C") else c for c in value).split()
-    )[:maximum]
+    )[:maximum].rstrip()
 
 
 def web_source(url: str, title: str, content: str) -> Source | None:

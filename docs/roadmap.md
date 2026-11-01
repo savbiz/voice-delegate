@@ -145,3 +145,8 @@ they are synthetic fixtures, not evidence of live retrieval quality. System prom
 are packaged Markdown resources. Live relevance, narration and provider account
 acceptance remain pending. See [worker setup](worker.md#optional-public-web-search)
 and [ADR 011](decisions/011-read-only-web-search.md).
+
+Review regressions also cover whitespace at excerpt cutoffs, voice capabilities that
+match the configured planner, and citation loss during local, private-worker and
+delayed-result clipping. Uncited clipped web results fail rather than being reported
+as successfully delivered evidence. These remain offline checks, not live acceptance.

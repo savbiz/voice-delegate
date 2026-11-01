@@ -2,6 +2,24 @@
 
 The worker runs a bounded LangGraph loop with a calculator and `search_documentation`. The default offline planner is deterministic and makes no provider calls. Enable the paid planner only on the backend for natural-language tool selection.
 
+## Worker modes
+
+LangGraph is the orchestration library, not a language model. Every mode uses the
+same bounded graph and server-executed tools; the mode chooses the planner:
+
+| `VOICE_WORKER_MODE` | Planner | External model usage |
+|---|---|---|
+| `offline` (default) | Deterministic rules for explicit commands | None; an opted-in web tool still calls Tavily |
+| `openai` | Text model selects tools and generates the final response | OpenAI text-model calls, separate from the voice provider |
+| `decisions` | Decisions selects an action; text model writes final prose | Decisions and text-model calls; classification failure uses the text planner |
+
+The backend chooses this at startup. It is independent of the voice provider: GPT-Live
+can handle speech while a separate text model plans worker actions. Tools themselves
+are Python functions, not additional voice models. Natural-language web search is
+advertised to the voice provider only in `openai` or `decisions` mode. For remote
+workers, configure matching modes on the API and worker; this capability is not
+automatically negotiated. The offline planner keeps its explicit `web <query>` path.
+
 ## Natural-language worker with live voice
 
 Retain your existing `.env` and add:
@@ -93,15 +111,17 @@ Set these variables on the backend for local worker execution, or on the private
 worker service for remote execution, then restart that process:
 
 ```sh
+VOICE_WORKER_MODE=openai
 VOICE_WEB_SEARCH=true
 TAVILY_API_KEY=<set privately in the process environment>
 VOICE_WEB_SEARCH_TIMEOUT_SECONDS=3
 VOICE_WEB_SEARCH_DOMAINS='["example.org"]'
 ```
 
+For natural-language requests, also configure `OPENAI_API_KEY` as described above.
 The domain list is optional; its default is empty. Do not put the key in frontend
 variables, source files or logs. In remote mode enable `VOICE_WEB_SEARCH=true` on the
-API too, so its voice instructions and result validation match the worker. The key
+API too, so its voice instructions and result validation match the worker. The Tavily key
 is required only on the process that executes the search. Keep the existing service
 authentication and private networking. Hosted deployments continue to use the
 existing Railway backend and Vercel frontend; no new deployment is provisioned.
@@ -110,7 +130,9 @@ The adapter makes one Tavily Basic Search request with up to three results, a 64
 response cap and a total deadline of three seconds by default (maximum five).
 It clips excerpts to 400 characters, follows no redirects and never downloads result
 pages. Unavailable search falls back to local documentation with an explicit notice.
-An empty result does not authorize an unsupported current-facts answer. Task
+An empty result does not authorize an unsupported current-facts answer. If narration
+clipping removes every web citation, delivery reports a failed task instead of an
+uncited successful answer; this also applies after the delayed-result preamble. Task
 cancellation remains cancellation. Existing delegation and session limits still apply.
 
 Search must be the last tool action in a task: after receiving web excerpts the graph

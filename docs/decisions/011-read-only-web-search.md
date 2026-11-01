@@ -40,7 +40,10 @@ After web evidence is read, the graph allows only a final answer: further tool c
 are rejected in code. Calculation or project search can precede web search within
 the existing step budget. This limits the first implementation's multi-step workflows
 and prevents search-result instructions from launching another tool. Final web
-answers need valid source indices; citations do not prove semantic accuracy. This is
+answers need valid source indices; citations do not prove semantic accuracy. If later
+narration clipping removes every web citation, the task fails with a bounded notice.
+Natural-language search is advertised only for model-backed worker modes; the
+deterministic offline planner continues to require an explicit `web ` command. This is
 not a replacement for the planned moderation extension or a guarantee that an LLM
 will never repeat malicious text.
 

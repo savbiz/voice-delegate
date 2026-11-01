@@ -145,7 +145,7 @@ class SessionManager:
 
     def _instructions(self) -> str:
         return voice_prompt(
-            web_search=self.settings.web_search,
+            web_search=self.settings.web_search and self.settings.worker_mode != "offline",
             intent_cancellation=self.settings.intent_cancellation,
             decisions_cancel=self.settings.decisions_cancel,
         )

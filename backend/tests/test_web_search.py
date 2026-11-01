@@ -3,7 +3,7 @@
 import asyncio
 import json
 from dataclasses import asdict, replace
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 import pytest
@@ -286,3 +286,34 @@ async def test_enabled_factory_owns_search_tool_and_client() -> None:
     assert "Search the web last" in runtime.instructions
     await runtime.aclose()
     assert runtime.web.http.is_closed
+
+
+def test_clipped_whitespace_does_not_invalidate_web_evidence() -> None:
+    source = web_source("https://example.org/notice", "word " * 60, "word " * 200)
+    assert source is not None
+    assert len(source.title) == 159
+    assert len(source.text) == 399
+    assert not source.title.endswith(" ") and not source.text.endswith(" ")
+    assert verified_web_source(source)
+    assert JobOutput(status="completed", web_sources=(source,)).web_sources == (source,)
+
+
+@pytest.mark.parametrize("mode", ["offline", "openai", "decisions"])
+async def test_voice_advertises_natural_search_only_with_a_capable_planner(
+    mode: Literal["offline", "openai", "decisions"],
+) -> None:
+    from voice_delegate.providers.fake import FakeProvider
+    from voice_delegate.session.manager import SessionManager
+
+    settings = Settings(
+        worker_mode=mode,
+        web_search=True,
+        tavily_api_key=SecretStr("test-value"),
+        openai_api_key=SecretStr("test-model-value"),
+    )
+    manager = SessionManager(FakeProvider(), settings)
+    try:
+        instructions = manager.config().instructions
+        assert ("read-only public web search" in instructions) is (mode != "offline")
+    finally:
+        await manager.aclose()

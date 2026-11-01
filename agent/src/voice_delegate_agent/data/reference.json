@@ -520,12 +520,12 @@
     "digest": "6f05c8d813cbb3af464224e25d15004a5e32c9f1d114b19d705a62a76a54a61f"
   },
   {
-    "id": "e74d1a2616eac148",
+    "id": "51dc1fc5176a9709",
     "title": "ADR 011: Read-only web search in the delegated worker",
     "path": "docs/decisions/011-read-only-web-search.md",
     "section": "Decision",
-    "text": "After web evidence is read, the graph allows only a final answer: further tool calls\nare rejected in code. Calculation or project search can precede web search within\nthe existing step budget. This limits the first implementation's multi-step workflows\nand prevents search-result instructions from launching another tool. Final web\nanswers need valid source indices; citations do not prove semantic accuracy. This is\nnot a replacement for the planned moderation extension or a guarantee that an LLM\nwill never repeat malicious text.",
-    "digest": "e74d1a2616eac1483a6919c1d2a4b48aba23958ca6d9a103772fa3e569497ecd"
+    "text": "After web evidence is read, the graph allows only a final answer: further tool calls\nare rejected in code. Calculation or project search can precede web search within\nthe existing step budget. This limits the first implementation's multi-step workflows\nand prevents search-result instructions from launching another tool. Final web\nanswers need valid source indices; citations do not prove semantic accuracy. If later\nnarration clipping removes every web citation, the task fails with a bounded notice.\nNatural-language search is advertised only for model-backed worker modes; the\ndeterministic offline planner continues to require an explicit `web ` command. This is\nnot a replacement for the planned moderation extension or a guarantee that an LLM\nwill never repeat malicious text.",
+    "digest": "51dc1fc5176a97092402192c4207714dc25d801f43d96e8fd5e7ef2fb7bf51cc"
   },
   {
     "id": "bdc47c09ce09259e",
