@@ -18,6 +18,7 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test:stack": "playwright test -c playwright.stack.config.ts",
+    "benchmark:voice": "node benchmarks/run.ts",
     "native:build": "node scripts/native-build.ts build",
     "native:sync": "node scripts/native-build.ts sync"
   },

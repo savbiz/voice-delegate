@@ -119,3 +119,18 @@ cleanup and native Origin policy. An unsigned iOS Simulator build was verified o
 test APK compilation were also verified; instrumented tests were not run. Simulator launch,
 physical-device audio, Bluetooth, native recording export and store distribution
 remain pending. No live provider call or deployed configuration change is claimed.
+
+## Reproducible voice benchmark preparation
+
+The [benchmark page](benchmarks.md) defines 30 fixed delegation cases, with separate
+required, direct and ambiguous labels. Offline tests exercise deliberately imperfect
+scoring, missing evidence, timing censoring and artifact provenance. The browser harness
+observes a real local WebRTC tone loopback without a provider; this verifies measurement
+plumbing, not voice recognition or model quality. Paid comparison runs require explicit
+opt-in, a clean source revision, hashed local WAV inputs and an exact session budget.
+
+GPT-Live, OpenAI Realtime and Azure comparison results remain pending. ElevenLabs remains
+unsupported until its transport evaluation and adapter are approved. No paid calls,
+new deployment, measured provider latency or new live acceptance are claimed. The current
+Grafana stack has no retained trace data source; the optional trace exporter is verified
+with offline mocks and requires an existing Tempo-backed Grafana for a real export.

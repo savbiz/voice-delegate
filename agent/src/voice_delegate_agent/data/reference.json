@@ -320,6 +320,22 @@
     "digest": "b602962bab4c7ad06c0b1e92173c8231bdd9500fb2242b01f7aadbe411afc240"
   },
   {
+    "id": "83a3995c533fdfcf",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Isolated voice measurement harness",
+    "text": "The opt-in [benchmark](benchmarks.md) runs outside the product UI. A local Playwright\npage sends fixed WAV input through the existing owned session/offer API and direct\nWebRTC connection. It observes received playback energy and delegation events, closes\neach session, and retains case IDs, input hashes and speech-end offsets, timings, outcomes,\nprovider/model labels, browser version, run date and source revision/state. Provider keys\nremain on the backend; provider/model labels in the capture are operator declarations,\nnot browser configuration authority. No new application route or voice tool is added.",
+    "digest": "83a3995c533fdfcfa240d4899a2289fb15782ddc65b675fce9c279d106ccd474"
+  },
+  {
+    "id": "5bbbd6cbe31b9310",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Isolated voice measurement harness",
+    "text": "The default path uses a local WebRTC tone pair and scripted scorer fixtures. Live mode\nrequires explicit environment and CLI opt-ins plus a session budget. Its recordings are\nlocal inputs, not bundled user data. A bounded exporter can retrieve timing-only trace\nprojections from an existing Grafana Tempo data source; the checked-in Grafana stack\nstill provisions only Prometheus. No queryable trace storage or live result is implied.",
+    "digest": "5bbbd6cbe31b9310204d543a98276c622a6b822b4545796bd58eaecdbaea7571"
+  },
+  {
     "id": "c95e177cccf46e9f",
     "title": "ADR 002: Explicit lifecycle ownership and finite budgets",
     "path": "docs/decisions/002-lifecycle-and-bounds.md",

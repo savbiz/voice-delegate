@@ -59,3 +59,11 @@ both the public website and the backend host; it requires an explicit allowlist.
 
 **Capacitor preview:** the optional iOS/iPadOS and Android container for the React
 frontend. Local web-asset verification is separate from native-device and store acceptance.
+
+**Response-onset latency:** time from the labelled end of a fixed input recording to
+the first received playback energy, using one browser audio clock. It differs from
+transcript arrival, provider setup and acoustic speaker latency.
+
+**Censored benchmark observation:** an attempted case with overlap, timeout, missing
+evidence or transport failure. It remains in outcome and accuracy denominators and
+does not become a zero-millisecond latency sample.

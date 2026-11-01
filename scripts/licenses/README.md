@@ -23,8 +23,8 @@ pnpm licenses list --long --json > /tmp/voice-frontend-licenses.json
 cd ..
 ```
 
-If pnpm reports missing store indexes, use a fresh installation of the same package.json
-and lockfile under `frontend/.license-inventory/`, then run the inventory there. Do not
+If pnpm reports missing store indexes, use a fresh installation of the same package.json,
+lockfile and pnpm-workspace.yaml under `frontend/.license-inventory/`, then run the inventory there. Do not
 use an error response as an inventory. The generator rejects it.
 
 ```sh

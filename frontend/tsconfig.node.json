@@ -24,6 +24,7 @@
     "tests",
     "src/**/*.test.ts",
     "capacitor.config.ts",
-    "scripts"
+    "scripts",
+    "benchmarks"
   ]
 }

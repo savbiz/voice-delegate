@@ -1,12 +1,29 @@
-"""Prevent reintroducing the dependency versions covered by the two security alerts."""
+"""Prevent reintroducing dependency versions covered by known security alerts."""
 
 import re
 import tomllib
 from pathlib import Path
 
+import pytest
 from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+@pytest.mark.parametrize(
+    ("package", "minimum"), [("minimatch", "11.0.1"), ("glob", "14.0.2"), ("zod", "4.6.6")]
+)
+def test_frontend_tooling_copies_have_security_fixes_and_current_attribution(
+    package: str, minimum: str
+) -> None:
+    lock = (ROOT / "frontend/pnpm-lock.yaml").read_text()
+    packages = lock.split("\npackages:\n", 1)[1].split("\nsnapshots:\n", 1)[0]
+    versions = set(re.findall(rf"^  {re.escape(package)}@([^:]+):", packages, re.MULTILINE))
+    assert versions
+    notices = (ROOT / "THIRD_PARTY_NOTICES.md").read_text()
+    for version in versions:
+        assert Version(version) >= Version(minimum)
+        assert f"### `{package}` {version}\n" in notices
 
 
 def test_locked_sdk_has_the_auth_actions_fix_and_current_attribution() -> None:

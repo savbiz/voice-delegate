@@ -1,12 +1,25 @@
 # Reproducible offline evaluation
 
+## Voice audio and delegation benchmark
+
+See [method, commands and verification status](../docs/benchmarks.md). Run
+`uv run python -m evals.voice_benchmark --output .local/benchmarks/scripted.json`
+from the repository root for deterministic scorer checks. From `frontend/`, run
+`pnpm benchmark:voice` for a local browser WebRTC tone loopback. Both paths are
+offline harness checks, not provider performance or model-quality measurements.
+The 30 spoken cases require hashed local WAV inputs and explicit paid-run authorization.
+Trace timing export is optional and requires an existing Grafana Tempo data source;
+the checked-in Grafana stack currently provides metrics only.
+
+## Existing offline suites
+
 `uv run pytest evals backend/tests/test_failover.py backend/tests/test_delegation.py`
 runs scripted controls, timeout/cancellation budgets, duplicate suppression, bounded
 context, stale results, fallback ownership, and one-attempt recovery. The JSON fixtures
 contain invented utterances and provider decisions. A non-delegation fixture supplies no
 delegation event; it verifies orchestration, not the model's decision to delegate.
 
-`pnpm --dir frontend test:e2e` additionally verifies peer replacement and cleanup in a
+From `frontend/`, `pnpm test:e2e` additionally verifies peer replacement and cleanup in a
 browser with fake WebRTC and API responses. There are no audio recordings or paid calls.
 Backend tests disable network sockets. OTel checks use only in-memory readers/exporters.
 

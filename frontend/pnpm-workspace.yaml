@@ -1,0 +1,7 @@
+# GHSA-g3hv-75wg-m249: remove vulnerable transitive copies from development tools.
+overrides:
+  'minimatch@<11.0.1': 11.0.1
+  # GHSA-3g3m-2fjr-6pw4: ensure aborted filesystem walks actually stop.
+  'glob@>=9.0.0 <14.0.2': 14.0.2
+  # GHSA-mrhx-c7xc-m3w5: bound validation of oversized collections.
+  'zod@<4.6.6': 4.6.6

@@ -1,0 +1,155 @@
+{
+  "version": "voice-v1",
+  "cases": [
+    {
+      "id": "delegate-01",
+      "utterance": "Use the calculator to compute 46000 divided by 314.2.",
+      "label": "delegate"
+    },
+    {
+      "id": "delegate-02",
+      "utterance": "Search the project documentation and explain how Azure fallback works.",
+      "label": "delegate"
+    },
+    {
+      "id": "delegate-03",
+      "utterance": "Use the calculator to multiply 10046 by four.",
+      "label": "delegate"
+    },
+    {
+      "id": "delegate-04",
+      "utterance": "Find the documented session expiration limits and cite the source.",
+      "label": "delegate"
+    },
+    {
+      "id": "delegate-05",
+      "utterance": "Search the documentation for invitation revocation instructions.",
+      "label": "delegate"
+    },
+    {
+      "id": "delegate-06",
+      "utterance": "Use the calculator to add 346 and 2412.",
+      "label": "delegate"
+    },
+    {
+      "id": "delegate-07",
+      "utterance": "Find the documentation for enabling server debug recording.",
+      "label": "delegate"
+    },
+    {
+      "id": "delegate-08",
+      "utterance": "Search the project documentation for the worker request limits.",
+      "label": "delegate"
+    },
+    {
+      "id": "delegate-09",
+      "utterance": "Use the calculator to compute seventeen thousand plus four.",
+      "label": "delegate"
+    },
+    {
+      "id": "delegate-10",
+      "utterance": "Look up the project documentation on same-host scaling and cite it.",
+      "label": "delegate"
+    },
+    {
+      "id": "direct-01",
+      "utterance": "Hello, how are you?",
+      "label": "direct"
+    },
+    {
+      "id": "direct-02",
+      "utterance": "Tell me your name in one sentence.",
+      "label": "direct"
+    },
+    {
+      "id": "direct-03",
+      "utterance": "Please say good morning in Italian.",
+      "label": "direct"
+    },
+    {
+      "id": "direct-04",
+      "utterance": "Thank you for your help.",
+      "label": "direct"
+    },
+    {
+      "id": "direct-05",
+      "utterance": "Please repeat the word hello.",
+      "label": "direct"
+    },
+    {
+      "id": "direct-06",
+      "utterance": "Tell me a very short story about a cat.",
+      "label": "direct"
+    },
+    {
+      "id": "direct-07",
+      "utterance": "Say the alphabet from A to E.",
+      "label": "direct"
+    },
+    {
+      "id": "direct-08",
+      "utterance": "Please answer this greeting in Spanish: hello.",
+      "label": "direct"
+    },
+    {
+      "id": "direct-09",
+      "utterance": "Tell me one common fact about the ocean without looking anything up.",
+      "label": "direct"
+    },
+    {
+      "id": "direct-10",
+      "utterance": "Goodbye, have a nice day.",
+      "label": "direct"
+    },
+    {
+      "id": "ambiguous-01",
+      "utterance": "What is two plus two?",
+      "label": "ambiguous"
+    },
+    {
+      "id": "ambiguous-02",
+      "utterance": "Can you explain what fallback means in general?",
+      "label": "ambiguous"
+    },
+    {
+      "id": "ambiguous-03",
+      "utterance": "Tell me about Azure.",
+      "label": "ambiguous"
+    },
+    {
+      "id": "ambiguous-04",
+      "utterance": "Could you help me find something?",
+      "label": "ambiguous"
+    },
+    {
+      "id": "ambiguous-05",
+      "utterance": "I might want to calculate something later.",
+      "label": "ambiguous"
+    },
+    {
+      "id": "ambiguous-06",
+      "utterance": "What tools can you use?",
+      "label": "ambiguous"
+    },
+    {
+      "id": "ambiguous-07",
+      "utterance": "What is a session?",
+      "label": "ambiguous"
+    },
+    {
+      "id": "ambiguous-08",
+      "utterance": "Can we talk about documentation?",
+      "label": "ambiguous"
+    },
+    {
+      "id": "ambiguous-09",
+      "utterance": "I wonder how much this costs.",
+      "label": "ambiguous"
+    },
+    {
+      "id": "ambiguous-10",
+      "utterance": "How do I get started?",
+      "label": "ambiguous"
+    }
+  ]
+}

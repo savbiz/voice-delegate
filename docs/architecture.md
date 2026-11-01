@@ -363,3 +363,19 @@ clarification. Input/output caps, classification and task deadlines, and the gra
 step limit bound both paths. This is verified offline with deterministic fakes;
 live semantic accuracy and cost remain pending. See [worker limits](worker.md#decisions-worker-planner)
 and the [reproducible comparison](../evals/README.md#planner-comparison).
+
+## Isolated voice measurement harness
+
+The opt-in [benchmark](benchmarks.md) runs outside the product UI. A local Playwright
+page sends fixed WAV input through the existing owned session/offer API and direct
+WebRTC connection. It observes received playback energy and delegation events, closes
+each session, and retains case IDs, input hashes and speech-end offsets, timings, outcomes,
+provider/model labels, browser version, run date and source revision/state. Provider keys
+remain on the backend; provider/model labels in the capture are operator declarations,
+not browser configuration authority. No new application route or voice tool is added.
+
+The default path uses a local WebRTC tone pair and scripted scorer fixtures. Live mode
+requires explicit environment and CLI opt-ins plus a session budget. Its recordings are
+local inputs, not bundled user data. A bounded exporter can retrieve timing-only trace
+projections from an existing Grafana Tempo data source; the checked-in Grafana stack
+still provisions only Prometheus. No queryable trace storage or live result is implied.
