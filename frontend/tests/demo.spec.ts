@@ -69,6 +69,15 @@ test('mode tabs support keyboard selection and expose their panel', async ({ pag
   );
   await expect(page.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'tab-live');
   await expect(page.locator('#recap')).toHaveAttribute('aria-live', 'off');
+  await page.keyboard.press('End');
+  await expect(page.getByRole('tab', { name: 'Documentation', exact: true })).toBeFocused();
+  await expect(page.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'tab-reference');
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'Free demo' })).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('tab', { name: 'Documentation', exact: true })).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(page.getByRole('tab', { name: 'Free demo' })).toBeFocused();
 });
 
 test('demo head and favicon load without console errors under production CSP', async ({ page }) => {

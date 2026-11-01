@@ -1,3 +1,4 @@
+import { Button } from './components/Button';
 import { useEffect, useRef, useState } from 'react';
 
 export type Source = {
@@ -94,7 +95,9 @@ export function Reference({ code }: { code: string }) {
           Project question{' '}
           <input value={query} maxLength={500} onChange={(event) => setQuery(event.target.value)} />
         </label>
-        <button disabled={busy || !query.trim()}>Search documentation</button>
+        <Button type="submit" variant="primary" disabled={busy || !query.trim()}>
+          Search documentation
+        </Button>
       </form>
       <p role="status">{status}</p>
       <ol className="space-y-3">

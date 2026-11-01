@@ -1,5 +1,8 @@
 /** React shell separating a free scripted demo from the live WebRTC lifecycle. */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Button } from './components/Button';
+import { ModeTabs } from './components/ModeTabs';
+import type { Mode } from './components/ModeTabs';
 import { createLiveSession } from './realtime/live';
 import type { LiveController } from './realtime/live';
 import { createLiveStore, taskLabel } from './realtime/store';
@@ -67,7 +70,7 @@ function Live({ code }: { code: string }) {
           {state.workerMessage}
         </p>
         {state.worker === 'running' && !state.intentCancellation && (
-          <button
+          <Button
             id="cancel-task"
             disabled={
               state.worker !== 'running' ||
@@ -79,7 +82,7 @@ function Live({ code }: { code: string }) {
             onClick={() => controller.current?.cancel()}
           >
             Cancel task
-          </button>
+          </Button>
         )}
         {state.intentCancellation && state.tasks.length > 0 && (
           <div>
@@ -103,12 +106,12 @@ function Live({ code }: { code: string }) {
                       )}
                   </small>{' '}
                   {['running', 'pending', 'delivering'].includes(task.status) && (
-                    <button
+                    <Button
                       disabled={!state.active || state.ending || state.recovering}
                       onClick={() => controller.current?.cancel(task.id)}
                     >
                       Cancel {task.id}
-                    </button>
+                    </Button>
                   )}
                 </li>
               ))}
@@ -117,35 +120,37 @@ function Live({ code }: { code: string }) {
         )}
         <p id="recovery-help">{state.help}</p>
         <div className="actions">
-          <button
+          <Button
             id="start"
+            variant="primary"
             disabled={state.active || state.ending || state.recovering}
             onClick={() => controller.current?.start()}
           >
             Start conversation
-          </button>
-          <button
+          </Button>
+          <Button
             id="stop"
+            variant="danger"
             disabled={!state.active || state.ending}
             onClick={() => controller.current?.stop()}
           >
             Stop
-          </button>
+          </Button>
         </div>
         <div className="actions">
-          <button id="mute-audio" aria-pressed={muted} onClick={() => setMuted((value) => !value)}>
+          <Button id="mute-audio" aria-pressed={muted} onClick={() => setMuted((value) => !value)}>
             {muted ? 'Unmute assistant' : 'Mute assistant'}
-          </button>
-          <button
+          </Button>
+          <Button
             id="large-captions"
             aria-pressed={largeCaptions}
             onClick={() => setLargeCaptions((value) => !value)}
           >
             Large captions
-          </button>
+          </Button>
         </div>
         {state.active && state.audioBlocked && (
-          <button
+          <Button
             onClick={() => {
               void audio.current
                 ?.play()
@@ -157,7 +162,7 @@ function Live({ code }: { code: string }) {
             }}
           >
             Enable audio
-          </button>
+          </Button>
         )}
       </div>
       <details className="secondary-panel settings-panel">
@@ -310,7 +315,7 @@ function Live({ code }: { code: string }) {
             <option value="other">Other problem</option>
           </select>
         </label>
-        <button
+        <Button
           id="send-feedback"
           disabled={!code || state.reportPending || state.reportSent}
           onClick={() => {
@@ -318,7 +323,7 @@ function Live({ code }: { code: string }) {
           }}
         >
           Send report
-        </button>
+        </Button>
         <p id="feedback-status" aria-live="polite">
           {state.feedbackStatus}
         </p>
@@ -340,7 +345,7 @@ function StackDemo() {
         generated audio or paid calls.
       </p>
       <div className="actions">
-        <button
+        <Button
           disabled={busy}
           onClick={() => {
             const controller = new AbortController();
@@ -361,8 +366,8 @@ function StackDemo() {
           }}
         >
           Run offline worker
-        </button>
-        <button
+        </Button>
+        <Button
           disabled={!busy}
           onClick={() => {
             pending.current?.abort();
@@ -370,12 +375,12 @@ function StackDemo() {
           }}
         >
           Stop demo
-        </button>
+        </Button>
       </div>
       <p role="status">{result}</p>
-      <button disabled={busy} onClick={() => setStaticDemo(true)}>
+      <Button disabled={busy} onClick={() => setStaticDemo(true)}>
         Use static demo instead
-      </button>
+      </Button>
       <p>
         Open Grafana on port 3000 to inspect backend metrics. No audio latency is measured in this
         demo.
@@ -405,7 +410,7 @@ function StaticDemo() {
         are illustrative.
       </p>
       <div className="actions">
-        <button
+        <Button
           disabled={running}
           onClick={() => {
             setStep(0);
@@ -413,10 +418,10 @@ function StaticDemo() {
           }}
         >
           Start demo
-        </button>
-        <button disabled={!running} onClick={() => setRunning(false)}>
+        </Button>
+        <Button disabled={!running} onClick={() => setRunning(false)}>
           Stop demo
-        </button>
+        </Button>
       </div>
       <p role="status">
         {running
@@ -438,54 +443,23 @@ function StaticDemo() {
   );
 }
 export default function App() {
-  const [mode, setMode] = useState<'demo' | 'live' | 'reference'>('demo');
+  const [mode, setMode] = useState<Mode>('demo');
   const [code, setCode] = useState(readInvitation);
   useEffect(() => {
     saveInvitation(code);
   }, [code]);
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
-      <header className="mb-10">
+    <main className="app-shell">
+      <header className="app-header">
         <span className="badge">OPEN REFERENCE · {version}</span>
-        <h1 className="mt-5 text-5xl font-semibold tracking-tight">
-          voice-delegate<span className="text-emerald-400">.</span>
+        <h1 className="brand-title">
+          voice-delegate<span className="brand-accent">.</span>
         </h1>
-        <p className="mt-4 text-lg text-[var(--muted)]">
+        <p className="app-pitch">
           A fast voice conversation. A separate worker for the heavy lifting.
         </p>
       </header>
-      <nav className="mode-tabs" role="tablist" aria-label="Conversation mode">
-        {(['demo', 'live', 'reference'] as const).map((tab, index, tabs) => (
-          <button
-            key={tab}
-            role="tab"
-            id={`tab-${tab}`}
-            aria-controls="mode-panel"
-            aria-selected={mode === tab}
-            tabIndex={mode === tab ? 0 : -1}
-            onClick={() => setMode(tab)}
-            onKeyDown={(event) => {
-              const next =
-                event.key === 'ArrowRight'
-                  ? tabs[(index + 1) % tabs.length]
-                  : event.key === 'ArrowLeft'
-                    ? tabs[(index + tabs.length - 1) % tabs.length]
-                    : event.key === 'Home'
-                      ? tabs[0]
-                      : event.key === 'End'
-                        ? tabs.at(-1)
-                        : undefined;
-              if (next) {
-                event.preventDefault();
-                setMode(next);
-                document.getElementById(`tab-${next}`)?.focus();
-              }
-            }}
-          >
-            {tab === 'demo' ? 'Free demo' : tab === 'live' ? 'Live voice' : 'Documentation'}
-          </button>
-        ))}
-      </nav>
+      <ModeTabs mode={mode} onChange={setMode} />
       <div id="mode-panel" role="tabpanel" aria-labelledby={`tab-${mode}`}>
         {mode !== 'demo' && (
           <label className="block my-5">
@@ -511,7 +485,7 @@ export default function App() {
           <Live code={code} />
         )}
       </div>
-      <footer className="mt-12 border-t border-slate-800 pt-6 text-sm text-slate-400">
+      <footer className="app-footer">
         React 19 · FastAPI · WebRTC
         <br />
         Bounded delegation · Azure recovery · Optional telemetry.
