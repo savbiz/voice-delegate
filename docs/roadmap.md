@@ -172,3 +172,17 @@ current settings with all optional features off; the generated configuration ref
 includes enum choices, collection/string constraints and frontend build options.
 Copyable local model-backed setup is documented without changing private credentials
 or cloud deployments. No new live acceptance or measured model comparison is claimed.
+
+## ElevenLabs transport evaluation
+
+The [transport proposal](elevenlabs-transport.md), reviewed against official documentation
+on 2026-11-01, compares private Agents WebRTC with client-tool/webhook admission and
+standalone Realtime WSS. The standalone API documents short-lived client credentials;
+a backend audio relay is not inherently required. Agents with a client-tool admission
+bridge is the initial recommendation, conditional on verifying call identity and a
+safe explicit path for later result delivery.
+
+No adapter, dependency, runtime flag, provider account configuration, deployment or
+paid test is added. The recommendation awaits maintainer review and transport choice
+before implementation. Offline repository checks validate this documentation change;
+SDK behavior, close confirmation, latency, native audio and hosted acceptance remain pending.

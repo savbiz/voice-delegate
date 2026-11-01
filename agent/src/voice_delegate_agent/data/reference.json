@@ -464,6 +464,22 @@
     "digest": "5bbbd6cbe31b9310204d543a98276c622a6b822b4545796bd58eaecdbaea7571"
   },
   {
+    "id": "b811ca0ff71f50a8",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "ElevenLabs transport proposal",
+    "text": "The [transport evaluation](elevenlabs-transport.md) compares Agents WebRTC with\nclient-tool or webhook admission and standalone Realtime over PCM WebSocket.\nIt recommends evaluating Agents with one `delegate_task` tool first. All execution,\nownership, task limits and pending results remain in the backend portfolio.",
+    "digest": "b811ca0ff71f50a8bcf8e19e673aa7e97cbfe8006b639a471ac17752e4683373"
+  },
+  {
+    "id": "943628a701306e09",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "ElevenLabs transport proposal",
+    "text": "This is not an implemented adapter. SDK-managed negotiation and client-relayed control\nrequire an explicit capability extension to the current SDP-based provider contract.\nStandalone Realtime documents ephemeral browser credentials, so an audio relay is a\nseparate design choice. Delivery acknowledgements, server finalization and actual\nprovider behavior remain unverified. No new provider flag, route or deployment is enabled.",
+    "digest": "943628a701306e09f29dd2135573dec1c6396808cb0c6d79b360711ba5e2005b"
+  },
+  {
     "id": "c95e177cccf46e9f",
     "title": "ADR 002: Explicit lifecycle ownership and finite budgets",
     "path": "docs/decisions/002-lifecycle-and-bounds.md",

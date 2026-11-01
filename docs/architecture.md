@@ -396,3 +396,16 @@ requires explicit environment and CLI opt-ins plus a session budget. Its recordi
 local inputs, not bundled user data. A bounded exporter can retrieve timing-only trace
 projections from an existing Grafana Tempo data source; the checked-in Grafana stack
 still provisions only Prometheus. No queryable trace storage or live result is implied.
+
+## ElevenLabs transport proposal
+
+The [transport evaluation](elevenlabs-transport.md) compares Agents WebRTC with
+client-tool or webhook admission and standalone Realtime over PCM WebSocket.
+It recommends evaluating Agents with one `delegate_task` tool first. All execution,
+ownership, task limits and pending results remain in the backend portfolio.
+
+This is not an implemented adapter. SDK-managed negotiation and client-relayed control
+require an explicit capability extension to the current SDP-based provider contract.
+Standalone Realtime documents ephemeral browser credentials, so an audio relay is a
+separate design choice. Delivery acknowledgements, server finalization and actual
+provider behavior remain unverified. No new provider flag, route or deployment is enabled.

@@ -75,3 +75,18 @@ It differs from the bundled project documentation and is untrusted input.
 **Terminal evidence step:** a web search after which the graph permits a final answer
 but rejects additional tool calls. It limits injection-driven tool execution while
 leaving semantic answer quality subject to separate evaluation.
+
+**Agents conversation token:** a short-lived credential for an ElevenLabs Agents
+WebRTC session associated with a configured agent. The proposed adapter mints it on
+the backend; it differs from a standalone Realtime client secret.
+
+**Standalone Realtime client secret:** an ephemeral credential minted against a
+server-authored ElevenLabs Realtime session for a direct browser WebSocket connection.
+Its expiry is distinct from the lifetime of an established call.
+
+**Client-tool admission bridge:** the proposed path that forwards a voice tool request
+from the browser SDK to our owned backend admission logic. It returns an acknowledgement
+promptly; the browser does not execute LangGraph worker tools.
+
+**Contextual update:** background information supplied to a provider conversation.
+It does not itself prove that a pending result has been narrated or fully played.
