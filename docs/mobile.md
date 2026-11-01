@@ -8,8 +8,10 @@ The backend and the single `delegate_task` voice-tool contract stay the same.
 This is an experimental, opt-in scaffold. Native web assets and deterministic
 browser/API tests can be verified without a provider key. An unsigned iOS Simulator
 build was verified on 2026-11-01 with Xcode 27.1 and the iOS Simulator 27.1 SDK.
-Simulator launch, physical-device audio, Bluetooth, recording export, Android compilation
-and store acceptance are pending.
+The maintainer also reported a successful Android `:app:assembleDebug` build on
+2026-11-01 (16 seconds, 71 executed tasks). A subsequent local build also compiled
+`:app:assembleDebugAndroidTest`; instrumented tests were not executed. These are compilation checks; simulator
+launch, physical-device audio, Bluetooth, recording export and store acceptance are pending.
 The generated launcher icons and splash screens are placeholders, not store assets.
 
 ## Build the packaged frontend

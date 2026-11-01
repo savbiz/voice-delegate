@@ -198,7 +198,9 @@ The wrapper archive contains no NOTICE file.
 
 The source projects also declare native build inputs that are not resolved or
 compiled by the Python/JavaScript checks. The iOS simulator build resolves the
-Swift dependency pinned in `Package.resolved`; Android resolution remains pending. These include Android Gradle Plugin
+Swift dependency pinned in `Package.resolved`; Android debug and test APK builds
+also resolve their declared dependencies. Neither build is a completed native
+artifact licence review. These include Android Gradle Plugin
 8.13.0 (Apache-2.0), the AndroidX runtime libraries in `android/variables.gradle`
 (Apache-2.0), Apache Cordova Android 14.0.1 (Apache-2.0), and Capacitor Swift PM
 8.6.0 (MIT, including Apache-2.0 Cordova components). Native test tooling includes

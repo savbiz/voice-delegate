@@ -53,4 +53,7 @@ frontend with local packaged assets. `VOICE_NATIVE_BUILD=true` and an explicit H
 Native voice additionally requires `VITE_NATIVE_LIVE=true` in a test build and an
 explicit backend Origin allowlist. It is off by default. Normal Vercel builds and
 existing web voice behaviour remain unchanged. An unsigned iOS Simulator build is
-verified; launch, physical-device, Android compilation and store acceptance remain pending; building assets is not an App Store or Google Play publication.
+verified, as are Android debug and instrumented-test APK builds. Instrumented tests
+were not executed. Launch,
+physical-device and store acceptance remain pending; building assets is not an App
+Store or Google Play publication.

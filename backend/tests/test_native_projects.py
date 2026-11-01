@@ -34,3 +34,29 @@ def test_native_version_comes_from_frontend_package() -> None:
     assert set(re.findall(r"MARKETING_VERSION = ([^;]+);", ios)) == {version}
     android = (ROOT / "frontend/android/app/build.gradle").read_text()
     assert "parse(file('../../package.json')).version" in android
+
+
+def test_android_instrumented_test_targets_actual_application_id() -> None:
+    project = ROOT / "frontend/android/app"
+    build = (project / "build.gradle").read_text()
+    application = re.search(r'applicationId "([^"]+)"', build)
+    assert application is not None
+    test = (
+        project / "src/androidTest/java/com/getcapacitor/myapp/ExampleInstrumentedTest.java"
+    ).read_text()
+    expected = re.search(r'assertEquals\("([^"]+)", appContext.getPackageName\(\)\)', test)
+    assert expected is not None
+    assert expected[1] == application[1]
+
+
+def test_android_theme_color_references_are_defined_by_the_app() -> None:
+    values = ROOT / "frontend/android/app/src/main/res/values"
+    theme = ElementTree.parse(values / "styles.xml")
+    colors = ElementTree.parse(values / "colors.xml")
+    references = {
+        item.text.removeprefix("@color/")
+        for item in theme.findall(".//item")
+        if item.text and item.text.startswith("@color/")
+    }
+    declarations = {color.get("name") for color in colors.findall("color")}
+    assert references and references <= declarations

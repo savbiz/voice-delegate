@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { Capacitor } from '@capacitor/core';
 import { createLiveSession } from './live';
 import type { LiveController } from './live';
 import { createLiveStore } from './store';
@@ -461,4 +462,29 @@ test('slow intent heartbeat prevents overlapping requests and updates tasks when
   expect(store.getSnapshot().decisionCostUsd).toBe(0.25);
   await vi.advanceTimersByTimeAsync(2000);
   expect(requests.filter((r) => r.path.endsWith('/heartbeat'))).toHaveLength(2);
+});
+
+test('native background closure marks worker ended while retaining last reported tasks', async () => {
+  intentCancellation = true;
+  const store = await start();
+  const tasks = [{ id: 'work', goal: 'Calculate', status: 'running', elapsed_seconds: 1 }];
+  store.update({
+    worker: 'running',
+    workerMessage: 'Tasks continue while you speak. Use Cancel to stop work.',
+    cancelPending: true,
+    tasks,
+  });
+  vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+  Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+  document.dispatchEvent(new Event('visibilitychange'));
+  expect(store.getSnapshot()).toMatchObject({
+    phase: 'ended',
+    active: false,
+    worker: 'idle',
+    cancelPending: false,
+    workerMessage: 'Session ended. Task states below are the last reported states.',
+    tasks,
+  });
+  expect(stopTrack).toHaveBeenCalledOnce();
+  expect(requests.filter((request) => request.path.endsWith('/close'))).toHaveLength(1);
 });

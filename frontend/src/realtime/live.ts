@@ -689,6 +689,7 @@ export function createLiveSession(
     attemptId += 1;
     release();
     showState('ended', 'Conversation ended.', 'Select Start conversation to begin a new session.');
+    store.update(endedWorkerState(store.getSnapshot()));
   };
   const onVisibilityChange = () => {
     if (isNativeClient() && document.visibilityState === 'hidden' && store.getSnapshot().active)
