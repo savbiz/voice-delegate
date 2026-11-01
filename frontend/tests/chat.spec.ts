@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { installFakePeers } from './fixtures';
 
-for (const width of [390, 1100]) {
+for (const width of [320, 390, 768, 1100]) {
   test(`conversation shows ordered chat bubbles at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 1000 });
     await page.addInitScript(installFakePeers);
