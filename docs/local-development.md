@@ -200,7 +200,7 @@ backend environment. Setting a key does not itself enable the corresponding feat
 | `VOICE_ACCESS_TOKEN` | Shared access code, used only when no named invitation map is configured. |
 | `VOICE_INVITE_TOKENS` | JSON map of invitation names to individual codes; takes precedence over shared access. |
 | `VOICE_ENVIRONMENT` | `development` for local work; production applies stricter host/origin/access requirements. |
-| `VOICE_ALLOWED_ORIGIN` | Deprecated singular frontend origin. Prefer `VOICE_ALLOWED_ORIGINS`, a JSON list. |
+| `VOICE_ALLOWED_ORIGINS` | JSON list of exact frontend origins permitted by routes, CORS and limiter responses. |
 | `VOICE_ALLOWED_HOSTS` | JSON list of permitted backend Host names, separate from frontend origins. |
 | `VOICE_PUBLIC_DEMO` | Enables named invitation/quota admission for a production public demo; false for local launcher. |
 | `VOICE_INSTANCE_ID` | Instance prefix for same-host routing; leave empty for simple local use. |
@@ -231,7 +231,7 @@ non-sensitive selectors/model values when migrating a local configuration.
 After merging the dev/configuration PR and updating your main checkout, use the
 commented [server template](../.env.example) as the complete list of server settings.
 It contains declared defaults, no keys, the canonical adapter name, and every current
-server setting except the deprecated singular-origin alias (shown as a comment).
+server setting except the deprecated singular-origin alias.
 The [generated reference](configuration.md) lists all enums, types and bounds and the
 cross-field validation rules; model IDs, voice names, paths and account credentials
 are free-form settings rather than finite application enums.

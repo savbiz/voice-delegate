@@ -800,12 +800,12 @@
     "digest": "520b788ec0b06be16364bee93e8f9c8a46b3bb3e408346700cfb84976fe80d14"
   },
   {
-    "id": "7245bd2dfa480b94",
+    "id": "1b9a05165fdae48b",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Copyable local configuration",
-    "text": "After merging the dev/configuration PR and updating your main checkout, use the\ncommented [server template](../.env.example) as the complete list of server settings.\nIt contains declared defaults, no keys, the canonical adapter name, and every current\nserver setting except the deprecated singular-origin alias (shown as a comment).\nThe [generated reference](configuration.md) lists all enums, types and bounds and the\ncross-field validation rules; model IDs, voice names, paths and account credentials\nare free-form settings rather than finite application enums.",
-    "digest": "7245bd2dfa480b949ddff10ecc0ff9f69cf47539b5c61643c9a13b97391423fd"
+    "text": "After merging the dev/configuration PR and updating your main checkout, use the\ncommented [server template](../.env.example) as the complete list of server settings.\nIt contains declared defaults, no keys, the canonical adapter name, and every current\nserver setting except the deprecated singular-origin alias.\nThe [generated reference](configuration.md) lists all enums, types and bounds and the\ncross-field validation rules; model IDs, voice names, paths and account credentials\nare free-form settings rather than finite application enums.",
+    "digest": "1b9a05165fdae48b390b83801e70e0ab1f9314bec77c3623a7b732c2a8f7f3a3"
   },
   {
     "id": "bf8c0ce8470406a7",
