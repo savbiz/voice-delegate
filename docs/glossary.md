@@ -104,3 +104,14 @@ does not imply that media is connected or that upstream closure is confirmed.
 
 - **Adapter selection**: server-allowlisted transport/provider choice fixed at session creation.
 - **Observed audio activity**: browser energy indication, distinct from provider speech events.
+
+## Planned terms
+
+The following describe [future extensions](future-extensions.md), not current capabilities.
+
+- **MCP registry snapshot**: a bounded, reviewed tool catalog fixed for one delegation.
+- **Moderation boundary**: origin-aware application policy before planning or narration;
+  classification is advisory and does not authorize tool side effects.
+- **SIP admission**: proof of telephone caller entitlement before one owned accept operation.
+- **Cascaded voice adapter**: separate STT, conversation model and TTS stages with explicit
+  audio-relay transport, preserving worker cancellation and delivery rules.

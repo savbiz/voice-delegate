@@ -398,6 +398,10 @@ The [Agents integration](elevenlabs.md) uses direct browser WebRTC media and an 
 
 The [session UI](session-ui.md) selects from a server-owned adapter registry before creation; each session keeps its provider, while ElevenLabs never uses Azure recovery.
 
+## Planned extensions
+
+[MCP, moderation, SIP and cascaded audio](future-extensions.md) have design notes and diagrams only; they retain one voice-facing delegate_task tool and require separate opt-in implementations and acceptance.
+
 ## Sources
 
 Reviewed public documentation on 2026-09-20:

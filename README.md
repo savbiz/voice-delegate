@@ -254,3 +254,5 @@ not require provider credentials or paid requests.
 
 Public protocol sources are cited in the design documents and ADRs. The project is
 Apache-2.0; dependencies and bundled data retain their individual licence terms.
+
+Future work: [MCP, moderation, telephone SIP and a cascaded voice pipeline](docs/future-extensions.md) are documented proposals, not enabled capabilities.

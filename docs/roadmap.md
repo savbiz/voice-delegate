@@ -208,3 +208,16 @@ Costs, controls, timing and intent cancellation are automatic; credential presen
 search and ElevenLabs, while native clients filter ElevenLabs out. Offline contracts are
 covered by tests; live account billing and device audio acceptance remain pending. See
 [personal-key access and migration](personal-api.md).
+
+## Future extension milestones
+
+These are planned work, with neither offline nor live acceptance claimed. The
+[future extension guide](future-extensions.md) records diagrams, prerequisites, proposed
+flags, failure behavior and test gates. No implementation is enabled by these notes.
+
+| Planned milestone | Scope | Gate |
+| --- | --- | --- |
+| Moderation | One origin-aware hook for speech, goals and tool evidence | Agree policy; adversarial fake suite |
+| Worker MCP client | Audited read-only discovery, cached catalogs and ICS example | ADR 010; moderation boundary |
+| SIP, optional | Authenticated telephone admission and direct provider media | Admission ADR; authorized carrier smoke |
+| Cascade, optional | STT/text/TTS adapter behind explicit audio-relay capability | Privacy/relay ADR; measured comparison |
