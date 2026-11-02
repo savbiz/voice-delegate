@@ -6,23 +6,30 @@ Run `uv run python scripts/build_configuration.py`; pytest checks for drift.
 Settings load at process startup. Process environment overrides root `.env`; restart
 after changes. JSON arrays/objects are required for origins, hosts and invitations.
 Declared defaults below never read your environment or reveal configured secrets.
+Boolean flags accept `true` or `false`. `enum` lists every application-allowed choice;
+numeric bounds and collection/string limits are listed in field validation.
+A plain string is not an enumerated model/voice catalogue: provider/account support
+still determines whether that value works. Empty optional credentials disable no
+feature automatically; enabling a dependent feature can require its credentials.
+See [local profiles](local-development.md#copyable-local-configuration) and the
+commented [server template](../.env.example) for meanings and examples.
 
 | Field | Environment variable | Default | Field validation |
 |---|---|---|---|
-| `openai_api_key` | `OPENAI_API_KEY` | `""` | `{"type": "string"}` |
+| `openai_api_key` | `OPENAI_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
 | `azure_endpoint` | `VOICE_AZURE_ENDPOINT` | `""` | `{"type": "string"}` |
-| `azure_api_key` | `VOICE_AZURE_API_KEY` | `""` | `{"type": "string"}` |
+| `azure_api_key` | `VOICE_AZURE_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
 | `azure_deployment` | `VOICE_AZURE_DEPLOYMENT` | `"gpt-realtime"` | `{"type": "string"}` |
 | `azure_voice` | `VOICE_AZURE_VOICE` | `"marin"` | `{"type": "string"}` |
 | `fallback_enabled` | `VOICE_FALLBACK_ENABLED` | `false` | `{"type": "boolean"}` |
-| `voice_provider` | `VOICE_VOICE_PROVIDER` | `"live"` | `{"type": "string", "enum": ["live", "realtime", "azure"]}` |
+| `voice_provider` | `VOICE_ADAPTER` | `"live"` | `{"type": "string", "enum": ["live", "realtime", "azure"]}` |
 | `realtime_model` | `VOICE_REALTIME_MODEL` | `"gpt-realtime"` | `{"type": "string"}` |
 | `model` | `VOICE_MODEL` | `"gpt-live-1"` | `{"type": "string"}` |
 | `voice` | `VOICE_VOICE` | `"marin"` | `{"type": "string"}` |
 | `native_clients` | `VOICE_NATIVE_CLIENTS` | `false` | `{"type": "boolean"}` |
-| `allowed_origins` | `VOICE_ALLOWED_ORIGINS` | `["http://localhost:5173"]` | `{"type": "array"}` |
-| `allowed_origin` | `VOICE_ALLOWED_ORIGIN` | `null` | `{}` |
-| `allowed_hosts` | `VOICE_ALLOWED_HOSTS` | `["localhost", "127.0.0.1", "testserver"]` | `{"type": "array"}` |
+| `allowed_origins` | `VOICE_ALLOWED_ORIGINS` | `["http://localhost:5173"]` | `{"type": "array", "items": {"type": "string"}, "minItems": 1}` |
+| `allowed_origin` | `VOICE_ALLOWED_ORIGIN` | `null` | `{"anyOf": [{"type": "string"}, {"type": "null"}]}` |
+| `allowed_hosts` | `VOICE_ALLOWED_HOSTS` | `["localhost", "127.0.0.1", "testserver"]` | `{"type": "array", "items": {"type": "string"}}` |
 | `trust_proxy` | `VOICE_TRUST_PROXY` | `false` | `{"type": "boolean"}` |
 | `trusted_proxy_hops` | `VOICE_TRUSTED_PROXY_HOPS` | `1` | `{"type": "integer", "minimum": 1, "maximum": 32}` |
 | `environment` | `VOICE_ENVIRONMENT` | `"development"` | `{"type": "string"}` |
@@ -32,7 +39,7 @@ Declared defaults below never read your environment or reveal configured secrets
 | `max_inflight_tasks` | `VOICE_MAX_INFLIGHT_TASKS` | `2` | `{"type": "integer", "minimum": 1, "maximum": 2}` |
 | `delivery_timeout_seconds` | `VOICE_DELIVERY_TIMEOUT_SECONDS` | `30` | `{"type": "number", "maximum": 120, "exclusiveMinimum": 0}` |
 | `delivery_silence_seconds` | `VOICE_DELIVERY_SILENCE_SECONDS` | `0.6` | `{"type": "number", "minimum": 0.3, "maximum": 5}` |
-| `delivery_preamble` | `VOICE_DELIVERY_PREAMBLE` | `"About your request"` | `{"type": "string"}` |
+| `delivery_preamble` | `VOICE_DELIVERY_PREAMBLE` | `"About your request"` | `{"type": "string", "minLength": 1, "maxLength": 80}` |
 | `decisions_cancel` | `VOICE_DECISIONS_CANCEL` | `false` | `{"type": "boolean"}` |
 | `decisions_threshold` | `VOICE_DECISIONS_THRESHOLD` | `0.85` | `{"type": "number", "minimum": 0.5, "maximum": 1}` |
 | `decisions_timeout_seconds` | `VOICE_DECISIONS_TIMEOUT_SECONDS` | `1` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
@@ -40,8 +47,8 @@ Declared defaults below never read your environment or reveal configured secrets
 | `decisions_input_usd_per_million` | `VOICE_DECISIONS_INPUT_USD_PER_MILLION` | `0.1` | `{"type": "number", "minimum": 0, "maximum": 100}` |
 | `debug_recording` | `VOICE_DEBUG_RECORDING` | `false` | `{"type": "boolean"}` |
 | `debug_directory` | `VOICE_DEBUG_DIRECTORY` | `".local/debug"` | `{"type": "string"}` |
-| `access_token` | `VOICE_ACCESS_TOKEN` | `""` | `{"type": "string"}` |
-| `invite_tokens` | `VOICE_INVITE_TOKENS` | `{}` | `{"type": "object"}` |
+| `access_token` | `VOICE_ACCESS_TOKEN` | `""` | `{"type": "string", "format": "password"}` |
+| `invite_tokens` | `VOICE_INVITE_TOKENS` | `{}` | `{"type": "object", "additionalProperties": {"format": "password", "type": "string", "writeOnly": true}}` |
 | `public_demo` | `VOICE_PUBLIC_DEMO` | `false` | `{"type": "boolean"}` |
 | `demo_enabled` | `VOICE_DEMO_ENABLED` | `true` | `{"type": "boolean"}` |
 | `quota_database` | `VOICE_QUOTA_DATABASE` | `".local/quotas.sqlite3"` | `{"type": "string"}` |
@@ -57,15 +64,15 @@ Declared defaults below never read your environment or reveal configured secrets
 | `instance_id` | `VOICE_INSTANCE_ID` | `""` | `{"type": "string", "pattern": "^[a-z0-9]{0,16}$"}` |
 | `worker_execution` | `VOICE_WORKER_EXECUTION` | `"local"` | `{"type": "string", "enum": ["local", "remote"]}` |
 | `worker_service_url` | `VOICE_WORKER_SERVICE_URL` | `"http://worker:8001"` | `{"type": "string"}` |
-| `worker_service_token` | `VOICE_WORKER_SERVICE_TOKEN` | `""` | `{"type": "string"}` |
+| `worker_service_token` | `VOICE_WORKER_SERVICE_TOKEN` | `""` | `{"type": "string", "format": "password"}` |
 | `worker_service_capacity` | `VOICE_WORKER_SERVICE_CAPACITY` | `4` | `{"type": "integer", "minimum": 1, "maximum": 32}` |
 | `worker_max_records` | `VOICE_WORKER_MAX_RECORDS` | `128` | `{"type": "integer", "minimum": 32, "maximum": 1024}` |
 | `worker_mode` | `VOICE_WORKER_MODE` | `"offline"` | `{"type": "string", "enum": ["offline", "openai", "decisions"]}` |
 | `web_search` | `VOICE_WEB_SEARCH` | `false` | `{"type": "boolean"}` |
-| `tavily_api_key` | `TAVILY_API_KEY` | `""` | `{"type": "string"}` |
-| `web_search_domains` | `VOICE_WEB_SEARCH_DOMAINS` | `[]` | `{"type": "array"}` |
+| `tavily_api_key` | `TAVILY_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
+| `web_search_domains` | `VOICE_WEB_SEARCH_DOMAINS` | `[]` | `{"type": "array", "items": {"type": "string"}, "maxItems": 20}` |
 | `web_search_timeout_seconds` | `VOICE_WEB_SEARCH_TIMEOUT_SECONDS` | `3` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
-| `worker_model` | `VOICE_WORKER_MODEL` | `"gpt-4.1-mini"` | `{"type": "string"}` |
+| `worker_model` | `VOICE_WORKER_MODEL` | `"gpt-6-luna"` | `{"type": "string"}` |
 | `delegation_timeout_seconds` | `VOICE_DELEGATION_TIMEOUT_SECONDS` | `15` | `{"type": "number", "maximum": 120, "exclusiveMinimum": 0}` |
 | `delegation_result_tokens` | `VOICE_DELEGATION_RESULT_TOKENS` | `120` | `{"type": "integer", "minimum": 8, "maximum": 480}` |
 | `worker_max_steps` | `VOICE_WORKER_MAX_STEPS` | `4` | `{"type": "integer", "minimum": 1, "maximum": 12}` |
@@ -75,6 +82,8 @@ Declared defaults below never read your environment or reveal configured secrets
 | `connect_timeout_seconds` | `VOICE_CONNECT_TIMEOUT_SECONDS` | `20` | `{"type": "number", "exclusiveMinimum": 0}` |
 | `close_timeout_seconds` | `VOICE_CLOSE_TIMEOUT_SECONDS` | `5` | `{"type": "number", "exclusiveMinimum": 0}` |
 | `max_body_bytes` | `VOICE_MAX_BODY_BYTES` | `65536` | `{"type": "integer", "minimum": 1024, "maximum": 1048576}` |
+
+`VOICE_ADAPTER` also accepts `VOICE_VOICE_PROVIDER` for backward compatibility; the first name takes precedence within the same settings source.
 
 ## Cross-field validator rules
 
@@ -228,6 +237,21 @@ and limiter responses share the list.
 Origins must use browser serialization: lowercase/punycode hostnames and no
 explicit default ports (`:443` for HTTPS or `:80` for HTTP). Noncanonical values
 are rejected at startup; non-default ports and canonical IPv6 origins are allowed.
+
+## Frontend and auxiliary variables
+
+These are not backend Settings and do not belong in the server template:
+
+| Variable | Accepted value and purpose |
+|---|---|
+| `VITE_API_BASE_URL` | Empty for the local Vite proxy, or a backend HTTP(S) origin; public build-time URL. |
+| `VOICE_NATIVE_BUILD` | Exact `true` opts into the native build script; required by `pnpm native:sync`. |
+| `VITE_NATIVE_LIVE` | Exact `true` enables the experimental native voice path; otherwise off. |
+| `VITE_OFFLINE_STACK` | Exact `true` selects the container offline-stack UI; otherwise off. |
+| `BRAINTRUST_API_KEY` | Optional private eval-upload credential, never a frontend value. |
+
+Frontend build flags live in the frontend build environment, not root `.env`.
+CLI-only eval, benchmark and hosting options are documented in their own guides.
 
 ## Hosting configuration
 

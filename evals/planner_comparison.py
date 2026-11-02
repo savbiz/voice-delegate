@@ -28,6 +28,7 @@ from voice_delegate_agent.graph import (
     OpenAIPlanner,
     Planner,
 )
+from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
 
 
 class ScriptedChoiceDecider(FakeDecider):
@@ -179,12 +180,13 @@ async def compare_planners(
     *,
     paid: bool = False,
     key: str = "",
-    model: str = "gpt-4.1-mini",
+    model: str = DEFAULT_WORKER_MODEL,
     maximum: int = 0,
     input_rate: float | None = None,
     output_rate: float | None = None,
     decision_rate: float = 0.1,
 ) -> dict[str, Any]:
+    """Compare action selection with bounded calls and explicit offline or paid mode."""
     from .worker_eval import metadata, score
 
     budget = CallBudget(maximum)

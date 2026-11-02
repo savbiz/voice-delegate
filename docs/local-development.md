@@ -8,8 +8,10 @@ From that root, run:
 
 ```bash
 uv sync --locked
-cp .env.example .env
-pnpm --dir frontend install --frozen-lockfile
+if [ ! -e .env ]; then cp .env.example .env; fi
+cd frontend
+pnpm install --frozen-lockfile
+cd ..
 ```
 
 Configure PyCharm's interpreter as an existing environment at `.venv/bin/python` (Windows: `.venv/Scripts/python.exe`). Mark `backend/src` as Sources Root. For a Python run configuration select module `uvicorn`, arguments `voice_delegate.api.app:create_app --factory --host 127.0.0.1 --port 8000`, and working directory equal to the repository root. Environment settings load from root `.env` through python-dotenv.
@@ -18,13 +20,60 @@ Two terminal tabs:
 
 ```bash
 # Tab 1, repository root
-uv run uvicorn voice_delegate.api.app:create_app --factory --reload --host 127.0.0.1 --port 8000
+make be
 ```
 
 ```bash
 # Tab 2, repository root
-pnpm --dir frontend dev
+make fe
 ```
+
+The repository [Makefile](../Makefile) provides these shortcuts without installing
+shell aliases. Run `make` for help; it does not start a server. `make be` starts only
+FastAPI with reload on `127.0.0.1:8000`; `make fe` starts only Vite on
+`127.0.0.1:5173`. Stop each process with Ctrl+C. Dependencies must already be installed.
+
+Run `make invite` to print a reusable **local** invitation, then paste it in the UI.
+`make be` uses the same code, stored in ignored `.local/dev-invite.txt` with owner-only
+permissions. Restart an existing backend with `make be` before using this code.
+The launcher binds only to loopback and requires development mode with public demo
+disabled. For that process only, it replaces configured invitation/shared-token auth
+with the generated local invitation; the original `.env` is never rewritten and
+its existing codes are never printed. Direct uvicorn startup still uses `.env` auth.
+The local launcher permits both localhost and 127.0.0.1 frontend origins. `make invite`
+is an explicit credential-display action; normal startup only prints the command to
+retrieve it. Do not use this local code for Railway or invitations to hosted users.
+
+Backend settings load from the existing root `.env`; process environment values take
+precedence. Normal startup does not print API keys or configured invite codes. Only `make invite`
+prints the generated local code when explicitly requested.
+With no overrides, code defaults are `VOICE_ADAPTER=live` for GPT-Live, `VOICE_WORKER_MODE=offline` for the
+deterministic planner and `VOICE_WEB_SEARCH=false`. Existing `.env` values still win
+over these declared defaults. See [all configuration names](configuration.md).
+
+For one invocation, set options before the command:
+
+```sh
+VOICE_WORKER_MODE=openai make be
+VOICE_WORKER_MODE=decisions make be
+```
+
+These model-backed modes require a privately configured `OPENAI_API_KEY` and can
+incur provider charges. [Worker setup](worker.md) explains each mode. For persistent
+choices edit your local `.env`, then restart the backend. Never put API keys in the
+Makefile or frontend variables.
+
+The frontend shortcut explicitly defaults `VITE_API_BASE_URL` to empty so Vite proxies
+`/api` to the local backend, even if a frontend env file names a hosted API. To select
+a hosted backend explicitly:
+
+```sh
+make fe VITE_API_BASE_URL=https://your-api.example
+```
+
+A non-local backend must allow the frontend origin. This does not deploy or modify
+that backend. Paths are derived from the Makefile location, so linked worktrees use
+their own backend and frontend directories.
 
 Open **http://localhost:5173** (use localhost, matching the allowed origin). The free simulated demo works even without the Python server. It requests no microphone and plays no generated speech. Live voice needs `OPENAI_API_KEY` in root `.env`, GPT-Live access, and billed provider usage. Restart Python after changing settings. A ChatGPT subscription does not supply a project API key.
 
@@ -38,15 +87,17 @@ uv run ruff format --check .
 uv run mypy
 uv run pytest
 uv build --all-packages
-pnpm --dir frontend build
-pnpm --dir frontend test
-pnpm --dir frontend exec playwright install chromium
-pnpm --dir frontend test:e2e
+cd frontend
+pnpm lint
+pnpm build
+pnpm test
+pnpm exec playwright install chromium
+pnpm test:e2e
 ```
 
 Dependency and browser installation require internet; Python tests use no network and browser tests use only a local static server. Do not commit `.env`, `.venv`, node_modules or IDE configuration. Keep both lockfiles committed.
 
-If your environment already provides Chromium, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/absolute/path/to/chromium pnpm --dir frontend test:e2e` can use it instead of downloading Playwright's browser. The default CI path uses Playwright's own installation.
+If your environment already provides Chromium, `PLAYWRIGHT_CHROMIUM_EXECUTABLE=/absolute/path/to/chromium pnpm test:e2e` from `frontend/` can use it instead of downloading Playwright's browser. The default CI path uses Playwright's own installation.
 
 Container and same-host scaling checks are recorded in [Docker verification](milestones/m7-m8-verification.md#docker-acceptance-exercise). They exercise authentication, quotas and simulated orchestration without paid voice calls.
 
@@ -132,3 +183,113 @@ If a measured cold start exceeds four minutes, enable a Codespaces prebuild in
 repository Settings → Codespaces → Prebuilds, select this devcontainer and branch,
 and rerun the timing from a newly created codespace. Prebuilds consume the account's
 Codespaces allowance; check that allowance before enabling them. Keep ports private.
+
+## Common local environment variables
+
+The complete generated reference is [Configuration](configuration.md). Process
+variables override `.env`; restart the backend after changes. Keep keys only in the
+backend environment. Setting a key does not itself enable the corresponding feature.
+
+| Variable | Purpose |
+|---|---|
+| `OPENAI_API_KEY` | OpenAI voice and, when selected, paid text/Decisions worker access. |
+| `VOICE_ADAPTER` | Voice adapter: `live`, `realtime` or `azure`; default `live`. |
+| `VOICE_MODEL` | GPT-Live model; applies to the `live` voice adapter. |
+| `VOICE_REALTIME_MODEL` | Model used only by the OpenAI Realtime voice adapter. |
+| `VOICE_VOICE` | Voice selection for the OpenAI voice adapters. |
+| `VOICE_ACCESS_TOKEN` | Shared access code, used only when no named invitation map is configured. |
+| `VOICE_INVITE_TOKENS` | JSON map of invitation names to individual codes; takes precedence over shared access. |
+| `VOICE_ENVIRONMENT` | `development` for local work; production applies stricter host/origin/access requirements. |
+| `VOICE_ALLOWED_ORIGINS` | JSON list of exact frontend origins permitted by routes, CORS and limiter responses. |
+| `VOICE_ALLOWED_HOSTS` | JSON list of permitted backend Host names, separate from frontend origins. |
+| `VOICE_PUBLIC_DEMO` | Enables named invitation/quota admission for a production public demo; false for local launcher. |
+| `VOICE_INSTANCE_ID` | Instance prefix for same-host routing; leave empty for simple local use. |
+| `VOICE_WORKER_EXECUTION` | `local` in-process worker or `remote` private worker service. |
+| `VOICE_WORKER_MODE` | Planner choice: deterministic `offline`, text-model `openai`, or `decisions`. |
+| `VOICE_WORKER_MODEL` | Text model for the model-backed worker, independent of the voice model. |
+| `VOICE_FALLBACK_ENABLED` | Enables one Azure recovery attempt; requires separate Azure configuration. |
+| `VOICE_OTEL_ENABLED` | Enables optional backend OpenTelemetry tracing; it does not enable transcript recording. |
+| `VOICE_DEBUG_RECORDING` | Makes consent-based server debug recording available; a session must explicitly opt in. |
+| `TAVILY_API_KEY` | Server-side web-search credential; also requires `VOICE_WEB_SEARCH=true`. |
+| `BRAINTRUST_API_KEY` | Optional evaluation upload credential; unused by ordinary voice sessions. |
+| `VOICE_WEB_SEARCH` | Opt-in worker web tool; false by default. Natural-language voice search needs a model-backed worker. |
+
+`make be` deliberately uses isolated local invitation auth while retaining model and
+feature choices. Public-demo/production configurations must use the normal deployment
+entry point; they are rejected by the local launcher. `make fe` uses an empty
+`VITE_API_BASE_URL` by default to proxy to the local backend. Override that public URL
+only when explicitly selecting a hosted API; it is not a place for credentials.
+
+`VOICE_ADAPTER` is the canonical selector for the existing `live`, `realtime` and
+`azure` adapters. It selects an integration, not the commercial provider. The old
+`VOICE_VOICE_PROVIDER` name remains accepted as a deprecated alias; if both names
+are present in the same source, `VOICE_ADAPTER` wins. Keep your existing keys and change only the
+non-sensitive selectors/model values when migrating a local configuration.
+
+## Copyable local configuration
+
+After merging the dev/configuration PR and updating your main checkout, use the
+commented [server template](../.env.example) as the complete list of server settings.
+It contains declared defaults, no keys, the canonical adapter name, and every current
+server setting except the deprecated singular-origin alias.
+The [generated reference](configuration.md) lists all enums, types and bounds and the
+cross-field validation rules; model IDs, voice names, paths and account credentials
+are free-form settings rather than finite application enums.
+
+For a simple local GPT-Live session with a model-backed worker, these are the main
+values to choose in your private root `.env`:
+
+```dotenv
+OPENAI_API_KEY=REPLACE_WITH_YOUR_EXISTING_OPENAI_KEY
+VOICE_ENVIRONMENT=development
+VOICE_ADAPTER=live
+VOICE_MODEL=gpt-live-1
+VOICE_REALTIME_MODEL=gpt-realtime
+VOICE_VOICE=marin
+VOICE_WORKER_MODE=openai
+VOICE_WORKER_MODEL=gpt-6-luna
+VOICE_WORKER_EXECUTION=local
+VOICE_ALLOWED_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]
+VOICE_ALLOWED_HOSTS=["localhost","127.0.0.1"]
+VOICE_PUBLIC_DEMO=false
+VOICE_INSTANCE_ID=
+VOICE_ACCESS_TOKEN=
+VOICE_INVITE_TOKENS={}
+VOICE_FALLBACK_ENABLED=false
+VOICE_DECISIONS_CANCEL=false
+VOICE_WEB_SEARCH=false
+VOICE_OTEL_ENABLED=false
+VOICE_AUDIO_TIMING=false
+VOICE_INTENT_CANCELLATION=false
+VOICE_DEBUG_RECORDING=false
+```
+
+Replace the placeholder with your existing private key before starting. Preserve
+any Azure, Tavily or evaluation keys you still need before replacing an old file;
+this example cannot recover them. The minimal profile inherits the remaining
+resource limits from code defaults. The full template spells those limits out.
+Do not put a real key in `.env.example` or commit your `.env`.
+
+Start `make be`, `make fe`, then run `make invite` in another terminal to copy the
+local invitation. Empty invite settings in this file are intentional: the local
+launcher supplies its generated invitation to the backend process. A direct uvicorn
+launch does not inject that invitation. With both authentication settings empty,
+development requests require no access code. Configure an access code or named
+invitation explicitly if you want authentication for direct uvicorn startup.
+
+Keep optional features off for an initial baseline. Then opt in deliberately:
+
+| Change | Effect and prerequisites |
+|---|---|
+| `VOICE_AUDIO_TIMING=true` | Browser audio measurement; separate from transcript gaps. |
+| `VOICE_INTENT_CANCELLATION=true` | Preserve work through speech interruption, up to two tasks and bounded silence-gated delivery. |
+| `VOICE_DEBUG_RECORDING=true` | Offer per-session server-debug consent; does not record audio or bypass consent. |
+| `VOICE_WEB_SEARCH=true` | Add worker web search; requires private `TAVILY_API_KEY`. |
+| `VOICE_DECISIONS_CANCEL=true` | Paid semantic cancellation; requires intent cancellation and OpenAI key. |
+| `VOICE_WORKER_MODE=offline` | Remove text-model calls; live voice itself can still incur charges. |
+| `VOICE_WORKER_MODE=decisions` | Experimental classifier planner; deterministic argument builders have the limits documented in the worker guide. |
+
+All changes require restarting the backend (and the private worker too if using
+remote execution). A key alone does not turn on a feature. Backend `.env` is not a
+frontend configuration file: `make fe` already selects the local API. Native build,
+offline-stack UI and Vercel variables are listed separately in the reference.

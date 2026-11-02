@@ -26,7 +26,7 @@ Retain your existing `.env` and add:
 
 ```dotenv
 VOICE_WORKER_MODE=openai
-VOICE_WORKER_MODEL=gpt-4.1-mini
+VOICE_WORKER_MODEL=gpt-6-luna
 VOICE_WORKER_MAX_STEPS=4
 VOICE_DELEGATION_TIMEOUT_SECONDS=15
 VOICE_DELEGATION_RESULT_TOKENS=120
@@ -161,3 +161,23 @@ LangChain supplies interfaces; the project owns these prompts and the execution 
 Verification: `uv run pytest backend/tests/test_web_search.py
 backend/tests/test_adversarial_worker.py backend/tests/test_web_eval.py` runs offline.
 Live search quality and spoken citation delivery remain pending.
+
+## Default text model and migration
+
+The default text model is `gpt-6-luna` for local and private workers and for new
+evaluation runs. The adapter explicitly sends `reasoning_effort="none"` in Chat
+Completions for Luna, including final-answer generation and a Luna eval judge.
+That setting is required for function calling on this endpoint; the existing
+timeout, step, token and byte budgets still apply. Other explicitly configured
+models do not receive a guessed reasoning setting.
+
+Existing `.env` or platform overrides still take precedence. Replace an explicit
+`VOICE_WORKER_MODEL=gpt-4.1-mini` with `VOICE_WORKER_MODEL=gpt-6-luna`, then restart
+the process executing the worker. Never replace or print the existing API key.
+Historical evaluation records retain their original model names. Offline HTTP
+fakes verify the request format; no live Luna quality or cost benchmark is claimed.
+
+[Official model contract](https://developers.openai.com/api/docs/models/gpt-6-luna)
+requires `none` for Chat Completions function calling. OpenAI lists Luna as the
+[replacement for GPT-4.1 mini](https://developers.openai.com/api/docs/deprecations),
+whose shutdown is scheduled for 2027-01-14.

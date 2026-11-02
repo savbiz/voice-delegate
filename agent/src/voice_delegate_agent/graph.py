@@ -18,6 +18,7 @@ from pydantic import BaseModel, SecretStr, ValidationError
 
 from .decisions import Choice, Decider, Decision, DecisionError, Option
 from .limits import SOURCE_PREVIEW_CHARS
+from .model_config import chat_reasoning_effort
 from .prompts import worker_prompt
 from .reference import Source, WorkerResult, source_by_id
 from .tools import TOOLS
@@ -100,12 +101,14 @@ class OpenAIPlanner:
     """Explicitly enabled paid text model with no implicit retries."""
 
     def __init__(self, api_key: str, model: str, *, tools: Sequence[BaseTool] = TOOLS) -> None:
+        """Create a bounded text client with model-specific tool-call compatibility."""
         self.client = ChatOpenAI(
             model=model,
             api_key=SecretStr(api_key),
             max_retries=0,
             timeout=20,
             max_completion_tokens=1000,
+            reasoning_effort=chat_reasoning_effort(model),
         )
         self.model = self.client.bind_tools(tools, parallel_tool_calls=False)
 

@@ -122,7 +122,7 @@ Use a clean committed checkout. Start a **dedicated local** backend with the exi
 environment credentials, selecting one provider per run. Example for GPT-Live:
 
 ```sh
-VOICE_VOICE_PROVIDER=live VOICE_WORKER_MODE=offline \
+VOICE_ADAPTER=live VOICE_WORKER_MODE=offline \
 VOICE_PUBLIC_DEMO=false VOICE_ENVIRONMENT=development \
 VOICE_ALLOWED_ORIGINS='["http://127.0.0.1:4175"]' \
 uv run uvicorn voice_delegate.api.app:create_app --factory --host 127.0.0.1 --port 8000
@@ -146,8 +146,8 @@ VOICE_BENCHMARK_LIVE=true pnpm benchmark:voice --live --allow-paid \
 ```
 
 The provider/model arguments are labels, not client overrides. They **must match** the
-backend configuration: use `VOICE_VOICE_PROVIDER=realtime` and `VOICE_REALTIME_MODEL` for
-OpenAI Realtime, or `VOICE_VOICE_PROVIDER=azure`, `VOICE_AZURE_ENDPOINT`,
+backend configuration: use `VOICE_ADAPTER=realtime` and `VOICE_REALTIME_MODEL` for
+OpenAI Realtime, or `VOICE_ADAPTER=azure`, `VOICE_AZURE_ENDPOINT`,
 `VOICE_AZURE_DEPLOYMENT` and `VOICE_AZURE_API_KEY` for Azure. Restart the dedicated backend
 between providers. Azure requires valid existing endpoint credentials; ElevenLabs is
 rejected until its adapter exists. Never enable fallback during a provider comparison.

@@ -77,9 +77,9 @@ three representative cases with up to four worker calls and one judge call each:
 
 ```bash
 uv run --group eval python -m evals.worker_eval \
-  --mode openai --model gpt-4.1-mini --allow-paid --max-model-calls 15 \
+  --mode openai --model gpt-6-luna --allow-paid --max-model-calls 15 \
   --case math-01 --case docs-05 --case language-01 \
-  --judge-model gpt-4.1-mini --upload --project voice-delegate \
+  --judge-model gpt-6-luna --upload --project voice-delegate \
   --output .local/evals/live-smoke.json
 ```
 
@@ -196,7 +196,7 @@ uv run python -m evals.worker_eval --compare-planners --mode openai --allow-paid
 
 The worst-case gate reserves 12 calls per selected case across both planners: four
 baseline steps plus up to two calls for each of four DecisionsPlanner steps. The live
-text model defaults to `gpt-4.1-mini` and the classifier is `gpt-6-luna`. Use `--model`
+text model defaults to `gpt-6-luna` and the classifier is `gpt-6-luna`. Use `--model`
 to select the text model. This run has no AI judge or cloud upload. A case is bounded
 to 45 seconds and four steps. To compare all 40 cases, explicitly budget at least 480
 calls; do not do so merely to obtain an offline result.

@@ -7,7 +7,7 @@ import json
 import textwrap
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import AliasChoices, SecretStr
 from voice_delegate.config import Settings
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +15,7 @@ OUTPUT = ROOT / "docs/configuration.md"
 
 
 def validator_source() -> str:
+    """Extract cross-field validation rules without loading configured values."""
     source = inspect.getsource(Settings)
     tree = ast.parse(source)
     validators = [
@@ -29,6 +30,7 @@ def validator_source() -> str:
 
 
 def build() -> str:
+    """Render all declared defaults, aliases and constraints without reading secrets."""
     schema = Settings.model_json_schema(by_alias=False)["properties"]
     lines = [
         "# Configuration",
@@ -39,6 +41,13 @@ def build() -> str:
         "Settings load at process startup. Process environment overrides root `.env`; restart",
         "after changes. JSON arrays/objects are required for origins, hosts and invitations.",
         "Declared defaults below never read your environment or reveal configured secrets.",
+        "Boolean flags accept `true` or `false`. `enum` lists every application-allowed choice;",
+        "numeric bounds and collection/string limits are listed in field validation.",
+        "A plain string is not an enumerated model/voice catalogue: provider/account support",
+        "still determines whether that value works. Empty optional credentials disable no",
+        "feature automatically; enabling a dependent feature can require its credentials.",
+        "See [local profiles](local-development.md#copyable-local-configuration) and the",
+        "commented [server template](../.env.example) for meanings and examples.",
         "",
         "| Field | Environment variable | Default | Field validation |",
         "|---|---|---|---|",
@@ -51,9 +60,27 @@ def build() -> str:
         "exclusiveMinimum",
         "exclusiveMaximum",
         "pattern",
+        "anyOf",
+        "items",
+        "additionalProperties",
+        "minItems",
+        "maxItems",
+        "minLength",
+        "maxLength",
+        "format",
     )
+    aliases: list[str] = []
     for name, field in Settings.model_fields.items():
-        env = field.validation_alias or "VOICE_" + name.upper()
+        alias = field.validation_alias
+        if isinstance(alias, AliasChoices):
+            env = alias.choices[0]
+            alternatives = ", ".join(f"`{choice}`" for choice in alias.choices[1:])
+            aliases.append(
+                f"`{env}` also accepts {alternatives} for backward compatibility; "
+                "the first name takes precedence within the same settings source."
+            )
+        else:
+            env = alias or "VOICE_" + name.upper()
         default = field.get_default(call_default_factory=True)
         if isinstance(default, SecretStr):
             default = default.get_secret_value()
@@ -61,6 +88,7 @@ def build() -> str:
         lines.append(
             f"| `{name}` | `{env}` | `{json.dumps(default)}` | `{json.dumps(constraints)}` |"
         )
+    lines += ["", *aliases]
     lines += [
         "",
         "## Cross-field validator rules",
@@ -88,6 +116,26 @@ def build() -> str:
         "explicit default ports (`:443` for HTTPS or `:80` for HTTP). Noncanonical values",
         "are rejected at startup; non-default ports and canonical IPv6 origins are allowed.",
         "",
+        "## Frontend and auxiliary variables",
+        "",
+        "These are not backend Settings and do not belong in the server template:",
+        "",
+        "| Variable | Accepted value and purpose |",
+        "|---|---|",
+        "| `VITE_API_BASE_URL` | Empty for the local Vite proxy, or a backend HTTP(S) "
+        "origin; public build-time URL. |",
+        "| `VOICE_NATIVE_BUILD` | Exact `true` opts into the native build script; "
+        "required by `pnpm native:sync`. |",
+        "| `VITE_NATIVE_LIVE` | Exact `true` enables the experimental native voice "
+        "path; otherwise off. |",
+        "| `VITE_OFFLINE_STACK` | Exact `true` selects the container offline-stack UI; "
+        "otherwise off. |",
+        "| `BRAINTRUST_API_KEY` | Optional private eval-upload credential, never a "
+        "frontend value. |",
+        "",
+        "Frontend build flags live in the frontend build environment, not root `.env`.",
+        "CLI-only eval, benchmark and hosting options are documented in their own guides.",
+        "",
         "## Hosting configuration",
         "",
         "Vercel serves the static frontend: set only `VITE_API_BASE_URL` to the backend HTTPS",
@@ -104,6 +152,7 @@ def build() -> str:
 
 
 def main() -> None:
+    """Write the configuration reference or fail when its checked-in copy has drifted."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
