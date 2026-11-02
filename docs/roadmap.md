@@ -163,3 +163,12 @@ name accepted as a deprecated alias. New worker/eval defaults use GPT-6 Luna wit
 Chat Completions reasoning disabled for tool calling. Offline request-format and
 alias-precedence checks are separate from live model acceptance, which is pending.
 Existing explicit environment overrides are not silently changed.
+
+## Current entry-point documentation
+
+The README now distinguishes scripted browser playback, real offline worker execution,
+reported local live smoke tests and remaining acceptance. The server template lists
+current settings with all optional features off; the generated configuration reference
+includes enum choices, collection/string constraints and frontend build options.
+Copyable local model-backed setup is documented without changing private credentials
+or cloud deployments. No new live acceptance or measured model comparison is claimed.

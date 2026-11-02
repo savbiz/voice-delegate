@@ -8,7 +8,7 @@ From that root, run:
 
 ```bash
 uv sync --locked
-test -f .env || touch .env
+cp .env.example .env  # First setup only; preserve an existing .env and its keys.
 cd frontend
 pnpm install --frozen-lockfile
 cd ..
@@ -223,6 +223,71 @@ only when explicitly selecting a hosted API; it is not a place for credentials.
 `VOICE_ADAPTER` is the canonical selector for the existing `live`, `realtime` and
 `azure` adapters. It selects an integration, not the commercial provider. The old
 `VOICE_VOICE_PROVIDER` name remains accepted as a deprecated alias; if both names
-are present in the same source, `VOICE_ADAPTER` wins. Prefer the current instructions
-here over legacy template values. Keep your existing keys and change only the
+are present in the same source, `VOICE_ADAPTER` wins. Keep your existing keys and change only the
 non-sensitive selectors/model values when migrating a local configuration.
+
+## Copyable local configuration
+
+After merging the dev/configuration PR and updating your main checkout, use the
+commented [server template](../.env.example) as the complete list of server settings.
+It contains declared defaults, no keys, the canonical adapter name, and every current
+server setting except the deprecated singular-origin alias (shown as a comment).
+The [generated reference](configuration.md) lists all enums, types and bounds and the
+cross-field validation rules; model IDs, voice names, paths and account credentials
+are free-form settings rather than finite application enums.
+
+For a simple local GPT-Live session with a model-backed worker, these are the main
+values to choose in your private root `.env`:
+
+```dotenv
+OPENAI_API_KEY=REPLACE_WITH_YOUR_EXISTING_OPENAI_KEY
+VOICE_ENVIRONMENT=development
+VOICE_ADAPTER=live
+VOICE_MODEL=gpt-live-1
+VOICE_REALTIME_MODEL=gpt-realtime
+VOICE_VOICE=marin
+VOICE_WORKER_MODE=openai
+VOICE_WORKER_MODEL=gpt-6-luna
+VOICE_WORKER_EXECUTION=local
+VOICE_ALLOWED_ORIGINS=["http://localhost:5173","http://127.0.0.1:5173"]
+VOICE_ALLOWED_HOSTS=["localhost","127.0.0.1"]
+VOICE_PUBLIC_DEMO=false
+VOICE_INSTANCE_ID=
+VOICE_ACCESS_TOKEN=
+VOICE_INVITE_TOKENS={}
+VOICE_FALLBACK_ENABLED=false
+VOICE_DECISIONS_CANCEL=false
+VOICE_WEB_SEARCH=false
+VOICE_OTEL_ENABLED=false
+VOICE_AUDIO_TIMING=false
+VOICE_INTENT_CANCELLATION=false
+VOICE_DEBUG_RECORDING=false
+```
+
+Replace the placeholder with your existing private key before starting. Preserve
+any Azure, Tavily or evaluation keys you still need before replacing an old file;
+this example cannot recover them. The minimal profile inherits the remaining
+resource limits from code defaults. The full template spells those limits out.
+Do not put a real key in `.env.example` or commit your `.env`.
+
+Start `make be`, `make fe`, then run `make invite` in another terminal to copy the
+local invitation. Empty invite settings in this file are intentional: the local
+launcher supplies its generated invitation to the backend process. A direct uvicorn
+launch instead needs its own configured access code or named invitation.
+
+Keep optional features off for an initial baseline. Then opt in deliberately:
+
+| Change | Effect and prerequisites |
+|---|---|
+| `VOICE_AUDIO_TIMING=true` | Browser audio measurement; separate from transcript gaps. |
+| `VOICE_INTENT_CANCELLATION=true` | Preserve work through speech interruption, up to two tasks and bounded silence-gated delivery. |
+| `VOICE_DEBUG_RECORDING=true` | Offer per-session server-debug consent; does not record audio or bypass consent. |
+| `VOICE_WEB_SEARCH=true` | Add worker web search; requires private `TAVILY_API_KEY`. |
+| `VOICE_DECISIONS_CANCEL=true` | Paid semantic cancellation; requires intent cancellation and OpenAI key. |
+| `VOICE_WORKER_MODE=offline` | Remove text-model calls; live voice itself can still incur charges. |
+| `VOICE_WORKER_MODE=decisions` | Experimental classifier planner; deterministic argument builders have the limits documented in the worker guide. |
+
+All changes require restarting the backend (and the private worker too if using
+remote execution). A key alone does not turn on a feature. Backend `.env` is not a
+frontend configuration file: `make fe` already selects the local API. Native build,
+offline-stack UI and Vercel variables are listed separately in the reference.

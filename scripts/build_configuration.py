@@ -39,6 +39,13 @@ def build() -> str:
         "Settings load at process startup. Process environment overrides root `.env`; restart",
         "after changes. JSON arrays/objects are required for origins, hosts and invitations.",
         "Declared defaults below never read your environment or reveal configured secrets.",
+        "Boolean flags accept `true` or `false`. `enum` lists every application-allowed choice;",
+        "numeric bounds and collection/string limits are listed in field validation.",
+        "A plain string is not an enumerated model/voice catalogue: provider/account support",
+        "still determines whether that value works. Empty optional credentials disable no",
+        "feature automatically; enabling a dependent feature can require its credentials.",
+        "See [local profiles](local-development.md#copyable-local-configuration) and the",
+        "commented [server template](../.env.example) for meanings and examples.",
         "",
         "| Field | Environment variable | Default | Field validation |",
         "|---|---|---|---|",
@@ -51,6 +58,14 @@ def build() -> str:
         "exclusiveMinimum",
         "exclusiveMaximum",
         "pattern",
+        "anyOf",
+        "items",
+        "additionalProperties",
+        "minItems",
+        "maxItems",
+        "minLength",
+        "maxLength",
+        "format",
     )
     aliases: list[str] = []
     for name, field in Settings.model_fields.items():
@@ -98,6 +113,26 @@ def build() -> str:
         "Origins must use browser serialization: lowercase/punycode hostnames and no",
         "explicit default ports (`:443` for HTTPS or `:80` for HTTP). Noncanonical values",
         "are rejected at startup; non-default ports and canonical IPv6 origins are allowed.",
+        "",
+        "## Frontend and auxiliary variables",
+        "",
+        "These are not backend Settings and do not belong in the server template:",
+        "",
+        "| Variable | Accepted value and purpose |",
+        "|---|---|",
+        "| `VITE_API_BASE_URL` | Empty for the local Vite proxy, or a backend HTTP(S) "
+        "origin; public build-time URL. |",
+        "| `VOICE_NATIVE_BUILD` | Exact `true` opts into the native build script; "
+        "required by `pnpm native:sync`. |",
+        "| `VITE_NATIVE_LIVE` | Exact `true` enables the experimental native voice "
+        "path; otherwise off. |",
+        "| `VITE_OFFLINE_STACK` | Exact `true` selects the container offline-stack UI; "
+        "otherwise off. |",
+        "| `BRAINTRUST_API_KEY` | Optional private eval-upload credential, never a "
+        "frontend value. |",
+        "",
+        "Frontend build flags live in the frontend build environment, not root `.env`.",
+        "CLI-only eval, benchmark and hosting options are documented in their own guides.",
         "",
         "## Hosting configuration",
         "",

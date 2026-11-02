@@ -3,7 +3,7 @@
 [![ci](https://github.com/savbiz/voice-delegate/actions/workflows/ci.yml/badge.svg)](https://github.com/savbiz/voice-delegate/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-**A reference architecture for real-time voice agents that stay responsive while doing real work.**
+**A fast voice conversation. A separate worker for the heavy lifting.**
 
 ## Independence
 
@@ -13,221 +13,217 @@ also not affiliated with or endorsed by OpenAI, Microsoft Azure or any other pro
 named in this documentation; product names are used descriptively. Copyright 2026 Savino
 Bizzoca, Apache-2.0.
 
-A speech-to-speech model (GPT-Live over WebRTC) owns the conversation. Anything slower than a
-sentence is handed to a separate LangGraph worker through a single `delegate_task` boundary, and
-narrated back when it completes. The user can interrupt at any time: an interrupted task is never narrated
-after the interruption is registered. Backend-owned buffers, queues and sessions have explicit budgets; optional telemetry records
-backend spans per turn.
+Ask a question, delegate a calculation or a documentation lookup, and keep talking.
+The voice model knows one tool, `delegate_task`; a bounded LangGraph worker handles
+calculation, cited project documentation and optional public web search. Preserving
+work while the user speaks requires the opt-in intent-cancellation mode described below.
 
-Built clean-room from public provider documentation. Apache-2.0, copyright 2026 Savino Bizzoca.
+## Try it locally
 
-<!-- TODO(v0.1.0): replace with docs/media/demo.gif recorded during the live smoke test:
-     connect, ask a question, delegate a calculation, interrupt mid-answer, inspect timings, end. -->
+Prerequisites: Python 3.12 or 3.13, uv, Node.js 24, pnpm 11.19.0 and make. From the
+repository root, install dependencies once:
 
-```mermaid
-flowchart LR
-    B["Browser: React UI, WebRTC controller, local speech-onset detector"]
-    subgraph API["FastAPI process (one per VOICE_INSTANCE_ID)"]
-        R["/api routes: Origin check, invitation token, X-Session-Key"]
-        SM["Session manager: lock, generation, TTL and heartbeat, one provider connection"]
-        AD["Admission: daily quotas, active leases"]
-        PA["Provider adapters: OpenAILiveProvider, OpenAIRealtimeProvider, AzureRealtimeProvider"]
-        DR["Delegation runner: timeout, dedupe, result clipping"]
-    end
-    LW["LangGraphWorker in-process: OfflinePlanner or OpenAIPlanner; calculate, search_documentation"]
-    RW["Worker service (remote mode): POST/GET/DELETE /jobs, bearer token, capacity 4"]
-    Q[("quotas.sqlite3")]
-    F[("feedback.sqlite3")]
-    V["Primary voice provider: GPT-Live or Realtime"]
-    AZ["Azure Realtime: single fallback attempt"]
-    O["OTel collector, Prometheus, Grafana (opt-in, no transcripts)"]
-    B <-->|WebRTC audio| V
-    B -->|HTTPS JSON| R
-    R --> SM
-    R --> F
-    SM --> AD --> Q
-    SM --> PA
-    PA <-->|HTTPS SDP + WSS sideband| V
-    PA -.->|after sideband failure| AZ
-    SM --> DR -->|delegate_task| LW
-    DR -.->|VOICE_WORKER_EXECUTION=remote| RW
-    SM -.->|OTLP| O
-```
-
-## Why it exists
-
-Voice agents fail in two ways: they go quiet while a tool runs, or they keep talking over a
-result that is no longer wanted. This project shows one way to avoid both:
-
-- **One delegation entry point.** The voice model knows a single tool; the worker evolves and
-  is tested on its own.
-- **Interruption invalidates work.** A generation counter is bumped before cancellation, so a
-  late worker result is discarded rather than narrated.
-- **Bounded everything the backend owns.** Sessions, buffers, history, worker steps and
-  result size have limits with a documented reason and a documented behaviour on exhaustion.
-- **Provider failover with clamped history.** A primary transport failure reconnects to a
-  fallback provider and replays bounded text, never tool executions.
-- **Measured, not assumed.** OpenTelemetry spans per turn, provider setup duration,
-  transcript-arrival wait, delegation duration by status, failover duration; offline evals for scheduling and limits.
-- **Fake provider for evals.** Reproducible failure sequences and injected clocks make
-  lifecycle behaviour testable without credentials. Scripted tests verify orchestration;
-  live model-quality and audio-latency measurements remain separate.
-
-## Status
-
-**v0.1.0 is an implementation release.** The hosted [Vercel frontend](https://voice-delegate.vercel.app) and [Railway backend](https://voice-delegate-api-production.up.railway.app/healthz) offer the simulated demo and invitation-protected documentation search; live voice requires a real backend provider key. Sessions, delegation, recovery, observability, invitations, cited search and same-host scaling are implemented. Live voice, Azure calls, measured voice latency and hosted end-to-end acceptance remain unverified.
-See the [roadmap](docs/roadmap.md) and [production scope](docs/production.md).
-
-<!-- TODO(v0.1.0): fill from the live smoke test; keep p50/p95 and the exact model names.
-| Measurement | p50 | p95 | Notes |
-|---|---|---|---|
-| Provider time-to-first-byte |  |  | gpt-live-1, WebRTC, EU |
-| Delegated task end-to-end |  |  | offline planner / gpt-6-luna |
-| Failover to Azure |  |  | injected sideband failure |
--->
-
-## Quickstart — no API key required for the simulated demo
-
-Prerequisites: Python 3.12 or 3.13, uv, Node.js 24 and pnpm 11.19.0. Open the repository folder containing `pyproject.toml`.
-
-```bash
-cd voice-delegate
+```sh
 uv sync --locked
-test -f .env || touch .env
+cp .env.example .env  # First setup only; preserve an existing .env and its keys.
 cd frontend
 pnpm install --frozen-lockfile
 cd ..
 make fe
 ```
 
-Open **http://localhost:5173** and press **Start demo**. This mode is free, scripted and silent: no API calls, microphone or generated speech. Simulated timings are labeled.
+Open **http://localhost:5173**, select **Free demo**, then start. It is scripted,
+silent and free: no microphone, backend or provider key is required.
 
-For live voice, set `OPENAI_API_KEY` in root `.env`, then in a second terminal from the repository root:
+For local live voice, put your real `OPENAI_API_KEY` in the private root `.env`.
+Start the backend in another terminal, then get the local invitation in a third:
 
-```bash
+```sh
 make be
-# Another terminal, repository root: print the local code to paste in the UI
+```
+
+```sh
 make invite
 ```
 
-Select **Live voice** in the browser. Provider access and usage billing are required. Keys stay on the server. Use one backend worker; sessions are held in memory.
+Paste that invitation in the browser and select **Live voice**. Stop each server
+with Ctrl+C. `make` shows help. Existing `.env` values override code defaults; the
+launcher changes local admission only, never your file or provider key.
 
-See [PyCharm and local development](docs/local-development.md) and [GitHub, Vercel, Railway/Render deployment](deployment/README.md).
+The server template defaults to the **offline worker planner**. To let the worker
+interpret natural-language requests using Luna, choose the paid planner explicitly:
 
-## Repository
-
-| Directory | Responsibility |
-|---|---|
-| `.github/` | CI, CodeQL and dependency updates |
-| `agent/` | LangGraph worker, planners, tools and bundled reference corpus |
-| `backend/` | FastAPI, provider adapters, sessions, limits and offline tests |
-| `deployment/` | Docker images, hosting instructions and same-host scaling |
-| `docs/` | Architecture, decisions and historical verification records |
-| `evals/` | Versioned worker datasets, quality reporting and scripted controls |
-| `frontend/` | React UI, WebRTC controller, Vitest and Playwright |
-| `observability/` | OTel collector, Prometheus and Grafana |
-| `realtime/` | Browser/server WebRTC boundary documentation |
-| `scripts/` | Reference generation, link checks and container smoke tests |
-| `test_support/` | Shared deterministic test helpers |
-
-## Session and delegation guarantees
-
-- Application session creation and ownership keys; duplicate-offer protection.
-- Server-mediated GPT-Live WebRTC SDP exchange and server-side event connection.
-- Start/end browser controls, microphone cleanup, independent bounded captions, estimated per-turn transcript gaps.
-- Absolute lifetime, browser heartbeat expiry, request size and session capacity limits.
-- Bounded WebSocket/event queues and graceful close with explicit confirmed/unconfirmed finalization.
-- LangGraph delegation with offline/OpenAI planners, timeout, result clipping and interruption cancellation.
-
-Other implemented areas:
-
-- [Voice controls](docs/architecture.md): language, translation mode, captions and interruption recap.
-- [Cited documentation search](agent/README.md): local evidence with immutable source IDs.
-- [Admission and feedback](docs/api.md): invitations, durable quotas and bounded reports.
-- [Provider recovery](docs/architecture.md): one fallback attempt with clamped text history.
-- [Observability](observability/README.md): backend traces, counters and latency histograms.
-- [Same-host scaling](deployment/README.md): instance routing, shared leases and a private worker.
-- [Evaluation](evals/README.md): synthetic controls and separately reported worker quality.
-
-GPT-Live uses native client delegation (ID and timestamp, no schema). The Realtime and Azure adapters register [docs/delegate_task.schema.json](docs/delegate_task.schema.json) as a server-owned tool and map function_call events to the same worker.
-
-`delegate_task(goal, context)` is the internal worker contract. Delegation starts an asynchronous worker and returns compact commentary. `VOICE_WORKER_MODE=offline` uses a scripted planner by default; set `openai` for natural-language tool selection. No web search or external actions are available.
-
-The capability-aware `/token` endpoint returns **501** for this adapter. Live's documented browser flow creates sessions using server credentials and SDP; this project does not invent a Live ephemeral credential API. The browser uses `/offer`. See [ADR 001](docs/decisions/001-live-client-delegation.md).
-
-## Try the real worker offline
-
-```bash
-uv run python -m voice_delegate.delegation.demo "calculate (120 + 80) * 1.22"
+```sh
+VOICE_WORKER_MODE=openai make be
 ```
 
-This executes the LangGraph graph and calculator without any API call and returns 244. See [worker delegation](docs/worker.md) for enabling the paid text model and testing interruption.
+Voice provider usage and text-worker usage are billed separately. A ChatGPT
+subscription does not supply an API key. See the [copyable local configuration](docs/local-development.md#copyable-local-configuration)
+and [all variables, allowed choices and bounds](docs/configuration.md).
 
-## Verification
+### One-command offline stack and Codespaces
 
-```bash
+With Docker running, this starts the API, separate worker, frontend, Prometheus,
+Grafana and collector without any provider key:
+
+```sh
+bash .devcontainer/start-demo.sh
+```
+
+Open **http://localhost:8080** and use **Run offline worker**. Unlike the scripted
+browser demo, this executes the real worker graph with a deterministic planner.
+See [offline stack](deployment/README.md#offline-stack-in-one-command) for inspection
+and shutdown commands. Codespaces uses the same stack; keep forwarded ports private.
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/savbiz/voice-delegate)
+
+## Status and verification
+
+**v0.1.0 is an implementation release.** Offline tests cover session ownership,
+limits, worker tools, cancellation, recovery, metrics and browser behavior.
+The maintainer reported successful local GPT-Live conversations and tool use; the
+full recorded live acceptance checklist is still pending. A small live Decisions
+API smoke is recorded separately; it does not establish cancellation quality.
+
+The [hosted frontend](https://voice-delegate.vercel.app) can run the simulated demo
+without the backend. Railway is the canonical deployment target, but its trial
+expired: this README does not claim the [configured API](https://voice-delegate-api-production.up.railway.app/healthz)
+is currently available or running the latest commit. Hosted documentation search
+and live voice require a healthy backend, invitations and applicable provider keys.
+
+Codespaces offline worker/metrics acceptance was reported on 2026-10-25; the
+startup/origin fixes are covered offline, while a new hosted rerun and cold-start
+timings remain pending. iOS Simulator and Android debug builds compile; device
+microphone, audio routing and store publication are separate acceptance work.
+
+See [current evidence and remaining gates](docs/roadmap.md), the
+[live checklist](docs/milestones/live-verification.md), [benchmarks](docs/benchmarks.md)
+and the [two-minute video script](docs/demo-video.md). The script is preparation,
+not a published demo video. No measured provider comparison, live Luna evaluation
+or Azure recovery result is claimed.
+
+## Providers and worker modes
+
+`VOICE_ADAPTER` selects an integration; the old `VOICE_VOICE_PROVIDER` name remains
+a deprecated alias. All adapters expose the same delegation boundary.
+
+| Adapter | Voice service and transport | State |
+|---|---|---|
+| `live` | OpenAI GPT-Live; browser WebRTC audio and backend sideband | Default; partial local smoke reported |
+| `realtime` | OpenAI Realtime; browser WebRTC audio and backend sideband | Implemented; full live acceptance pending |
+| `azure` | Azure OpenAI Realtime; browser WebRTC and backend sideband | Primary or optional one-attempt recovery; live acceptance pending |
+
+ElevenLabs Agents integration is an incomplete [separate draft](https://github.com/savbiz/voice-delegate/pull/21),
+not an available adapter in this branch. Cross-vendor fallback, SIP telephone entry
+and worker MCP connections are not implemented here.
+
+The worker uses **LangGraph for orchestration** and a selected planner for decisions:
+
+| `VOICE_WORKER_MODE` | How a step is chosen | External usage |
+|---|---|---|
+| `offline` | Deterministic scripted planner, real local tools | No model calls |
+| `openai` | Text model selects tools and writes the final answer | OpenAI; configurable model, default `gpt-6-luna` |
+| `decisions` | Decisions chooses an action; code builds supported arguments, text model writes the answer | OpenAI Decisions and text-model calls |
+
+`VOICE_WORKER_EXECUTION=local` runs that graph inside the API process. `remote`
+uses a separately started private HTTP worker service; it can be another container
+on the same machine. It does not automatically deploy another service. Both modes
+retain the selected planner and limits. See [worker configuration](docs/worker.md).
+
+The worker has `calculate` and `search_documentation`. Optional `web_search` needs
+`VOICE_WEB_SEARCH=true` and a private Tavily key on the worker host; it is off by
+default and may incur search-provider charges. A web result is untrusted data and
+ends further tool selection for that delegation. The voice model still sees only
+`delegate_task`, never these individual tools. [Prompts](agent/src/voice_delegate_agent/prompts/)
+are versioned with the worker.
+
+[Voice instructions and session design](docs/architecture.md).
+
+## Interruption, cancellation and delivery
+
+The default path retains the original cancellation behavior. Opt into the separate
+work/narration lifecycle with `VOICE_INTENT_CANCELLATION=true`:
+
+- Speaking interrupts narration while delegated work continues.
+- Up to two tasks run independently; a new delegation does not cancel the previous one.
+- Results wait for silence, then are sent to the voice provider, or expire after a bounded wait.
+- Explicit UI/API cancellation and session end cancel work. Optional semantic cancellation
+  additionally requires `VOICE_DECISIONS_CANCEL=true`; failure leaves work running.
+
+“Result sent” means the provider accepted it, not that the user heard the complete
+answer. Interrupted audio is not automatically repeated. Task execution and delivery
+wait are shown separately. See [ADR 009](docs/decisions/009-cancellation-is-intent.md).
+
+## Data flow and limits
+
+```mermaid
+flowchart LR
+    B["Browser / opt-in Capacitor shell"] <-->|WebRTC audio| V["Voice service"]
+    B -->|Origin + invitation + session key| A["FastAPI: owned sessions and quotas"]
+    A <-->|SDP and sideband events| V
+    V -->|delegate_task| A
+    A --> W["LangGraph worker: local or private HTTP service"]
+    W --> P["Offline / OpenAI / Decisions planner"]
+    P --> T["Calculator / project documentation / optional web search"]
+    W --> D["Bounded result; silence-gated when enabled"]
+    D --> A
+    A -.-> O["Opt-in OTel, Prometheus and Grafana"]
+```
+
+Audio goes directly between the browser and voice provider. Backend-owned sessions,
+queues, history, model steps, results and external requests have explicit limits.
+Invitations, quota SQLite stores and leases control public access. Provider recovery
+creates a new browser peer and replays bounded text, never tool executions.
+
+Optional `VOICE_AUDIO_TIMING=true` measures browser audio onset/playback separately
+from the always-labeled transcript timestamp gap. A transcript gap is not acoustic
+latency; browser measurements are proxies, not a hardware loopback measurement.
+See [measurement methodology](docs/benchmarks.md) and [observability](observability/README.md).
+
+Ordinary diagnostics exclude conversation text. Server debug recording requires
+`VOICE_DEBUG_RECORDING=true` and session consent; it stores bounded data for up to
+24 hours while the backend runs. Audio recording is a separate browser-only consent
+and download. The operator can read server debug recordings. See [operations](docs/operations.md).
+
+## Checks
+
+From the repository root:
+
+```sh
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
 uv run pytest --cov=voice_delegate --cov=voice_delegate_agent --cov-fail-under=85
+uv run python scripts/check_independence.py
 uv run python scripts/check_deployment.py
 uv run python scripts/check_links.py
 uv run python scripts/build_reference.py --check
-pnpm --dir frontend lint
-pnpm --dir frontend build
-pnpm --dir frontend test
-pnpm --dir frontend test:e2e
 uv build --all-packages
-docker build -f deployment/Dockerfile.backend -t voice-delegate:ci .
-uv run python scripts/smoke_container.py
 ```
 
-CI runs the backend on Python 3.12 and 3.13, builds and smoke-tests the container on 3.12, checks release tag/version agreement on tag pushes, checks that the CSP API host appears in both deployment guides, and rejects unresolved Vercel placeholders. The pytest suite also checks generated configuration documentation for drift.
+From `frontend/`:
 
-Pytest disables IP sockets; only local Unix sockets used by asyncio are allowed. HTTP tests use in-process ASGI and mock transports. Test fixtures contain invented identifiers and no recordings from private systems. Dependency installation needs internet; the tests themselves do not.
+```sh
+pnpm lint
+pnpm build
+pnpm test
+pnpm exec playwright install chromium  # Once, if the browser is not installed.
+pnpm test:e2e
+pnpm test:stack
+```
 
-See [the live smoke-test checklist](docs/milestones/live-verification.md#live-smoke-test-checklist). CI runs on hosted GitHub Actions, and paid text-worker evaluations are recorded in
-[the evaluation verification record](docs/milestones/m9-evals-verification.md); live voice
-and Azure calls have not yet been verified.
+CI checks Python 3.12 and 3.13, builds/smokes the backend and offline demo containers,
+and syncs the opt-in native scaffold. Python tests disable external sockets; browser
+tests use local fakes. Installing dependencies/browsers needs internet; testing does
+not require provider credentials or paid requests.
 
-## Timing and cleanup limitations
+## Documentation
 
-The UI measures an **estimated transcript gap**, not audio TTFB or end-to-end playback latency. Transcript timestamps can overlap; negative values are retained. Turns are approximated by 800 ms gaps between user transcript fragments. The backend exports separate turn, provider, delegation and failover metrics; see [observability](observability/README.md).
+- [Architecture](docs/architecture.md), [API](docs/api.md), [glossary](docs/glossary.md) and [ADRs](docs/decisions/)
+- [Configuration](docs/configuration.md), [local development](docs/local-development.md), [worker setup](docs/worker.md)
+- [Deployment](deployment/README.md), [operations](docs/operations.md), [production scope](docs/production.md)
+- [Benchmarks](docs/benchmarks.md), [worker evals](evals/README.md), [roadmap and acceptance](docs/roadmap.md)
+- [Native packaging](docs/mobile.md), [third-party notices](THIRD_PARTY_NOTICES.md) and [contributing](CONTRIBUTING.md)
 
-The provider creation POST is never automatically retried: an ambiguous response can already have created a billable session. If the sideband fails after creation, the adapter attempts to recover it solely to close the session. If recovery fails, remote finalization cannot be guaranteed and is logged as unconfirmed. The public hangup reference describes SIP, so the Live adapter does not assume it works for WebRTC. A process crash also cannot guarantee remote cleanup. A normal close waits for `session.closed` before releasing transports.
-
-## Roadmap and acceptance gates
-
-v0.x tags publish the implementation with documented verification gaps; acceptance-gated tags begin at v1.0.
-The full plan covers voice sessions through same-host scaling: see [scope, acceptance and status](docs/roadmap.md).
-The table below covers the core features; later features extend them with a controlled
-public demo, a complete use case, advanced voice UX and optional scaling.
-
-| Feature | Acceptance gate |
-|---|---|
-| GPT-Live sessions, provider contract, browser | Offline checks + real voice, interruption, and cleanup smoke test |
-| LangGraph worker, internal delegation, token budget, cancellation | Offline worker tests + live delegated response |
-| Azure Realtime adapter, renegotiation failover, clamped history | Capability checks and timed fallback scenarios |
-| OTel, collector, Prometheus, Grafana dashboard, evals, docs | Reproducible offline suite + explicitly separate live validation |
-
-Voice controls include language/translate preferences, an extractive interruption recap and OpenAI Realtime. Optional scaling adds a same-host multi-process topology. ElevenLabs and cross-host high availability remain future extensions.
-
-The Azure adapter uses documented GA WebRTC and sideband capabilities. A provider change establishes a new browser peer connection and replays bounded text; it does not transparently migrate audio or imply identical full-duplex behavior.
-
-## Public sources
-
-Protocol implementation is based on the public OpenAI [WebRTC guide](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live), [server controls](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live), [session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations), and [delegation guide](https://developers.openai.com/api/docs/guides/live-delegation). See [architecture](docs/architecture.md) and [ADRs](docs/decisions/) for application-level reasoning and feature boundaries.
-
-## Documentation map
-
-- [Architecture](docs/architecture.md) and [API contracts](docs/api.md)
-- [Production scope](docs/production.md)
-- [Configuration](docs/configuration.md), [operations runbook](docs/operations.md) and [deployment](deployment/README.md)
-- [Glossary](docs/glossary.md), [local development](docs/local-development.md) and [worker contract](agent/README.md)
-- [Architecture decisions](docs/decisions/)
-- [Historical milestone records](docs/milestones/) and [current roadmap](docs/roadmap.md)
-
-Optional [public web search](docs/worker.md#optional-public-web-search) runs in the
-worker behind the same `delegate_task` entry point. It is disabled by default and
-requires a server-side Tavily key. Offline contracts are verified; live search
-quality and spoken delivery remain pending.
+Public protocol sources are cited in the design documents and ADRs. The project is
+Apache-2.0; dependencies and bundled data retain their individual licence terms.
