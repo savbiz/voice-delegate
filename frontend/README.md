@@ -57,3 +57,9 @@ verified, as are Android debug and instrumented-test APK builds. Instrumented te
 were not executed. Launch,
 physical-device and store acceptance remain pending; building assets is not an App
 Store or Google Play publication.
+
+The opt-in ElevenLabs Agents SDK uses the media signaling host
+`https://livekit.rtc.elevenlabs.io` / `wss://livekit.rtc.elevenlabs.io` in addition
+to the single application API host. Backend configuration still controls availability;
+this CSP allowance does not start a session. Native builds keep their existing
+restricted policy and do not support this transport yet.

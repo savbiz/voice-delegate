@@ -94,3 +94,7 @@ It does not itself prove that a pending result has been narrated or fully played
 **Agents bootstrap preview:** a development-only endpoint returning an SDK WebRTC
 token and conversation ID. It reserves one setup attempt on an owned session and
 does not imply that media is connected or that upstream closure is confirmed.
+
+- **Agents SDK transport:** optional ElevenLabs WebRTC media with owner-authenticated
+  client events and native asynchronous tool-result correlation. It does not expose
+  an SDP answer or imply that a browser disconnect confirms upstream finalization.

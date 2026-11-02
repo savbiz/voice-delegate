@@ -38,8 +38,20 @@ def create_app(
 ) -> FastAPI:
     """Build a single-process app; inject an offline provider in tests."""
     settings = settings or load_settings()
+    elevenlabs = (
+        ElevenLabsProvider(
+            settings.elevenlabs_api_key.get_secret_value(),
+            settings.elevenlabs_agent_id,
+            timeout=settings.elevenlabs_timeout_seconds,
+        )
+        if settings.elevenlabs_enabled
+        else None
+    )
     if provider is None:
-        if settings.voice_provider == "azure":
+        if settings.voice_provider == "elevenlabs":
+            assert elevenlabs is not None
+            provider = elevenlabs
+        elif settings.voice_provider == "azure":
             azure = AzureRealtimeProvider(
                 settings.azure_endpoint, settings.azure_api_key.get_secret_value()
             )
@@ -57,15 +69,6 @@ def create_app(
             )
             live.model, live.voice = settings.model, settings.voice
             provider = live
-    elevenlabs = (
-        ElevenLabsProvider(
-            settings.elevenlabs_api_key.get_secret_value(),
-            settings.elevenlabs_agent_id,
-            timeout=settings.elevenlabs_timeout_seconds,
-        )
-        if settings.elevenlabs_enabled
-        else None
-    )
     fallback = None
     if settings.fallback_enabled:
         fallback = AzureRealtimeProvider(
@@ -124,7 +127,7 @@ def create_app(
             with suppress(asyncio.CancelledError):
                 await janitor
             await manager.aclose()
-            if elevenlabs is not None:
+            if elevenlabs is not None and elevenlabs is not provider:
                 await elevenlabs.aclose()
             if remote is not None:
                 await remote.aclose()

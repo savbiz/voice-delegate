@@ -1,7 +1,10 @@
 """Private Agents bootstrap; SDK media is distinct from server-negotiated SDP."""
 
 import asyncio
+import json
+import re
 from dataclasses import dataclass, field
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,6 +19,18 @@ from .models import (
 )
 
 MAX_RESPONSE_BYTES = 32768
+
+
+def _require(condition: bool) -> None:
+    if not condition:
+        message = "Unsafe agent configuration"
+        raise ValueError(message)
+
+
+def _overrides_disabled(value: object) -> bool:
+    return value is False or (
+        isinstance(value, dict) and all(_overrides_disabled(v) for v in value.values())
+    )
 
 
 class TokenResponse(BaseModel):
@@ -60,6 +75,87 @@ class ElevenLabsProvider:
         self, instructions: str, history: tuple[tuple[str, str], ...] = ()
     ) -> SessionConfig:
         return SessionConfig(self.agent_id, "agent-configured", instructions, history)
+
+    async def _json(self, path: str) -> dict[str, Any]:
+        """Read only fixed provider resources with bounded bodies and no retries."""
+        raw = bytearray()
+        async with asyncio.timeout(self.timeout):
+            async with self.http.stream(
+                "GET",
+                "https://api.elevenlabs.io/v1/convai/" + path,
+                headers={"xi-api-key": self._api_key},
+                follow_redirects=False,
+            ) as response:
+                response.raise_for_status()
+                async for chunk in response.aiter_bytes():
+                    raw.extend(chunk)
+                    if len(raw) > MAX_RESPONSE_BYTES:
+                        message = "Agent configuration exceeds the input budget"
+                        raise ValueError(message)
+        payload = json.loads(raw)
+        if not isinstance(payload, dict):
+            message = "Invalid agent configuration"
+            raise TypeError(message)
+        return payload
+
+    async def validate_agent(self, ttl: float) -> None:
+        """Fail closed unless the private agent enforces async delegation and lifetime."""
+        try:
+            async with asyncio.timeout(self.timeout):
+                agent = await self._json("agents/" + self.agent_id)
+                config = agent["conversation_config"]
+                platform = agent["platform_settings"]
+                _require(isinstance(config, dict) and isinstance(platform, dict))
+                _require(platform["auth"]["enable_auth"] is True)
+                _require(not agent.get("workflow"))
+                _require(_overrides_disabled(platform.get("overrides", {})))
+                conversation = config["conversation"]
+                _require(0 < conversation["max_duration_seconds"] <= ttl)
+                prompt = config["agent"]["prompt"]
+                tools = prompt.get("tools", [])
+                identities = prompt.get("tool_ids", [])
+                if identities:
+                    _require(not tools and len(identities) == 1)
+                    identity = identities[0]
+                    _require(
+                        isinstance(identity, str)
+                        and re.fullmatch("[a-zA-Z0-9_-]{1,200}", identity) is not None
+                    )
+                    tools = [(await self._json("tools/" + identity))["tool_config"]]
+                _require(len(tools) == 1)
+                tool = tools[0]
+                _require(tool["type"] == "client" and tool["name"] == "delegate_task")
+                _require(tool["expects_response"] is True and tool["execution_mode"] == "async")
+                _require(tool.get("interruption_mode", "allow") == "allow")
+                _require(tool["response_timeout_secs"] == 120)
+                parameters = tool["parameters"]
+                _require(parameters["required"] == ["goal"])
+                _require(set(parameters["properties"]) == {"goal"})
+                _require(parameters["properties"]["goal"]["type"] == "string")
+        except (
+            httpx.HTTPError,
+            TimeoutError,
+            ValueError,
+            KeyError,
+            TypeError,
+            AttributeError,
+            IndexError,
+        ):
+            message = (
+                "ElevenLabs agent requires private async delegate_task and a bounded call lifetime"
+            )
+            raise ProviderError(message) from None
+
+    async def confirm_closed(self, conversation_id: str) -> bool:
+        """A browser disconnect alone cannot confirm that upstream usage ended."""
+        try:
+            payload = await self._json("conversations/" + conversation_id)
+            return payload.get("agent_id") == self.agent_id and payload.get("status") in {
+                "done",
+                "failed",
+            }
+        except (httpx.HTTPError, TimeoutError, ValueError, TypeError):
+            return False
 
     async def _fetch_bootstrap(self) -> BrowserBootstrap:
         raw = bytearray()

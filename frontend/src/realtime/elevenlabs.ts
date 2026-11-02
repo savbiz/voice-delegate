@@ -1,4 +1,4 @@
-/** Draft SDK callback boundary. No browser SDK is started or loaded by this module. */
+/** SDK callback correlation; only the selected transport loads the official SDK. */
 export type ElevenToolRequest = { call_id: string; goal: string };
 export type ElevenSubmit = (request: ElevenToolRequest, signal: AbortSignal) => Promise<string>;
 
@@ -52,7 +52,7 @@ export class ElevenToolBridge {
     const controller = new AbortController();
     const stop = () => controller.abort();
     this.abort.signal.addEventListener('abort', stop, { once: true });
-    const timer = setTimeout(stop, 20000);
+    const timer = setTimeout(stop, 120000);
     try {
       // Race explicitly: extensions that ignore AbortSignal must not hold the callback forever.
       const stopped = new Promise<never>((_, reject) =>

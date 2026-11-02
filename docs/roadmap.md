@@ -182,18 +182,12 @@ a backend audio relay is not inherently required. Agents with a client-tool admi
 bridge is the initial recommendation, conditional on verifying call identity and a
 safe explicit path for later result delivery.
 
-The maintainer selected Agents on 2026-11-02. The implementation draft adds a
-development-only bootstrap adapter, a single-attempt authenticated token endpoint
-and an offline-tested client-tool correlation boundary. The flag stays off and is
-rejected in production. The SDK is not installed or started, no UI provider switch
-is exposed, and public voice support is not claimed. SDK integration, server admission
-for callbacks, delayed spoken delivery, close control, CSP review, latency, native
-audio and hosted acceptance remain pending. See [draft status](elevenlabs.md).
+## ElevenLabs browser implementation
 
-## Deferred moderation and telephone entry
-
-On 2026-11-02, the maintainer deferred implementation of moderation and SIP telephone
-entry. Their proposed integration points, diagrams, policy decisions and acceptance
-requirements are recorded in [future extensions](future-extensions.md). These are
-design notes, not implemented or verified features. The MCP plan's dependency on
-moderation/output handling must be resolved explicitly before that work proceeds.
+The opt-in Agents SDK now connects browser media and native client-tool callbacks to
+existing session ownership, worker scheduling, cancellation, pending delivery and
+expiry. Configuration checks require a private bounded agent with async delegation
+and disabled overrides. Offline SDK/HTTP fixtures verify application contracts. Live
+audio, agent interoperability, async speech behavior and closure acceptance remain
+pending; native clients and mixed browser recording are unsupported for this transport.
+See [the implementation guide](elevenlabs.md). No paid calls or cloud changes were made.

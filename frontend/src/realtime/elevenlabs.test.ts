@@ -71,7 +71,7 @@ it('bounds callbacks even when the extension ignores cancellation', async () => 
   const parameters = { goal: 'hello' };
   observe(bridge, parameters);
   const pending = expect(bridge.delegate(parameters)).rejects.toThrow('unavailable or stopped');
-  await vi.advanceTimersByTimeAsync(20000);
+  await vi.advanceTimersByTimeAsync(120000);
   await pending;
   bridge.dispose();
 });

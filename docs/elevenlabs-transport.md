@@ -1,24 +1,24 @@
 # ElevenLabs transport evaluation
 
 Reviewed against official documentation on 2026-11-01 and 2026-11-02. The Agents
-path is selected for the implementation draft. The draft includes development-only
-credential bootstrap and a tested client-tool correlation boundary; it does not yet
-provide a usable browser voice session. No account configuration, paid calls, latency
+path is selected. The implementation now includes SDK-managed browser media and
+owned asynchronous tool callbacks; live acceptance remains pending. The evaluation
+is retained as design rationale. No account configuration, paid calls, latency
 measurements or deployment changes are claimed. See [implementation status](elevenlabs.md).
 
 ## Recommendation and decision gate
 
-Start with **ElevenLabs Agents over WebRTC**, using a private agent with exactly one
-application tool, `delegate_task`. For the initial browser integration, prefer a client
-tool that forwards admission to our authenticated backend and promptly returns a job
-acknowledgement. LangGraph and its tools remain entirely on the backend. This choice
-exercises a different delegation/control model while keeping audio out of FastAPI.
+Use **ElevenLabs Agents over WebRTC**, with a private agent exposing exactly one
+application tool, `delegate_task`. The selected implementation uses a native asynchronous
+client-tool callback: the backend admits the task, retains its native call ID and returns
+the eventual bounded worker result after the existing silence gate. LangGraph and its
+tools remain entirely on the backend. Audio stays out of FastAPI.
 
-This recommendation is conditional: the selected SDK must expose stable tool-call IDs,
-permit bounded admission replies, and support an explicit path for later delivery. A
-background context update alone does not establish that a result will be spoken. Do
-not enable live use until the maintainer accepts the delivery/control tradeoffs below. Webhook admission remains an alternative
-if stronger provider-origin evidence is required from the first implementation.
+The admission-only acknowledgement flow below is retained as an evaluated alternative,
+not the selected implementation. A background context update alone does not establish
+that a result will be spoken. Live use still needs explicit acceptance of asynchronous
+speech, result scheduling and closure limits in [the implementation guide](elevenlabs.md).
+Webhook admission remains an alternative when stronger provider-origin evidence is needed.
 
 The standalone Realtime API also supports ephemeral browser credentials. A server audio
 relay is therefore **not required just because its transport is WebSocket**. It is a
@@ -38,7 +38,7 @@ about server-side control of the same call.
 | Media format | SDK manages negotiation; do not impose standalone PCM settings | PCM16 at 24 kHz in the documented browser guide |
 | Backend audio required | No | No, when using the documented ephemeral flow |
 | Same-session backend sideband | Not established by the reviewed SDK/token docs | Not established; server-side SDK connection docs are not yet published |
-| Current repo support | Draft bootstrap and callback boundary only | Not implemented |
+| Current repo support | Opt-in browser SDK and owned async callbacks; live pending | Not implemented |
 
 Agents voice sessions use WebRTC by default; a private session passes a conversation
 token to `Conversation.startSession`. The token API returns `token` and
@@ -60,16 +60,17 @@ Sources: [client-secret API](https://elevenlabs.io/docs/api-reference/conversati
 
 ## Mapping the one voice tool
 
-### Client-tool admission bridge: proposed first path
+### Admission-only client-tool bridge: evaluated alternative
 
-Register only `delegate_task`, using the bounded goal contract from
-[the existing schema](delegate_task.schema.json). Agent configuration and client tool
+Register only `delegate_task`, using [the existing parameter schema](delegate_task.schema.json).
+That schema declares `goal` as a string; the backend `DelegationInput` model supplies the
+8,192-character bound, and SDK admission also limits UTF-8 bytes. Agent configuration and client tool
 names must match. Enabling Wait for response lets a returned value enter the agent's
 conversation context. Keep that wait limited to admission, not the whole worker job.
 Sources: [client tools](https://elevenlabs.io/docs/eleven-agents/customization/tools/client-tools),
 [client-tool event envelope](https://elevenlabs.io/docs/eleven-agents/customization/events/client-events).
 
-Proposed flow, not routes that exist today:
+Alternative flow, not the selected native async callback implementation:
 
 1. Our backend authenticates the invitation, allocates the usual session/lease and mints
    the private agent's token. Bind its provider conversation ID to that owned session.
@@ -197,6 +198,8 @@ These are requirements for a future implementation, not active Settings fields o
   close confirmation, quotas, browser audio timing, iOS/Android audio and hosted CSP. Until
   then, document offline verification separately from live acceptance.
 
-The maintainer selected Agents for the implementation draft on 2026-11-02. Bootstrap
-and callback contracts are implemented offline; the remaining browser, admission,
-delivery and lifecycle gates above still apply before enabling voice sessions.
+The selected Agents implementation is documented in [the transport guide](elevenlabs.md).
+The official client-tool schema includes `execution_mode=async`, separately from
+`expects_response`; the integration requires both asynchronous execution and a returned
+result. Application policy and SDK fixtures are verified offline. Actual continued speech,
+spoken result scheduling, media quality and finalization remain live pending.

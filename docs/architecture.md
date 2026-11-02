@@ -310,33 +310,6 @@ System prompts ship as Markdown resources inside the backend and agent packages,
 with server-selected variants matching enabled tools and cancellation behavior.
 
 
-## ElevenLabs implementation draft
-
-The opt-in development-only Agents bootstrap is separate from the existing SDP
-`/offer` path. An owned session can request one short-lived token; an attempted
-bootstrap prevents a second mint or a simultaneous SDP offer. The provider adapter
-returns a typed SDK bootstrap and explicitly rejects SDP negotiation and assumed
-credential expiry. GPT-Live, Realtime and Azure behavior remains unchanged.
-
-A frontend callback boundary correlates the SDK's native tool-call ID with the
-parameters object before forwarding `delegate_task`, deduplicates repeated calls and
-bounds callback duration and output bytes. It is currently an offline-tested port,
-not wired to a browser SDK or a backend admission route. No new transcript handling,
-media transport, autonomous spoken delivery or cross-provider fallback is enabled.
-See [implementation status and remaining gates](elevenlabs.md).
-
-## Sources
-
-Reviewed public documentation on 2026-09-20:
-
-- [GPT-Live WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live)
-- [GPT-Live sideband](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live)
-- [Session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations)
-- [Delegation](https://developers.openai.com/api/docs/guides/live-delegation)
-- [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
-
-Application limits and ownership rules are first-principles design choices, not upstream service guarantees.
-
 ## Browser audio observations
 
 With `VOICE_AUDIO_TIMING=true` (default false), the existing WebRTC stream analyser
@@ -425,3 +398,24 @@ require an explicit capability extension to the current SDP-based provider contr
 Standalone Realtime documents ephemeral browser credentials, so an audio relay is a
 separate design choice. Delivery acknowledgements, server finalization and actual
 provider behavior remain unverified. No new provider flag, route or deployment is enabled.
+
+## Optional ElevenLabs Agents transport
+
+The selected SDK transport retains owned application sessions, one `delegate_task`
+entry point and the existing local/remote worker. Native tool results return through
+async SDK callbacks after bounded server delivery scheduling. Agent configuration is
+validated before one-shot token issuance; browser-reported activity is distinct from
+an authoritative server sideband. Close confirmation requires provider status, not
+a client assertion. See [transport contracts and limitations](elevenlabs.md).
+
+## Sources
+
+Reviewed public documentation on 2026-09-20:
+
+- [GPT-Live WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live)
+- [GPT-Live sideband](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live)
+- [Session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations)
+- [Delegation](https://developers.openai.com/api/docs/guides/live-delegation)
+- [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
+
+Application limits and ownership rules are first-principles design choices, not upstream service guarantees.

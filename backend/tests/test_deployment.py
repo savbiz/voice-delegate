@@ -22,7 +22,8 @@ def test_vercel_headers_and_install_command_are_ready_for_git_deployment() -> No
     assert headers == {
         "Content-Security-Policy": (
             "default-src 'self'; connect-src 'self' "
-            "https://voice-delegate-api-production.up.railway.app; style-src 'self'; "
+            "https://voice-delegate-api-production.up.railway.app "
+            "https://livekit.rtc.elevenlabs.io wss://livekit.rtc.elevenlabs.io; style-src 'self'; "
             "img-src 'self'; media-src 'self'; object-src 'none'; base-uri 'none'; "
             "form-action 'self'; frame-ancestors 'none'"
         ),

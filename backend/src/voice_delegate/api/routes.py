@@ -1,17 +1,18 @@
 """Local-demo HTTP routes with per-session ownership and origin validation."""
 
 from dataclasses import asdict
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from voice_delegate_agent.limits import QUERY_MAX_CHARS
 from voice_delegate_agent.reference import search, source_by_id
 
 from voice_delegate.debug import DebugSample
 from voice_delegate.feedback import FeedbackInput, FeedbackStore
 from voice_delegate.providers.elevenlabs import ElevenLabsProvider
-from voice_delegate.providers.models import UnsupportedCapability
+from voice_delegate.providers.elevenlabs_session import ElevenLabsConnection
+from voice_delegate.providers.models import SpeechStarted, Transcript, UnsupportedCapability
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import Session
 from voice_delegate.session.preferences import VoicePreferences
@@ -28,6 +29,25 @@ from .schemas import (
     Status,
     TaskStatus,
 )
+
+
+class SDKEvent(BaseModel):
+    """Owner-authenticated SDK reports; no arbitrary provider commands or tool names."""
+
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["connected", "transcript", "activity"]
+    sequence: int = Field(ge=0, le=1000000)
+    conversation_id: str = Field(default="", max_length=200)
+    text: str = Field(default="", max_length=8192)
+    speaker: Literal["user", "assistant"] = "user"
+    user_speaking: bool = False
+    assistant_speaking: bool = False
+
+
+class SDKCallInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    call_id: str = Field(min_length=1, max_length=200, pattern=r"^[a-zA-Z0-9_.:-]+$")
+    goal: str = Field(default="", max_length=8192)
 
 
 class ReferenceQuery(BaseModel):
@@ -60,8 +80,12 @@ def build_router(
         return {"diagnostic_id": feedback.submit(principal, body, manager.settings.voice_provider)}
 
     @router.post("/config")
-    async def configuration() -> dict[str, bool]:
+    async def configuration() -> dict[str, object]:
         return {
+            "transport": "elevenlabs_agents_webrtc"
+            if manager.settings.voice_provider == "elevenlabs"
+            else "webrtc",
+            "audio_recording_available": manager.settings.voice_provider != "elevenlabs",
             "debug_recording_available": manager.settings.debug_recording,
             "audio_timing_available": manager.settings.audio_timing,
             "intent_cancellation": manager.settings.intent_cancellation,
@@ -70,7 +94,9 @@ def build_router(
                 manager.settings.invite_tokens or manager.settings.access_token.get_secret_value()
             ),
             "voice_available": bool(
-                manager.settings.azure_api_key.get_secret_value()
+                manager.settings.elevenlabs_api_key.get_secret_value()
+                if manager.settings.voice_provider == "elevenlabs"
+                else manager.settings.azure_api_key.get_secret_value()
                 if manager.settings.voice_provider == "azure"
                 else manager.settings.openai_api_key.get_secret_value()
             ),
@@ -227,12 +253,82 @@ def build_router(
             # Credential issuance does not confirm upstream media closure.
             session.previous_finalized = False
             with manager.metrics.operation("provider.connect"):
+                await elevenlabs.validate_agent(manager.settings.session_ttl_seconds)
                 bootstrap = await elevenlabs.prepare_browser()
+
+            async def confirm_close() -> bool:
+                return await elevenlabs.confirm_closed(bootstrap.conversation_id)
+
+            session.connection = ElevenLabsConnection(bootstrap.conversation_id, confirm_close)
+            session.previous_finalized = True
             return {
                 "transport": bootstrap.transport,
                 "conversation_id": bootstrap.conversation_id,
                 "token": bootstrap.token,
             }
+
+    def sdk_connection(session: Session) -> ElevenLabsConnection:
+        if not isinstance(session.connection, ElevenLabsConnection) or session.connection.closed:
+            raise HTTPException(409, "SDK transport is not active")
+        return session.connection
+
+    @router.post("/sessions/{session_id}/elevenlabs/events")
+    async def sdk_event(
+        body: SDKEvent, session: Annotated[Session, Depends(owned)]
+    ) -> dict[str, bool]:
+        connection = sdk_connection(session)
+        if body.sequence <= connection.sequence:
+            return {"recorded": False}
+        if connection.events_received >= 4096:
+            raise HTTPException(429, "SDK event budget reached")
+        if body.kind == "connected":
+            if body.conversation_id != connection.conversation_id:
+                raise HTTPException(409, "SDK conversation identity mismatch")
+            if not connection.started:
+                connection.start()
+                manager.attach_sdk(session, connection)
+        elif not connection.started or session.state != "connected":
+            raise HTTPException(409, "SDK transport is not connected")
+        elif body.kind == "transcript":
+            if body.speaker == "user":
+                connection.emit(SpeechStarted())
+            connection.emit(Transcript(body.speaker, body.text, 0, 0, committed=True))
+        elif manager.settings.intent_cancellation:
+            manager.intent.activity(
+                session.portfolio,
+                body.sequence,
+                speaking=body.user_speaking or body.assistant_speaking,
+                assistant_speaking=body.assistant_speaking,
+            )
+        connection.sequence = body.sequence
+        connection.events_received += 1
+        return {"recorded": True}
+
+    @router.post("/sessions/{session_id}/elevenlabs/delegate", status_code=202)
+    async def sdk_delegate(
+        body: SDKCallInput, session: Annotated[Session, Depends(owned)]
+    ) -> dict[str, str]:
+        connection = sdk_connection(session)
+        if not connection.started or session.state != "connected":
+            raise HTTPException(409, "SDK transport is not connected")
+        if not body.goal.strip() or len(body.goal.encode()) > 8192:
+            raise HTTPException(422, "A bounded delegation goal is required")
+        connection.delegate(body.call_id, body.goal.strip())
+        return {"status": "pending"}
+
+    @router.post("/sessions/{session_id}/elevenlabs/result")
+    async def sdk_result(
+        body: SDKCallInput, session: Annotated[Session, Depends(owned)]
+    ) -> dict[str, str]:
+        connection = sdk_connection(session)
+        call = connection.calls.get(body.call_id)
+        if call is None:
+            raise HTTPException(404, "SDK call not found")
+        return (
+            {"status": "pending"}
+            if call.result is None
+            else {"status": "ready", "text": call.result}
+        )
 
     @router.post("/sessions/{session_id}/token")
     async def token(_session: Annotated[Session, Depends(owned)]) -> None:

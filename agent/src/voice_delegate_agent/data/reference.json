@@ -48,12 +48,12 @@
     "digest": "f1ad20aff95ba9c445b9dbf747de4406a7c6ab643cad60178121187f706a7c8e"
   },
   {
-    "id": "acfdb9a124d4d6cd",
+    "id": "a8299a5e2bfd2656",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Try it locally",
-    "text": "The server template defaults to the **offline worker planner**. To let the worker\ninterpret natural-language requests using Luna, choose the paid planner explicitly:",
-    "digest": "acfdb9a124d4d6cd7abc39ad58f74874601fad0a633b4c18d9c30f8b5fdb99f6"
+    "text": "The server template covers the core defaults; optional provider settings are documented separately.\nIt defaults to the **offline worker planner**. To let the worker\ninterpret natural-language requests using Luna, choose the paid planner explicitly:",
+    "digest": "a8299a5e2bfd2656031ae055e0199defd3bcef436425ffc2539abf39ccbba200"
   },
   {
     "id": "7ebac81355d58af6",
@@ -120,12 +120,12 @@
     "digest": "4cc15322ee3bcc5c7796d5298f6939d9b4988c1aca40061bf628e28d4daa8749"
   },
   {
-    "id": "ea7af92d0a5b1cc3",
+    "id": "46e19627d77f18d1",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Providers and worker modes",
-    "text": "ElevenLabs Agents integration is an incomplete [separate draft](https://github.com/savbiz/voice-delegate/pull/21),\nnot an available adapter in this branch. Cross-vendor fallback, SIP telephone entry\nand worker MCP connections are not implemented here.",
-    "digest": "ea7af92d0a5b1cc36d07d41d4fd6467a37695f636d19eb4039f860678fbedf7f"
+    "text": "ElevenLabs Agents is an opt-in browser SDK transport (`VOICE_ADAPTER=elevenlabs`)\nbehind a disabled-by-default flag. Its [application contracts](docs/elevenlabs.md)\nare verified offline; live provider acceptance is pending. Cross-vendor fallback, SIP telephone entry\nand worker MCP connections are not implemented here.",
+    "digest": "46e19627d77f18d1ced0b4f77c74c6b0ab4894d5cb56d35beec47eaf79d0e745"
   },
   {
     "id": "b6416bd6d6454d69",
@@ -480,6 +480,14 @@
     "digest": "943628a701306e09f29dd2135573dec1c6396808cb0c6d79b360711ba5e2005b"
   },
   {
+    "id": "7303437fb3777190",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional ElevenLabs Agents transport",
+    "text": "The selected SDK transport retains owned application sessions, one `delegate_task`\nentry point and the existing local/remote worker. Native tool results return through\nasync SDK callbacks after bounded server delivery scheduling. Agent configuration is\nvalidated before one-shot token issuance; browser-reported activity is distinct from\nan authoritative server sideband. Close confirmation requires provider status, not\na client assertion. See [transport contracts and limitations](elevenlabs.md).",
+    "digest": "7303437fb3777190f2754f1c3686028808af195e5e90c458e26d0873287d5738"
+  },
+  {
     "id": "c95e177cccf46e9f",
     "title": "ADR 002: Explicit lifecycle ownership and finite budgets",
     "path": "docs/decisions/002-lifecycle-and-bounds.md",
@@ -816,12 +824,12 @@
     "digest": "520b788ec0b06be16364bee93e8f9c8a46b3bb3e408346700cfb84976fe80d14"
   },
   {
-    "id": "1b9a05165fdae48b",
+    "id": "5be328e09737fde4",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Copyable local configuration",
-    "text": "After merging the dev/configuration PR and updating your main checkout, use the\ncommented [server template](../.env.example) as the complete list of server settings.\nIt contains declared defaults, no keys, the canonical adapter name, and every current\nserver setting except the deprecated singular-origin alias.\nThe [generated reference](configuration.md) lists all enums, types and bounds and the\ncross-field validation rules; model IDs, voice names, paths and account credentials\nare free-form settings rather than finite application enums.",
-    "digest": "1b9a05165fdae48b390b83801e70e0ab1f9314bec77c3623a7b732c2a8f7f3a3"
+    "text": "After merging the dev/configuration PR and updating your main checkout, use the\ncommented [server template](../.env.example) as the complete list of server settings.\nIt contains core declared defaults, no keys and the canonical adapter name. Optional\nprovider settings are documented in their integration guides and generated reference.\nThe [generated reference](configuration.md) lists all enums, types and bounds and the\ncross-field validation rules; model IDs, voice names, paths and account credentials\nare free-form settings rather than finite application enums.",
+    "digest": "5be328e09737fde4252b40e63337fca37fc69575c305197c68e0a4cb64c4df97"
   },
   {
     "id": "bf8c0ce8470406a7",
