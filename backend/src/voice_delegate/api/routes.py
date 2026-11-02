@@ -44,12 +44,6 @@ class SDKEvent(BaseModel):
     assistant_speaking: bool = False
 
 
-class SDKCallInput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    call_id: str = Field(min_length=1, max_length=200, pattern=r"^[a-zA-Z0-9_.:-]+$")
-    goal: str = Field(default="", max_length=8192)
-
-
 class ReferenceQuery(BaseModel):
     query: str = Field(min_length=1, max_length=QUERY_MAX_CHARS)
 
@@ -242,7 +236,7 @@ def build_router(
 
     @router.post("/sessions/{session_id}/elevenlabs/bootstrap")
     async def elevenlabs_bootstrap(session: Annotated[Session, Depends(owned)]) -> dict[str, str]:
-        if elevenlabs is None:
+        if elevenlabs is None or manager.settings.voice_provider != "elevenlabs":
             raise HTTPException(501, "ElevenLabs preview is disabled")
         async with session.lock:
             if session.state != "created" or session.sdk_bootstrap_issued:
@@ -303,32 +297,6 @@ def build_router(
         connection.sequence = body.sequence
         connection.events_received += 1
         return {"recorded": True}
-
-    @router.post("/sessions/{session_id}/elevenlabs/delegate", status_code=202)
-    async def sdk_delegate(
-        body: SDKCallInput, session: Annotated[Session, Depends(owned)]
-    ) -> dict[str, str]:
-        connection = sdk_connection(session)
-        if not connection.started or session.state != "connected":
-            raise HTTPException(409, "SDK transport is not connected")
-        if not body.goal.strip() or len(body.goal.encode()) > 8192:
-            raise HTTPException(422, "A bounded delegation goal is required")
-        connection.delegate(body.call_id, body.goal.strip())
-        return {"status": "pending"}
-
-    @router.post("/sessions/{session_id}/elevenlabs/result")
-    async def sdk_result(
-        body: SDKCallInput, session: Annotated[Session, Depends(owned)]
-    ) -> dict[str, str]:
-        connection = sdk_connection(session)
-        call = connection.calls.get(body.call_id)
-        if call is None:
-            raise HTTPException(404, "SDK call not found")
-        return (
-            {"status": "pending"}
-            if call.result is None
-            else {"status": "ready", "text": call.result}
-        )
 
     @router.post("/sessions/{session_id}/token")
     async def token(_session: Annotated[Session, Depends(owned)]) -> None:

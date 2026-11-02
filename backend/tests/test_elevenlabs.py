@@ -1,7 +1,8 @@
-"""Development-only Agents bootstrap and unsupported-transport contracts, never live."""
+"""Opt-in Agents bootstrap and webhook configuration contracts, never live."""
 
 import asyncio
 import json
+from typing import Any
 
 import httpx
 import pytest
@@ -106,7 +107,11 @@ async def test_bootstrap_route_is_owned_one_shot_and_blocks_sdp_setup(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = Settings(
+        voice_provider="elevenlabs",
+        intent_cancellation=True,
         elevenlabs_enabled=True,
+        elevenlabs_webhook_token=SecretStr("w" * 32),
+        elevenlabs_webhook_url="https://backend.example/integrations/elevenlabs/delegate",
         elevenlabs_api_key=SecretStr("server-fixture"),
         elevenlabs_agent_id="agent_fixture",
     )
@@ -124,7 +129,7 @@ async def test_bootstrap_route_is_owned_one_shot_and_blocks_sdp_setup(
 
     monkeypatch.setattr(ElevenLabsProvider, "validate_agent", validate)
     monkeypatch.setattr(ElevenLabsProvider, "prepare_browser", prepare)
-    app = create_app(settings, FakeProvider())
+    app = create_app(settings)
     async with asgi_client(app) as client:
         client.headers["Origin"] = "http://localhost:5173"
         session = (await client.post("/api/sessions")).json()
@@ -159,7 +164,11 @@ async def test_failed_bootstrap_consumes_attempt_and_redacts_upstream_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     settings = Settings(
+        voice_provider="elevenlabs",
+        intent_cancellation=True,
         elevenlabs_enabled=True,
+        elevenlabs_webhook_token=SecretStr("w" * 32),
+        elevenlabs_webhook_url="https://backend.example/integrations/elevenlabs/delegate",
         elevenlabs_api_key=SecretStr("server-fixture"),
         elevenlabs_agent_id="agent_fixture",
     )
@@ -176,7 +185,7 @@ async def test_failed_bootstrap_consumes_attempt_and_redacts_upstream_failure(
 
     monkeypatch.setattr(ElevenLabsProvider, "validate_agent", validate)
     monkeypatch.setattr(ElevenLabsProvider, "prepare_browser", prepare)
-    async with asgi_client(create_app(settings, FakeProvider())) as client:
+    async with asgi_client(create_app(settings)) as client:
         client.headers["Origin"] = "http://localhost:5173"
         session = (await client.post("/api/sessions")).json()
         client.headers["X-Session-Key"] = session["key"]
@@ -190,18 +199,44 @@ async def test_failed_bootstrap_consumes_attempt_and_redacts_upstream_failure(
 
 
 @pytest.mark.parametrize(
-    "change", ["none", "public", "sync", "extra_tool", "duration", "overrides"]
+    "change",
+    [
+        "none",
+        "public",
+        "sync",
+        "extra_tool",
+        "duration",
+        "overrides",
+        "client",
+        "url",
+        "auth",
+        "binding",
+        "method",
+        "extra_param",
+        "builtin",
+    ],
 )
 async def test_agent_policy_is_validated_before_credentials(change: str) -> None:
-    tool = {
-        "type": "client",
+    tool: dict[str, Any] = {
+        "type": "webhook",
         "name": "delegate_task",
-        "expects_response": True,
         "execution_mode": "async",
         "response_timeout_secs": 120,
-        "parameters": {"required": ["goal"], "properties": {"goal": {"type": "string"}}},
+        "api_schema": {
+            "url": "https://backend.example/integrations/elevenlabs/delegate",
+            "method": "POST",
+            "request_headers": {
+                "X-Voice-Webhook-Token": {"secret_id": "fixture-stored-token"},
+                "X-Voice-Conversation-Id": {"variable_name": "system__conversation_id"},
+            },
+            "request_body_schema": {
+                "type": "object",
+                "required": ["goal"],
+                "properties": {"goal": {"type": "string", "description": "Task"}},
+            },
+        },
     }
-    agent = {
+    agent: dict[str, Any] = {
         "platform_settings": {
             "auth": {"enable_auth": change != "public"},
             "overrides": {"prompt": change == "overrides"},
@@ -213,10 +248,30 @@ async def test_agent_policy_is_validated_before_credentials(change: str) -> None
     }
     if change == "sync":
         tool["execution_mode"] = "immediate"
+    if change == "client":
+        tool["type"] = "client"
+    if change == "url":
+        tool["api_schema"]["url"] = "https://untrusted.example/"
+    if change == "auth":
+        tool["api_schema"]["request_headers"]["X-Voice-Webhook-Token"] = "plain-text"
+    if change == "binding":
+        tool["api_schema"]["request_headers"]["X-Voice-Conversation-Id"] = "model supplied"
+    if change == "method":
+        tool["api_schema"]["method"] = "GET"
+    if change == "extra_param":
+        tool["api_schema"]["request_body_schema"]["properties"]["owner"] = {"type": "string"}
+    if change == "builtin":
+        agent["conversation_config"]["agent"]["prompt"]["built_in_tools"] = {"other": {}}
+
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda request: httpx.Response(200, json=agent))
     ) as http:
-        provider = ElevenLabsProvider("fixture", "agent_fixture", http=http)
+        provider = ElevenLabsProvider(
+            "fixture",
+            "agent_fixture",
+            http=http,
+            webhook_url="https://backend.example/integrations/elevenlabs/delegate",
+        )
         if change == "none":
             await provider.validate_agent(300)
         else:
@@ -246,86 +301,6 @@ async def test_sdk_connection_deduplication_bounds_and_verified_close() -> None:
         await connection.send(Commentary("native-one", "é" * 251))
     assert await connection.aclose()
     assert not await connection.aclose()
-
-
-async def test_sdk_uses_existing_worker_scheduler_with_owned_routes(
-    asgi_client: ASGIClientFactory,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    from fastapi import FastAPI, Request
-    from fastapi.responses import JSONResponse
-    from voice_delegate.api.routes import build_router
-    from voice_delegate.providers.elevenlabs import BrowserBootstrap
-    from voice_delegate.session.manager import SessionManager
-    from voice_delegate.session.models import SessionError
-
-    provider = ElevenLabsProvider("fixture", "agent_fixture")
-
-    async def validate(ttl: float) -> None:
-        pass
-
-    async def bootstrap() -> BrowserBootstrap:
-        return BrowserBootstrap("conv_fixture", "ephemeral-fixture")
-
-    monkeypatch.setattr(provider, "validate_agent", validate)
-    monkeypatch.setattr(provider, "prepare_browser", bootstrap)
-
-    async def confirm(identity: str) -> bool:
-        return False
-
-    monkeypatch.setattr(provider, "confirm_closed", confirm)
-    manager = SessionManager(FakeProvider(), Settings())
-    app = FastAPI()
-
-    async def session_error(request: Request, exc: Exception) -> JSONResponse:
-        assert isinstance(exc, SessionError)
-        return JSONResponse({"detail": str(exc)}, status_code=exc.status)
-
-    app.add_exception_handler(SessionError, session_error)
-    app.include_router(build_router(manager, elevenlabs=provider))
-    session = manager.create()
-    root = f"/api/sessions/{session.id}"
-    try:
-        async with asgi_client(app) as client:
-            client.headers.update({"Origin": "http://localhost:5173", "X-Session-Key": session.key})
-            assert (await client.post(root + "/elevenlabs/bootstrap")).status_code == 200
-            assert (
-                await client.post(
-                    root + "/elevenlabs/delegate", json={"call_id": "one", "goal": "calculate 2+2"}
-                )
-            ).status_code == 409
-            assert (
-                await client.post(
-                    root + "/elevenlabs/events",
-                    json={"kind": "connected", "sequence": 0, "conversation_id": "other"},
-                )
-            ).status_code == 409
-            assert (
-                await client.post(
-                    root + "/elevenlabs/events",
-                    json={"kind": "connected", "sequence": 0, "conversation_id": "conv_fixture"},
-                )
-            ).status_code == 200
-            assert (
-                await client.post(
-                    root + "/elevenlabs/delegate", json={"call_id": "one", "goal": "calculate 2+2"}
-                )
-            ).status_code == 202
-            from test_support import eventually
-
-            await eventually(lambda: session.delegation.status == "completed")
-            result = (
-                await client.post(root + "/elevenlabs/result", json={"call_id": "one"})
-            ).json()
-            assert result["status"] == "ready"
-            assert "4" in result["text"]
-            client.headers["X-Session-Key"] = "wrong"
-            assert (
-                await client.post(root + "/elevenlabs/result", json={"call_id": "one"})
-            ).status_code == 404
-    finally:
-        await manager.aclose()
-        await provider.aclose()
 
 
 async def test_sdk_speech_preserves_work_and_explicit_cancel_settles_native_call(

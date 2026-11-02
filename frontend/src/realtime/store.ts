@@ -369,7 +369,8 @@ export function chatBubbles(messages: ChatMessage[]): ChatMessage[] {
 }
 
 export function taskLabel(status: string, transport: LiveState['transport'] = 'webrtc'): string {
-  if (status === 'completed' && transport === 'elevenlabs') return 'Result handed to browser SDK';
+  if (status === 'completed' && transport === 'elevenlabs')
+    return 'Result prepared for ElevenLabs webhook';
   return (
     {
       running: 'Working',

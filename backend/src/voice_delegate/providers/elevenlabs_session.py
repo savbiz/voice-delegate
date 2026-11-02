@@ -2,7 +2,8 @@
 
 import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from uuid import uuid4
 
 from .models import (
     Commentary,
@@ -16,19 +17,22 @@ from .models import (
 
 
 @dataclass
-class SDKCall:
+class WebhookCall:
     goal: str
     result: str | None = None
+    ready: asyncio.Event = field(default_factory=asyncio.Event)
+    deadline: float = 0
+    waiters: int = 0
 
 
 class ElevenLabsConnection:
-    """Bounded client-tool correlation and the existing server delivery scheduler."""
+    """Bounded webhook response correlation and the existing server delivery scheduler."""
 
     def __init__(self, conversation_id: str, confirm_close: Callable[[], Awaitable[bool]]) -> None:
         self.conversation_id = conversation_id
         self.confirm_close = confirm_close
         self.queue: asyncio.Queue[ProviderEvent | None] = asyncio.Queue(maxsize=64)
-        self.calls: dict[str, SDKCall] = {}
+        self.calls: dict[str, WebhookCall] = {}
         self.started = False
         self.closed = False
         self.sequence = -1
@@ -65,7 +69,23 @@ class ElevenLabsConnection:
             message = "SDK call capacity reached"
             raise ProviderError(message)
         self.emit(DelegationRequested(identity, goal=goal))
-        self.calls[identity] = SDKCall(goal)
+        self.calls[identity] = WebhookCall(goal)
+
+    def admit(self, goal: str) -> tuple[str, WebhookCall]:
+        # The HTTP response correlates to the provider invocation. Internal job IDs are
+        # application UUIDs, not invented upstream IDs. Exact goals coalesce for this call.
+        for identity, call in self.calls.items():
+            if call.goal == goal:
+                return identity, call
+        identity = "webhook-" + str(uuid4())
+        self.delegate(identity, goal)
+        return identity, self.calls[identity]
+
+    def settle(self, identity: str, text: str) -> None:
+        call = self.calls[identity]
+        if call.result is None:
+            call.result = text
+            call.ready.set()
 
     async def events(self) -> AsyncIterator[ProviderEvent]:
         while True:
@@ -82,20 +102,24 @@ class ElevenLabsConnection:
         if len(command.content.encode()) > 500:
             message = "SDK result exceeds the delivery budget"
             raise ProviderError(message)
-        if call.result is None:
-            call.result = (
+        if call.result is not None:
+            message = "Webhook response is already settled"
+            raise ProviderError(message)
+        self.settle(
+            command.delegation_id,
+            (
                 "Task cancelled or no longer deliverable."
                 if command.settle_only
                 else command.content
-            )
+            ),
+        )
 
     async def aclose(self) -> bool:
         if self.closed:
             return False
         self.closed = True
-        for call in self.calls.values():
-            if call.result is None:
-                call.result = "Session ended; task cancelled."
+        for identity in self.calls:
+            self.settle(identity, "Session ended; task cancelled.")
         # Do not leave an event consumer blocked, even after queue exhaustion.
         while not self.queue.empty():
             self.queue.get_nowait()

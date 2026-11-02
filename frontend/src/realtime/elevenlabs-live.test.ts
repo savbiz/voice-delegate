@@ -20,12 +20,11 @@ function fixture() {
   const request = vi.fn(async (path: string) => {
     if (path === '/elevenlabs/bootstrap')
       return { token: 'ephemeral-fixture', conversation_id: 'conv_fixture' };
-    if (path === '/elevenlabs/result') return { status: 'ready', text: '4' };
     return {};
   }) as unknown as SDKRequest;
   return { sdk, factory, request, options: () => options! };
 }
-it('uses SDK-owned media and native tool results without manufacturing a user turn', async () => {
+it('uses SDK-owned media without browser tool execution or result polling', async () => {
   const setup = fixture();
   const store = createLiveStore();
   const connected = vi.fn();
@@ -40,16 +39,14 @@ it('uses SDK-owned media and native tool results without manufacturing a user tu
   );
   await controller.start();
   expect(connected).toHaveBeenCalledOnce();
-  const parameters = { goal: 'calculate 2+2' };
-  setup.options().onIncomingEvent?.({
-    type: 'client_tool_call',
-    client_tool_call: { tool_name: 'delegate_task', tool_call_id: 'native-one', parameters },
-  });
-  expect(await setup.options().clientTools?.delegate_task?.(parameters)).toBe('4');
-  expect(setup.request).toHaveBeenCalledWith('/elevenlabs/delegate', {
-    call_id: 'native-one',
-    goal: 'calculate 2+2',
-  });
+  expect(setup.options().clientTools).toBeUndefined();
+  expect(
+    vi
+      .mocked(setup.request)
+      .mock.calls.some(
+        ([path]) => path === '/elevenlabs/delegate' || path === '/elevenlabs/result',
+      ),
+  ).toBe(false);
   await controller.end();
   expect(setup.sdk.endSession).toHaveBeenCalledOnce();
 });

@@ -1,9 +1,8 @@
-/** SDK media and owned client tools; no synthetic user messages or arbitrary provider commands. */
+/** SDK media and UI events; tools execute over authenticated server webhooks. */
 import type { PartialOptions, VoiceConversation } from '@elevenlabs/client';
 import type { LiveStore, TaskStatus } from './store';
 import { processEvent, recapText, workerState } from './store';
 import { AudioTimingMeter } from './audio-timing';
-import { ElevenToolBridge } from './elevenlabs';
 import type { Source } from '../reference';
 type SDK = Pick<
   VoiceConversation,
@@ -55,24 +54,9 @@ export function elevenSession(
       queued -= 1;
     });
   };
-  const bridge = new ElevenToolBridge(async (body, signal) => {
-    await admitted;
-    await chain;
-    if (signal.aborted) throw new Error('Task cancelled.');
-    await request('/elevenlabs/delegate', body);
-    while (!stopped && !signal.aborted) {
-      const result = await request<{ status: string; text?: string }>('/elevenlabs/result', {
-        call_id: body.call_id,
-      });
-      if (result.status === 'ready' && typeof result.text === 'string') return result.text;
-      await new Promise<void>((resolve) => setTimeout(resolve, 200));
-    }
-    throw new Error('Session ended.');
-  });
   async function end() {
     stopped = true;
     rejectEvents?.();
-    bridge.dispose();
     clearInterval(interval);
     clearInterval(activityTimer);
     const current = sdk;
@@ -116,8 +100,6 @@ export function elevenSession(
         });
         void connectedReport.catch(() => ended('Server connection failed.'));
       },
-      onIncomingEvent: (event) => bridge.observe(event),
-      clientTools: { delegate_task: (parameters: unknown) => bridge.delegate(parameters) },
       onMessage: ({ message, role, event_id, response_id }) => {
         if (stopped || !message || message.length > 8192) return;
         const speaker = role === 'user' ? 'user' : 'assistant';

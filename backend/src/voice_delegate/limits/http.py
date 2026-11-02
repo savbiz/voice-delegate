@@ -22,9 +22,11 @@ class BodyLimitMiddleware:
                 return
             chunk = message.get("body", b"")
             if len(body) + len(chunk) > self.max_bytes:
-                await JSONResponse({"detail": "Request too large"}, status_code=413)(
-                    scope, receive, send
-                )
+                await JSONResponse(
+                    {"detail": "Request too large"},
+                    status_code=413,
+                    headers={"Cache-Control": "no-store"},
+                )(scope, receive, send)
                 return
             body.extend(chunk)
             if not message.get("more_body", False):

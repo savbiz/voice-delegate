@@ -114,7 +114,7 @@ a deprecated alias. All adapters expose the same delegation boundary.
 | `realtime` | OpenAI Realtime; browser WebRTC audio and backend sideband | Implemented; full live acceptance pending |
 | `azure` | Azure OpenAI Realtime; browser WebRTC and backend sideband | Primary or optional one-attempt recovery; live acceptance pending |
 
-ElevenLabs Agents is an opt-in browser SDK transport (`VOICE_ADAPTER=elevenlabs`)
+ElevenLabs Agents is an opt-in browser SDK transport with server-side webhook delegation (`VOICE_ADAPTER=elevenlabs`)
 behind a disabled-by-default flag. Its [application contracts](docs/elevenlabs.md)
 are verified offline; live provider acceptance is pending. Cross-vendor fallback, SIP telephone entry
 and worker MCP connections are not implemented here.

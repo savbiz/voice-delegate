@@ -30,6 +30,7 @@ from voice_delegate.scaling.remote import RemoteWorker
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
 
+from .elevenlabs_webhook import build_webhook_router
 from .routes import build_router
 
 
@@ -43,6 +44,7 @@ def create_app(
             settings.elevenlabs_api_key.get_secret_value(),
             settings.elevenlabs_agent_id,
             timeout=settings.elevenlabs_timeout_seconds,
+            webhook_url=settings.elevenlabs_webhook_url,
         )
         if settings.elevenlabs_enabled
         else None
@@ -177,4 +179,5 @@ def create_app(
         return {"status": "ok"}
 
     app.include_router(build_router(manager, feedback, elevenlabs))
+    app.include_router(build_webhook_router(manager))
     return app

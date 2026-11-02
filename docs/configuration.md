@@ -27,6 +27,8 @@ commented [server template](../.env.example) for meanings and examples.
 | `elevenlabs_api_key` | `ELEVENLABS_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
 | `elevenlabs_agent_id` | `VOICE_ELEVENLABS_AGENT_ID` | `""` | `{"type": "string", "pattern": "^(agent_[a-zA-Z0-9_-]+)?$", "maxLength": 200}` |
 | `elevenlabs_timeout_seconds` | `VOICE_ELEVENLABS_TIMEOUT_SECONDS` | `3` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
+| `elevenlabs_webhook_token` | `VOICE_ELEVENLABS_WEBHOOK_TOKEN` | `""` | `{"type": "string", "format": "password"}` |
+| `elevenlabs_webhook_url` | `VOICE_ELEVENLABS_WEBHOOK_URL` | `""` | `{"type": "string"}` |
 | `realtime_model` | `VOICE_REALTIME_MODEL` | `"gpt-realtime"` | `{"type": "string"}` |
 | `model` | `VOICE_MODEL` | `"gpt-live-1"` | `{"type": "string"}` |
 | `voice` | `VOICE_VOICE` | `"marin"` | `{"type": "string"}` |
@@ -108,6 +110,23 @@ def validate_elevenlabs(self) -> "Settings":
     ):
         message = "ElevenLabs requires ELEVENLABS_API_KEY and VOICE_ELEVENLABS_AGENT_ID"
         raise ValueError(message)
+    if self.elevenlabs_enabled:
+        url = urlsplit(self.elevenlabs_webhook_url)
+        if (
+            len(self.elevenlabs_webhook_token.get_secret_value()) < 32
+            or url.scheme != "https"
+            or not url.hostname
+            or url.username
+            or url.password
+            or url.query
+            or url.fragment
+            or url.path != "/integrations/elevenlabs/delegate"
+        ):
+            message = (
+                "ElevenLabs requires a webhook token of at least 32 characters "
+                "and an HTTPS webhook URL"
+            )
+            raise ValueError(message)
     if self.voice_provider == "elevenlabs" and not self.intent_cancellation:
         message = "ElevenLabs async delegation requires VOICE_INTENT_CANCELLATION"
         raise ValueError(message)
@@ -118,7 +137,7 @@ def validate_elevenlabs(self) -> "Settings":
         self.voice_provider == "elevenlabs"
         and self.delegation_timeout_seconds + self.delivery_timeout_seconds > 110
     ):
-        message = "ElevenLabs delegation plus delivery wait must fit the SDK callback deadline"
+        message = "ElevenLabs work and delivery must fit the webhook deadline"
         raise ValueError(message)
     return self
 

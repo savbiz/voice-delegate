@@ -386,27 +386,9 @@ local inputs, not bundled user data. A bounded exporter can retrieve timing-only
 projections from an existing Grafana Tempo data source; the checked-in Grafana stack
 still provisions only Prometheus. No queryable trace storage or live result is implied.
 
-## ElevenLabs transport proposal
-
-The [transport evaluation](elevenlabs-transport.md) compares Agents WebRTC with
-client-tool or webhook admission and standalone Realtime over PCM WebSocket.
-It recommends evaluating Agents with one `delegate_task` tool first. All execution,
-ownership, task limits and pending results remain in the backend portfolio.
-
-This is not an implemented adapter. SDK-managed negotiation and client-relayed control
-require an explicit capability extension to the current SDP-based provider contract.
-Standalone Realtime documents ephemeral browser credentials, so an audio relay is a
-separate design choice. Delivery acknowledgements, server finalization and actual
-provider behavior remain unverified. No new provider flag, route or deployment is enabled.
-
 ## Optional ElevenLabs Agents transport
 
-The selected SDK transport retains owned application sessions, one `delegate_task`
-entry point and the existing local/remote worker. Native tool results return through
-async SDK callbacks after bounded server delivery scheduling. Agent configuration is
-validated before one-shot token issuance; browser-reported activity is distinct from
-an authoritative server sideband. Close confirmation requires provider status, not
-a client assertion. See [transport contracts and limitations](elevenlabs.md).
+The [Agents integration](elevenlabs.md) uses direct browser WebRTC media and an authenticated async server webhook for delegate_task. The existing local/remote worker and silence-gated portfolio stay on the backend; the browser supplies owned activity/transcript observations but never submits tools or polls results. Exact goals coalesce per conversation, and HTTP responses carry bounded results. Provider finalization requires status evidence; live acceptance remains pending. See the [transport evaluation](elevenlabs-transport.md).
 
 ## Sources
 

@@ -173,21 +173,16 @@ includes enum choices, collection/string constraints and frontend build options.
 Copyable local model-backed setup is documented without changing private credentials
 or cloud deployments. No new live acceptance or measured model comparison is claimed.
 
-## ElevenLabs transport evaluation
+## ElevenLabs transport evaluation and implementation
 
-The [transport proposal](elevenlabs-transport.md), reviewed against official documentation
-on 2026-11-01, compares private Agents WebRTC with client-tool/webhook admission and
-standalone Realtime WSS. The standalone API documents short-lived client credentials;
-a backend audio relay is not inherently required. Agents with a client-tool admission
-bridge is the initial recommendation, conditional on verifying call identity and a
-safe explicit path for later result delivery.
+The [transport evaluation](elevenlabs-transport.md) selects private Agents WebRTC with one
+async server webhook for delegate_task. The browser owns SDK media and activity/transcript
+observations; the backend owns tool admission, the existing worker and bounded HTTP result
+delivery. The earlier client-tool forwarding and browser result polling have been removed.
 
-## ElevenLabs browser implementation
-
-The opt-in Agents SDK now connects browser media and native client-tool callbacks to
-existing session ownership, worker scheduling, cancellation, pending delivery and
-expiry. Configuration checks require a private bounded agent with async delegation
-and disabled overrides. Offline SDK/HTTP fixtures verify application contracts. Live
-audio, agent interoperability, async speech behavior and closure acceptance remain
-pending; native clients and mixed browser recording are unsupported for this transport.
-See [the implementation guide](elevenlabs.md). No paid calls or cloud changes were made.
+Offline fixtures verify auth/conversation binding, constrained agent configuration, coalesced
+replay, independent tasks, cancellation, response deadlines and SDK lifecycle. Identical goals
+reuse a task/result for the entire conversation. This is application replay policy, not native
+provider exactly-once evidence. Live audio, webhook reachability, async narration, device and
+closure acceptance remain pending. See [the implementation guide](elevenlabs.md). No paid
+calls or cloud/account changes were made.

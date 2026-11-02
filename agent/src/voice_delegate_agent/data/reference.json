@@ -120,12 +120,12 @@
     "digest": "4cc15322ee3bcc5c7796d5298f6939d9b4988c1aca40061bf628e28d4daa8749"
   },
   {
-    "id": "46e19627d77f18d1",
+    "id": "8977605ff6333edd",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Providers and worker modes",
-    "text": "ElevenLabs Agents is an opt-in browser SDK transport (`VOICE_ADAPTER=elevenlabs`)\nbehind a disabled-by-default flag. Its [application contracts](docs/elevenlabs.md)\nare verified offline; live provider acceptance is pending. Cross-vendor fallback, SIP telephone entry\nand worker MCP connections are not implemented here.",
-    "digest": "46e19627d77f18d1ced0b4f77c74c6b0ab4894d5cb56d35beec47eaf79d0e745"
+    "text": "ElevenLabs Agents is an opt-in browser SDK transport with server-side webhook delegation (`VOICE_ADAPTER=elevenlabs`)\nbehind a disabled-by-default flag. Its [application contracts](docs/elevenlabs.md)\nare verified offline; live provider acceptance is pending. Cross-vendor fallback, SIP telephone entry\nand worker MCP connections are not implemented here.",
+    "digest": "8977605ff6333edd47bc9b370792cde0c617899b1acf60d319281eb6653731bc"
   },
   {
     "id": "b6416bd6d6454d69",
@@ -462,30 +462,6 @@
     "section": "Isolated voice measurement harness",
     "text": "The default path uses a local WebRTC tone pair and scripted scorer fixtures. Live mode\nrequires explicit environment and CLI opt-ins plus a session budget. Its recordings are\nlocal inputs, not bundled user data. A bounded exporter can retrieve timing-only trace\nprojections from an existing Grafana Tempo data source; the checked-in Grafana stack\nstill provisions only Prometheus. No queryable trace storage or live result is implied.",
     "digest": "5bbbd6cbe31b9310204d543a98276c622a6b822b4545796bd58eaecdbaea7571"
-  },
-  {
-    "id": "b811ca0ff71f50a8",
-    "title": "Architecture",
-    "path": "docs/architecture.md",
-    "section": "ElevenLabs transport proposal",
-    "text": "The [transport evaluation](elevenlabs-transport.md) compares Agents WebRTC with\nclient-tool or webhook admission and standalone Realtime over PCM WebSocket.\nIt recommends evaluating Agents with one `delegate_task` tool first. All execution,\nownership, task limits and pending results remain in the backend portfolio.",
-    "digest": "b811ca0ff71f50a8bcf8e19e673aa7e97cbfe8006b639a471ac17752e4683373"
-  },
-  {
-    "id": "943628a701306e09",
-    "title": "Architecture",
-    "path": "docs/architecture.md",
-    "section": "ElevenLabs transport proposal",
-    "text": "This is not an implemented adapter. SDK-managed negotiation and client-relayed control\nrequire an explicit capability extension to the current SDP-based provider contract.\nStandalone Realtime documents ephemeral browser credentials, so an audio relay is a\nseparate design choice. Delivery acknowledgements, server finalization and actual\nprovider behavior remain unverified. No new provider flag, route or deployment is enabled.",
-    "digest": "943628a701306e09f29dd2135573dec1c6396808cb0c6d79b360711ba5e2005b"
-  },
-  {
-    "id": "7303437fb3777190",
-    "title": "Architecture",
-    "path": "docs/architecture.md",
-    "section": "Optional ElevenLabs Agents transport",
-    "text": "The selected SDK transport retains owned application sessions, one `delegate_task`\nentry point and the existing local/remote worker. Native tool results return through\nasync SDK callbacks after bounded server delivery scheduling. Agent configuration is\nvalidated before one-shot token issuance; browser-reported activity is distinct from\nan authoritative server sideband. Close confirmation requires provider status, not\na client assertion. See [transport contracts and limitations](elevenlabs.md).",
-    "digest": "7303437fb3777190f2754f1c3686028808af195e5e90c458e26d0873287d5738"
   },
   {
     "id": "c95e177cccf46e9f",

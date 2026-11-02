@@ -96,7 +96,7 @@ function Live({ code }: { code: string }) {
           <div>
             <p className="muted">
               {state.transport === 'elevenlabs'
-                ? 'Result sent means handed to the browser SDK; provider acceptance and playback are not confirmed.'
+                ? 'Result sent means prepared for the webhook response; provider narration and playback are not confirmed.'
                 : 'Result sent means accepted by the voice provider, not fully played.'}{' '}
               Audio interrupted by speech is not automatically repeated.
             </p>

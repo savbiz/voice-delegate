@@ -77,24 +77,24 @@ but rejects additional tool calls. It limits injection-driven tool execution whi
 leaving semantic answer quality subject to separate evaluation.
 
 **Agents conversation token:** a short-lived credential for an ElevenLabs Agents
-WebRTC session associated with a configured agent. The proposed adapter mints it on
+WebRTC session associated with a configured agent. The adapter mints it on
 the backend; it differs from a standalone Realtime client secret.
 
 **Standalone Realtime client secret:** an ephemeral credential minted against a
 server-authored ElevenLabs Realtime session for a direct browser WebSocket connection.
 Its expiry is distinct from the lifetime of an established call.
 
-**Client-tool admission bridge:** the proposed path that forwards a voice tool request
-from the browser SDK to our owned backend admission logic. It returns an acknowledgement
-promptly; the browser does not execute LangGraph worker tools.
+**Agents server-tool webhook:** an authenticated provider-to-backend request for
+`delegate_task`. It awaits a bounded result, uses the reserved conversation binding and
+coalesces exact goals per conversation; the browser is outside tool-result transport.
 
 **Contextual update:** background information supplied to a provider conversation.
 It does not itself prove that a pending result has been narrated or fully played.
 
-**Agents bootstrap preview:** a development-only endpoint returning an SDK WebRTC
+**Agents bootstrap:** an opt-in endpoint returning an SDK WebRTC
 token and conversation ID. It reserves one setup attempt on an owned session and
 does not imply that media is connected or that upstream closure is confirmed.
 
 - **Agents SDK transport:** optional ElevenLabs WebRTC media with owner-authenticated
-  client events and native asynchronous tool-result correlation. It does not expose
+  client events and authenticated asynchronous server-tool responses. It does not expose
   an SDP answer or imply that a browser disconnect confirms upstream finalization.

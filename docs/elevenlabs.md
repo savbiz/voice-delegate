@@ -1,124 +1,171 @@
-# ElevenLabs Agents browser transport
+# ElevenLabs Agents browser transport and server tools
 
-Status: implementation verified with deterministic offline fixtures; paid SDK/audio
-acceptance is pending. No account, deployed agent or cloud environment is changed.
-The default remains GPT-Live and `VOICE_ELEVENLABS_ENABLED=false`.
+Status: SDK/media lifecycle and authenticated webhook application contracts are verified
+offline. Live audio, provider async speech behaviour and hosted callback acceptance remain
+pending. No account configuration or paid provider calls are made by this implementation.
 
-## Enable an existing private agent
+## Configuration
 
-Configure the backend privately, restart it, and start a new browser conversation:
+Keep the default adapter unchanged unless explicitly testing ElevenLabs. Configure these
+variables on the backend, with actual values supplied privately through the environment:
 
 ```dotenv
 VOICE_ELEVENLABS_ENABLED=true
 VOICE_ADAPTER=elevenlabs
-ELEVENLABS_API_KEY=<your private server key>
-VOICE_ELEVENLABS_AGENT_ID=agent_<your private agent>
+ELEVENLABS_API_KEY=<server API key>
+VOICE_ELEVENLABS_AGENT_ID=agent_<private agent>
+VOICE_ELEVENLABS_WEBHOOK_TOKEN=<independent random token of at least 32 characters>
+VOICE_ELEVENLABS_WEBHOOK_URL=https://<public backend>/integrations/elevenlabs/delegate
 VOICE_INTENT_CANCELLATION=true
 VOICE_FALLBACK_ENABLED=false
 VOICE_NATIVE_CLIENTS=false
 ```
 
-The agent is configured in ElevenLabs, not created by this repository. Its language,
-voice and prompt are server-owned there. Use the browser's default language/style;
-this adapter rejects unsupported preference overrides rather than silently ignoring
-them. The agent prompt should delegate project documentation, calculation and opted-in
-web requests through `delegate_task`, and treat returned evidence as untrusted data.
-The worker still owns all individual tools and existing step/time/result limits.
+Generate the independent service token locally with
+`uv run python -c 'import secrets; print(secrets.token_urlsafe(32))'`. Store the same value
+as an ElevenLabs tool-header secret. It is not an invitation, browser session key or
+ElevenLabs API key. Never place it in the tool's model-visible arguments, URLs or logs.
+No environment file or provider account is created or changed automatically.
 
-Before minting a token, the backend reads the existing agent/tool configuration and
-requires private authentication, disabled client overrides, no workflow, and exactly
-one client tool with this contract:
+The agent already exists in ElevenLabs and owns its voice, language and prompt. The browser
+uses default language/style; unsupported overrides and mixed-audio recording are rejected.
+Configure the agent prompt to route calculation, project documentation and opted-in web
+requests through `delegate_task`, treat returned evidence as data, and describe cancellation,
+expiry and failure as incomplete work. The worker owns all individual tools and limits.
+
+## Required agent tool
+
+Configure exactly one **webhook/server tool**, not a client tool. The backend validates this
+configuration before minting a browser token, including referenced tool definitions:
 
 ```json
 {
-  "type": "client",
+  "type": "webhook",
   "name": "delegate_task",
-  "description": "Delegate bounded work to the application worker.",
-  "expects_response": true,
+  "description": "Delegate bounded work to the application worker and use its returned result.",
   "execution_mode": "async",
   "interruption_mode": "allow",
   "response_timeout_secs": 120,
-  "parameters": {
-    "type": "object",
-    "required": ["goal"],
-    "properties": {"goal": {"type": "string", "description": "The requested task"}}
+  "follow_redirects": false,
+  "api_schema": {
+    "url": "https://<public backend>/integrations/elevenlabs/delegate",
+    "method": "POST",
+    "content_type": "application/json",
+    "request_headers": {
+      "X-Voice-Webhook-Token": {"secret_id": "<stored tool-header secret ID>"},
+      "X-Voice-Conversation-Id": {"variable_name": "system__conversation_id"}
+    },
+    "request_body_schema": {
+      "type": "object",
+      "required": ["goal"],
+      "properties": {
+        "goal": {"type": "string", "description": "The bounded task requested by the user"}
+      }
+    }
   }
 }
 ```
 
-The provider's `max_duration_seconds` must be positive and no greater than
-`VOICE_SESSION_TTL_SECONDS`. Backend execution plus delivery-wait budgets must fit
-within 110 seconds, leaving room for SDK polling inside the 120-second callback.
-A missing/unsafe configuration fails before token creation. Provider configuration
-can change outside the application; these checks are admission checks, not a lock
-on later dashboard edits. Do not share this private agent with unrelated apps.
+The URL must exactly equal `VOICE_ELEVENLABS_WEBHOOK_URL`. The token header must reference
+provider secret storage; the conversation header must use the reserved system variable,
+not a model-generated owner ID. Header binding authenticates a service request; the backend
+also requires an existing, unexpired conversation it minted. Do not share the service token
+or this private agent with unrelated applications. The agent must require authentication,
+have no workflow or extra built-in tools, and disable client overrides.
 
-## Lifecycle and delivery
+The provider's maximum conversation duration must not exceed `VOICE_SESSION_TTL_SECONDS`.
+Execution plus delivery budgets must fit within 110 seconds. The backend response wait is
+115 seconds and provider tool timeout is 120 seconds. Hosting and reverse proxies must allow
+that bounded HTTP response duration. Dashboard edits can change provider behaviour after
+validation; this check does not lock remote configuration.
+
+## Data flow
 
 ```mermaid
 sequenceDiagram
     participant B as Browser SDK
-    participant A as Owned API session
+    participant A as Backend
     participant E as ElevenLabs Agents
-    participant W as Existing worker
-    B->>A: One-shot bootstrap with invitation and session key
-    A->>E: Validate private agent and request conversation token
-    A-->>B: Opaque token and reserved conversation ID
-    B->>E: SDK-managed WebRTC
-    B->>A: Connected event with matching conversation ID
-    E->>B: Native delegate_task call ID and goal
-    B->>A: Admit call, then poll its bounded result
-    A->>W: Existing delegation scheduler
-    Note over B,E: Async client tool allows conversation to continue
-    W-->>A: Result retained pending delivery
-    A-->>B: Result after fresh browser-reported silence
-    B->>E: SDK returns native correlated client-tool result
-    B->>E: endSession on stop, failure or expiry
-    B->>A: Close owned application session
-    A->>E: Reconcile conversation status when available
+    participant W as Existing LangGraph worker
+    B->>A: Owned application session and bootstrap
+    A->>E: Validate private agent and mint token once
+    A-->>B: Temporary SDK token and conversation ID
+    B<<->>E: Direct WebRTC audio
+    E->>A: Authenticated async delegate_task webhook
+    A->>A: Bind conversation and coalesce exact-goal replay
+    A->>W: Background job under existing budgets
+    Note over B,E: Async provider conversation can continue; live acceptance pending
+    B->>A: Owned transcript/activity reports and heartbeat
+    W-->>A: Bounded result and sources
+    A->>A: Pending delivery waits for fresh quiet activity
+    A-->>E: HTTP result after delivery scheduling
+    E-->>B: Provider handles result narration
 ```
 
-Callbacks require the same Origin, invitation and session-key checks as other
-session routes. Native call IDs are captured before the SDK's parameters-only
-handler; arbitrary tool names, reused IDs with changed goals, oversized results and
-unbounded queues are rejected. There is no browser execution of worker tools.
-Repeated call delivery reuses the result. Requests, startup, callbacks and close
-waits have deadlines; late startup closes itself after stop. No operation silently
-retries token creation or changes to a different voice vendor.
+The browser never submits delegations, polls task results or resolves client-tool callbacks.
+The `/integrations/elevenlabs/delegate` route is separate from `/api` browser Origin checks.
+It rejects browser Origin headers, requires the independent service token, binds the reserved
+conversation ID to an active owned session and accepts only a bounded `goal` body. Existing
+host validation, IP limits and streamed body limits still apply. Responses are `no-store`;
+invalid request bodies are rejected without echoing goal text.
 
-The SDK result is returned through the native tool call. Neither `sendUserMessage`
-nor a contextual update is used to manufacture a response. The `async` tool setting
-and live continued-conversation behavior still require provider acceptance; offline
-fixtures establish application control flow, not vendor speech scheduling quality.
+An authenticated provider request can attach the control lifecycle before a browser connected
+report arrives. The browser remains the source of transcript and audio-activity observations;
+this is not a provider-side authoritative event stream. Missing/stale activity holds delivery
+until its normal expiry. The new transport removes the browser from tool request/result
+transport, not from media, session liveness or the current silence gate.
 
-Speech activity and transcripts arrive through the authenticated browser boundary;
-they are not a server-authoritative ElevenLabs sideband. Stale activity blocks pending
-delivery. SDK scalar audio levels support labeled browser timing observations; they
-are not physical speaker latency. Debug transcripts require the existing server flag
-and explicit session consent. Browser mixed-audio recording and native clients are
-not supported by this transport and are rejected before starting a provider session.
+## Replay and failure policy
 
-SDK disconnect does not prove upstream billing stopped. The backend only confirms
-closure when the provider reports the reserved conversation ended for the expected
-agent; otherwise the UI retains unconfirmed-finalization wording. On a lost browser,
-backend expiry reclaims application work while the configured upstream duration
-bounds the call. Credential expiry is never invented. Immediate server-forced hangup
-through ElevenLabs monitoring requires an enterprise capability and is not assumed.
+The documented webhook request schema does not establish a native invocation ID forwarded to
+this endpoint. Each HTTP response correlates to its own provider request. Backend task IDs are
+application UUIDs, never presented as upstream tool-call IDs.
 
-## Network and verification
+For conservative replay protection, identical stripped goals share one task and cached response
+for the whole conversation, including concurrent requests. A later identical request does not
+refresh a previous web search or rerun a failed/cancelled job. An intentionally changed request
+needs a different goal or a new conversation. This is explicit goal coalescing, not a claim of
+provider-native exactly-once execution. Different goals retain independent task IDs and limits.
 
-The pinned official `@elevenlabs/client` SDK is dynamically imported only for this
-transport. Its exact LiveKit HTTPS/WSS signaling host is allowed alongside the single
-application API origin; no wildcard, arbitrary signaling URL or client API key is
-added. All runtime/transitive licence texts are in `THIRD_PARTY_NOTICES.md`.
+The connection retains at most 64 call records, allows at most four HTTP waiters per goal and
+eight per conversation, and returns results within the 500-byte narration budget. The webhook
+returns the actual result or a bounded failure/cancellation message, never only a 202 job-start
+acknowledgement. The backend does not retry billable work after ambiguous failures.
 
-Offline tests cover policy validation, token size/deadline/error behavior, one-shot
-setup, native-ID deduplication, result caps, ownership, startup cancellation and the
-real application worker scheduler. Paid browser acceptance must separately verify
-microphone/playback, continued speech during async tools, explicit cancellation,
-pending delivery, mute, expiry, finalization and the actual agent configuration.
+An HTTP waiter disconnect or cancellation does not cancel useful worker work or another waiter.
+The execution/delivery/session budgets still apply; a repeated request can retrieve a prepared
+result. If the provider abandons its webhook, narration may be lost: no separate server push or
+automatic replay is assumed. A response-window timeout returns an incomplete notice. Explicit
+UI/API/semantic cancellation and session end retain the existing task semantics.
 
-Public contracts: [SDK](https://elevenlabs.io/docs/eleven-agents/libraries/java-script),
-[client tool schema](https://github.com/elevenlabs/elevenlabs-python/blob/main/src/elevenlabs/types/client_tool_config_input.py),
-[token API](https://elevenlabs.io/docs/api-reference/conversations/get-webrtc-token),
-[monitoring limitations](https://elevenlabs.io/docs/eleven-agents/guides/realtime-monitoring).
+A prepared response is not proof of provider acceptance or finished playback. The UI uses
+"Result prepared for ElevenLabs webhook". Browser Stop ends SDK media and requests backend
+cleanup. Upstream closure is confirmed only by matching provider conversation status; bounded
+agent duration remains required when finalization cannot be confirmed. Cross-vendor fallback,
+native clients, preference overrides and mixed browser audio recording remain unsupported.
+
+## Local and live acceptance
+
+Local backend work requires a reachable HTTPS tunnel for ElevenLabs server callbacks. Point
+both the tool URL and environment variable at that backend route, include its host in
+`VOICE_ALLOWED_HOSTS`, and use the independent stored header token. Do not expose debug/admin
+routes or loosen the browser Origin policy. A tunnel/host is an operator choice; none is created
+by this PR. No frontend CSP change is needed for server-to-server tool requests.
+
+Offline fakes cover configuration rejection, auth/session binding, body limits, replay,
+concurrent tasks, busy response, targeted cancellation, silence-gated delivery, disappearing
+waiters, session end and response deadlines. SDK tests verify media/event cleanup and the
+absence of client tool handlers or result polling. These do not prove live provider behaviour.
+
+A separately authorized smoke must verify private-agent token setup, continued speech during
+an async webhook, two tasks, cancellation, silence delivery, identical-goal replay, real webhook
+failure, mute, expiry, closure and deployed HTTPS timeouts. No measured provider latency or
+account/plan acceptance is claimed.
+
+Public contracts checked on 2026-11-02:
+[webhook tools](https://elevenlabs.io/docs/eleven-agents/customization/tools/webhook-tools),
+[webhook configuration schema](https://github.com/elevenlabs/elevenlabs-python/blob/main/src/elevenlabs/types/webhook_tool_config_input.py),
+[header bindings](https://github.com/elevenlabs/elevenlabs-python/blob/main/src/elevenlabs/types/webhook_tool_api_schema_config_input_request_headers_value.py),
+[system variables](https://elevenlabs.io/docs/eleven-agents/customization/personalization/dynamic-variables),
+[SDK](https://elevenlabs.io/docs/eleven-agents/libraries/java-script),
+[token API](https://elevenlabs.io/docs/api-reference/conversations/get-webrtc-token).

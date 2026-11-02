@@ -36,6 +36,8 @@ class Settings(BaseSettings):
         default="", max_length=200, pattern=r"^(agent_[a-zA-Z0-9_-]+)?$"
     )
     elevenlabs_timeout_seconds: float = Field(default=3, gt=0, le=5)
+    elevenlabs_webhook_token: SecretStr = SecretStr("")
+    elevenlabs_webhook_url: str = ""
     realtime_model: str = "gpt-realtime"
     model: str = "gpt-live-1"
     voice: str = "marin"
@@ -109,6 +111,23 @@ class Settings(BaseSettings):
         ):
             message = "ElevenLabs requires ELEVENLABS_API_KEY and VOICE_ELEVENLABS_AGENT_ID"
             raise ValueError(message)
+        if self.elevenlabs_enabled:
+            url = urlsplit(self.elevenlabs_webhook_url)
+            if (
+                len(self.elevenlabs_webhook_token.get_secret_value()) < 32
+                or url.scheme != "https"
+                or not url.hostname
+                or url.username
+                or url.password
+                or url.query
+                or url.fragment
+                or url.path != "/integrations/elevenlabs/delegate"
+            ):
+                message = (
+                    "ElevenLabs requires a webhook token of at least 32 characters "
+                    "and an HTTPS webhook URL"
+                )
+                raise ValueError(message)
         if self.voice_provider == "elevenlabs" and not self.intent_cancellation:
             message = "ElevenLabs async delegation requires VOICE_INTENT_CANCELLATION"
             raise ValueError(message)
@@ -119,7 +138,7 @@ class Settings(BaseSettings):
             self.voice_provider == "elevenlabs"
             and self.delegation_timeout_seconds + self.delivery_timeout_seconds > 110
         ):
-            message = "ElevenLabs delegation plus delivery wait must fit the SDK callback deadline"
+            message = "ElevenLabs work and delivery must fit the webhook deadline"
             raise ValueError(message)
         return self
 

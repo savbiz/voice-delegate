@@ -58,10 +58,12 @@ class ElevenLabsProvider:
         *,
         timeout: float = 3,
         http: httpx.AsyncClient | None = None,
+        webhook_url: str = "",
     ) -> None:
         if not api_key or not agent_id or not 0 < timeout <= 5:
             message = "ElevenLabs requires server credentials and a bounded timeout"
             raise ValueError(message)
+        self.webhook_url = webhook_url
         self.agent_id = agent_id
         self.timeout = timeout
         self._api_key = api_key
@@ -112,6 +114,7 @@ class ElevenLabsProvider:
                 conversation = config["conversation"]
                 _require(0 < conversation["max_duration_seconds"] <= ttl)
                 prompt = config["agent"]["prompt"]
+                _require(not prompt.get("built_in_tools"))
                 tools = prompt.get("tools", [])
                 identities = prompt.get("tool_ids", [])
                 if identities:
@@ -124,14 +127,55 @@ class ElevenLabsProvider:
                     tools = [(await self._json("tools/" + identity))["tool_config"]]
                 _require(len(tools) == 1)
                 tool = tools[0]
-                _require(tool["type"] == "client" and tool["name"] == "delegate_task")
-                _require(tool["expects_response"] is True and tool["execution_mode"] == "async")
+                _require(tool["type"] == "webhook" and tool["name"] == "delegate_task")
+                _require(tool["execution_mode"] == "async")
                 _require(tool.get("interruption_mode", "allow") == "allow")
                 _require(tool["response_timeout_secs"] == 120)
-                parameters = tool["parameters"]
+                _require(tool.get("follow_redirects", False) is False)
+                schema = tool["api_schema"]
+                _require(bool(self.webhook_url) and schema["url"] == self.webhook_url)
+                _require(schema["method"] == "POST")
+                _require(schema.get("content_type") in (None, "application/json"))
+                _require(not schema.get("path_params_schema"))
+                _require(not schema.get("query_params_schema"))
+                _require(not schema.get("auth_connection"))
+                _require(not schema.get("response_filter"))
+                headers = {name.lower(): value for name, value in schema["request_headers"].items()}
+                _require(len(headers) == len(schema["request_headers"]))
+                _require(set(headers) == {"x-voice-webhook-token", "x-voice-conversation-id"})
+                token = headers["x-voice-webhook-token"]
+                _require(
+                    isinstance(token, dict)
+                    and set(token) == {"secret_id"}
+                    and isinstance(token["secret_id"], str)
+                    and bool(token["secret_id"])
+                )
+                _require(
+                    headers["x-voice-conversation-id"]
+                    == {"variable_name": "system__conversation_id"}
+                )
+                parameters = schema["request_body_schema"]
+                _require(parameters.get("type") == "object")
+                _require(
+                    not parameters.get("dynamic_variable")
+                    and not parameters.get("constant_value")
+                    and not parameters.get("is_omitted")
+                )
                 _require(parameters["required"] == ["goal"])
                 _require(set(parameters["properties"]) == {"goal"})
-                _require(parameters["properties"]["goal"]["type"] == "string")
+                goal = parameters["properties"]["goal"]
+                _require(goal["type"] == "string" and bool(goal.get("description")))
+                _require(
+                    not any(
+                        goal.get(k)
+                        for k in (
+                            "dynamic_variable",
+                            "constant_value",
+                            "is_system_provided",
+                            "is_omitted",
+                        )
+                    )
+                )
         except (
             httpx.HTTPError,
             TimeoutError,
@@ -142,7 +186,8 @@ class ElevenLabsProvider:
             IndexError,
         ):
             message = (
-                "ElevenLabs agent requires private async delegate_task and a bounded call lifetime"
+                "ElevenLabs agent requires private async webhook delegate_task "
+                "and a bounded call lifetime"
             )
             raise ProviderError(message) from None
 
