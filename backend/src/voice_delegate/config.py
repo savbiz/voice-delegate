@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 from dotenv import load_dotenv
 from pydantic import Field, HttpUrl, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from voice_delegate_agent.web_search import domain_name
 
 from voice_delegate.limits.defaults import WORKER_PORT
 
@@ -71,6 +72,10 @@ class Settings(BaseSettings):
     worker_service_capacity: int = Field(default=4, ge=1, le=32)
     worker_max_records: int = Field(default=128, ge=32, le=1024)
     worker_mode: Literal["offline", "openai", "decisions"] = "offline"
+    web_search: bool = False
+    tavily_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="TAVILY_API_KEY")
+    web_search_domains: list[str] = Field(default_factory=list, max_length=20)
+    web_search_timeout_seconds: float = Field(default=3, gt=0, le=5)
     worker_model: str = "gpt-4.1-mini"
     delegation_timeout_seconds: float = Field(default=15, gt=0, le=120)
     delegation_result_tokens: int = Field(default=120, ge=8, le=480)
@@ -81,6 +86,20 @@ class Settings(BaseSettings):
     connect_timeout_seconds: float = Field(default=20, gt=0)
     close_timeout_seconds: float = Field(default=5, gt=0)
     max_body_bytes: int = Field(default=65536, ge=1024, le=1048576)
+
+    @model_validator(mode="after")
+    def validate_web_search(self) -> "Settings":
+        self.web_search_domains = list(
+            dict.fromkeys(domain_name(value) for value in self.web_search_domains)
+        )
+        if (
+            self.web_search
+            and self.worker_execution == "local"
+            and not self.tavily_api_key.get_secret_value()
+        ):
+            message = "Web search requires TAVILY_API_KEY on the worker host"
+            raise ValueError(message)
+        return self
 
     @model_validator(mode="after")
     def validate_origins(self) -> "Settings":

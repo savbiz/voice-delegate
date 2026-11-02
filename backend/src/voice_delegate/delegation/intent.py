@@ -11,9 +11,10 @@ from voice_delegate_agent.reference import Source, WorkerResult
 from voice_delegate.config import Settings
 from voice_delegate.debug import DebugRecording
 from voice_delegate.decisions import Decider, Predicate
+from voice_delegate.limits.results import clip_worker_result
 from voice_delegate.limits.tokens import truncate
 from voice_delegate.providers.base import RealtimeConnection
-from voice_delegate.providers.models import COMMENTARY_MAX_BYTES, Commentary
+from voice_delegate.providers.models import Commentary
 
 from .contracts import DelegationInput, WorkerBusy
 from .runner import DelegationRunner
@@ -147,6 +148,8 @@ class IntentRunner:
                     outcome = "error"
                 if job.status == "running":
                     self._pending(job, result)
+                    if job.result is not None and job.result.status == "failed":
+                        outcome = "error"
         except asyncio.CancelledError:
             outcome = "cancelled"
             if child is not None:
@@ -175,11 +178,7 @@ class IntentRunner:
             truncate(self.settings.delivery_preamble + " " + job.goal[:80], 32, max_bytes=160)
             + ": "
         )
-        job.result = WorkerResult(
-            truncate(preamble + result.text, self.runner.budget, max_bytes=COMMENTARY_MAX_BYTES),
-            result.sources,
-            result.status,
-        )
+        job.result = clip_worker_result(result, self.runner.budget, prefix=preamble)
         job.ready = self.clock()
         job.work_finished = job.ready
         job.status = "pending"

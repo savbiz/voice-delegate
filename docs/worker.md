@@ -2,6 +2,24 @@
 
 The worker runs a bounded LangGraph loop with a calculator and `search_documentation`. The default offline planner is deterministic and makes no provider calls. Enable the paid planner only on the backend for natural-language tool selection.
 
+## Worker modes
+
+LangGraph is the orchestration library, not a language model. Every mode uses the
+same bounded graph and server-executed tools; the mode chooses the planner:
+
+| `VOICE_WORKER_MODE` | Planner | External model usage |
+|---|---|---|
+| `offline` (default) | Deterministic rules for explicit commands | None; an opted-in web tool still calls Tavily |
+| `openai` | Text model selects tools and generates the final response | OpenAI text-model calls, separate from the voice provider |
+| `decisions` | Decisions selects an action; text model writes final prose | Decisions and text-model calls; classification failure uses the text planner |
+
+The backend chooses this at startup. It is independent of the voice provider: GPT-Live
+can handle speech while a separate text model plans worker actions. Tools themselves
+are Python functions, not additional voice models. Natural-language web search is
+advertised to the voice provider only in `openai` or `decisions` mode. For remote
+workers, configure matching modes on the API and worker; this capability is not
+automatically negotiated. The offline planner keeps its explicit `web <query>` path.
+
 ## Natural-language worker with live voice
 
 Retain your existing `.env` and add:
@@ -81,3 +99,65 @@ The [offline comparison](../evals/README.md#planner-comparison) exercises contra
 local execution only. Real planner accuracy, latency and cost remain live pending.
 
 Contract source: [OpenAI Decisions API reference](https://developers.openai.com/api/reference/resources/decisions/methods/create).
+
+## Optional public web search
+
+The voice model still delegates through `delegate_task`. The worker has calculation,
+project documentation search and, when enabled, `web_search`. Project questions use
+the bundled corpus; external-information questions can use Tavily. See
+[the provider decision and trust limits](decisions/011-read-only-web-search.md).
+
+Set these variables on the backend for local worker execution, or on the private
+worker service for remote execution, then restart that process:
+
+```sh
+VOICE_WORKER_MODE=openai
+VOICE_WEB_SEARCH=true
+TAVILY_API_KEY=<set privately in the process environment>
+VOICE_WEB_SEARCH_TIMEOUT_SECONDS=3
+VOICE_WEB_SEARCH_DOMAINS='["example.org"]'
+```
+
+For natural-language requests, also configure `OPENAI_API_KEY` as described above.
+The domain list is optional; its default is empty. Do not put the key in frontend
+variables, source files or logs. In remote mode enable `VOICE_WEB_SEARCH=true` on the
+API too, so its voice instructions and result validation match the worker. The Tavily key
+is required only on the process that executes the search. Keep the existing service
+authentication and private networking. Hosted deployments continue to use the
+existing Railway backend and Vercel frontend; no new deployment is provisioned.
+
+The adapter makes one Tavily Basic Search request with up to three results, a 64 KiB
+response cap and a total deadline of three seconds by default (maximum five).
+It clips excerpts to 400 characters, follows no redirects and never downloads result
+pages. Unavailable search falls back to local documentation with an explicit notice.
+An empty result does not authorize an unsupported current-facts answer. If narration
+clipping removes every web citation, delivery reports a failed task instead of an
+uncited successful answer; this also applies after the delayed-result preamble. Task
+cancellation remains cancellation. Existing delegation and session limits still apply.
+
+Search must be the last tool action in a task: after receiving web excerpts the graph
+rejects further tool calls and requires a cited final answer. This deliberately limits
+multi-step planning and blocks tool execution requested by injected search text;
+it does not establish semantic immunity to prompt injection. External source links
+appear in the live source panel; documentation sources remain bundled snapshots.
+
+Tavily provides a free account allowance; additional searches can incur charges
+according to the operator's plan. Voice and text-model charges are separate. Keep
+paid overage disabled in the provider account when testing within free credits.
+The adapter sends the query to Tavily; selected excerpts also reach the worker model
+and voice narration. Avoid submitting private information as search queries.
+
+`OfflinePlanner` supports explicit `web <query>` only when this tool is enabled.
+With a real key this command still makes a real external search: “offline planner”
+means no planning model, not an offline search service. The one-command demo rejects
+web search; automated tests use deterministic HTTP fakes with no provider calls.
+
+System instructions are editable packaged Markdown in the
+[worker prompts](../agent/src/voice_delegate_agent/prompts/worker.md) and
+[voice prompts](../backend/src/voice_delegate/prompts/voice-classic.md).
+Capability-specific variants are selected by server settings. Restart after editing.
+LangChain supplies interfaces; the project owns these prompts and the execution policy.
+
+Verification: `uv run pytest backend/tests/test_web_search.py
+backend/tests/test_adversarial_worker.py backend/tests/test_web_eval.py` runs offline.
+Live search quality and spoken citation delivery remain pending.

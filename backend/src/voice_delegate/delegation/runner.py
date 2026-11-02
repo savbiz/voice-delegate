@@ -10,10 +10,10 @@ from opentelemetry import trace
 from opentelemetry.context import Context
 from voice_delegate_agent.reference import Source, WorkerResult
 
-from voice_delegate.limits.tokens import truncate
+from voice_delegate.limits.results import clip_worker_result
 from voice_delegate.observability.metrics import Metrics
 from voice_delegate.providers.base import RealtimeConnection
-from voice_delegate.providers.models import COMMENTARY_MAX_BYTES, Commentary, ProviderError
+from voice_delegate.providers.models import Commentary, ProviderError
 
 from .contracts import DelegationInput, Worker, WorkerBusy
 
@@ -158,7 +158,10 @@ class DelegationRunner:
                             )
                 if work_generation == state.work_generation and is_connected():
                     # 500 UTF-8 bytes also conservatively bound the provider's 500-token limit.
-                    narration = truncate(result.text, self.budget, max_bytes=COMMENTARY_MAX_BYTES)
+                    result = clip_worker_result(result, self.budget)
+                    if result.status == "failed":
+                        status = "failed"
+                    narration = result.text
                     await connection.send(Commentary(request_id, narration))
                     if work_generation == state.work_generation:
                         state.status = status

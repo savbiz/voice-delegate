@@ -46,8 +46,14 @@ class RemoteWorker:
                 response.raise_for_status()
                 result = JobOutput.model_validate_json(response.content)
                 if result.status == "completed" or (result.status == "failed" and result.text):
+                    if result.web_sources and not self.settings.web_search:
+                        message = "Remote worker web evidence was not enabled"
+                        raise RuntimeError(message)
+                    web = {s.id: s for s in result.web_sources} if self.settings.web_search else {}
                     sources = tuple(
-                        s for key in result.source_ids if (s := source_by_id(key)) is not None
+                        s
+                        for key in result.source_ids
+                        if (s := source_by_id(key) or web.get(key)) is not None
                     )
                     return WorkerResult(
                         result.text, sources, "failed" if result.status == "failed" else "completed"

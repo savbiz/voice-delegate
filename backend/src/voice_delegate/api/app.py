@@ -89,7 +89,12 @@ def create_app(
         settings,
         tracer=get_tracer(telemetry),
         metrics=Metrics(meter_provider),
-        worker=remote or LangGraphWorker(planner or OfflinePlanner(), settings.worker_max_steps),
+        worker=remote
+        or (
+            runtime.worker(settings.worker_max_steps)
+            if runtime is not None
+            else LangGraphWorker(planner or OfflinePlanner(), settings.worker_max_steps)
+        ),
         fallback=fallback,
     )
 

@@ -222,3 +222,8 @@ Protocol implementation is based on the public OpenAI [WebRTC guide](https://dev
 - [Glossary](docs/glossary.md), [local development](docs/local-development.md) and [worker contract](agent/README.md)
 - [Architecture decisions](docs/decisions/)
 - [Historical milestone records](docs/milestones/) and [current roadmap](docs/roadmap.md)
+
+Optional [public web search](docs/worker.md#optional-public-web-search) runs in the
+worker behind the same `delegate_task` entry point. It is disabled by default and
+requires a server-side Tavily key. Offline contracts are verified; live search
+quality and spoken delivery remain pending.

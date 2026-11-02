@@ -12,6 +12,7 @@ import { Reference } from './reference';
 import { Transcript } from './Transcript';
 import { version } from '../package.json';
 import { readInvitation, saveInvitation } from './invitation';
+import { sourceUrl } from './source-url';
 
 function Live({ code }: { code: string }) {
   const [store] = useState(createLiveStore);
@@ -242,7 +243,11 @@ function Live({ code }: { code: string }) {
       <Transcript messages={state.messages} />
       {state.sources.length > 0 && (
         <section aria-label="Worker sources">
-          <h2>Documentation sources</h2>
+          <h2>
+            {state.sources.some((source) => source.section === 'Web search')
+              ? 'Sources'
+              : 'Documentation sources'}
+          </h2>
           <div id="sources">
             {state.sources.map((source, index) => (
               <details key={source.id}>
@@ -251,7 +256,15 @@ function Live({ code }: { code: string }) {
                 </summary>
                 <blockquote>{source.text}</blockquote>
                 <small>
-                  {source.path} · Snapshot {source.id}
+                  {sourceUrl(source) ? (
+                    <a href={sourceUrl(source)} target="_blank" rel="noopener noreferrer">
+                      {source.path}
+                    </a>
+                  ) : (
+                    source.path
+                  )}
+                  {' · '}
+                  {source.section === 'Web search' ? 'Evidence' : 'Snapshot'} {source.id}
                 </small>
               </details>
             ))}

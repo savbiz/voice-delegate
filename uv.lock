@@ -2115,12 +2115,14 @@ name = "voice-delegate-agent"
 version = "0.1.0"
 source = { editable = "agent" }
 dependencies = [
+    { name = "httpx" },
     { name = "langchain-openai" },
     { name = "langgraph" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1,<1" },
     { name = "langchain-openai", specifier = ">=1.6.2,<2" },
     { name = "langgraph", specifier = ">=1.2.2,<2" },
 ]

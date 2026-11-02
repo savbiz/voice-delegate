@@ -11,15 +11,15 @@ from secrets import compare_digest
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from pydantic import BaseModel, Field
-from voice_delegate_agent.graph import LangGraphWorker
+from pydantic import BaseModel, Field, field_validator
+from voice_delegate_agent.reference import Source
+from voice_delegate_agent.web_search import verified_web_source
 
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.delegation.contracts import Worker
 from voice_delegate.delegation.planner import build_planner
 from voice_delegate.limits.http import BodyLimitMiddleware
-from voice_delegate.limits.tokens import truncate
-from voice_delegate.providers.models import COMMENTARY_MAX_BYTES
+from voice_delegate.limits.results import clip_worker_result
 
 
 class JobInput(BaseModel):
@@ -33,6 +33,17 @@ class JobOutput(BaseModel):
     status: str
     text: str = ""
     source_ids: tuple[str, ...] = ()
+    web_sources: tuple[Source, ...] = Field(default=(), max_length=3)
+
+    @field_validator("web_sources")
+    @classmethod
+    def validate_web_sources(cls, sources: tuple[Source, ...]) -> tuple[Source, ...]:
+        if len({s.id for s in sources}) != len(sources) or not all(
+            verified_web_source(s) for s in sources
+        ):
+            message = "Invalid web evidence from worker"
+            raise ValueError(message)
+        return sources
 
 
 @dataclass
@@ -43,6 +54,7 @@ class Job:
     status: str = "running"
     text: str = ""
     source_ids: tuple[str, ...] = ()
+    web_sources: tuple[Source, ...] = ()
 
 
 class Jobs:
@@ -69,7 +81,7 @@ class Jobs:
             job = Job("", time.time() + 180)
             self.items[key] = job
         job.status = "cancelled"
-        job.text, job.source_ids = "", ()
+        job.text, job.source_ids, job.web_sources = "", (), ()
         if job.task is not None:
             job.task.cancel()
 
@@ -105,12 +117,10 @@ class Jobs:
             ):
                 result = await self.worker.delegate_task(body.goal, body.context)
             if job.status != "cancelled":
-                job.text = truncate(
-                    result.text,
-                    self.settings.delegation_result_tokens,
-                    max_bytes=COMMENTARY_MAX_BYTES,
-                )
-                job.source_ids = tuple(s.id for s in result.sources)
+                result = clip_worker_result(result, self.settings.delegation_result_tokens)
+                job.text = result.text
+                job.source_ids = tuple(s.id for s in result.sources[:3])
+                job.web_sources = tuple(s for s in result.sources[:3] if verified_web_source(s))
                 job.status = result.status
         except asyncio.CancelledError:
             job.status = "cancelled"
@@ -137,7 +147,7 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
     runtime = None
     if worker is None:
         runtime = build_planner(settings)
-        worker = LangGraphWorker(runtime.planner, settings.worker_max_steps)
+        worker = runtime.worker(settings.worker_max_steps)
     jobs = Jobs(worker, settings)
 
     async def janitor() -> None:
@@ -186,7 +196,9 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
         job = jobs.items.get(key)
         if job is None:
             raise HTTPException(404, "Job not found or expired")
-        return JobOutput(status=job.status, text=job.text, source_ids=job.source_ids)
+        return JobOutput(
+            status=job.status, text=job.text, source_ids=job.source_ids, web_sources=job.web_sources
+        )
 
     @app.delete("/jobs/{key}")
     async def cancel(key: UUID) -> JobOutput:
