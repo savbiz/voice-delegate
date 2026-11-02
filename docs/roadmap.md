@@ -189,3 +189,11 @@ rejected in production. The SDK is not installed or started, no UI provider swit
 is exposed, and public voice support is not claimed. SDK integration, server admission
 for callbacks, delayed spoken delivery, close control, CSP review, latency, native
 audio and hosted acceptance remain pending. See [draft status](elevenlabs.md).
+
+## Deferred moderation and telephone entry
+
+On 2026-11-02, the maintainer deferred implementation of moderation and SIP telephone
+entry. Their proposed integration points, diagrams, policy decisions and acceptance
+requirements are recorded in [future extensions](future-extensions.md). These are
+design notes, not implemented or verified features. The MCP plan's dependency on
+moderation/output handling must be resolved explicitly before that work proceeds.
