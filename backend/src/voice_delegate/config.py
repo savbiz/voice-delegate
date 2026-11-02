@@ -4,8 +4,9 @@ from typing import Literal
 from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
-from pydantic import Field, HttpUrl, SecretStr, model_validator
+from pydantic import AliasChoices, Field, HttpUrl, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
 from voice_delegate_agent.web_search import domain_name
 
 from voice_delegate.limits.defaults import WORKER_PORT
@@ -15,7 +16,7 @@ class Settings(BaseSettings):
     """Resource budgets and server-owned provider configuration."""
 
     model_config = SettingsConfigDict(
-        env_prefix="VOICE_", extra="ignore", hide_input_in_errors=True
+        env_prefix="VOICE_", extra="ignore", hide_input_in_errors=True, populate_by_name=True
     )
     openai_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="OPENAI_API_KEY")
     azure_endpoint: str = ""
@@ -23,7 +24,11 @@ class Settings(BaseSettings):
     azure_deployment: str = "gpt-realtime"
     azure_voice: str = "marin"
     fallback_enabled: bool = False
-    voice_provider: Literal["live", "realtime", "azure"] = "live"
+    voice_provider: Literal["live", "realtime", "azure"] = Field(
+        default="live",
+        validation_alias=AliasChoices("VOICE_ADAPTER", "VOICE_VOICE_PROVIDER"),
+        description="Voice adapter. VOICE_VOICE_PROVIDER is a deprecated alias.",
+    )
     realtime_model: str = "gpt-realtime"
     model: str = "gpt-live-1"
     voice: str = "marin"
@@ -76,7 +81,7 @@ class Settings(BaseSettings):
     tavily_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="TAVILY_API_KEY")
     web_search_domains: list[str] = Field(default_factory=list, max_length=20)
     web_search_timeout_seconds: float = Field(default=3, gt=0, le=5)
-    worker_model: str = "gpt-4.1-mini"
+    worker_model: str = DEFAULT_WORKER_MODEL
     delegation_timeout_seconds: float = Field(default=15, gt=0, le=120)
     delegation_result_tokens: int = Field(default=120, ge=8, le=480)
     worker_max_steps: int = Field(default=4, ge=1, le=12)

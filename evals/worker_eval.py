@@ -29,6 +29,7 @@ from voice_delegate_agent.graph import (
     OpenAIPlanner,
     Planner,
 )
+from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL, chat_reasoning_effort
 from voice_delegate_agent.reference import corpus, source_by_id
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -188,6 +189,7 @@ async def run_cases(
             max_retries=0,
             timeout=20,
             max_completion_tokens=500,
+            reasoning_effort=chat_reasoning_effort(judge_model),
         )
         if judge_model
         else None
@@ -353,7 +355,7 @@ def upload(report: dict[str, Any], cases: list[dict[str, Any]], project: str) ->
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=["offline", "openai"], default="offline")
-    parser.add_argument("--model", default="gpt-4.1-mini")
+    parser.add_argument("--model", default=DEFAULT_WORKER_MODEL)
     parser.add_argument("--compare-planners", action="store_true")
     parser.add_argument("--text-input-usd-per-million", type=float)
     parser.add_argument("--text-output-usd-per-million", type=float)

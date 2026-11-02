@@ -150,3 +150,16 @@ Review regressions also cover whitespace at excerpt cutoffs, voice capabilities 
 match the configured planner, and citation loss during local, private-worker and
 delayed-result clipping. Uncited clipped web results fail rather than being reported
 as successfully delivered evidence. These remain offline checks, not live acceptance.
+
+## Local development commands
+
+Repository-local `make be`, `make fe` and `make invite` commands provide a reusable
+local invitation without rewriting existing configuration or credentials.
+
+## Configuration naming and worker model migration
+
+`VOICE_ADAPTER` replaces the ambiguous voice-provider selector name, with the old
+name accepted as a deprecated alias. New worker/eval defaults use GPT-6 Luna with
+Chat Completions reasoning disabled for tool calling. Offline request-format and
+alias-precedence checks are separate from live model acceptance, which is pending.
+Existing explicit environment overrides are not silently changed.

@@ -82,7 +82,7 @@ See the [roadmap](docs/roadmap.md) and [production scope](docs/production.md).
 | Measurement | p50 | p95 | Notes |
 |---|---|---|---|
 | Provider time-to-first-byte |  |  | gpt-live-1, WebRTC, EU |
-| Delegated task end-to-end |  |  | offline planner / gpt-4.1-mini |
+| Delegated task end-to-end |  |  | offline planner / gpt-6-luna |
 | Failover to Azure |  |  | injected sideband failure |
 -->
 
@@ -93,9 +93,11 @@ Prerequisites: Python 3.12 or 3.13, uv, Node.js 24 and pnpm 11.19.0. Open the re
 ```bash
 cd voice-delegate
 uv sync --locked
-cp .env.example .env
-pnpm --dir frontend install --frozen-lockfile
-pnpm --dir frontend dev
+test -f .env || touch .env
+cd frontend
+pnpm install --frozen-lockfile
+cd ..
+make fe
 ```
 
 Open **http://localhost:5173** and press **Start demo**. This mode is free, scripted and silent: no API calls, microphone or generated speech. Simulated timings are labeled.
@@ -103,7 +105,9 @@ Open **http://localhost:5173** and press **Start demo**. This mode is free, scri
 For live voice, set `OPENAI_API_KEY` in root `.env`, then in a second terminal from the repository root:
 
 ```bash
-uv run uvicorn voice_delegate.api.app:create_app --factory --reload --host 127.0.0.1 --port 8000
+make be
+# Another terminal, repository root: print the local code to paste in the UI
+make invite
 ```
 
 Select **Live voice** in the browser. Provider access and usage billing are required. Keys stay on the server. Use one backend worker; sessions are held in memory.

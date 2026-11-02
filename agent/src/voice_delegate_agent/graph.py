@@ -18,6 +18,7 @@ from pydantic import BaseModel, SecretStr, ValidationError
 
 from .decisions import Choice, Decider, Decision, DecisionError, Option
 from .limits import SOURCE_PREVIEW_CHARS
+from .model_config import chat_reasoning_effort
 from .prompts import worker_prompt
 from .reference import Source, WorkerResult, source_by_id
 from .tools import TOOLS
@@ -106,6 +107,7 @@ class OpenAIPlanner:
             max_retries=0,
             timeout=20,
             max_completion_tokens=1000,
+            reasoning_effort=chat_reasoning_effort(model),
         )
         self.model = self.client.bind_tools(tools, parallel_tool_calls=False)
 

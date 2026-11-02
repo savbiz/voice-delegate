@@ -552,6 +552,54 @@
     "digest": "375fd28b9c5385d42b2344129793fe9479f1262c517bda00091b633453a6c0b1"
   },
   {
+    "id": "904d7d622c908ea9",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Local development and PyCharm",
+    "text": "The repository [Makefile](../Makefile) provides these shortcuts without installing\nshell aliases. Run `make` for help; it does not start a server. `make be` starts only\nFastAPI with reload on `127.0.0.1:8000`; `make fe` starts only Vite on\n`127.0.0.1:5173`. Stop each process with Ctrl+C. Dependencies must already be installed.",
+    "digest": "904d7d622c908ea996388b2a93fc64d99aa37543dd265fdf40a090fa7b1db1bd"
+  },
+  {
+    "id": "5028ad2326c4dff8",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Local development and PyCharm",
+    "text": "Run `make invite` to print a reusable **local** invitation, then paste it in the UI.\n`make be` uses the same code, stored in ignored `.local/dev-invite.txt` with owner-only\npermissions. Restart an existing backend with `make be` before using this code.\nThe launcher binds only to loopback and requires development mode with public demo\ndisabled. For that process only, it replaces configured invitation/shared-token auth\nwith the generated local invitation; the original `.env` is never rewritten and\nits existing codes are never printed. Direct uvicorn startup still uses `.env` auth.\nThe local launcher permits both localhost and 127.0.0.1 frontend origins. `make invite`\nis an explicit credential-display action; normal startup only prints the command to\nretrieve it. Do not use this local code for Railway or invitations to hosted users.",
+    "digest": "5028ad2326c4dff8e64d65ef2135deceb26e98adee0d1a68eebaf2a51c335688"
+  },
+  {
+    "id": "b97a890fa79d6064",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Local development and PyCharm",
+    "text": "Backend settings load from the existing root `.env`; process environment values take\nprecedence. Normal startup does not print API keys or configured invite codes. Only `make invite`\nprints the generated local code when explicitly requested.\nWith no overrides, code defaults are `VOICE_ADAPTER=live` for GPT-Live, `VOICE_WORKER_MODE=offline` for the\ndeterministic planner and `VOICE_WEB_SEARCH=false`. Existing `.env` values still win\nover these declared defaults. See [all configuration names](configuration.md).",
+    "digest": "b97a890fa79d60645b3737d8ca7624ce018f7680670829a282b15dbb51f78a3b"
+  },
+  {
+    "id": "f1d3adbb4c52ddb4",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Local development and PyCharm",
+    "text": "These model-backed modes require a privately configured `OPENAI_API_KEY` and can\nincur provider charges. [Worker setup](worker.md) explains each mode. For persistent\nchoices edit your local `.env`, then restart the backend. Never put API keys in the\nMakefile or frontend variables.",
+    "digest": "f1d3adbb4c52ddb4625472d99c80f579f8f500e7d0bb213427e2fa50b515c728"
+  },
+  {
+    "id": "e0bda2d017da1782",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Local development and PyCharm",
+    "text": "The frontend shortcut explicitly defaults `VITE_API_BASE_URL` to empty so Vite proxies\n`/api` to the local backend, even if a frontend env file names a hosted API. To select\na hosted backend explicitly:",
+    "digest": "e0bda2d017da17826f49500cbe436753c122a0b0588fb49976d859a6b92e43c1"
+  },
+  {
+    "id": "1c27fc5436015d31",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Local development and PyCharm",
+    "text": "A non-local backend must allow the frontend origin. This does not deploy or modify\nthat backend. Paths are derived from the Makefile location, so linked worktrees use\ntheir own backend and frontend directories.",
+    "digest": "1c27fc5436015d31b1fba3b0a28b0d2c1033b6f09e7f27e2eb200682b05b5dad"
+  },
+  {
     "id": "c38bee83afe223be",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
@@ -622,5 +670,29 @@
     "section": "Measured Codespaces proxy behaviour",
     "text": "The first build may take several minutes; the warm-cache goal excludes cold\nprovisioning. The reported run did not record creation/build timings or its commit.\nIf a measured cold start exceeds four minutes, enable a Codespaces prebuild in\nrepository Settings → Codespaces → Prebuilds, select this devcontainer and branch,\nand rerun the timing from a newly created codespace. Prebuilds consume the account's\nCodespaces allowance; check that allowance before enabling them. Keep ports private.",
     "digest": "65afc9304f0d877b5ea7bce7467973827c5eb18e78ed5aa8eb2074c3684ccd04"
+  },
+  {
+    "id": "56e0adc4d5e467ed",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Common local environment variables",
+    "text": "The complete generated reference is [Configuration](configuration.md). Process\nvariables override `.env`; restart the backend after changes. Keep keys only in the\nbackend environment. Setting a key does not itself enable the corresponding feature.",
+    "digest": "56e0adc4d5e467edcc3f158a91c2f19b059024e12591afa6de616f29a9561c0f"
+  },
+  {
+    "id": "56ee299f888474fe",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Common local environment variables",
+    "text": "`make be` deliberately uses isolated local invitation auth while retaining model and\nfeature choices. Public-demo/production configurations must use the normal deployment\nentry point; they are rejected by the local launcher. `make fe` uses an empty\n`VITE_API_BASE_URL` by default to proxy to the local backend. Override that public URL\nonly when explicitly selecting a hosted API; it is not a place for credentials.",
+    "digest": "56ee299f888474fef999cc6151363eefc889d2e130dffddd6e79004a20aa9c65"
+  },
+  {
+    "id": "55c644874caf3728",
+    "title": "Local development and PyCharm",
+    "path": "docs/local-development.md",
+    "section": "Common local environment variables",
+    "text": "`VOICE_ADAPTER` is the canonical selector for the existing `live`, `realtime` and\n`azure` adapters. It selects an integration, not the commercial provider. The old\n`VOICE_VOICE_PROVIDER` name remains accepted as a deprecated alias; if both names\nare present in the same source, `VOICE_ADAPTER` wins. Prefer the current instructions\nhere over legacy template values. Keep your existing keys and change only the\nnon-sensitive selectors/model values when migrating a local configuration.",
+    "digest": "55c644874caf37282b1a6f4947210a893c8ad1a2aba7093a1df1b506dde4664e"
   }
 ]

@@ -15,7 +15,7 @@ Declared defaults below never read your environment or reveal configured secrets
 | `azure_deployment` | `VOICE_AZURE_DEPLOYMENT` | `"gpt-realtime"` | `{"type": "string"}` |
 | `azure_voice` | `VOICE_AZURE_VOICE` | `"marin"` | `{"type": "string"}` |
 | `fallback_enabled` | `VOICE_FALLBACK_ENABLED` | `false` | `{"type": "boolean"}` |
-| `voice_provider` | `VOICE_VOICE_PROVIDER` | `"live"` | `{"type": "string", "enum": ["live", "realtime", "azure"]}` |
+| `voice_provider` | `VOICE_ADAPTER` | `"live"` | `{"type": "string", "enum": ["live", "realtime", "azure"]}` |
 | `realtime_model` | `VOICE_REALTIME_MODEL` | `"gpt-realtime"` | `{"type": "string"}` |
 | `model` | `VOICE_MODEL` | `"gpt-live-1"` | `{"type": "string"}` |
 | `voice` | `VOICE_VOICE` | `"marin"` | `{"type": "string"}` |
@@ -65,7 +65,7 @@ Declared defaults below never read your environment or reveal configured secrets
 | `tavily_api_key` | `TAVILY_API_KEY` | `""` | `{"type": "string"}` |
 | `web_search_domains` | `VOICE_WEB_SEARCH_DOMAINS` | `[]` | `{"type": "array"}` |
 | `web_search_timeout_seconds` | `VOICE_WEB_SEARCH_TIMEOUT_SECONDS` | `3` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
-| `worker_model` | `VOICE_WORKER_MODEL` | `"gpt-4.1-mini"` | `{"type": "string"}` |
+| `worker_model` | `VOICE_WORKER_MODEL` | `"gpt-6-luna"` | `{"type": "string"}` |
 | `delegation_timeout_seconds` | `VOICE_DELEGATION_TIMEOUT_SECONDS` | `15` | `{"type": "number", "maximum": 120, "exclusiveMinimum": 0}` |
 | `delegation_result_tokens` | `VOICE_DELEGATION_RESULT_TOKENS` | `120` | `{"type": "integer", "minimum": 8, "maximum": 480}` |
 | `worker_max_steps` | `VOICE_WORKER_MAX_STEPS` | `4` | `{"type": "integer", "minimum": 1, "maximum": 12}` |
@@ -75,6 +75,8 @@ Declared defaults below never read your environment or reveal configured secrets
 | `connect_timeout_seconds` | `VOICE_CONNECT_TIMEOUT_SECONDS` | `20` | `{"type": "number", "exclusiveMinimum": 0}` |
 | `close_timeout_seconds` | `VOICE_CLOSE_TIMEOUT_SECONDS` | `5` | `{"type": "number", "exclusiveMinimum": 0}` |
 | `max_body_bytes` | `VOICE_MAX_BODY_BYTES` | `65536` | `{"type": "integer", "minimum": 1024, "maximum": 1048576}` |
+
+`VOICE_ADAPTER` also accepts `VOICE_VOICE_PROVIDER` for backward compatibility; the first name takes precedence within the same settings source.
 
 ## Cross-field validator rules
 

@@ -7,7 +7,7 @@ import json
 import textwrap
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import AliasChoices, SecretStr
 from voice_delegate.config import Settings
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,8 +52,18 @@ def build() -> str:
         "exclusiveMaximum",
         "pattern",
     )
+    aliases: list[str] = []
     for name, field in Settings.model_fields.items():
-        env = field.validation_alias or "VOICE_" + name.upper()
+        alias = field.validation_alias
+        if isinstance(alias, AliasChoices):
+            env = alias.choices[0]
+            alternatives = ", ".join(f"`{choice}`" for choice in alias.choices[1:])
+            aliases.append(
+                f"`{env}` also accepts {alternatives} for backward compatibility; "
+                "the first name takes precedence within the same settings source."
+            )
+        else:
+            env = alias or "VOICE_" + name.upper()
         default = field.get_default(call_default_factory=True)
         if isinstance(default, SecretStr):
             default = default.get_secret_value()
@@ -61,6 +71,7 @@ def build() -> str:
         lines.append(
             f"| `{name}` | `{env}` | `{json.dumps(default)}` | `{json.dumps(constraints)}` |"
         )
+    lines += ["", *aliases]
     lines += [
         "",
         "## Cross-field validator rules",
