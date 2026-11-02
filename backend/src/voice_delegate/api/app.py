@@ -22,6 +22,7 @@ from voice_delegate.observability.metrics import Metrics, configure_metrics
 from voice_delegate.observability.tracing import configure_tracing, get_tracer
 from voice_delegate.providers.azure import AzureRealtimeProvider
 from voice_delegate.providers.base import RealtimeProvider
+from voice_delegate.providers.elevenlabs import ElevenLabsProvider
 from voice_delegate.providers.models import ProviderError, UnsupportedCapability
 from voice_delegate.providers.openai import OpenAILiveProvider
 from voice_delegate.providers.realtime import OpenAIRealtimeProvider
@@ -56,6 +57,15 @@ def create_app(
             )
             live.model, live.voice = settings.model, settings.voice
             provider = live
+    elevenlabs = (
+        ElevenLabsProvider(
+            settings.elevenlabs_api_key.get_secret_value(),
+            settings.elevenlabs_agent_id,
+            timeout=settings.elevenlabs_timeout_seconds,
+        )
+        if settings.elevenlabs_enabled
+        else None
+    )
     fallback = None
     if settings.fallback_enabled:
         fallback = AzureRealtimeProvider(
@@ -114,6 +124,8 @@ def create_app(
             with suppress(asyncio.CancelledError):
                 await janitor
             await manager.aclose()
+            if elevenlabs is not None:
+                await elevenlabs.aclose()
             if remote is not None:
                 await remote.aclose()
             if runtime is not None:
@@ -161,5 +173,5 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    app.include_router(build_router(manager, feedback))
+    app.include_router(build_router(manager, feedback, elevenlabs))
     return app

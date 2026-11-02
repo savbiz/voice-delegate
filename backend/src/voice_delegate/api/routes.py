@@ -10,6 +10,7 @@ from voice_delegate_agent.reference import search, source_by_id
 
 from voice_delegate.debug import DebugSample
 from voice_delegate.feedback import FeedbackInput, FeedbackStore
+from voice_delegate.providers.elevenlabs import ElevenLabsProvider
 from voice_delegate.providers.models import UnsupportedCapability
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import Session
@@ -33,7 +34,11 @@ class ReferenceQuery(BaseModel):
     query: str = Field(min_length=1, max_length=QUERY_MAX_CHARS)
 
 
-def build_router(manager: SessionManager, feedback: FeedbackStore | None = None) -> APIRouter:
+def build_router(
+    manager: SessionManager,
+    feedback: FeedbackStore | None = None,
+    elevenlabs: ElevenLabsProvider | None = None,
+) -> APIRouter:
     """Bind a router to one lifecycle-owned manager, avoiding untyped app state."""
 
     async def check_origin(request: Request, response: Response) -> None:
@@ -208,6 +213,26 @@ def build_router(manager: SessionManager, feedback: FeedbackStore | None = None)
             if manager.settings.intent_cancellation
             else session.delegation.status
         }
+
+    @router.post("/sessions/{session_id}/elevenlabs/bootstrap")
+    async def elevenlabs_bootstrap(session: Annotated[Session, Depends(owned)]) -> dict[str, str]:
+        if elevenlabs is None:
+            raise HTTPException(501, "ElevenLabs preview is disabled")
+        async with session.lock:
+            if session.state != "created" or session.sdk_bootstrap_issued:
+                raise HTTPException(409, "Session setup already attempted")
+            # Do not retry a token mint after an ambiguous upstream failure.
+            session.sdk_bootstrap_issued = True
+            session.state = "connecting"
+            # Credential issuance does not confirm upstream media closure.
+            session.previous_finalized = False
+            with manager.metrics.operation("provider.connect"):
+                bootstrap = await elevenlabs.prepare_browser()
+            return {
+                "transport": bootstrap.transport,
+                "conversation_id": bootstrap.conversation_id,
+                "token": bootstrap.token,
+            }
 
     @router.post("/sessions/{session_id}/token")
     async def token(_session: Annotated[Session, Depends(owned)]) -> None:

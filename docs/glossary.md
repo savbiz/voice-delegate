@@ -90,3 +90,7 @@ promptly; the browser does not execute LangGraph worker tools.
 
 **Contextual update:** background information supplied to a provider conversation.
 It does not itself prove that a pending result has been narrated or fully played.
+
+**Agents bootstrap preview:** a development-only endpoint returning an SDK WebRTC
+token and conversation ID. It reserves one setup attempt on an owned session and
+does not imply that media is connected or that upstream closure is confirmed.

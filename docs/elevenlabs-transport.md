@@ -1,8 +1,10 @@
 # ElevenLabs transport evaluation
 
-Reviewed against official documentation on 2026-11-01. This is a proposal for review,
-not an implemented provider. No ElevenLabs account configuration, credentials, paid
-calls, latency measurements or deployment changes are part of this document.
+Reviewed against official documentation on 2026-11-01 and 2026-11-02. The Agents
+path is selected for the implementation draft. The draft includes development-only
+credential bootstrap and a tested client-tool correlation boundary; it does not yet
+provide a usable browser voice session. No account configuration, paid calls, latency
+measurements or deployment changes are claimed. See [implementation status](elevenlabs.md).
 
 ## Recommendation and decision gate
 
@@ -15,8 +17,7 @@ exercises a different delegation/control model while keeping audio out of FastAP
 This recommendation is conditional: the selected SDK must expose stable tool-call IDs,
 permit bounded admission replies, and support an explicit path for later delivery. A
 background context update alone does not establish that a result will be spoken. Do
-not implement or enable the provider until the maintainer chooses the transport and
-accepts the delivery/control tradeoffs below. Webhook admission remains an alternative
+not enable live use until the maintainer accepts the delivery/control tradeoffs below. Webhook admission remains an alternative
 if stronger provider-origin evidence is required from the first implementation.
 
 The standalone Realtime API also supports ephemeral browser credentials. A server audio
@@ -37,7 +38,7 @@ about server-side control of the same call.
 | Media format | SDK manages negotiation; do not impose standalone PCM settings | PCM16 at 24 kHz in the documented browser guide |
 | Backend audio required | No | No, when using the documented ephemeral flow |
 | Same-session backend sideband | Not established by the reviewed SDK/token docs | Not established; server-side SDK connection docs are not yet published |
-| Current repo support | Not implemented | Not implemented |
+| Current repo support | Draft bootstrap and callback boundary only | Not implemented |
 
 Agents voice sessions use WebRTC by default; a private session passes a conversation
 token to `Conversation.startSession`. The token API returns `token` and
@@ -196,5 +197,6 @@ These are requirements for a future implementation, not active Settings fields o
   close confirmation, quotas, browser audio timing, iOS/Android audio and hosted CSP. Until
   then, document offline verification separately from live acceptance.
 
-No provider implementation is authorized merely by merging this evaluation. The next
-decision is Agents client-tool bridge, Agents webhook admission, or standalone Realtime.
+The maintainer selected Agents for the implementation draft on 2026-11-02. Bootstrap
+and callback contracts are implemented offline; the remaining browser, admission,
+delivery and lifecycle gates above still apply before enabling voice sessions.

@@ -28,6 +28,14 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("VOICE_ADAPTER", "VOICE_VOICE_PROVIDER"),
         description="Voice adapter. VOICE_VOICE_PROVIDER is a deprecated alias.",
     )
+    elevenlabs_enabled: bool = False
+    elevenlabs_api_key: SecretStr = Field(
+        default=SecretStr(""), validation_alias="ELEVENLABS_API_KEY"
+    )
+    elevenlabs_agent_id: str = Field(
+        default="", max_length=200, pattern=r"^(agent_[a-zA-Z0-9_-]+)?$"
+    )
+    elevenlabs_timeout_seconds: float = Field(default=3, gt=0, le=5)
     realtime_model: str = "gpt-realtime"
     model: str = "gpt-live-1"
     voice: str = "marin"
@@ -90,6 +98,18 @@ class Settings(BaseSettings):
     connect_timeout_seconds: float = Field(default=20, gt=0)
     close_timeout_seconds: float = Field(default=5, gt=0)
     max_body_bytes: int = Field(default=65536, ge=1024, le=1048576)
+
+    @model_validator(mode="after")
+    def validate_elevenlabs(self) -> "Settings":
+        if self.elevenlabs_enabled and self.environment != "development":
+            message = "ElevenLabs bootstrap preview is development-only until lifecycle acceptance"
+            raise ValueError(message)
+        if self.elevenlabs_enabled and (
+            not self.elevenlabs_api_key.get_secret_value() or not self.elevenlabs_agent_id
+        ):
+            message = "ElevenLabs preview requires ELEVENLABS_API_KEY and VOICE_ELEVENLABS_AGENT_ID"
+            raise ValueError(message)
+        return self
 
     @model_validator(mode="after")
     def validate_web_search(self) -> "Settings":
