@@ -1,6 +1,8 @@
 """Canonical adapter names and actual Chat Completions payloads, with no provider calls."""
 
 import json
+import os
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -8,7 +10,7 @@ import pytest
 from langchain_core.messages import AnyMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from pydantic import ValidationError
-from voice_delegate.config import Settings
+from voice_delegate.config import Settings, load_settings
 from voice_delegate_agent import graph
 from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
 
@@ -16,6 +18,7 @@ from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
 def test_adapter_alias_precedence_and_programmatic_configuration(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Canonical aliases win within a source while constructor overrides retain priority."""
     monkeypatch.setenv("VOICE_VOICE_PROVIDER", "realtime")
     assert Settings().voice_provider == "realtime"
     monkeypatch.setenv("VOICE_ADAPTER", "live")
@@ -30,6 +33,7 @@ def test_adapter_alias_precedence_and_programmatic_configuration(
 def test_default_worker_model_is_luna_and_explicit_override_is_preserved(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """A new default must not override an explicitly selected worker model."""
     monkeypatch.delenv("VOICE_WORKER_MODEL", raising=False)
     assert Settings().worker_model == DEFAULT_WORKER_MODEL == "gpt-6-luna"
     monkeypatch.setenv("VOICE_WORKER_MODEL", "explicit-test-model")
@@ -41,9 +45,11 @@ async def test_worker_serializes_supported_tool_and_final_requests(
     model: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Exercise the actual SDK serialization with a fake HTTP transport."""
     captured: list[dict[str, Any]] = []
 
     def respond(request: httpx.Request) -> httpx.Response:
+        """Return deterministic completion envelopes and capture only fixture requests."""
         assert request.url.path == "/v1/chat/completions"
         body = json.loads(request.content)
         captured.append(body)
@@ -84,6 +90,7 @@ async def test_worker_serializes_supported_tool_and_final_requests(
     async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
 
         def local_client(**kwargs: Any) -> ChatOpenAI:
+            """Inject a fake transport into the real SDK client."""
             return ChatOpenAI(**kwargs, http_async_client=http)
 
         monkeypatch.setattr(graph, "ChatOpenAI", local_client)
@@ -106,3 +113,29 @@ async def test_worker_serializes_supported_tool_and_final_requests(
             assert "reasoning_effort" not in body
     assert captured[0]["parallel_tool_calls"] is False
     assert "tools" not in captured[1]
+
+
+@pytest.mark.parametrize(
+    ("process_name", "file_name"),
+    [
+        ("VOICE_ADAPTER", "VOICE_VOICE_PROVIDER"),
+        ("VOICE_VOICE_PROVIDER", "VOICE_ADAPTER"),
+    ],
+)
+def test_process_adapter_overrides_dotenv_across_aliases_without_mutating_environment(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    process_name: str,
+    file_name: str,
+) -> None:
+    """A deprecated process override still outranks the canonical name in dotenv."""
+    for key in list(os.environ):
+        if key.startswith("VOICE_"):
+            monkeypatch.delenv(key)
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(f"{file_name}=live\nVOICE_WORKER_MODEL=file-model\n")
+    monkeypatch.setenv(process_name, "realtime")
+    assert load_settings().voice_provider == "realtime"
+    assert load_settings().worker_model == "file-model"
+    assert file_name not in os.environ
+    assert "VOICE_WORKER_MODEL" not in os.environ

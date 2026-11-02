@@ -8,7 +8,7 @@ From that root, run:
 
 ```bash
 uv sync --locked
-cp .env.example .env  # First setup only; preserve an existing .env and its keys.
+if [ ! -e .env ]; then cp .env.example .env; fi
 cd frontend
 pnpm install --frozen-lockfile
 cd ..
@@ -273,7 +273,9 @@ Do not put a real key in `.env.example` or commit your `.env`.
 Start `make be`, `make fe`, then run `make invite` in another terminal to copy the
 local invitation. Empty invite settings in this file are intentional: the local
 launcher supplies its generated invitation to the backend process. A direct uvicorn
-launch instead needs its own configured access code or named invitation.
+launch does not inject that invitation. With both authentication settings empty,
+development requests require no access code. Configure an access code or named
+invitation explicitly if you want authentication for direct uvicorn startup.
 
 Keep optional features off for an initial baseline. Then opt in deliberately:
 

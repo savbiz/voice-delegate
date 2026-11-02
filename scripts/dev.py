@@ -65,6 +65,7 @@ def backend_environment(root: Path) -> dict[str, str]:
 
 
 def main() -> None:
+    """Start the loopback backend or explicitly display its generated local invitation."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("be", "invite"))
     arguments = parser.parse_args()

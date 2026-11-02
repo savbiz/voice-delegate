@@ -101,6 +101,7 @@ class OpenAIPlanner:
     """Explicitly enabled paid text model with no implicit retries."""
 
     def __init__(self, api_key: str, model: str, *, tools: Sequence[BaseTool] = TOOLS) -> None:
+        """Create a bounded text client with model-specific tool-call compatibility."""
         self.client = ChatOpenAI(
             model=model,
             api_key=SecretStr(api_key),

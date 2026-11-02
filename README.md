@@ -25,7 +25,7 @@ repository root, install dependencies once:
 
 ```sh
 uv sync --locked
-cp .env.example .env  # First setup only; preserve an existing .env and its keys.
+if [ ! -e .env ]; then cp .env.example .env; fi
 cd frontend
 pnpm install --frozen-lockfile
 cd ..

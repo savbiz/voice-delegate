@@ -3,7 +3,6 @@
 from typing import Literal
 from urllib.parse import urlsplit
 
-from dotenv import load_dotenv
 from pydantic import AliasChoices, Field, HttpUrl, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
@@ -223,5 +222,5 @@ class Settings(BaseSettings):
 
 def load_settings() -> Settings:
     """Read a local .env without overriding the process environment."""
-    load_dotenv(override=False)
-    return Settings()
+    # BaseSettings loads dotenv separately, preserving process precedence across aliases.
+    return Settings(_env_file=".env")  # type: ignore[call-arg]

@@ -186,6 +186,7 @@ async def compare_planners(
     output_rate: float | None = None,
     decision_rate: float = 0.1,
 ) -> dict[str, Any]:
+    """Compare action selection with bounded calls and explicit offline or paid mode."""
     from .worker_eval import metadata, score
 
     budget = CallBudget(maximum)

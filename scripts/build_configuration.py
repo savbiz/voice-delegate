@@ -15,6 +15,7 @@ OUTPUT = ROOT / "docs/configuration.md"
 
 
 def validator_source() -> str:
+    """Extract cross-field validation rules without loading configured values."""
     source = inspect.getsource(Settings)
     tree = ast.parse(source)
     validators = [
@@ -29,6 +30,7 @@ def validator_source() -> str:
 
 
 def build() -> str:
+    """Render all declared defaults, aliases and constraints without reading secrets."""
     schema = Settings.model_json_schema(by_alias=False)["properties"]
     lines = [
         "# Configuration",
@@ -150,6 +152,7 @@ def build() -> str:
 
 
 def main() -> None:
+    """Write the configuration reference or fail when its checked-in copy has drifted."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()

@@ -178,6 +178,7 @@ def metadata(mode: str, model: str, judge: str | None) -> dict[str, Any]:
 async def run_cases(
     cases: list[dict[str, Any]], mode: str, model: str, maximum: int, judge_model: str | None = None
 ) -> dict[str, Any]:
+    """Evaluate bounded cases with the selected planner and optional separate judge."""
     budget = Budget(maximum)
     paid = mode == "openai"
     planner = OpenAIPlanner(os.environ["OPENAI_API_KEY"], model) if paid else OfflinePlanner()
@@ -353,6 +354,7 @@ def upload(report: dict[str, Any], cases: list[dict[str, Any]], project: str) ->
 
 
 def main() -> None:
+    """Run the selected evaluation mode and write its explicitly scoped report."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=["offline", "openai"], default="offline")
     parser.add_argument("--model", default=DEFAULT_WORKER_MODEL)

@@ -824,12 +824,12 @@
     "digest": "06770d137a7c7db7b1a28e8fe89ed5e20c1abdc740de0a02b13777613963e08f"
   },
   {
-    "id": "d9585bab98766265",
+    "id": "4f7abd5c24966ec0",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Copyable local configuration",
-    "text": "Start `make be`, `make fe`, then run `make invite` in another terminal to copy the\nlocal invitation. Empty invite settings in this file are intentional: the local\nlauncher supplies its generated invitation to the backend process. A direct uvicorn\nlaunch instead needs its own configured access code or named invitation.",
-    "digest": "d9585bab9876626573b549142c6f9610aa25e1aa1673df149e05b1e5e2c64755"
+    "text": "Start `make be`, `make fe`, then run `make invite` in another terminal to copy the\nlocal invitation. Empty invite settings in this file are intentional: the local\nlauncher supplies its generated invitation to the backend process. A direct uvicorn\nlaunch does not inject that invitation. With both authentication settings empty,\ndevelopment requests require no access code. Configure an access code or named\ninvitation explicitly if you want authentication for direct uvicorn startup.",
+    "digest": "4f7abd5c24966ec0dd92852ee48125dd18c36d5003df5e9d9da4bae69bd8fe12"
   },
   {
     "id": "aafcf126d3ddbd70",

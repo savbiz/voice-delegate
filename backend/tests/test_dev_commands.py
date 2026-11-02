@@ -11,12 +11,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_default_make_target_only_shows_help() -> None:
+    """Default make must show instructions without starting either service."""
     result = subprocess.run(["make", "-s"], cwd=ROOT, capture_output=True, text=True, check=True)
     assert "make be" in result.stdout
     assert "make fe" in result.stdout
 
 
 def test_dev_launchers_use_repo_paths_and_explicit_frontend_api(tmp_path: Path) -> None:
+    """Stub executables verify working directories and local API selection."""
     for executable in ("uv", "pnpm"):
         command = tmp_path / executable
         command.write_text('#!/bin/sh\nprintf "%s\\n" "$PWD" "$VITE_API_BASE_URL" "$@"\n')
@@ -45,6 +47,7 @@ def test_dev_launchers_use_repo_paths_and_explicit_frontend_api(tmp_path: Path) 
 
 
 def test_generated_local_invitation_is_stable_private_and_accepted(tmp_path: Path) -> None:
+    """Generated admission must be reusable, owner-only and valid for the backend."""
     from pydantic import SecretStr
     from voice_delegate.admission.policy import Admission
     from voice_delegate.config import Settings
@@ -66,6 +69,7 @@ def test_generated_local_invitation_is_stable_private_and_accepted(tmp_path: Pat
 def test_local_launcher_preserves_env_file_and_model_options(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Local auth overrides must not replace model options or rewrite the private file."""
     from scripts.dev import backend_environment, invitation
 
     for name in list(os.environ):
@@ -86,6 +90,7 @@ def test_local_launcher_preserves_env_file_and_model_options(
 def test_local_launcher_refuses_public_configuration(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """The local shortcut must not launch a production/public configuration."""
     from scripts.dev import backend_environment
 
     monkeypatch.setenv("VOICE_ENVIRONMENT", "production")
