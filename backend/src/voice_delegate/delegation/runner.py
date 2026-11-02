@@ -9,6 +9,7 @@ from time import monotonic
 from opentelemetry import trace
 from opentelemetry.context import Context
 from voice_delegate_agent.reference import Source, WorkerResult
+from voice_delegate_agent.usage import UsageSink, usage_sink
 
 from voice_delegate.limits.results import clip_worker_result
 from voice_delegate.observability.metrics import Metrics
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 class DelegationState:
     """Per-session work_generation, deduplication and UI status without storing results."""
 
+    usage: UsageSink | None = None
     work_generation: int = 0
     task: asyncio.Task[None] | None = None
     seen: set[str] = field(default_factory=set)
@@ -130,9 +132,10 @@ class DelegationRunner:
                         "failed",
                     )
                 else:
-                    child = asyncio.create_task(
-                        self.worker.delegate_task(request.goal, request.context)
-                    )
+                    with usage_sink(state.usage):
+                        child = asyncio.create_task(
+                            self.worker.delegate_task(request.goal, request.context)
+                        )
                     self.work.add(child)
                     child.add_done_callback(self._finished)
                     done, _ = await asyncio.wait({child}, timeout=self.timeout)

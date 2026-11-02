@@ -7,6 +7,7 @@ from uuid import uuid4
 
 import httpx
 from voice_delegate_agent.reference import WorkerResult, source_by_id
+from voice_delegate_agent.usage import Usage, note
 
 from voice_delegate.config import Settings
 from voice_delegate.delegation.contracts import WorkerBusy
@@ -24,6 +25,7 @@ class RemoteWorker:
         }
 
     async def delegate_task(self, goal: str, context: str) -> WorkerResult:
+        received_usage = False
         key = str(uuid4())
         url = f"{self.base}/jobs/{key}"
         try:
@@ -45,6 +47,9 @@ class RemoteWorker:
                 response = await self.http.get(url, headers=self.headers)
                 response.raise_for_status()
                 result = JobOutput.model_validate_json(response.content)
+                if result.status != "running":
+                    note(result.usage)
+                    received_usage = True
                 if result.status == "completed" or (result.status == "failed" and result.text):
                     if result.web_sources and not self.settings.web_search:
                         message = "Remote worker web evidence was not enabled"
@@ -63,6 +68,8 @@ class RemoteWorker:
                     raise RuntimeError(message)
                 await asyncio.sleep(0.2)
         finally:
+            if not received_usage:
+                note(Usage(uncertain=True))
             # Tombstone even after ambiguous POST failures; never resubmit this task.
             with suppress(httpx.HTTPError, TimeoutError):
                 async with asyncio.timeout(3):

@@ -390,6 +390,10 @@ still provisions only Prometheus. No queryable trace storage or live result is i
 
 The [Agents integration](elevenlabs.md) uses direct browser WebRTC media and an authenticated async server webhook for delegate_task. The existing local/remote worker and silence-gated portfolio stay on the backend; the browser supplies owned activity/transcript observations but never submits tools or polls results. Exact goals coalesce per conversation, and HTTP responses carry bounded results. Provider finalization requires status evidence; live acceptance remains pending. See the [transport evaluation](elevenlabs-transport.md).
 
+## Session accounting
+
+[Cost estimates](cost-estimates.md) are opt-in, session-scoped numeric ledgers with frozen price assumptions, remote usage propagation and fixed aggregate component labels.
+
 ## Sources
 
 Reviewed public documentation on 2026-09-20:

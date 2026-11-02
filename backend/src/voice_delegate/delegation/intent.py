@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from voice_delegate_agent.reference import Source, WorkerResult
+from voice_delegate_agent.usage import UsageSink, usage_sink
 
 from voice_delegate.config import Settings
 from voice_delegate.debug import DebugRecording
@@ -35,6 +36,7 @@ class Job:
     finished: float | None = None
     work_finished: float | None = None
     debug: DebugRecording | None = None
+    usage: UsageSink | None = None
     settled: bool = False
     task: asyncio.Task[None] | None = None
     delivery: asyncio.Task[None] | None = None
@@ -58,6 +60,7 @@ class Job:
 
 @dataclass
 class Portfolio:
+    usage: UsageSink | None = None
     debug: DebugRecording | None = None
     jobs: dict[str, Job] = field(default_factory=dict)
     generation: int = 0
@@ -110,7 +113,14 @@ class IntentRunner:
             return None
         if len(state.jobs) >= self.runner.request_limit:
             return Commentary(identity, "Delegation limit reached")
-        job = Job(identity, request.goal[:512], self.clock(), transport, debug=state.debug)
+        job = Job(
+            identity,
+            request.goal[:512],
+            self.clock(),
+            transport,
+            debug=state.debug,
+            usage=state.usage,
+        )
         state.jobs[identity] = job
         if len(state.active) > self.settings.max_inflight_tasks:
             job.status = "busy"
@@ -133,9 +143,10 @@ class IntentRunner:
                         "Please repeat the task; no usable transcript is available."
                     )
                 else:
-                    child = asyncio.create_task(
-                        self.runner.worker.delegate_task(request.goal, request.context)
-                    )
+                    with usage_sink(job.usage):
+                        child = asyncio.create_task(
+                            self.runner.worker.delegate_task(request.goal, request.context)
+                        )
                     self.runner.work.add(child)
                     child.add_done_callback(self.runner._finished)
                     done, _ = await asyncio.wait({child}, timeout=self.runner.timeout)
@@ -340,7 +351,7 @@ class IntentRunner:
             )
         )
         try:
-            with self.runner.metrics.operation("decision.cancel"):
+            with usage_sink(state.usage), self.runner.metrics.operation("decision.cancel"):
                 async with asyncio.timeout(self.settings.decisions_timeout_seconds):
                     result = await decider.decide(text, questions)
             cost = result.input_tokens * self.settings.decisions_input_usd_per_million / 1000000

@@ -210,6 +210,7 @@ def build_router(
                 )
                 for j in session.portfolio.jobs.values()
             ],
+            costs=session.costs.snapshot() if session.costs else None,
             decision_cost_usd=session.portfolio.decision_cost,
             generation=session.generation,
             sources=session.portfolio.sources
@@ -221,7 +222,10 @@ def build_router(
 
     @router.post("/sessions/{session_id}/close")
     async def close(session: Annotated[Session, Depends(owned)]) -> Closed:
-        return Closed(finalized=await manager.close(session))
+        finalized = await manager.close(session)
+        return Closed(
+            finalized=finalized, costs=session.costs.snapshot() if session.costs else None
+        )
 
     @router.post("/sessions/{session_id}/interrupt")
     async def interrupt(

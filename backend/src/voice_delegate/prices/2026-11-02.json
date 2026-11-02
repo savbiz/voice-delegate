@@ -1,0 +1,42 @@
+{
+  "version": "2026-11-02-public-assumptions-v1",
+  "date": "2026-11-02",
+  "rates": {
+    "voice.live.second": {
+      "usd": 0.0008333333333333334,
+      "source": "https://developers.openai.com/api/docs/models/gpt-live-1"
+    },
+    "voice.realtime.second": {
+      "usd": null,
+      "source": "https://developers.openai.com/api/docs/pricing"
+    },
+    "voice.azure.second": {
+      "usd": null,
+      "source": "https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/"
+    },
+    "voice.elevenlabs.second": {
+      "usd": null,
+      "source": "https://elevenlabs.io/pricing"
+    },
+    "worker.gpt-6-luna.input_token": {
+      "usd": 1.0000000000000001e-07,
+      "source": "https://developers.openai.com/api/docs/models/gpt-6-luna"
+    },
+    "worker.gpt-6-luna.cached_token": {
+      "usd": 1e-08,
+      "source": "https://developers.openai.com/api/docs/models/gpt-6-luna"
+    },
+    "worker.gpt-6-luna.output_token": {
+      "usd": 5e-07,
+      "source": "https://developers.openai.com/api/docs/models/gpt-6-luna"
+    },
+    "decisions.input_token": {
+      "usd": 1.0000000000000001e-07,
+      "source": "https://developers.openai.com/api/docs/models/gpt-6-luna"
+    },
+    "tavily.basic_search": {
+      "usd": 0.008,
+      "source": "https://docs.tavily.com/documentation/api-credits"
+    }
+  }
+}

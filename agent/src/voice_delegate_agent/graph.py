@@ -22,6 +22,7 @@ from .model_config import chat_reasoning_effort
 from .prompts import worker_prompt
 from .reference import Source, WorkerResult, source_by_id
 from .tools import TOOLS
+from .usage import external_call, model_usage
 from .web_search import verified_web_source
 
 INSTRUCTIONS = worker_prompt()
@@ -114,19 +115,23 @@ class OpenAIPlanner:
 
     async def respond(self, messages: list[AnyMessage]) -> AIMessage:
         """Call the bound text model; cancellation propagates through await."""
-        answer: object = await self.model.ainvoke(messages)
-        if not isinstance(answer, AIMessage):
-            message = "Unexpected worker response"
-            raise ValueError(message)  # noqa: TRY004 - explicit worker boundary contract
-        return answer
+        with external_call("worker_calls"):
+            answer: object = await self.model.ainvoke(messages)
+            if not isinstance(answer, AIMessage):
+                message = "Unexpected worker response"
+                raise ValueError(message)  # noqa: TRY004 - explicit worker boundary contract
+            model_usage(answer.usage_metadata)
+            return answer
 
     async def respond_final(self, messages: list[AnyMessage]) -> AIMessage:
         """Generate final prose without advertising tools to the text model."""
-        answer: object = await self.client.ainvoke(messages)
-        if not isinstance(answer, AIMessage):
-            message = "Unexpected worker response"
-            raise ValueError(message)  # noqa: TRY004 - explicit worker boundary contract
-        return answer
+        with external_call("worker_calls"):
+            answer: object = await self.client.ainvoke(messages)
+            if not isinstance(answer, AIMessage):
+                message = "Unexpected worker response"
+                raise ValueError(message)  # noqa: TRY004 - explicit worker boundary contract
+            model_usage(answer.usage_metadata)
+            return answer
 
     async def aclose(self) -> None:
         """Release the text model HTTP pools during application shutdown."""

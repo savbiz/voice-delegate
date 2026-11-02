@@ -8,6 +8,8 @@ from typing import Annotated, Literal
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from voice_delegate_agent.usage import Usage as RecordedUsage
+from voice_delegate_agent.usage import external_call, note
 
 from . import Choice, Decision, DecisionError, Predicate, Question, Selection
 
@@ -62,6 +64,12 @@ class OpenAIDecider:
         self._timeout = timeout
 
     async def decide(self, text: str, questions: tuple[Question, ...]) -> Decision:
+        with external_call("decision_calls"):
+            result = await self._decide(text, questions)
+            note(RecordedUsage(decision_tokens=result.input_tokens))
+            return result
+
+    async def _decide(self, text: str, questions: tuple[Question, ...]) -> Decision:
         if (
             len(text.encode()) > 32768
             or not 1 <= len(questions) <= 4

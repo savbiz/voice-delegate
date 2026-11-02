@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Literal
 
+from voice_delegate.costs import CostLedger
 from voice_delegate.debug import DebugRecording
 from voice_delegate.delegation.history import History
 from voice_delegate.delegation.intent import Portfolio
@@ -30,6 +31,7 @@ class Session:
     recap: Recap = field(default_factory=Recap)
     principal: str = field(default="local", repr=False)
     debug: DebugRecording | None = field(default=None, repr=False)
+    costs: CostLedger | None = None
     connection: RealtimeConnection | None = None
     watcher: asyncio.Task[None] | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)

@@ -1,3 +1,4 @@
+import type { CostSummary } from './costs';
 /** SDK media and UI events; tools execute over authenticated server webhooks. */
 import type { PartialOptions, VoiceConversation } from '@elevenlabs/client';
 import type { LiveStore, TaskStatus } from './store';
@@ -167,6 +168,7 @@ export function elevenSession(
         delegation: string;
         tasks: TaskStatus[];
         sources: Source[];
+        costs?: CostSummary;
         decision_cost_usd: number;
         recap: { latest_request: string; latest_reply: string; interrupted: boolean };
       }>('/heartbeat')
@@ -176,6 +178,7 @@ export function elevenSession(
           store.update({
             tasks: state.tasks,
             sources: state.sources,
+            costs: state.costs,
             decisionCostUsd: state.decision_cost_usd,
             recap: recapText(state.recap),
           });

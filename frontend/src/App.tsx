@@ -1,3 +1,4 @@
+import { costText } from './realtime/costs';
 /** React shell separating a free scripted demo from the live WebRTC lifecycle. */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { canStartVoice } from './native';
@@ -287,6 +288,7 @@ function Live({ code }: { code: string }) {
       <details className="secondary-panel">
         <summary>Connection timings</summary>
         <p>{state.audioTimingStatus}</p>
+        {state.costs && <p role="status">{costText(state.costs)}</p>}
         {state.intentCancellation && (
           <p>
             Estimated Decisions input cost: ${state.decisionCostUsd.toFixed(6)} (configured rate;

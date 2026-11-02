@@ -15,6 +15,7 @@ from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 
 from voice_delegate.admission.policy import Admission
 from voice_delegate.config import Settings
+from voice_delegate.costs import CostLedger, Prices
 from voice_delegate.debug import DebugRecording, purge_recordings
 from voice_delegate.decisions import Decider
 from voice_delegate.decisions.openai import OpenAIDecider
@@ -81,6 +82,7 @@ class SessionManager:
                 timeout=settings.decisions_timeout_seconds,
             )
         self.intent = IntentRunner(self.delegator, settings, clock, self.decider)
+        self.prices = Prices.load(settings.price_file) if settings.cost_estimates else None
         self.provider = provider
         self.fallback = fallback
         self.settings = settings
@@ -123,6 +125,16 @@ class SessionManager:
             except OSError as exc:
                 self.admission.release(session.id)
                 raise SessionError(503, "Debug recording unavailable") from exc
+        if self.prices is not None:
+            session.costs = CostLedger(
+                self.prices,
+                self.settings.voice_provider,
+                self.settings.worker_model,
+                self.clock,
+                self.metrics,
+            )
+            session.portfolio.usage = session.costs.record
+            session.delegation.usage = session.costs.record
         session.portfolio.debug = session.debug
         self.sessions[session.id] = session
         return session
@@ -175,6 +187,8 @@ class SessionManager:
                     raise SessionError(504, "Provider connection timed out") from exc
                 raise
             session.state = "connected"
+            if session.costs is not None:
+                session.costs.connect()
             if self.settings.intent_cancellation:
                 session.portfolio.pump = asyncio.create_task(
                     self._deliver(session), name="pending-delivery"
@@ -187,6 +201,8 @@ class SessionManager:
         """Attach owned SDK events to the same work, cancellation and delivery lifecycle."""
         session.connection = connection
         session.state = "connected"
+        if session.costs is not None:
+            session.costs.connect()
         if self.settings.intent_cancellation:
             session.portfolio.pump = asyncio.create_task(
                 self._deliver(session), name="pending-delivery"
@@ -433,6 +449,8 @@ class SessionManager:
                             config=config, offer_sdp=offer_sdp
                         )
                     session.state = "connected"
+                    if session.costs is not None:
+                        session.costs.connect("azure")
                     session.watcher = asyncio.create_task(
                         self._watch(session), name="fallback-events"
                     )
@@ -470,6 +488,8 @@ class SessionManager:
                     await asyncio.gather(watcher, return_exceptions=True)
                 if session.debug:
                     session.debug.close(session.finalized and session.previous_finalized)
+                if session.costs is not None:
+                    session.costs.close(session.finalized and session.previous_finalized)
                 session.state = "closed"
                 self.sessions.pop(session.id, None)
                 self.admission.release(session.id)

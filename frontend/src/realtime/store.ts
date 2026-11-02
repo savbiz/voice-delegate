@@ -1,4 +1,5 @@
 /** Immutable display state and pure provider-event transitions. */
+import type { CostSummary } from './costs';
 import type { AudioTiming } from './audio-timing';
 import type { Source } from '../reference';
 
@@ -41,6 +42,7 @@ export type LiveState = {
   transport: 'webrtc' | 'elevenlabs';
   intentCancellation: boolean;
   tasks: TaskStatus[];
+  costs?: CostSummary;
   decisionCostUsd: number;
   phase: Phase;
   status: string;

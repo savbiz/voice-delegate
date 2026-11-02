@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .limits import QUERY_MAX_CHARS, SOURCE_PREVIEW_CHARS
 from .reference import Source, search
+from .usage import external_call
 
 RESPONSE_BYTES = 65536
 RESULTS = 3
@@ -133,6 +134,10 @@ class TavilySearch:
         )
 
     async def _request(self, query: str) -> list[object]:
+        with external_call("web_calls"):
+            return await self._request_inner(query)
+
+    async def _request_inner(self, query: str) -> list[object]:
         raw = bytearray()
         async with asyncio.timeout(self.timeout):
             async with self.http.stream(

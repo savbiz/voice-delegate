@@ -98,3 +98,6 @@ does not imply that media is connected or that upstream closure is confirmed.
 - **Agents SDK transport:** optional ElevenLabs WebRTC media with owner-authenticated
   client events and authenticated asynchronous server-tool responses. It does not expose
   an SDP answer or imply that a browser disconnect confirms upstream finalization.
+
+- **Cost snapshot**: session-local estimate from numeric usage and a frozen price version;
+  partial when usage or rates are missing, never a provider invoice.

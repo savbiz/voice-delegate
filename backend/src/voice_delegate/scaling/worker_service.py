@@ -6,13 +6,14 @@ import logging
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager, suppress
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from secrets import compare_digest
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from voice_delegate_agent.reference import Source
+from voice_delegate_agent.usage import Usage, usage_sink
 from voice_delegate_agent.web_search import verified_web_source
 
 from voice_delegate.config import Settings, load_settings
@@ -30,6 +31,7 @@ class JobInput(BaseModel):
 
 
 class JobOutput(BaseModel):
+    usage: Usage = Usage(uncertain=True)
     status: str
     text: str = ""
     source_ids: tuple[str, ...] = ()
@@ -50,6 +52,11 @@ class JobOutput(BaseModel):
 class Job:
     fingerprint: str
     expires: float
+    usage: Usage = field(default_factory=Usage)
+
+    def record_usage(self, usage: Usage) -> None:
+        self.usage = self.usage.plus(usage)
+
     task: asyncio.Task[None] | None = None
     status: str = "running"
     text: str = ""
@@ -115,7 +122,8 @@ class Jobs:
                     max(0.001, body.deadline - time.time()),
                 )
             ):
-                result = await self.worker.delegate_task(body.goal, body.context)
+                with usage_sink(job.record_usage):
+                    result = await self.worker.delegate_task(body.goal, body.context)
             if job.status != "cancelled":
                 result = clip_worker_result(result, self.settings.delegation_result_tokens)
                 job.text = result.text
@@ -197,7 +205,11 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
         if job is None:
             raise HTTPException(404, "Job not found or expired")
         return JobOutput(
-            status=job.status, text=job.text, source_ids=job.source_ids, web_sources=job.web_sources
+            status=job.status,
+            text=job.text,
+            source_ids=job.source_ids,
+            web_sources=job.web_sources,
+            usage=job.usage,
         )
 
     @app.delete("/jobs/{key}")
