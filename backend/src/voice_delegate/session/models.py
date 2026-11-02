@@ -31,6 +31,7 @@ class Session:
     recap: Recap = field(default_factory=Recap)
     principal: str = field(default="local", repr=False)
     debug: DebugRecording | None = field(default=None, repr=False)
+    adapter: str = ""
     costs: CostLedger | None = None
     connection: RealtimeConnection | None = None
     watcher: asyncio.Task[None] | None = None

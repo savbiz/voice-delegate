@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 class VoicePreferences(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    adapter: Literal["live", "realtime", "azure", "elevenlabs"] | None = None
     debug_recording: bool = False
     language: Literal["auto", "it", "en", "es", "fr", "de"] = "auto"
     mode: Literal["conversation", "translate"] = "conversation"

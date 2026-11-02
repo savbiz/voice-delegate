@@ -394,6 +394,10 @@ The [Agents integration](elevenlabs.md) uses direct browser WebRTC media and an 
 
 [Cost estimates](cost-estimates.md) are opt-in, session-scoped numeric ledgers with frozen price assumptions, remote usage propagation and fixed aggregate component labels.
 
+## Session provider selection
+
+The [session UI](session-ui.md) selects from a server-owned adapter registry before creation; each session keeps its provider, while ElevenLabs never uses Azure recovery.
+
 ## Sources
 
 Reviewed public documentation on 2026-09-20:

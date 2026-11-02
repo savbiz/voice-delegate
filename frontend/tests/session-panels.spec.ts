@@ -1,0 +1,71 @@
+import { expect, test } from '@playwright/test';
+import { installFakePeers } from './fixtures';
+
+test('mobile session chooses a server-enabled provider and retains final costs', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(installFakePeers);
+  await page.clock.install();
+  const selected: unknown[] = [];
+  const cost = {
+    version: 'offline-fixture',
+    price_date: '2026-11-02',
+    estimated_usd: 0.012,
+    components: { voice: 0.01, worker: 0.002 },
+    usage: { worker_calls: 1, decision_calls: 0, web_calls: 0, uncertain: false },
+    voice_seconds: 12,
+    partial: false,
+    unpriced: [],
+    final: false,
+  };
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/config'))
+      return route.fulfill({
+        json: {
+          session_ui: true,
+          adapter: 'live',
+          available_adapters: ['live', 'realtime', 'elevenlabs'],
+          voice_available: true,
+          intent_cancellation: true,
+        },
+      });
+    if (path.endsWith('/sessions')) {
+      selected.push(route.request().postDataJSON());
+      return route.fulfill({ json: { id: 'owned', key: 'fixture' } });
+    }
+    if (path.endsWith('/heartbeat'))
+      return route.fulfill({
+        json: { state: 'connected', delegation: 'idle', tasks: [], costs: cost },
+      });
+    if (path.endsWith('/close'))
+      return route.fulfill({ json: { finalized: true, costs: { ...cost, final: true } } });
+    return route.fulfill({ json: { sdp: 'v=0\r\n' } });
+  });
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  const provider = page.getByRole('combobox', { name: 'Voice provider', exact: false });
+  await expect(provider).toBeVisible();
+  await provider.selectOption('elevenlabs');
+  await page.getByText('Voice settings & recording', { exact: true }).click();
+  await expect(page.getByLabel('Response language')).toBeDisabled();
+  await expect(page.getByLabel('Record audio locally.', { exact: false })).toBeDisabled();
+  await provider.selectOption('realtime');
+  await expect(page.getByLabel('Response language')).toBeEnabled();
+  await page.getByRole('button', { name: 'Start conversation', exact: true }).click();
+  await expect(page.locator('#status')).toContainText('Connected');
+  await expect(provider).toBeDisabled();
+  expect(selected).toEqual([expect.objectContaining({ adapter: 'realtime' })]);
+  await page.clock.runFor(2100);
+  const panel = page.getByRole('region', { name: 'Session cost estimate' });
+  await expect(panel).toContainText('$0.012000');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.screenshot({ path: test.info().outputPath('mobile-session.png'), fullPage: true });
+  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+  await expect(panel).toContainText('Finished');
+  await expect(provider).toBeEnabled();
+  await expect(page.getByLabel('Observed audio activity')).toHaveCount(0);
+});

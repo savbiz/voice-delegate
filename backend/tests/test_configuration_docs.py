@@ -45,6 +45,7 @@ def test_server_template_boots_with_optional_features_off(
         "VOICE_ALLOWED_ORIGIN",
         "VOICE_COST_ESTIMATES",
         "VOICE_PRICE_FILE",
+        "VOICE_SESSION_UI",
         "VOICE_ELEVENLABS_ENABLED",
         "ELEVENLABS_API_KEY",
         "VOICE_ELEVENLABS_AGENT_ID",

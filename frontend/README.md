@@ -63,3 +63,7 @@ The opt-in ElevenLabs Agents SDK uses the media signaling host
 to the single application API host. Backend configuration still controls availability;
 this CSP allowance does not start a session. Native builds keep their existing
 restricted policy and do not support this transport yet.
+
+Optional [session controls](../docs/session-ui.md) expose a server-controlled provider selector,
+observed audio activity and a separate cost panel. Flags default off; live/device acceptance
+is tracked separately from browser tests.

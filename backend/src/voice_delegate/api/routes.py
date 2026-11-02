@@ -74,12 +74,14 @@ def build_router(
         return {"diagnostic_id": feedback.submit(principal, body, manager.settings.voice_provider)}
 
     @router.post("/config")
-    async def configuration() -> dict[str, object]:
+    async def configuration(body: VoicePreferences | None = None) -> dict[str, object]:
+        adapter = manager.select_adapter(body.adapter if body else None)
         return {
-            "transport": "elevenlabs_agents_webrtc"
-            if manager.settings.voice_provider == "elevenlabs"
-            else "webrtc",
-            "audio_recording_available": manager.settings.voice_provider != "elevenlabs",
+            "adapter": adapter,
+            "session_ui": manager.settings.session_ui,
+            "available_adapters": list(manager.providers) if manager.settings.session_ui else [],
+            "transport": "elevenlabs_agents_webrtc" if adapter == "elevenlabs" else "webrtc",
+            "audio_recording_available": adapter != "elevenlabs",
             "debug_recording_available": manager.settings.debug_recording,
             "audio_timing_available": manager.settings.audio_timing,
             "intent_cancellation": manager.settings.intent_cancellation,
@@ -89,9 +91,9 @@ def build_router(
             ),
             "voice_available": bool(
                 manager.settings.elevenlabs_api_key.get_secret_value()
-                if manager.settings.voice_provider == "elevenlabs"
+                if adapter == "elevenlabs"
                 else manager.settings.azure_api_key.get_secret_value()
-                if manager.settings.voice_provider == "azure"
+                if adapter == "azure"
                 else manager.settings.openai_api_key.get_secret_value()
             ),
         }
@@ -217,7 +219,9 @@ def build_router(
             if manager.settings.intent_cancellation
             else session.delegation.sources,
             recap=session.recap,
-            fallback_available=manager.fallback is not None and not session.fallback_used,
+            fallback_available=manager.fallback is not None
+            and session.adapter != "elevenlabs"
+            and not session.fallback_used,
         )
 
     @router.post("/sessions/{session_id}/close")
@@ -240,7 +244,7 @@ def build_router(
 
     @router.post("/sessions/{session_id}/elevenlabs/bootstrap")
     async def elevenlabs_bootstrap(session: Annotated[Session, Depends(owned)]) -> dict[str, str]:
-        if elevenlabs is None or manager.settings.voice_provider != "elevenlabs":
+        if elevenlabs is None or session.adapter != "elevenlabs":
             raise HTTPException(501, "ElevenLabs preview is disabled")
         async with session.lock:
             if session.state != "created" or session.sdk_bootstrap_issued:

@@ -78,6 +78,38 @@ def create_app(
         )
         fallback.close_timeout = settings.close_timeout_seconds
         fallback.model, fallback.voice = settings.azure_deployment, settings.azure_voice
+    providers: dict[str, RealtimeProvider] = {settings.voice_provider: provider}
+    if settings.session_ui:
+        if settings.openai_api_key.get_secret_value():
+            if "live" not in providers:
+                live = OpenAILiveProvider(
+                    settings.openai_api_key.get_secret_value(), settings.close_timeout_seconds
+                )
+                live.model, live.voice = settings.model, settings.voice
+                providers["live"] = live
+            if "realtime" not in providers:
+                realtime = OpenAIRealtimeProvider(settings.openai_api_key.get_secret_value())
+                realtime.close_timeout = settings.close_timeout_seconds
+                realtime.model, realtime.voice = settings.realtime_model, settings.voice
+                providers["realtime"] = realtime
+        if (
+            settings.azure_api_key.get_secret_value()
+            and settings.azure_endpoint
+            and "azure" not in providers
+        ):
+            azure = AzureRealtimeProvider(
+                settings.azure_endpoint, settings.azure_api_key.get_secret_value()
+            )
+            azure.close_timeout = settings.close_timeout_seconds
+            azure.model, azure.voice = settings.azure_deployment, settings.azure_voice
+            providers["azure"] = azure
+        if (
+            elevenlabs is not None
+            and settings.intent_cancellation
+            and not settings.native_clients
+            and settings.delegation_timeout_seconds + settings.delivery_timeout_seconds <= 110
+        ):
+            providers["elevenlabs"] = elevenlabs
     telemetry = configure_tracing(settings)
     meter_provider = configure_metrics(settings)
     runtime = build_planner(settings) if settings.worker_execution == "local" else None
@@ -111,6 +143,7 @@ def create_app(
             else LangGraphWorker(planner or OfflinePlanner(), settings.worker_max_steps)
         ),
         fallback=fallback,
+        providers=providers,
     )
 
     @asynccontextmanager
@@ -129,7 +162,7 @@ def create_app(
             with suppress(asyncio.CancelledError):
                 await janitor
             await manager.aclose()
-            if elevenlabs is not None and elevenlabs is not provider:
+            if elevenlabs is not None and "elevenlabs" not in providers:
                 await elevenlabs.aclose()
             if remote is not None:
                 await remote.aclose()

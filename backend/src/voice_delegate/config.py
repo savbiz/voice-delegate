@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     trusted_proxy_hops: int = Field(default=1, ge=1, le=32)
     environment: str = "development"
     api_docs: bool = False
+    session_ui: bool = False
     cost_estimates: bool = False
     price_file: str = ""
     audio_timing: bool = False

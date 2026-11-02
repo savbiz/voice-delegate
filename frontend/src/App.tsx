@@ -1,4 +1,5 @@
-import { costText } from './realtime/costs';
+import { CostPanel, ProviderChoice, SpeakingStatus } from './components/SessionPanels';
+import { voiceOptions, type Adapter, type VoiceOptions } from './realtime/provider-options';
 /** React shell separating a free scripted demo from the live WebRTC lifecycle. */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { canStartVoice } from './native';
@@ -23,6 +24,18 @@ function Live({ code }: { code: string }) {
   const controller = useRef<LiveController | null>(null);
   const codeRef = useRef(code);
   codeRef.current = code;
+  const [options, setOptions] = useState<VoiceOptions>();
+  const [adapter, setAdapter] = useState<Adapter>();
+  const selectedAdapter = adapter ?? options?.adapter;
+  const sdkSelected = selectedAdapter === 'elevenlabs';
+  useEffect(() => {
+    if (!canStartVoice()) return;
+    const abort = new AbortController();
+    void voiceOptions(abort.signal).then((value) => {
+      if (!abort.signal.aborted) setOptions(value);
+    });
+    return () => abort.abort();
+  }, []);
   const [language, setLanguage] = useState('auto');
   const [connectionSounds, setConnectionSounds] = useState(true);
   const soundsRef = useRef(connectionSounds);
@@ -32,8 +45,13 @@ function Live({ code }: { code: string }) {
   const [audioRecording, setAudioRecording] = useState(false);
   const recordingRef = useRef(audioRecording);
   recordingRef.current = audioRecording;
-  const preferences = useRef({ language, mode: voiceMode, debug_recording: debugRecording });
-  preferences.current = { language, mode: voiceMode, debug_recording: debugRecording };
+  const preferences = useRef({
+    language,
+    mode: voiceMode,
+    debug_recording: debugRecording,
+    adapter,
+  });
+  preferences.current = { language, mode: voiceMode, debug_recording: debugRecording, adapter };
   const [muted, setMuted] = useState(false);
   const [largeCaptions, setLargeCaptions] = useState(false);
   const [category, setCategory] = useState('wrong_answer');
@@ -71,6 +89,20 @@ function Live({ code }: { code: string }) {
         Live voice requires a server API key and incurs provider usage charges. Your microphone is
         requested only when you start.
       </p>
+      {options && selectedAdapter && (
+        <ProviderChoice
+          options={options}
+          value={selectedAdapter}
+          disabled={state.active || state.ending}
+          onChange={(value) => {
+            setAdapter(value);
+            setLanguage('auto');
+            setVoiceMode('conversation');
+            setAudioRecording(false);
+          }}
+        />
+      )}
+      {state.sessionUi && state.active && <SpeakingStatus activity={state.speaking} />}
       <div className="session-controls">
         <p id="status" role="status">
           {state.status}
@@ -179,6 +211,12 @@ function Live({ code }: { code: string }) {
       </div>
       <details className="secondary-panel settings-panel">
         <summary>Voice settings &amp; recording</summary>
+        {sdkSelected && (
+          <p className="notice">
+            This agent manages its own language and style. Mixed audio recording is unavailable for
+            this transport.
+          </p>
+        )}
         <fieldset id="voice-preferences" disabled={state.active}>
           <legend>Voice preferences (before starting)</legend>
           <label>
@@ -191,7 +229,12 @@ function Live({ code }: { code: string }) {
           </label>
           <label>
             Response language{' '}
-            <select id="language" value={language} onChange={(e) => setLanguage(e.target.value)}>
+            <select
+              id="language"
+              disabled={sdkSelected}
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            >
               <option value="auto">Follow the speaker</option>
               <option value="it">Italiano</option>
               <option value="en">English</option>
@@ -203,6 +246,7 @@ function Live({ code }: { code: string }) {
           <label>
             Conversation style{' '}
             <select
+              disabled={sdkSelected}
               id="voice-mode"
               value={voiceMode}
               onChange={(e) => setVoiceMode(e.target.value)}
@@ -226,6 +270,7 @@ function Live({ code }: { code: string }) {
           <label>
             <input
               type="checkbox"
+              disabled={sdkSelected}
               checked={audioRecording}
               onChange={(event) => setAudioRecording(event.target.checked)}
             />
@@ -244,6 +289,7 @@ function Live({ code }: { code: string }) {
         </a>
       )}
       <audio id="audio" ref={audio} muted={muted} autoPlay hidden />
+      <CostPanel cost={state.costs} />
       <Transcript messages={state.messages} />
       {state.sources.length > 0 && (
         <section aria-label="Worker sources">
@@ -288,7 +334,6 @@ function Live({ code }: { code: string }) {
       <details className="secondary-panel">
         <summary>Connection timings</summary>
         <p>{state.audioTimingStatus}</p>
-        {state.costs && <p role="status">{costText(state.costs)}</p>}
         {state.intentCancellation && (
           <p>
             Estimated Decisions input cost: ${state.decisionCostUsd.toFixed(6)} (configured rate;

@@ -40,6 +40,8 @@ export type TaskStatus = {
 };
 export type LiveState = {
   transport: 'webrtc' | 'elevenlabs';
+  sessionUi?: boolean;
+  speaking?: { user: boolean; assistant: boolean };
   intentCancellation: boolean;
   tasks: TaskStatus[];
   costs?: CostSummary;

@@ -192,3 +192,9 @@ calls or cloud/account changes were made.
 Opt-in session accounting uses versioned prices, observed voice duration and numeric worker,
 Decisions and search usage. Offline arithmetic, isolation and remote propagation are verified.
 Live billing reconciliation is pending; see [cost estimates](cost-estimates.md).
+
+## Session controls
+
+The opt-in [session UI](session-ui.md) provides server-controlled provider selection,
+observed audio activity and cost breakdowns. Offline and narrow-viewport checks are verified;
+actual device/provider voice acceptance remains pending.

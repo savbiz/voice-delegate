@@ -15,7 +15,12 @@ import { shouldRecover } from './recovery';
 
 import { endedWorkerState, processEvent, recapText, workerState } from './store';
 import type { LiveStore, Phase } from './store';
-export type Preferences = { language: string; mode: string; debug_recording?: boolean };
+export type Preferences = {
+  language: string;
+  mode: string;
+  debug_recording?: boolean;
+  adapter?: string;
+};
 export function createLiveSession(
   store: LiveStore,
   audio: HTMLAudioElement,
@@ -86,7 +91,7 @@ export function createLiveSession(
     channel = undefined;
     peer = undefined;
     session = undefined;
-    store.update({ active: false, audioBlocked: false });
+    store.update({ active: false, audioBlocked: false, speaking: undefined });
   }
 
   function requestOptions(
@@ -340,6 +345,7 @@ export function createLiveSession(
       store.update({ debugStatus: '' });
       fallbackAttempted = false;
       store.update({
+        speaking: undefined,
         captions: { user: '', assistant: '' },
         messages: [],
         audioBlocked: false,
@@ -379,12 +385,14 @@ export function createLiveSession(
       const config = await request<{
         voice_available: boolean;
         transport?: string;
+        session_ui?: boolean;
         audio_timing_available?: boolean;
         intent_cancellation?: boolean;
         debug_recording_available?: boolean;
-      }>('/config');
+      }>('/config', undefined, existing ? {} : { adapter: requestedPreferences.adapter });
       if (attempt !== attemptId) return;
       store.update({
+        sessionUi: Boolean(config.session_ui),
         intentCancellation: Boolean(config.intent_cancellation),
         transport: config.transport === 'elevenlabs_agents_webrtc' ? 'elevenlabs' : 'webrtc',
       });
@@ -601,9 +609,19 @@ export function createLiveSession(
             void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
           },
           audio,
-          config.audio_timing_available || config.intent_cancellation
+          config.audio_timing_available || config.intent_cancellation || config.session_ui
             ? (now, local, remote, playing, remoteEnergy) => {
                 if (attempt !== attemptId) return;
+                if (config.session_ui) {
+                  const next = { user: local > 0.035, assistant: remoteEnergy > 0.02 };
+                  const previous = store.getSnapshot().speaking;
+                  if (
+                    !previous ||
+                    previous.user !== next.user ||
+                    previous.assistant !== next.assistant
+                  )
+                    store.update({ speaking: next });
+                }
                 if (config.intent_cancellation && !activityBusy) {
                   const activity = activityReporter.sample(now, local, remoteEnergy);
                   if (activity) {
