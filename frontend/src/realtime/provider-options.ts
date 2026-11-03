@@ -1,7 +1,7 @@
 /** Bounded configuration discovery; failure preserves the existing fixed-provider UI. */
 export const adapterNames = {
-  openai: 'OpenAI',
-  azure: 'Azure · GPT-Live',
+  openai: 'OpenAI · GPT-Live',
+  azure: 'Azure',
   elevenlabs: 'ElevenLabs · Agents',
 } as const;
 export type Adapter = keyof typeof adapterNames;

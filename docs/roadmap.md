@@ -213,7 +213,7 @@ covered by tests; live account billing and device audio acceptance remain pendin
 
 These are planned work, with neither offline nor live acceptance claimed. The
 [future extension guide](future-extensions.md) records diagrams, prerequisites, proposed
-flags, failure behavior and test gates. No implementation is enabled by these notes.
+switches, failure behavior and test gates. No implementation is enabled by these notes.
 
 | Planned milestone | Scope | Gate |
 | --- | --- | --- |

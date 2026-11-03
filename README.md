@@ -13,6 +13,8 @@ also not affiliated with or endorsed by OpenAI, Microsoft Azure or any other pro
 named in this documentation; product names are used descriptively. Copyright 2026 Savino
 Bizzoca, Apache-2.0.
 
+Voice providers: **OpenAI GPT-Live**, **Azure** (a GPT-Live deployment) and **ElevenLabs Agents**, chosen per session in the UI.
+
 Ask a question, delegate a calculation or a documentation lookup, and keep talking.
 The voice model knows one tool, `delegate_task`; a bounded LangGraph worker handles
 calculation, cited project documentation and optional public web search. Preserving
@@ -118,9 +120,9 @@ All adapters expose the same delegation boundary.
 
 | Adapter | Voice service and transport | State |
 |---|---|---|
-| `openai` | OpenAI GPT-Live; browser WebRTC audio and backend sideband | Default; partial local smoke reported |
-| `azure` | Azure GPT-Live; browser WebRTC and backend sideband | Primary or one recovery attempt with session consent; live acceptance pending |
-| `elevenlabs` | ElevenLabs Agents; browser SDK WebRTC and authenticated backend webhook | Opt-in; offline contracts tested, full live acceptance pending |
+| `openai` | OpenAI GPT-Live (shown as "OpenAI · GPT-Live"); browser WebRTC audio and backend sideband | Default; partial local smoke reported |
+| `azure` | Azure (a `gpt-live-1` deployment); browser WebRTC and backend sideband | Primary or one recovery attempt with session consent; live acceptance pending |
+| `elevenlabs` | ElevenLabs Agents; browser SDK WebRTC and authenticated backend webhook | Opt-in; works live on the deployed backend per the maintainer's 2026-11-03 report; formal acceptance pending |
 
 ElevenLabs requires its private backend API key, agent ID and shared webhook token;
 see [agent setup and authentication](docs/elevenlabs.md). The browser receives a

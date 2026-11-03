@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Changed: the provider menu names OpenAI as "OpenAI · GPT-Live" and Azure simply as "Azure". Documentation: the maintainer reported ElevenLabs Agents working live on the deployed backend on 2026-11-03 (formal acceptance and cost reconciliation remain pending); future-extension proposals added under `docs/`.
+
 ## 0.2.0 - 2026-11-03
 
 Live voice is now the primary workspace, with a per-session choice of voice provider and billing source.

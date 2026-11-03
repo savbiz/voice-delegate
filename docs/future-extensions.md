@@ -209,8 +209,8 @@ latency only after authorized live tests; do not infer it from loopback peers.
 
 ## Suggested implementation order and review gates
 
-1. Finish ElevenLabs live acceptance and reconcile one session's cost estimate with reported
-   usage. Keep offline and live evidence separate in the roadmap.
+1. Complete formal ElevenLabs live acceptance (the maintainer reports it working live on the
+   deployed backend) and reconcile one session's cost estimate with reported usage. Keep offline and live evidence separate in the roadmap.
 2. Agree moderation policy and implement its common hook, then the audited read-only MCP
    client and ICS example. Approve ADR 010 before enabling remote tools.
 3. Decide whether SIP and the cascaded comparison justify their extra admission, privacy and
