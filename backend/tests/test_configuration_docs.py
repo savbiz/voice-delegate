@@ -56,6 +56,7 @@ def test_server_template_boots_with_optional_features_off(
         "VOICE_ELEVENLABS_TIMEOUT_SECONDS",
         "VOICE_ELEVENLABS_WEBHOOK_TOKEN",
         "VOICE_ELEVENLABS_WEBHOOK_URL",
+        "VOICE_ACCESS_REQUEST_URL",
     }
     assert set(values) == canonical_names | {"BRAINTRUST_API_KEY", "VOICE_REALTIME_MODEL"}
     settings = Settings()

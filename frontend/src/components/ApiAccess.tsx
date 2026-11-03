@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { Adapter } from '../realtime/provider-options';
+import { RequestAccess } from './RequestAccess';
 
 export type ApiSource = 'platform' | 'personal';
 export type PersonalKeys = Partial<
@@ -30,6 +31,7 @@ export function ApiAccess({
   recovery,
   recoveryAvailable,
   onRecovery,
+  requestAccess = false,
 }: {
   source: ApiSource;
   onSource: (source: ApiSource) => void;
@@ -44,6 +46,7 @@ export function ApiAccess({
   recovery: boolean;
   recoveryAvailable: boolean;
   onRecovery: (enabled: boolean) => void;
+  requestAccess?: boolean;
 }) {
   const [showKeys, setShowKeys] = useState(false);
   const placeholders: Partial<Record<keyof PersonalKeys, string>> = {
@@ -104,16 +107,19 @@ export function ApiAccess({
         </label>
       )}
       {source === 'platform' ? (
-        <label>
-          Personal invitation code
-          <input
-            type="password"
-            autoComplete="off"
-            value={code}
-            placeholder="Required on the hosted platform"
-            onChange={(event) => onCode(event.target.value)}
-          />
-        </label>
+        <>
+          <label>
+            Personal invitation code
+            <input
+              type="password"
+              autoComplete="off"
+              value={code}
+              placeholder="Required on the hosted platform"
+              onChange={(event) => onCode(event.target.value)}
+            />
+          </label>
+          {requestAccess && !disabled && <RequestAccess />}
+        </>
       ) : (
         <>
           <p className="muted">

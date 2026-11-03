@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 
+from voice_delegate.access_request import AccessRequests
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.delegation.planner import build_planner
 from voice_delegate.feedback import FeedbackStore
@@ -35,10 +36,14 @@ from .routes import build_router
 
 
 def create_app(
-    settings: Settings | None = None, provider: RealtimeProvider | None = None
+    settings: Settings | None = None,
+    provider: RealtimeProvider | None = None,
+    access_requests: AccessRequests | None = None,
 ) -> FastAPI:
     """Build a single-process app; inject an offline provider in tests."""
     settings = settings or load_settings()
+    if access_requests is None and settings.access_request_url:
+        access_requests = AccessRequests(settings.access_request_url)
     elevenlabs = (
         ElevenLabsProvider(
             settings.elevenlabs_api_key.get_secret_value(),
@@ -154,6 +159,8 @@ def create_app(
                 await feedback_janitor
             if feedback is not None:
                 feedback.close()
+            if access_requests is not None:
+                await access_requests.aclose()
             with suppress(asyncio.CancelledError):
                 await janitor
             await manager.aclose()
@@ -216,6 +223,6 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    app.include_router(build_router(manager, feedback, elevenlabs))
+    app.include_router(build_router(manager, feedback, elevenlabs, access_requests))
     app.include_router(build_webhook_router(manager))
     return app

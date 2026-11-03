@@ -10,6 +10,10 @@ Set `VOICE_DEMO_ENABLED=false` on the backend and restart/redeploy every API ins
 
 Edit `VOICE_INVITE_TOKENS`, a JSON map of stable pseudonymous names to unique random tokens of at least 32 characters. Generate a replacement locally with `uv run python -c 'import secrets; print(secrets.token_urlsafe(32))'`. Keep the name unchanged when rotating so its hashed quota identity and reservations remain associated. Remove the name to revoke it. Apply the same mapping to all API instances and restart them. Distribute tokens privately. Never put tokens in URLs, screenshots, issue reports or frontend environment variables. `VOICE_ACCESS_TOKEN` is only for private testing, not the public-demo profile.
 
+### Access requests
+
+Set `VOICE_ACCESS_REQUEST_URL` to an HTTPS [ntfy](https://ntfy.sh) topic URL with a long, unguessable topic (for example `https://ntfy.sh/<random-string>`) and subscribe to it in the ntfy phone app. The hosted UI then shows **No invitation code? Request access**; a visitor's contact and optional note are forwarded to the topic as one notification, never stored or logged. At most five requests are forwarded per hour per process and a repeated contact is ignored within the hour. Treat the topic URL as a secret: anyone who knows it can read or post to it. To reply, add a name to `VOICE_INVITE_TOKENS` as above and send the token privately. Leave the variable empty to hide the button.
+
 ## Quotas and cost controls
 
 - `VOICE_DAILY_SESSIONS_PER_USER` limits sessions reserved per principal per UTC day.

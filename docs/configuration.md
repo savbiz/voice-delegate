@@ -53,6 +53,7 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `demo_enabled` | `VOICE_DEMO_ENABLED` | `true` | `{"type": "boolean"}` |
 | `quota_database` | `VOICE_QUOTA_DATABASE` | `".local/quotas.sqlite3"` | `{"type": "string"}` |
 | `feedback_database` | `VOICE_FEEDBACK_DATABASE` | `".local/feedback.sqlite3"` | `{"type": "string"}` |
+| `access_request_url` | `VOICE_ACCESS_REQUEST_URL` | `""` | `{"type": "string"}` |
 | `daily_sessions_per_user` | `VOICE_DAILY_SESSIONS_PER_USER` | `4` | `{"type": "integer", "minimum": 1, "maximum": 100}` |
 | `concurrent_sessions_per_user` | `VOICE_CONCURRENT_SESSIONS_PER_USER` | `1` | `{"type": "integer", "minimum": 1, "maximum": 10}` |
 | `daily_voice_seconds_per_user` | `VOICE_DAILY_VOICE_SECONDS_PER_USER` | `1500` | `{"type": "integer", "minimum": 1}` |
@@ -134,6 +135,19 @@ def validate_elevenlabs(self) -> "Settings":
                 "ElevenLabs requires a webhook token of at least 32 characters "
                 "and an HTTPS webhook URL"
             )
+            raise ValueError(message)
+    if self.access_request_url:
+        ntfy = urlsplit(self.access_request_url)
+        if (
+            ntfy.scheme != "https"
+            or not ntfy.hostname
+            or ntfy.username
+            or ntfy.password
+            or ntfy.query
+            or ntfy.fragment
+            or len(ntfy.path.strip("/")) < 8
+        ):
+            message = "VOICE_ACCESS_REQUEST_URL must be an HTTPS topic URL with a long topic"
             raise ValueError(message)
     if self.voice_provider == "elevenlabs" and not self.intent_cancellation:
         message = "ElevenLabs async delegation requires VOICE_INTENT_CANCELLATION"

@@ -158,3 +158,41 @@ test('a server with no configured provider explains it and blocks Start', async 
   ).toBeDisabled();
   await page.getByRole('radio', { name: 'Your API keys', exact: true }).check();
 });
+
+test('request access sends a bounded request and reports the result', async ({ page }) => {
+  let body: unknown;
+  await page.route('**/api/**', (route) => {
+    if (route.request().url().endsWith('/api/access-request')) {
+      body = route.request().postDataJSON();
+      return route.fulfill({ status: 202, json: { status: 'sent' } });
+    }
+    return route.fulfill({
+      json: {
+        session_ui: true,
+        adapter: 'openai',
+        available_adapters: ['openai'],
+        voice_available: true,
+        access_request_available: true,
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByText('No invitation code? Request access').click();
+  const send = page.getByRole('button', { name: 'Request access', exact: true });
+  await expect(send).toBeDisabled();
+  await page.getByLabel('How to reach you').fill('visitor@example.com');
+  await page.getByLabel('Note (optional)').fill('Curious about the demo');
+  await send.click();
+  await expect(page.getByRole('status').filter({ hasText: 'Request sent' })).toBeVisible();
+  expect(body).toEqual({ contact: 'visitor@example.com', note: 'Curious about the demo' });
+});
+
+test('request access is hidden unless the server enables it', async ({ page }) => {
+  await page.route('**/api/**', (route) =>
+    route.fulfill({
+      json: { session_ui: true, adapter: 'openai', available_adapters: ['openai'] },
+    }),
+  );
+  await page.goto('/');
+  await expect(page.getByText('No invitation code? Request access')).toHaveCount(0);
+});

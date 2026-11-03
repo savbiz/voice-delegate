@@ -10,6 +10,7 @@ export type VoiceOptions = {
   available_adapters: Adapter[];
   session_ui: true;
   azure_recovery_available?: boolean;
+  access_request_available?: boolean;
   elevenlabs_webhook_url?: string;
 };
 export async function voiceOptions(
@@ -70,6 +71,7 @@ export async function voiceOptions(
       available_adapters: configured,
       session_ui: true,
       azure_recovery_available: data.azure_recovery_available === true,
+      access_request_available: data.access_request_available === true,
       elevenlabs_webhook_url:
         typeof data.elevenlabs_webhook_url === 'string' && data.elevenlabs_webhook_url.length <= 512
           ? data.elevenlabs_webhook_url

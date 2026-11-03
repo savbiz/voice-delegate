@@ -7,7 +7,7 @@ The backend serves JSON over HTTPS in hosted deployments. All `/api` routes requ
 | Method | Route | Request / response | Success | Route-specific errors |
 |---|---|---|---|---|
 | GET | `/healthz` | `{"status":"ok"}`; process health, no provider call | 200 | — |
-| POST | `/api/config` | `requires_access_code`, `voice_available`, `feedback_available` booleans | 200 | — |
+| POST | `/api/config` | `requires_access_code`, `voice_available`, `feedback_available`, `access_request_available` booleans | 200 | — |
 | POST | `/api/sessions` | Optional `adapter`, `language`, `mode`, `azure_recovery` and debug consent preferences; returns `id`, `key`, `ttl_seconds` | 201 | 429 capacity/quota; 503 kill switch or quota store failure |
 | POST | `/api/sessions/{id}/offer` | `{"sdp":"v=0\r\n…"}` → `{"sdp":"…"}` | 200 | 409 duplicate/invalid state; 502 provider failure; 504 setup timeout |
 | POST | `/api/sessions/{id}/reconnect` | `sdp` and integer `generation` → SDP answer | 200 | 409 stale/used attempt or invalid state; 501 no replay-capable fallback; 502 provider failure; 504 timeout |
