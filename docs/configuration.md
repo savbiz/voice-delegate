@@ -9,30 +9,26 @@ Declared defaults below never read your environment or reveal configured secrets
 Boolean flags accept `true` or `false`. `enum` lists every application-allowed choice;
 numeric bounds and collection/string limits are listed in field validation.
 A plain string is not an enumerated model/voice catalogue: provider/account support
-still determines whether that value works. Empty optional credentials disable no
-feature automatically; enabling a dependent feature can require its credentials.
+still determines whether that value works. Optional providers become available when
+their required credentials are complete; supplying keys can enable billable calls.
 See [local profiles](local-development.md#copyable-local-configuration) and the
-commented [server template](../.env.example) for meanings and examples.
+[minimal server template](../config/local.env.template) for meanings and examples.
 
 | Field | Environment variable | Default | Field validation |
 |---|---|---|---|
 | `openai_api_key` | `OPENAI_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
 | `azure_endpoint` | `VOICE_AZURE_ENDPOINT` | `""` | `{"type": "string"}` |
 | `azure_api_key` | `VOICE_AZURE_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
-| `azure_deployment` | `VOICE_AZURE_DEPLOYMENT` | `"gpt-realtime"` | `{"type": "string"}` |
+| `azure_deployment` | `VOICE_AZURE_DEPLOYMENT` | `"gpt-live-1"` | `{"type": "string"}` |
 | `azure_voice` | `VOICE_AZURE_VOICE` | `"marin"` | `{"type": "string"}` |
-| `fallback_enabled` | `VOICE_FALLBACK_ENABLED` | `false` | `{"type": "boolean"}` |
-| `voice_provider` | `VOICE_ADAPTER` | `"live"` | `{"type": "string", "enum": ["live", "realtime", "azure", "elevenlabs"]}` |
-| `elevenlabs_enabled` | `VOICE_ELEVENLABS_ENABLED` | `false` | `{"type": "boolean"}` |
+| `voice_provider` | `VOICE_ADAPTER` | `"openai"` | `{"type": "string", "enum": ["openai", "azure", "elevenlabs"]}` |
 | `elevenlabs_api_key` | `ELEVENLABS_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
 | `elevenlabs_agent_id` | `VOICE_ELEVENLABS_AGENT_ID` | `""` | `{"type": "string", "pattern": "^(agent_[a-zA-Z0-9_-]+)?$", "maxLength": 200}` |
 | `elevenlabs_timeout_seconds` | `VOICE_ELEVENLABS_TIMEOUT_SECONDS` | `3` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
 | `elevenlabs_webhook_token` | `VOICE_ELEVENLABS_WEBHOOK_TOKEN` | `""` | `{"type": "string", "format": "password"}` |
 | `elevenlabs_webhook_url` | `VOICE_ELEVENLABS_WEBHOOK_URL` | `""` | `{"type": "string"}` |
-| `realtime_model` | `VOICE_REALTIME_MODEL` | `"gpt-realtime"` | `{"type": "string"}` |
 | `model` | `VOICE_MODEL` | `"gpt-live-1"` | `{"type": "string"}` |
 | `voice` | `VOICE_VOICE` | `"marin"` | `{"type": "string"}` |
-| `native_clients` | `VOICE_NATIVE_CLIENTS` | `false` | `{"type": "boolean"}` |
 | `allowed_origins` | `VOICE_ALLOWED_ORIGINS` | `["http://localhost:5173"]` | `{"type": "array", "items": {"type": "string"}, "minItems": 1}` |
 | `allowed_origin` | `VOICE_ALLOWED_ORIGIN` | `null` | `{"anyOf": [{"type": "string"}, {"type": "null"}]}` |
 | `allowed_hosts` | `VOICE_ALLOWED_HOSTS` | `["localhost", "127.0.0.1", "testserver"]` | `{"type": "array", "items": {"type": "string"}}` |
@@ -40,10 +36,7 @@ commented [server template](../.env.example) for meanings and examples.
 | `trusted_proxy_hops` | `VOICE_TRUSTED_PROXY_HOPS` | `1` | `{"type": "integer", "minimum": 1, "maximum": 32}` |
 | `environment` | `VOICE_ENVIRONMENT` | `"development"` | `{"type": "string"}` |
 | `api_docs` | `VOICE_API_DOCS` | `false` | `{"type": "boolean"}` |
-| `cost_estimates` | `VOICE_COST_ESTIMATES` | `true` | `{"type": "boolean"}` |
 | `price_file` | `VOICE_PRICE_FILE` | `""` | `{"type": "string"}` |
-| `audio_timing` | `VOICE_AUDIO_TIMING` | `false` | `{"type": "boolean"}` |
-| `intent_cancellation` | `VOICE_INTENT_CANCELLATION` | `false` | `{"type": "boolean"}` |
 | `max_inflight_tasks` | `VOICE_MAX_INFLIGHT_TASKS` | `2` | `{"type": "integer", "minimum": 1, "maximum": 2}` |
 | `delivery_timeout_seconds` | `VOICE_DELIVERY_TIMEOUT_SECONDS` | `30` | `{"type": "number", "maximum": 120, "exclusiveMinimum": 0}` |
 | `delivery_silence_seconds` | `VOICE_DELIVERY_SILENCE_SECONDS` | `0.6` | `{"type": "number", "minimum": 0.3, "maximum": 5}` |
@@ -53,7 +46,6 @@ commented [server template](../.env.example) for meanings and examples.
 | `decisions_timeout_seconds` | `VOICE_DECISIONS_TIMEOUT_SECONDS` | `1` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
 | `decisions_max_calls` | `VOICE_DECISIONS_MAX_CALLS` | `60` | `{"type": "integer", "minimum": 1, "maximum": 300}` |
 | `decisions_input_usd_per_million` | `VOICE_DECISIONS_INPUT_USD_PER_MILLION` | `0.1` | `{"type": "number", "minimum": 0, "maximum": 100}` |
-| `debug_recording` | `VOICE_DEBUG_RECORDING` | `false` | `{"type": "boolean"}` |
 | `debug_directory` | `VOICE_DEBUG_DIRECTORY` | `".local/debug"` | `{"type": "string"}` |
 | `access_token` | `VOICE_ACCESS_TOKEN` | `""` | `{"type": "string", "format": "password"}` |
 | `invite_tokens` | `VOICE_INVITE_TOKENS` | `{}` | `{"type": "object", "additionalProperties": {"format": "password", "type": "string", "writeOnly": true}}` |
@@ -66,7 +58,6 @@ commented [server template](../.env.example) for meanings and examples.
 | `daily_voice_seconds_per_user` | `VOICE_DAILY_VOICE_SECONDS_PER_USER` | `1500` | `{"type": "integer", "minimum": 1}` |
 | `daily_voice_seconds_global` | `VOICE_DAILY_VOICE_SECONDS_GLOBAL` | `6000` | `{"type": "integer", "minimum": 1}` |
 | `max_delegations_per_session` | `VOICE_MAX_DELEGATIONS_PER_SESSION` | `8` | `{"type": "integer", "minimum": 1, "maximum": 64}` |
-| `otel_enabled` | `VOICE_OTEL_ENABLED` | `false` | `{"type": "boolean"}` |
 | `otel_endpoint` | `VOICE_OTEL_ENDPOINT` | `""` | `{"type": "string"}` |
 | `otel_metrics_endpoint` | `VOICE_OTEL_METRICS_ENDPOINT` | `""` | `{"type": "string"}` |
 | `instance_id` | `VOICE_INSTANCE_ID` | `""` | `{"type": "string", "pattern": "^[a-z0-9]{0,16}$"}` |
@@ -76,7 +67,6 @@ commented [server template](../.env.example) for meanings and examples.
 | `worker_service_capacity` | `VOICE_WORKER_SERVICE_CAPACITY` | `4` | `{"type": "integer", "minimum": 1, "maximum": 32}` |
 | `worker_max_records` | `VOICE_WORKER_MAX_RECORDS` | `128` | `{"type": "integer", "minimum": 32, "maximum": 1024}` |
 | `worker_mode` | `VOICE_WORKER_MODE` | `"offline"` | `{"type": "string", "enum": ["offline", "openai", "decisions"]}` |
-| `web_search` | `VOICE_WEB_SEARCH` | `false` | `{"type": "boolean"}` |
 | `tavily_api_key` | `TAVILY_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
 | `web_search_domains` | `VOICE_WEB_SEARCH_DOMAINS` | `[]` | `{"type": "array", "items": {"type": "string"}, "maxItems": 20}` |
 | `web_search_timeout_seconds` | `VOICE_WEB_SEARCH_TIMEOUT_SECONDS` | `3` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
@@ -93,6 +83,22 @@ commented [server template](../.env.example) for meanings and examples.
 
 `VOICE_ADAPTER` also accepts `VOICE_VOICE_PROVIDER` for backward compatibility; the first name takes precedence within the same settings source.
 
+## Automatic features
+
+The application loader always enables cost accounting, provider selection, intent-based
+cancellation and audio timing. Native origins still require an explicit origin allowlist;
+ElevenLabs is filtered out on native clients. ElevenLabs becomes available with complete
+agent credentials; Tavily search with a key on the worker. Configured Azure credentials
+make recovery available for OpenAI sessions (not when Azure is the default adapter),
+off until selected per session. Debug
+recording needs checkbox consent; OTel is on, exporting only to configured endpoints
+or local console traces. No separate enable flags are required. With a key, the worker
+uses OpenAI;
+otherwise offline planning; an explicit worker mode still takes precedence.
+The former environment flags for these behaviours are ignored by the application loader.
+Low-level Settings constructor overrides remain for deterministic offline tests.
+Use [the minimal template](../config/local.env.template) for new installations.
+
 ## Cross-field validator rules
 
 Every configuration is also checked by the exact validator below. This includes
@@ -105,7 +111,7 @@ Field types use Pydantic's normal environment parsing; this is not strict JSON t
 @model_validator(mode="after")
 def validate_elevenlabs(self) -> "Settings":
     if self.voice_provider == "elevenlabs" and not self.elevenlabs_enabled:
-        message = "ElevenLabs adapter requires VOICE_ELEVENLABS_ENABLED"
+        message = "ElevenLabs adapter requires complete backend agent credentials"
         raise ValueError(message)
     if self.elevenlabs_enabled and (
         not self.elevenlabs_api_key.get_secret_value() or not self.elevenlabs_agent_id
@@ -132,8 +138,8 @@ def validate_elevenlabs(self) -> "Settings":
     if self.voice_provider == "elevenlabs" and not self.intent_cancellation:
         message = "ElevenLabs async delegation requires VOICE_INTENT_CANCELLATION"
         raise ValueError(message)
-    if self.voice_provider == "elevenlabs" and (self.fallback_enabled or self.native_clients):
-        message = "ElevenLabs does not support cross-vendor fallback or native clients"
+    if self.voice_provider == "elevenlabs" and self.fallback_enabled and not self.session_ui:
+        message = "ElevenLabs does not support cross-vendor fallback without session selection"
         raise ValueError(message)
     if (
         self.voice_provider == "elevenlabs"
@@ -213,6 +219,9 @@ def validate_production(self) -> "Settings":
         ):
             message = "Worker URL must be an HTTP(S) service origin"
             raise ValueError(message)
+        if not worker_transport_allowed(self.worker_service_url):
+            message = "Worker requires HTTPS outside private IPs, loopback or compose"
+            raise ValueError(message)
         if len(self.worker_service_token.get_secret_value()) < 32:
             message = "Remote worker requires a service token of at least 32 characters"
             raise ValueError(message)
@@ -232,21 +241,12 @@ def validate_production(self) -> "Settings":
     if self.public_demo and self.environment != "production":
         message = "Public demo requires production configuration"
         raise ValueError(message)
-    if self.fallback_enabled or self.voice_provider == "azure":
-        from urllib.parse import urlparse
-
-        endpoint = urlparse(self.azure_endpoint)
-        if (
-            endpoint.scheme != "https"
-            or not endpoint.hostname
-            or not endpoint.hostname.endswith(".openai.azure.com")
-            or endpoint.path not in {"", "/"}
-            or endpoint.query
-            or endpoint.fragment
-            or endpoint.username
-            or endpoint.password
-            or endpoint.port not in {None, 443}
-        ):
+    if (
+        self.fallback_enabled
+        or self.voice_provider == "azure"
+        or (self.session_ui and self.azure_endpoint and self.azure_api_key.get_secret_value())
+    ):
+        if not azure_origin_allowed(self.azure_endpoint):
             message = "Azure endpoint must be an HTTPS Azure OpenAI resource origin"
             raise ValueError(message)
         if not self.azure_api_key.get_secret_value():
@@ -280,8 +280,8 @@ def validate_production(self) -> "Settings":
 Use `VOICE_ALLOWED_ORIGINS` as a JSON array of exact origins. The deprecated
 `VOICE_ALLOWED_ORIGIN` accepts one origin only when no list was supplied.
 The list takes precedence if both variables are configured. Production requires
-HTTPS for every allowed browser origin. With `VOICE_NATIVE_CLIENTS=true`, the exact
-`capacitor://localhost` iOS origin may also be explicitly listed. Android uses
+HTTPS for every browser origin. The `capacitor://localhost` iOS origin may also
+be explicitly listed. Android uses
 `https://localhost`. Neither native origin is added automatically. Routes, CORS
 and limiter responses share the list.
 Origins must use browser serialization: lowercase/punycode hostnames and no

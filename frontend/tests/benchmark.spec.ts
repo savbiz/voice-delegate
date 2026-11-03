@@ -30,7 +30,7 @@ function wavFixture(): string {
 test('benchmark observes loopback audio and cleans up without calling an API', async ({ page }) => {
   const requests: string[] = [];
   page.on('request', (request) => requests.push(request.url()));
-  await page.goto('/');
+  await page.goto('/#demo');
   const result = await page.evaluate(probe, {
     fake: true,
     speechEndMs: 200,
@@ -47,7 +47,7 @@ test('benchmark connection errors expose no response content', async ({ page }) 
   await page.route('**/api/**', (route) =>
     route.fulfill({ status: 401, body: 'private response content' }),
   );
-  await page.goto('/');
+  await page.goto('/#demo');
   const result = await page.evaluate(probe, {
     api: new URL(page.url()).origin,
     wav: wavFixture(),
@@ -65,7 +65,7 @@ test('benchmark connection errors expose no response content', async ({ page }) 
 });
 
 test('benchmark timeout after connection is an unknown decision', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/#demo');
   const result = await page.evaluate(probe, {
     fake: true,
     speechEndMs: 200,
@@ -92,7 +92,7 @@ test('benchmark closes an owned session after offer rejection', async ({ page })
       json: path.endsWith('/sessions') ? { id: 'fixture', key: 'fixture-key' } : {},
     });
   });
-  await page.goto('/');
+  await page.goto('/#demo');
   const result = await page.evaluate(probe, {
     api: new URL(page.url()).origin,
     wav: wavFixture(),

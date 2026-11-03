@@ -60,6 +60,7 @@ class SessionManager:
         metrics: Metrics | None = None,
         admission_clock: Callable[[], float] = time.time,
         decider: Decider | None = None,
+        providers: dict[str, RealtimeProvider] | None = None,
     ) -> None:
         # Persistent leases use epoch time independently of monotonic session deadlines.
         self.admission = Admission(settings, clock=admission_clock)
@@ -83,6 +84,7 @@ class SessionManager:
             )
         self.intent = IntentRunner(self.delegator, settings, clock, self.decider)
         self.prices = Prices.load(settings.price_file) if settings.cost_estimates else None
+        self.providers = providers or {settings.voice_provider: provider}
         self.provider = provider
         self.fallback = fallback
         self.settings = settings
@@ -96,6 +98,13 @@ class SessionManager:
         """Reserve capacity atomically before any billable provider request."""
         if preferences and preferences.debug_recording and not self.settings.debug_recording:
             raise SessionError(403, "Debug recording is disabled on this server")
+        adapter = self.select_adapter(preferences.adapter if preferences else None)
+        if (
+            adapter == "elevenlabs"
+            and preferences
+            and (preferences.language != "auto" or preferences.mode != "conversation")
+        ):
+            raise SessionError(422, "This agent owns its language and conversation style")
         if self._shutting_down:
             raise SessionError(503, "Service shutting down")
         if len(self.sessions) >= self.settings.max_sessions:
@@ -109,9 +118,13 @@ class SessionManager:
         identity = (self.settings.instance_id + "-" if self.settings.instance_id else "") + str(
             uuid4()
         )
-        self.admission.reserve(principal, identity)
+        recovery = bool(preferences and preferences.azure_recovery)
+        if recovery and (adapter != "openai" or self.fallback is None):
+            raise SessionError(422, "Azure recovery is unavailable for this session")
+        self.admission.reserve(principal, identity, recovery=recovery)
         now = self.clock()
         session = Session(identity, secrets.token_urlsafe(32), now, now)
+        session.adapter = adapter
         session.principal = principal
         session.preferences = preferences or VoicePreferences()
         if session.preferences.debug_recording:
@@ -119,7 +132,7 @@ class SessionManager:
                 session.debug = DebugRecording(Path(self.settings.debug_directory), session.id)
                 session.debug.write(
                     "consent",
-                    provider=self.settings.voice_provider,
+                    provider=session.adapter,
                     model=self.config(session).model,
                 )
             except OSError as exc:
@@ -128,7 +141,7 @@ class SessionManager:
         if self.prices is not None:
             session.costs = CostLedger(
                 self.prices,
-                self.settings.voice_provider,
+                session.adapter,
                 self.settings.worker_model,
                 self.clock,
                 self.metrics,
@@ -150,10 +163,26 @@ class SessionManager:
         """Refresh browser liveness; never extend the absolute session deadline."""
         session.last_heartbeat = self.clock()
 
+    def select_adapter(self, requested: str | None = None) -> str:
+        adapter = requested or self.settings.voice_provider
+        if (not self.settings.session_ui and adapter != self.settings.voice_provider) or (
+            adapter not in self.providers
+        ):
+            raise SessionError(422, "Voice adapter is not enabled on this server")
+        return adapter
+
+    def owner_for(self, session: Session) -> "SessionManager":
+        return session.owner or self
+
+    def provider_for(self, session: Session | None = None) -> RealtimeProvider:
+        return self.providers[session.adapter] if session and session.adapter else self.provider
+
     def config(self, session: Session | None = None) -> SessionConfig:
         """Build trusted provider configuration."""
         preferences = session.preferences if session else VoicePreferences()
-        return self.provider.default_config(self._instructions() + " " + preferences.instructions())
+        return self.provider_for(session).default_config(
+            self._instructions() + " " + preferences.instructions()
+        )
 
     def _instructions(self) -> str:
         return voice_prompt(
@@ -174,7 +203,7 @@ class SessionManager:
                     self.tracer.start_as_current_span("provider.connect", record_exception=False),
                 ):
                     async with asyncio.timeout(self.settings.connect_timeout_seconds):
-                        session.connection = await self.provider.connect(
+                        session.connection = await self.provider_for(session).connect(
                             config=self.config(session), offer_sdp=offer_sdp
                         )
             except (ProviderError, TimeoutError, asyncio.CancelledError) as exc:
@@ -231,7 +260,7 @@ class SessionManager:
     async def _watch(self, session: Session) -> None:
         connection = session.connection
         assert connection is not None
-        provider = self.fallback if session.fallback_used else self.provider
+        provider = self.fallback if session.fallback_used else self.provider_for(session)
         assert provider is not None
         try:
             async for event in connection.events():
@@ -346,6 +375,8 @@ class SessionManager:
             if session.state not in {"closing", "closed", "reconnecting"}:
                 if (
                     self.fallback is not None
+                    and session.adapter == "openai"
+                    and session.preferences.azure_recovery
                     and not session.fallback_used
                     and not session.finalized
                 ):
@@ -401,7 +432,12 @@ class SessionManager:
     async def _reconnect(self, session: Session, offer_sdp: str, generation: int) -> WebRTCAnswer:
         """Consume one fallback attempt; never retry an ambiguous billable POST."""
         async with session.lock:
-            if self.fallback is None or not self.fallback.capabilities.text_replay:
+            if (
+                session.adapter != "openai"
+                or not session.preferences.azure_recovery
+                or self.fallback is None
+                or not self.fallback.capabilities.text_replay
+            ):
                 raise SessionError(501, "Fallback is not configured or cannot replay text")
             if session.fallback_used or generation != session.generation:
                 raise SessionError(409, "Stale or duplicate fallback attempt")
@@ -470,33 +506,42 @@ class SessionManager:
 
     async def close(self, session: Session) -> bool:
         """Idempotently close upstream before canceling the event consumer."""
-        async with session.lock:
-            if session.state == "closed":
-                return session.finalized and session.previous_finalized
-            session.state = "closing"
-            await self.intent.close(session.portfolio)
-            self.delegator.cancel(session.delegation)
-            try:
-                if session.connection is not None:
-                    session.finalized = await session.connection.aclose() or session.finalized
-            finally:
-                # Set "closing" first: the watcher's finally must not re-enter close()
-                # while this task holds session.lock, which would deadlock.
-                watcher = session.watcher
-                if watcher is not None and watcher is not asyncio.current_task():
-                    watcher.cancel()
-                    await asyncio.gather(watcher, return_exceptions=True)
-                if session.debug:
-                    session.debug.close(session.finalized and session.previous_finalized)
-                if session.costs is not None:
-                    session.costs.close(session.finalized and session.previous_finalized)
-                session.state = "closed"
-                self.sessions.pop(session.id, None)
-                self.admission.release(session.id)
-                if session.turn is not None:
-                    session.turn.span.end()
-                    session.turn = None
-            return session.finalized and session.previous_finalized
+        if session.owner is not None and session.owner is not self:
+            return await session.owner.close(session)
+        try:
+            async with session.lock:
+                if session.state == "closed":
+                    return session.finalized and session.previous_finalized
+                session.state = "closing"
+                await self.intent.close(session.portfolio)
+                self.delegator.cancel(session.delegation)
+                try:
+                    if session.connection is not None:
+                        session.finalized = await session.connection.aclose() or session.finalized
+                finally:
+                    # Set "closing" first: the watcher's finally must not re-enter close()
+                    # while this task holds session.lock, which would deadlock.
+                    watcher = session.watcher
+                    if watcher is not None and watcher is not asyncio.current_task():
+                        watcher.cancel()
+                        await asyncio.gather(watcher, return_exceptions=True)
+                    if session.debug:
+                        session.debug.close(session.finalized and session.previous_finalized)
+                    if session.costs is not None:
+                        session.costs.close(session.finalized and session.previous_finalized)
+                    session.state = "closed"
+                    self.sessions.pop(session.id, None)
+                    self.admission.release(session.id)
+                    if session.turn is not None:
+                        session.turn.span.end()
+                        session.turn = None
+                finalized = session.finalized and session.previous_finalized
+            return finalized
+        finally:
+            if session.state == "closed" and session.release_personal is not None:
+                release = session.release_personal
+                session.release_personal = None
+                await release()
 
     async def expire(self) -> None:
         """Expire abandoned setup, lost browsers, and absolute time budgets."""
@@ -537,7 +582,8 @@ class SessionManager:
         await self.delegator.aclose()
         if self.decider is not None:
             await self.decider.aclose()
-        await self.provider.aclose()
+        for provider in {id(p): p for p in self.providers.values()}.values():
+            await provider.aclose()
         self.admission.close()
         if self.fallback is not None:
             await self.fallback.aclose()

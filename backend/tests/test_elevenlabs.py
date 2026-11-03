@@ -99,7 +99,7 @@ def test_preview_requires_credentials_and_explicit_selection() -> None:
     assert not Settings().elevenlabs_enabled
     with pytest.raises(ValidationError, match="requires ELEVENLABS_API_KEY"):
         Settings(elevenlabs_enabled=True)
-    with pytest.raises(ValidationError, match="VOICE_ELEVENLABS_ENABLED"):
+    with pytest.raises(ValidationError, match="complete backend agent credentials"):
         Settings(voice_provider="elevenlabs")
 
 

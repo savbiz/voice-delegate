@@ -16,7 +16,7 @@ Bizzoca, Apache-2.0.
 Ask a question, delegate a calculation or a documentation lookup, and keep talking.
 The voice model knows one tool, `delegate_task`; a bounded LangGraph worker handles
 calculation, cited project documentation and optional public web search. Preserving
-work while the user speaks requires the opt-in intent-cancellation mode described below.
+work while the user speaks uses the intent-based lifecycle described below.
 
 ## Try it locally
 
@@ -25,15 +25,16 @@ repository root, install dependencies once:
 
 ```sh
 uv sync --locked
-if [ ! -e .env ]; then cp .env.example .env; fi
+if [ ! -e .env ]; then cp config/local.env.template .env; fi
 cd frontend
 pnpm install --frozen-lockfile
 cd ..
 make fe
 ```
 
-Open **http://localhost:5173**, select **Free demo**, then start. It is scripted,
-silent and free: no microphone, backend or provider key is required.
+Open **http://localhost:5173** for the voice workspace. For a scripted example, open
+**Tools & examples → Offline example** or **http://localhost:5173/#demo**. The example
+is silent and free: no microphone, backend or provider key is required.
 
 For local live voice, put your real `OPENAI_API_KEY` in the private root `.env`.
 Start the backend in another terminal, then get the local invitation in a third:
@@ -50,9 +51,9 @@ Paste that invitation in the browser and select **Live voice**. Stop each server
 with Ctrl+C. `make` shows help. Existing `.env` values override code defaults; the
 launcher changes local admission only, never your file or provider key.
 
-The server template covers the core defaults; optional provider settings are documented separately.
-It defaults to the **offline worker planner**. To let the worker
-interpret natural-language requests using Luna, choose the paid planner explicitly:
+The [minimal template](config/local.env.template) needs only keys and deployment choices.
+The worker uses Luna when an OpenAI key is configured, otherwise the offline planner.
+You can explicitly select the model-backed planner:
 
 ```sh
 VOICE_WORKER_MODE=openai make be
@@ -86,11 +87,15 @@ The maintainer reported successful local GPT-Live conversations and tool use; th
 full recorded live acceptance checklist is still pending. A small live Decisions
 API smoke is recorded separately; it does not establish cancellation quality.
 
-The [hosted frontend](https://voice-delegate.vercel.app) can run the simulated demo
-without the backend. Railway is the canonical deployment target, but its trial
-expired: this README does not claim the [configured API](https://voice-delegate-api-production.up.railway.app/healthz)
-is currently available or running the latest commit. Hosted documentation search
-and live voice require a healthy backend, invitations and applicable provider keys.
+The [hosted frontend](https://voice-delegate.vercel.app) opens the voice workspace.
+Tools & examples contains the offline example and a search of bundled project documentation;
+these are secondary utilities rather than conversation modes.
+Live voice and hosted documentation search use the
+[configured Railway API](https://voice-delegate-api-production.up.railway.app/healthz)
+and require a healthy deployment, invitation and applicable provider credentials.
+Application daily allowances and provider account credits are independent;
+see [operations](docs/operations.md) for diagnosis and targeted quota resets.
+Deployment availability and provider credit balance must be checked at use time.
 
 Codespaces offline worker/metrics acceptance was reported on 2026-10-25; the
 startup/origin fixes are covered offline, while a new hosted rerun and cold-start
@@ -106,18 +111,38 @@ or Azure recovery result is claimed.
 ## Providers and worker modes
 
 `VOICE_ADAPTER` selects an integration; the old `VOICE_VOICE_PROVIDER` name remains
-a deprecated alias. All adapters expose the same delegation boundary.
+a deprecated alias. Legacy values `live` and `realtime` now select `openai` and always
+use GPT-Live. Azure requires a deployment of `gpt-live-1`. Recovery is off by default
+and enabled only by the session checkbox. See [the session flow](docs/session-flow.md).
+All adapters expose the same delegation boundary.
 
 | Adapter | Voice service and transport | State |
 |---|---|---|
-| `live` | OpenAI GPT-Live; browser WebRTC audio and backend sideband | Default; partial local smoke reported |
-| `realtime` | OpenAI Realtime; browser WebRTC audio and backend sideband | Implemented; full live acceptance pending |
-| `azure` | Azure OpenAI Realtime; browser WebRTC and backend sideband | Primary or optional one-attempt recovery; live acceptance pending |
+| `openai` | OpenAI GPT-Live; browser WebRTC audio and backend sideband | Default; partial local smoke reported |
+| `azure` | Azure GPT-Live; browser WebRTC and backend sideband | Primary or one recovery attempt with session consent; live acceptance pending |
+| `elevenlabs` | ElevenLabs Agents; browser SDK WebRTC and authenticated backend webhook | Opt-in; offline contracts tested, full live acceptance pending |
 
-ElevenLabs Agents is an opt-in browser SDK transport with server-side webhook delegation (`VOICE_ADAPTER=elevenlabs`)
-behind a disabled-by-default flag. Its [application contracts](docs/elevenlabs.md)
-are verified offline; live provider acceptance is pending. Cross-vendor fallback, SIP telephone entry
-and worker MCP connections are not implemented here.
+ElevenLabs requires its private backend API key, agent ID and shared webhook token;
+see [agent setup and authentication](docs/elevenlabs.md). The browser receives a
+short-lived conversation token, never the private provider key.
+
+Provider selection, observed audio activity and responsive session panels are enabled
+by default. Provider choice is fixed for each conversation;
+this selector uses operator-configured credentials, not user-supplied keys.
+[Session controls](docs/session-ui.md) describe availability and unsupported preferences.
+
+[Cost estimates](docs/cost-estimates.md) are enabled by default. The UI retains a final
+breakdown by voice, worker, decisions and search, labeling missing prices as partial. When available, ElevenLabs
+reported credits/USD are shown separately; estimates are not a provider invoice.
+Cross-vendor fallback, SIP telephone entry and worker MCP connections are not implemented.
+The [roadmap](docs/roadmap.md) tracks these and moderation/cascade design work separately.
+
+The UI also offers **Your API keys** without an invitation. Keys are submitted once and
+kept in memory for that session, including in a configured private remote worker; they
+are not saved to browser storage or a database. **Platform API** uses the operator's keys
+and existing invitation gate. Personal sessions never borrow platform keys or recovery.
+ElevenLabs additionally needs your private agent ID and its configured webhook token.
+See [personal-key access](docs/personal-api.md).
 
 The worker uses **LangGraph for orchestration** and a selected planner for decisions:
 
@@ -133,8 +158,8 @@ on the same machine. It does not automatically deploy another service. Both mode
 retain the selected planner and limits. See [worker configuration](docs/worker.md).
 
 The worker has `calculate` and `search_documentation`. Optional `web_search` needs
-`VOICE_WEB_SEARCH=true` and a private Tavily key on the worker host; it is off by
-default and may incur search-provider charges. A web result is untrusted data and
+a private Tavily key on the worker host; providing that key enables search and may incur
+search-provider charges. A web result is untrusted data and
 ends further tool selection for that delegation. The voice model still sees only
 `delegate_task`, never these individual tools. [Prompts](agent/src/voice_delegate_agent/prompts/)
 are versioned with the worker.
@@ -143,8 +168,7 @@ are versioned with the worker.
 
 ## Interruption, cancellation and delivery
 
-The default path retains the original cancellation behavior. Opt into the separate
-work/narration lifecycle with `VOICE_INTENT_CANCELLATION=true`:
+The default work/narration lifecycle preserves tasks through speech interruptions:
 
 - Speaking interrupts narration while delegated work continues.
 - Up to two tasks run independently; a new delegation does not cancel the previous one.
@@ -162,7 +186,7 @@ wait are shown separately. See [ADR 009](docs/decisions/009-cancellation-is-inte
 flowchart LR
     B["Browser / opt-in Capacitor shell"] <-->|WebRTC audio| V["Voice service"]
     B -->|Origin + invitation + session key| A["FastAPI: owned sessions and quotas"]
-    A <-->|SDP and sideband events| V
+    A <-->|OpenAI SDP/sideband or ElevenLabs token/webhook| V
     V -->|delegate_task| A
     A --> W["LangGraph worker: local or private HTTP service"]
     W --> P["Offline / OpenAI / Decisions planner"]
@@ -177,13 +201,13 @@ queues, history, model steps, results and external requests have explicit limits
 Invitations, quota SQLite stores and leases control public access. Provider recovery
 creates a new browser peer and replays bounded text, never tool executions.
 
-Optional `VOICE_AUDIO_TIMING=true` measures browser audio onset/playback separately
+Browser audio timing measures onset/playback separately
 from the always-labeled transcript timestamp gap. A transcript gap is not acoustic
 latency; browser measurements are proxies, not a hardware loopback measurement.
 See [measurement methodology](docs/benchmarks.md) and [observability](observability/README.md).
 
 Ordinary diagnostics exclude conversation text. Server debug recording requires
-`VOICE_DEBUG_RECORDING=true` and session consent; it stores bounded data for up to
+explicit session consent; it stores bounded data for up to
 24 hours while the backend runs. Audio recording is a separate browser-only consent
 and download. The operator can read server debug recordings. See [operations](docs/operations.md).
 
@@ -225,6 +249,7 @@ not require provider credentials or paid requests.
 - [Configuration](docs/configuration.md), [local development](docs/local-development.md), [worker setup](docs/worker.md)
 - [Deployment](deployment/README.md), [operations](docs/operations.md), [production scope](docs/production.md)
 - [Benchmarks](docs/benchmarks.md), [worker evals](evals/README.md), [roadmap and acceptance](docs/roadmap.md)
+- [Session controls](docs/session-ui.md), [ElevenLabs setup](docs/elevenlabs.md), [cost estimates](docs/cost-estimates.md)
 - [Native packaging](docs/mobile.md), [third-party notices](THIRD_PARTY_NOTICES.md) and [contributing](CONTRIBUTING.md)
 
 Public protocol sources are cited in the design documents and ADRs. The project is

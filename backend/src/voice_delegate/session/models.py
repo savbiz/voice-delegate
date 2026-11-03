@@ -1,8 +1,12 @@
 """In-memory session state; each session belongs to one process."""
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from .manager import SessionManager
 
 from voice_delegate.costs import CostLedger
 from voice_delegate.debug import DebugRecording
@@ -31,6 +35,9 @@ class Session:
     recap: Recap = field(default_factory=Recap)
     principal: str = field(default="local", repr=False)
     debug: DebugRecording | None = field(default=None, repr=False)
+    adapter: str = ""
+    owner: "SessionManager | None" = field(default=None, repr=False)
+    release_personal: Callable[[], Awaitable[None]] | None = field(default=None, repr=False)
     costs: CostLedger | None = None
     connection: RealtimeConnection | None = None
     watcher: asyncio.Task[None] | None = None

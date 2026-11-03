@@ -8,7 +8,7 @@ test('demo completes without backend requests', async ({ page }) => {
     if (request.url().includes('/api/')) api.push(request.url());
   });
   await page.clock.install();
-  await page.goto('/');
+  await page.goto('/#demo');
   await expect(page.locator('header .badge')).toHaveText('OPEN REFERENCE · 0.1.0');
   await page.getByRole('button', { name: 'Start demo', exact: true }).click();
   await page.clock.runFor(4000);
@@ -17,20 +17,20 @@ test('demo completes without backend requests', async ({ page }) => {
 });
 test('stopping cancels further playback', async ({ page }) => {
   await page.clock.install();
-  await page.goto('/');
+  await page.goto('/#demo');
   await page.getByRole('button', { name: 'Start demo', exact: true }).click();
   await page.clock.fastForward(1000);
   await page.getByRole('button', { name: 'Stop demo', exact: true }).click();
   await page.clock.fastForward(5000);
   await expect(page.getByText('240 ms · simulated')).not.toBeVisible();
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Start conversation' })).toBeVisible();
 });
 
 test('live mode without a server key explains how to proceed', async ({ page }) => {
   await page.route('**/api/config', (route) => route.fulfill({ json: { voice_available: false } }));
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.getByRole('status')).toContainText('Set OPENAI_API_KEY on the backend');
   await expect(page.getByRole('button', { name: 'Start conversation' })).toBeEnabled();
@@ -40,7 +40,7 @@ test('voice preferences and accessible playback controls work before connecting'
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByText('Voice settings & recording', { exact: true }).click();
   await page.getByLabel('Response language').selectOption('it');
   await page.getByLabel('Conversation style').selectOption('translate');
@@ -58,26 +58,36 @@ test('voice preferences and accessible playback controls work before connecting'
   await expect(page.getByLabel('Response language')).toBeFocused();
 });
 
-test('mode tabs support keyboard selection and expose their panel', async ({ page }) => {
+test('voice is primary and secondary tools support keyboard navigation and direct links', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route('**/api/config', (route) => route.fulfill({ json: { voice_available: true } }));
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Free demo' }).focus();
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'Live voice' })).toBeFocused();
-  await expect(page.getByRole('tab', { name: 'Live voice' })).toHaveAttribute(
-    'aria-selected',
-    'true',
+  await expect(page.getByRole('button', { name: 'Start conversation' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Live voice', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
   );
-  await expect(page.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'tab-live');
-  await expect(page.locator('#recap')).toHaveAttribute('aria-live', 'off');
-  await page.keyboard.press('End');
-  await expect(page.getByRole('tab', { name: 'Documentation', exact: true })).toBeFocused();
-  await expect(page.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'tab-reference');
-  await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('tab', { name: 'Free demo' })).toBeFocused();
-  await page.keyboard.press('ArrowLeft');
-  await expect(page.getByRole('tab', { name: 'Documentation', exact: true })).toBeFocused();
-  await page.keyboard.press('Home');
-  await expect(page.getByRole('tab', { name: 'Free demo' })).toBeFocused();
+  await expect(page.getByRole('link', { name: 'Offline example', exact: true })).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Project documentation', exact: true })).toBeHidden();
+  await page.getByText('Tools & examples', { exact: true }).focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Offline example', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#demo$/);
+  await expect(page.getByRole('region', { name: 'Offline example', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Project documentation', exact: true }).click();
+  await expect(page).toHaveURL(/#reference$/);
+  await expect(page.getByLabel('Project question')).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('secondary-tools.png'), fullPage: true });
+  await page.reload();
+  await expect(page.getByLabel('Project question')).toBeVisible();
+  await page.goBack();
+  await expect(page.getByRole('button', { name: 'Start demo', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Start conversation' })).toBeVisible();
 });
 
 test('demo head and favicon load without console errors under production CSP', async ({ page }) => {
@@ -93,7 +103,7 @@ test('demo head and favicon load without console errors under production CSP', a
     const response = await route.fetch();
     await route.fulfill({ response, headers: { ...response.headers(), ...headers } });
   });
-  await page.goto('/');
+  await page.goto('/#demo');
   await expect(page.getByRole('button', { name: 'Start demo', exact: true })).toBeVisible();
   await expect(page.locator('meta[name="description"]')).toHaveAttribute(
     'content',

@@ -8,7 +8,7 @@ import textwrap
 from pathlib import Path
 
 from pydantic import AliasChoices, SecretStr
-from voice_delegate.config import Settings
+from voice_delegate.config import AUTOMATIC_FEATURES, Settings
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "docs/configuration.md"
@@ -44,10 +44,10 @@ def build() -> str:
         "Boolean flags accept `true` or `false`. `enum` lists every application-allowed choice;",
         "numeric bounds and collection/string limits are listed in field validation.",
         "A plain string is not an enumerated model/voice catalogue: provider/account support",
-        "still determines whether that value works. Empty optional credentials disable no",
-        "feature automatically; enabling a dependent feature can require its credentials.",
+        "still determines whether that value works. Optional providers become available when",
+        "their required credentials are complete; supplying keys can enable billable calls.",
         "See [local profiles](local-development.md#copyable-local-configuration) and the",
-        "commented [server template](../.env.example) for meanings and examples.",
+        "[minimal server template](../config/local.env.template) for meanings and examples.",
         "",
         "| Field | Environment variable | Default | Field validation |",
         "|---|---|---|---|",
@@ -71,6 +71,8 @@ def build() -> str:
     )
     aliases: list[str] = []
     for name, field in Settings.model_fields.items():
+        if name in AUTOMATIC_FEATURES:
+            continue
         alias = field.validation_alias
         if isinstance(alias, AliasChoices):
             env = alias.choices[0]
@@ -91,6 +93,22 @@ def build() -> str:
     lines += ["", *aliases]
     lines += [
         "",
+        "## Automatic features",
+        "",
+        "The application loader always enables cost accounting, provider selection, intent-based",
+        "cancellation and audio timing. Native origins still require an explicit origin allowlist;",
+        "ElevenLabs is filtered out on native clients. ElevenLabs becomes available with complete",
+        "agent credentials; Tavily search with a key on the worker. Configured Azure credentials",
+        "make recovery available for OpenAI sessions (not when Azure is the default adapter),",
+        "off until selected per session. Debug",
+        "recording needs checkbox consent; OTel is on, exporting only to configured endpoints",
+        "or local console traces. No separate enable flags are required. With a key, the worker",
+        "uses OpenAI;",
+        "otherwise offline planning; an explicit worker mode still takes precedence.",
+        "The former environment flags for these behaviours are ignored by the application loader.",
+        "Low-level Settings constructor overrides remain for deterministic offline tests.",
+        "Use [the minimal template](../config/local.env.template) for new installations.",
+        "",
         "## Cross-field validator rules",
         "",
         "Every configuration is also checked by the exact validator below. This includes",
@@ -108,8 +126,8 @@ def build() -> str:
         "Use `VOICE_ALLOWED_ORIGINS` as a JSON array of exact origins. The deprecated",
         "`VOICE_ALLOWED_ORIGIN` accepts one origin only when no list was supplied.",
         "The list takes precedence if both variables are configured. Production requires",
-        "HTTPS for every allowed browser origin. With `VOICE_NATIVE_CLIENTS=true`, the exact",
-        "`capacitor://localhost` iOS origin may also be explicitly listed. Android uses",
+        "HTTPS for every browser origin. The `capacitor://localhost` iOS origin may also",
+        "be explicitly listed. Android uses",
         "`https://localhost`. Neither native origin is added automatically. Routes, CORS",
         "and limiter responses share the list.",
         "Origins must use browser serialization: lowercase/punycode hostnames and no",

@@ -31,7 +31,7 @@ pnpm native:sync
 creates `dist-native/`; the normal Vercel build still creates `dist/`.
 `native:sync` rebuilds and copies the local assets into the checked-in iOS and Android
 projects. Rebuild and sync after changing frontend code or public build variables.
-Neither command calls a voice provider. The default Free demo needs no microphone,
+Neither command calls a voice provider. The default offline example needs no microphone,
 invitation or provider key and uses the existing scripted scenario.
 
 The API URL must be an explicit canonical HTTPS origin without a trailing slash,
@@ -99,12 +99,11 @@ Configure these backend values through its environment, preserving the existing
 web origin and all invitations/quotas:
 
 ```sh
-VOICE_NATIVE_CLIENTS=true
 VOICE_ALLOWED_ORIGINS='["https://voice-delegate.vercel.app","capacitor://localhost","https://localhost"]'
 ```
 
-The exact `capacitor://localhost` iOS origin is accepted only when
-`VOICE_NATIVE_CLIENTS=true`; the flag does not add any origins automatically.
+The exact `capacitor://localhost` iOS origin must be explicitly allowlisted;
+no origin is added automatically.
 Android uses `https://localhost`. Origins identify the app's local web content,
 not the backend's address. Keep `VOICE_ALLOWED_HOSTS` set to the backend's own host.
 No deployed environment is changed by this PR or by building the mobile preview.
@@ -118,7 +117,7 @@ and backend session expiry remains the final cleanup boundary.
 
 ## Acceptance checklist
 
-- Build and sync with native voice disabled; start and stop Free demo without API calls.
+- Build and sync with native voice disabled; start and stop the offline example without API calls.
 - Launch the compiled project on a simulator, then a physical iPhone/iPad and Android device.
 - Test documentation search with an invitation and the explicit native Origin allowlist.
 - Opt into voice only when ready for provider charges; test microphone permission denied,

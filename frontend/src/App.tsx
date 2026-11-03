@@ -1,10 +1,13 @@
-import { costText } from './realtime/costs';
+import { ApiAccess, type ApiSource, type PersonalKeys } from './components/ApiAccess';
+import { isNativeClient } from './native';
+import { CostPanel, ProviderChoice, SpeakingStatus } from './components/SessionPanels';
+import { voiceOptions, type Adapter, type VoiceOptions } from './realtime/provider-options';
 /** React shell separating a free scripted demo from the live WebRTC lifecycle. */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { canStartVoice } from './native';
 import { Button } from './components/Button';
-import { ModeTabs } from './components/ModeTabs';
-import type { Mode } from './components/ModeTabs';
+import { WorkspaceNavigation } from './components/WorkspaceNavigation';
+import type { Mode } from './components/WorkspaceNavigation';
 import { createLiveSession } from './realtime/live';
 import type { LiveController } from './realtime/live';
 import { createLiveStore, taskLabel } from './realtime/store';
@@ -15,7 +18,13 @@ import { version } from '../package.json';
 import { readInvitation, saveInvitation } from './invitation';
 import { sourceUrl } from './source-url';
 
-function Live({ code }: { code: string }) {
+function Live({ code, onCode }: { code: string; onCode: (code: string) => void }) {
+  const [apiSource, setApiSource] = useState<ApiSource>('platform');
+  const [keys, setKeys] = useState<PersonalKeys>({});
+  const keysRef = useRef(keys);
+  keysRef.current = keys;
+  const apiSourceRef = useRef(apiSource);
+  apiSourceRef.current = apiSource;
   const [store] = useState(createLiveStore);
   const storeRef = useRef(store);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
@@ -23,17 +32,59 @@ function Live({ code }: { code: string }) {
   const controller = useRef<LiveController | null>(null);
   const codeRef = useRef(code);
   codeRef.current = code;
+  const [options, setOptions] = useState<VoiceOptions>();
+  const [adapter, setAdapter] = useState<Adapter>();
+  const selectedAdapter = adapter ?? options?.adapter;
+  const sdkSelected = selectedAdapter === 'elevenlabs';
+  const noProvider = options !== undefined && options.available_adapters.length === 0;
+  const missingKeys =
+    apiSource === 'personal'
+      ? sdkSelected
+        ? !(
+            keys.elevenlabs_key?.trim() &&
+            keys.elevenlabs_agent_id?.trim() &&
+            keys.elevenlabs_webhook_token?.trim()
+          )
+        : selectedAdapter === 'azure'
+          ? !(keys.azure_key?.trim() && keys.azure_endpoint?.trim())
+          : !keys.openai_key?.trim()
+      : false;
+  useEffect(() => {
+    if (!canStartVoice()) return;
+    const abort = new AbortController();
+    void voiceOptions(abort.signal, apiSource, isNativeClient()).then((value) => {
+      if (!abort.signal.aborted) setOptions(value);
+    });
+    return () => abort.abort();
+  }, [apiSource]);
   const [language, setLanguage] = useState('auto');
   const [connectionSounds, setConnectionSounds] = useState(true);
   const soundsRef = useRef(connectionSounds);
   soundsRef.current = connectionSounds;
   const [voiceMode, setVoiceMode] = useState('conversation');
   const [debugRecording, setDebugRecording] = useState(false);
+  const [azureRecovery, setAzureRecovery] = useState(false);
+  const adapterRef = useRef(selectedAdapter);
+  adapterRef.current = selectedAdapter;
+  const recoveryRef = useRef(azureRecovery);
+  recoveryRef.current = azureRecovery;
   const [audioRecording, setAudioRecording] = useState(false);
   const recordingRef = useRef(audioRecording);
   recordingRef.current = audioRecording;
-  const preferences = useRef({ language, mode: voiceMode, debug_recording: debugRecording });
-  preferences.current = { language, mode: voiceMode, debug_recording: debugRecording };
+  const preferences = useRef({
+    language,
+    mode: voiceMode,
+    debug_recording: debugRecording,
+    azure_recovery: azureRecovery,
+    adapter: selectedAdapter,
+  });
+  preferences.current = {
+    language,
+    mode: voiceMode,
+    debug_recording: debugRecording,
+    azure_recovery: azureRecovery,
+    adapter: selectedAdapter,
+  };
   const [muted, setMuted] = useState(false);
   const [largeCaptions, setLargeCaptions] = useState(false);
   const [category, setCategory] = useState('wrong_answer');
@@ -46,6 +97,17 @@ function Live({ code }: { code: string }) {
       () => preferences.current,
       () => recordingRef.current,
       () => soundsRef.current,
+      () => {
+        if (apiSourceRef.current !== 'personal') return undefined;
+        if (adapterRef.current === 'azure' || recoveryRef.current) return keysRef.current;
+        // Retained Azure values from an earlier provider choice are not part of this session.
+        const rest = { ...keysRef.current };
+        delete rest.azure_key;
+        delete rest.azure_endpoint;
+        delete rest.azure_deployment;
+        return rest;
+      },
+      () => setKeys({}),
     );
     controller.current = session;
     return () => {
@@ -56,28 +118,93 @@ function Live({ code }: { code: string }) {
   useEffect(() => {
     if (state.phase === 'ended') {
       setDebugRecording(false);
+      setAzureRecovery(false);
       setAudioRecording(false);
     }
   }, [state.phase]);
   return (
     <div className={largeCaptions ? 'large-captions' : undefined}>
+      <ApiAccess
+        source={apiSource}
+        keys={keys}
+        onKeys={setKeys}
+        adapter={selectedAdapter}
+        recovery={azureRecovery}
+        onRecovery={(enabled) => {
+          setAzureRecovery(enabled);
+          if (!enabled && selectedAdapter === 'openai')
+            setKeys({
+              ...keys,
+              azure_key: undefined,
+              azure_endpoint: undefined,
+              azure_deployment: undefined,
+            });
+        }}
+        recoveryAvailable={apiSource === 'personal' || options?.azure_recovery_available === true}
+        disabled={state.active || state.ending}
+        code={code}
+        webhookUrl={options?.elevenlabs_webhook_url}
+        onCode={onCode}
+        onSource={(source) => {
+          setApiSource(source);
+          setKeys({});
+          setAdapter(undefined);
+          setOptions(undefined);
+          setLanguage('auto');
+          setVoiceMode('conversation');
+          setDebugRecording(false);
+          setAzureRecovery(false);
+          setAudioRecording(false);
+        }}
+      >
+        {options && selectedAdapter && (
+          <ProviderChoice
+            options={options}
+            source={apiSource}
+            value={selectedAdapter}
+            disabled={state.active || state.ending}
+            onChange={(value) => {
+              setAdapter(value);
+              setAzureRecovery(false);
+              setLanguage('auto');
+              setVoiceMode('conversation');
+              setAudioRecording(false);
+            }}
+          />
+        )}
+      </ApiAccess>
       {!canStartVoice() && (
         <p className="notice">
-          Native preview: Free demo works offline. Live voice is disabled until explicitly enabled
-          in a test build; native microphone and playback acceptance are pending.
+          Native preview: The offline example works without a connection. Live voice is disabled
+          until explicitly enabled in a test build; native microphone and playback acceptance are
+          pending.
         </p>
       )}
       <p className="notice">
-        Live voice requires a server API key and incurs provider usage charges. Your microphone is
-        requested only when you start.
+        {apiSource === 'personal'
+          ? 'Live voice uses your own provider accounts, which bill you directly.'
+          : 'Live voice uses the platform’s provider accounts and counts against your allowance.'}{' '}
+        Your microphone is requested only when you start.
       </p>
+      {state.sessionUi && state.active && <SpeakingStatus activity={state.speaking} />}
       <div className="session-controls">
         <p id="status" role="status">
-          {state.status}
+          {noProvider && !state.active
+            ? 'Voice is unavailable: no provider is configured on this server.'
+            : state.status}
         </p>
         <p id="task-status" className="muted" aria-live="polite">
           {state.workerMessage}
         </p>
+        {missingKeys && !state.active && !state.ending && (
+          <p id="start-hint" className="muted">
+            {sdkSelected
+              ? 'Enter your ElevenLabs API key, agent ID and webhook token to start.'
+              : selectedAdapter === 'azure'
+                ? 'Enter your Azure API key and resource origin to start.'
+                : 'Enter your OpenAI API key to start.'}
+          </p>
+        )}
         {state.worker === 'running' && !state.intentCancellation && (
           <Button
             id="cancel-task"
@@ -135,7 +262,8 @@ function Live({ code }: { code: string }) {
           <Button
             id="start"
             variant="primary"
-            disabled={state.active || state.ending || state.recovering}
+            disabled={state.active || state.ending || state.recovering || noProvider || missingKeys}
+            aria-describedby={missingKeys ? 'start-hint' : undefined}
             onClick={() => controller.current?.start()}
           >
             Start conversation
@@ -179,6 +307,12 @@ function Live({ code }: { code: string }) {
       </div>
       <details className="secondary-panel settings-panel">
         <summary>Voice settings &amp; recording</summary>
+        {sdkSelected && (
+          <p className="notice">
+            This agent manages its own language and style. Mixed audio recording is unavailable for
+            this transport.
+          </p>
+        )}
         <fieldset id="voice-preferences" disabled={state.active}>
           <legend>Voice preferences (before starting)</legend>
           <label>
@@ -191,7 +325,12 @@ function Live({ code }: { code: string }) {
           </label>
           <label>
             Response language{' '}
-            <select id="language" value={language} onChange={(e) => setLanguage(e.target.value)}>
+            <select
+              id="language"
+              disabled={sdkSelected}
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            >
               <option value="auto">Follow the speaker</option>
               <option value="it">Italiano</option>
               <option value="en">English</option>
@@ -203,6 +342,7 @@ function Live({ code }: { code: string }) {
           <label>
             Conversation style{' '}
             <select
+              disabled={sdkSelected}
               id="voice-mode"
               value={voiceMode}
               onChange={(e) => setVoiceMode(e.target.value)}
@@ -220,12 +360,12 @@ function Live({ code }: { code: string }) {
             Record this session for server debugging. I consent to saving transcripts, bounded
             worker results, session events and selected audio connection statistics on this backend
             for up to 24 hours while it is running. No audio recording, request credentials or
-            network addresses. Requires server debug mode. The service operator can read these
-            recordings.
+            network addresses. The service operator can read these recordings.
           </label>
           <label>
             <input
               type="checkbox"
+              disabled={sdkSelected}
               checked={audioRecording}
               onChange={(event) => setAudioRecording(event.target.checked)}
             />
@@ -244,6 +384,7 @@ function Live({ code }: { code: string }) {
         </a>
       )}
       <audio id="audio" ref={audio} muted={muted} autoPlay hidden />
+      <CostPanel cost={state.costs} />
       <Transcript messages={state.messages} />
       {state.sources.length > 0 && (
         <section aria-label="Worker sources">
@@ -278,8 +419,7 @@ function Live({ code }: { code: string }) {
       <details className="secondary-panel">
         <summary>Conversation recap</summary>
         <p className="muted">
-          Live transcript excerpts, refreshed with each heartbeat; not an AI summary. Interruption
-          does not mean completion.
+          Latest request and reply from the transcript. Interrupted work may still be incomplete.
         </p>
         <p id="recap" aria-live="off">
           {state.recap}
@@ -288,7 +428,6 @@ function Live({ code }: { code: string }) {
       <details className="secondary-panel">
         <summary>Connection timings</summary>
         <p>{state.audioTimingStatus}</p>
-        {state.costs && <p role="status">{costText(state.costs)}</p>}
         {state.intentCancellation && (
           <p>
             Estimated Decisions input cost: ${state.decisionCostUsd.toFixed(6)} (configured rate;
@@ -321,9 +460,8 @@ function Live({ code }: { code: string }) {
       <details className="secondary-panel">
         <summary>Report a problem</summary>
         <p>
-          Send only a category, diagnostic ID, interface state, configured provider and app version.
-          No audio, transcripts or message text. Reports expire after seven days. A pseudonymous
-          identity is used to limit submissions.
+          Reports include a category and app diagnostics, without audio or conversation text. They
+          are kept for seven days.
         </p>
         <label>
           Problem category{' '}
@@ -342,7 +480,7 @@ function Live({ code }: { code: string }) {
         </label>
         <Button
           id="send-feedback"
-          disabled={!code || state.reportPending || state.reportSent}
+          disabled={apiSource === 'personal' || !code || state.reportPending || state.reportSent}
           onClick={() => {
             void controller.current?.feedback(category);
           }}
@@ -350,7 +488,11 @@ function Live({ code }: { code: string }) {
           Send report
         </Button>
         <p id="feedback-status" aria-live="polite">
-          {state.feedbackStatus}
+          {apiSource === 'personal'
+            ? 'Reporting is available in Platform API mode with an invitation code.'
+            : !code
+              ? 'Enter your invitation code to send a report.'
+              : state.feedbackStatus}
         </p>
       </details>
     </div>
@@ -453,7 +595,7 @@ function StaticDemo() {
           ? 'Playing recorded scenario…'
           : step
             ? 'Demo stopped'
-            : 'Ready — try the free demo'}
+            : 'Ready — play the offline example'}
       </p>
       <div aria-live="polite" className="space-y-3">
         {visibleScenario(step).map((turn, i) => (
@@ -467,8 +609,19 @@ function StaticDemo() {
     </>
   );
 }
+function readMode(): Mode {
+  const hash = window.location.hash.slice(1);
+  if (hash === 'live' || hash === 'demo' || hash === 'reference') return hash;
+  return import.meta.env.VITE_OFFLINE_STACK === 'true' || !canStartVoice() ? 'demo' : 'live';
+}
+
 export default function App() {
-  const [mode, setMode] = useState<Mode>('demo');
+  const [mode, setMode] = useState<Mode>(readMode);
+  useEffect(() => {
+    const navigate = () => setMode(readMode());
+    window.addEventListener('hashchange', navigate);
+    return () => window.removeEventListener('hashchange', navigate);
+  }, []);
   const [code, setCode] = useState(readInvitation);
   useEffect(() => {
     saveInvitation(code);
@@ -484,9 +637,19 @@ export default function App() {
           A fast voice conversation. A separate worker for the heavy lifting.
         </p>
       </header>
-      <ModeTabs mode={mode} onChange={setMode} />
-      <div id="mode-panel" role="tabpanel" aria-labelledby={`tab-${mode}`}>
-        {mode !== 'demo' && (
+      <WorkspaceNavigation mode={mode} />
+      <div
+        id="mode-panel"
+        role="region"
+        aria-label={
+          mode === 'live'
+            ? 'Voice conversation'
+            : mode === 'demo'
+              ? 'Offline example'
+              : 'Project documentation'
+        }
+      >
+        {mode === 'reference' && (
           <label className="block my-5">
             Personal invitation code{' '}
             <input
@@ -507,13 +670,13 @@ export default function App() {
         ) : mode === 'reference' ? (
           <Reference code={code} />
         ) : (
-          <Live code={code} />
+          <Live code={code} onCode={setCode} />
         )}
       </div>
       <footer className="app-footer">
         React 19 · FastAPI · WebRTC
         <br />
-        Bounded delegation · Azure recovery · Optional telemetry.
+        Background tasks · Session costs · Opt-in Azure recovery.
         <br />
         <a href="/third-party-notices.txt" className="underline">
           Third-party notices

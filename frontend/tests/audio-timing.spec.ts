@@ -49,7 +49,7 @@ test('audio telemetry uses playback energy and survives upload failure', async (
     });
   });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.locator('#status')).toContainText('Connected');
   await page.evaluate(() => {

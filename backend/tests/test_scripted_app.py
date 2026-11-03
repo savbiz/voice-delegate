@@ -1,6 +1,7 @@
 """The simulated provider is available only through an explicit test opt-in."""
 
 import asyncio
+from pathlib import Path
 
 import pytest
 from conftest import ASGIClientFactory
@@ -29,7 +30,7 @@ async def test_scripted_app_starts_with_explicit_opt_in(
 
 
 @pytest.mark.parametrize(
-    "mode", ["disabled", "paid_worker", "provider_key", "recording", "fallback"]
+    "mode", ["disabled", "paid_worker", "provider_key", "recording", "fallback", "elevenlabs"]
 )
 def test_demo_factory_refuses_paid_or_recorded_configuration(
     mode: str, monkeypatch: pytest.MonkeyPatch
@@ -49,7 +50,9 @@ def test_demo_factory_refuses_paid_or_recorded_configuration(
         settings.debug_recording = True
     if mode == "fallback":
         settings.fallback_enabled = True
-    monkeypatch.setattr("voice_delegate.scaling.scripted_app.load_settings", lambda: settings)
+    if mode == "elevenlabs":
+        settings.elevenlabs_api_key = SecretStr("not-a-real-key")
+    monkeypatch.setattr("voice_delegate.scaling.scripted_app.Settings", lambda: settings)
     with pytest.raises(ValueError, match="Offline demo requires"):
         create_demo_app()
 
@@ -60,7 +63,7 @@ async def test_demo_runs_real_offline_worker_and_closes(
     from voice_delegate.scaling.scripted_app import create_demo_app
 
     monkeypatch.setenv("VOICE_OFFLINE_DEMO", "1")
-    monkeypatch.setattr("voice_delegate.scaling.scripted_app.load_settings", lambda: Settings())
+    monkeypatch.setattr("voice_delegate.scaling.scripted_app.Settings", lambda: Settings())
     async with asgi_client(create_demo_app()) as client:
         client.headers["Origin"] = "http://localhost:5173"
         owner = (await client.post("/api/sessions")).json()
@@ -79,3 +82,28 @@ async def test_demo_runs_real_offline_worker_and_closes(
         else:
             pytest.fail("Offline delegation did not complete")
         assert (await client.post(path + "/close")).json()["finalized"]
+
+
+async def test_demo_factory_loads_actual_offline_environment_without_online_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    asgi_client: ASGIClientFactory,
+) -> None:
+    import os
+
+    from voice_delegate.scaling.scripted_app import create_demo_app
+
+    monkeypatch.chdir(tmp_path)
+    for name in list(os.environ):
+        if name.startswith("VOICE_") or name in {
+            "OPENAI_API_KEY",
+            "TAVILY_API_KEY",
+            "ELEVENLABS_API_KEY",
+        }:
+            monkeypatch.delenv(name)
+    monkeypatch.setenv("VOICE_OFFLINE_DEMO", "1")
+    monkeypatch.setenv("VOICE_WORKER_MODE", "offline")
+    monkeypatch.setenv("VOICE_WORKER_EXECUTION", "remote")
+    monkeypatch.setenv("VOICE_WORKER_SERVICE_TOKEN", "offline-only-public-test-token-1234")
+    async with asgi_client(create_demo_app()) as client:
+        assert (await client.get("/healthz")).status_code == 200

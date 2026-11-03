@@ -33,8 +33,11 @@ class DebugSample(BaseModel):
 def purge_recordings(directory: Path) -> None:
     if directory.exists():
         for path in directory.glob("*.jsonl"):
-            if path.stat().st_mtime < time.time() - RETENTION_SECONDS:
-                path.unlink()
+            try:
+                if path.stat().st_mtime < time.time() - RETENTION_SECONDS:
+                    path.unlink()
+            except OSError:
+                continue  # Concurrent removal or permissions must not break the janitor.
 
 
 class DebugRecording:

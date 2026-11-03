@@ -1,10 +1,10 @@
 # Backend observability
 
 Set `GF_SECURITY_ADMIN_PASSWORD` to a private admin password, then start the local stack with `docker compose -f observability/compose.yaml up -d`.
-Set these backend variables and restart the API:
+OTel is enabled automatically. Without exporter endpoints, traces go to the local console
+and metrics have no external exporter. Set these backend variables and restart the API:
 
 ```dotenv
-VOICE_OTEL_ENABLED=true
 VOICE_OTEL_ENDPOINT=http://localhost:4318/v1/traces
 VOICE_OTEL_METRICS_ENDPOINT=http://localhost:4318/v1/metrics
 ```
@@ -42,7 +42,7 @@ Signaling duration, transcript arrival and audio playback are different measures
 TTFB, playback onset and end-to-end acoustic latency require a live measurement harness;
 this project does not export invented values for them. Fake runs measure orchestration only.
 
-OTel is disabled by default. Tests inject in-memory exporters and do not use network services.
+OTel is enabled automatically; without exporter endpoints it uses local console traces. Tests inject in-memory exporters and do not use network services.
 Metrics export additionally requires `VOICE_OTEL_METRICS_ENDPOINT`; there is no public
 application metrics endpoint. Collector buffers and container memory are bounded.
 

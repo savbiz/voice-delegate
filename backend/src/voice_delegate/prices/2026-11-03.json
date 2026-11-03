@@ -1,6 +1,6 @@
 {
-  "version": "2026-11-02-public-assumptions-v1",
-  "date": "2026-11-02",
+  "version": "2026-11-03-public-assumptions-v2",
+  "date": "2026-11-03",
   "rates": {
     "voice.live.second": {
       "usd": 0.0008333333333333334,
@@ -11,8 +11,8 @@
       "source": "https://developers.openai.com/api/docs/pricing"
     },
     "voice.azure.second": {
-      "usd": null,
-      "source": "https://azure.microsoft.com/pricing/details/cognitive-services/openai-service/"
+      "usd": 0.0008333333333333334,
+      "source": "Assumed equal to https://developers.openai.com/api/docs/models/gpt-live-1; Azure publishes no gpt-live-1 meter (only gpt-live-transcribe, https://prices.azure.com/api/retail/prices)"
     },
     "voice.elevenlabs.second": {
       "usd": null,

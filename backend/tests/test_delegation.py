@@ -18,6 +18,7 @@ from voice_delegate.providers.models import (
     Transcript,
 )
 from voice_delegate.session.manager import SessionManager
+from voice_delegate.session.preferences import VoicePreferences
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 from voice_delegate_agent.reference import WorkerResult
 from voice_delegate_agent.tools import calculate
@@ -250,7 +251,7 @@ async def test_realtime_interrupts_on_speech_not_delayed_transcript(
         worker=worker,
         fallback=realtime if fallback else None,
     )
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=fallback))
     await manager.connect(session, "v=0\r\n")
     if fallback:
         await manager.reconnect(session, "v=0\r\n", 0)

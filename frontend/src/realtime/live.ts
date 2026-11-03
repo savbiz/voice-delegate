@@ -1,3 +1,4 @@
+import type { PersonalKeys } from '../components/ApiAccess';
 import type { CostSummary } from './costs';
 import { elevenSession } from './elevenlabs-live';
 import { canStartVoice, isNativeClient } from '../native';
@@ -15,7 +16,53 @@ import { shouldRecover } from './recovery';
 
 import { endedWorkerState, processEvent, recapText, workerState } from './store';
 import type { LiveStore, Phase } from './store';
-export type Preferences = { language: string; mode: string; debug_recording?: boolean };
+export type Preferences = {
+  language: string;
+  mode: string;
+  azure_recovery?: boolean;
+  debug_recording?: boolean;
+  adapter?: string;
+};
+const SECRET_FIELDS = [
+  'openai_key',
+  'tavily_key',
+  'elevenlabs_key',
+  'azure_key',
+  'elevenlabs_webhook_token',
+] as const;
+
+/** Trim pasted values and explain mistakes before anything is sent or cleared. */
+export function cleanPersonalKeys(keys: PersonalKeys, preferences: Preferences): PersonalKeys {
+  const cleaned: PersonalKeys = {};
+  for (const [name, value] of Object.entries(keys) as [keyof PersonalKeys, string | undefined][]) {
+    const trimmed = value?.trim();
+    if (trimmed) cleaned[name] = trimmed;
+  }
+  for (const name of SECRET_FIELDS)
+    if (cleaned[name] && !/^[\x21-\x7e]+$/.test(cleaned[name]))
+      throw new Error(
+        'Keys and tokens cannot contain spaces, line breaks or non-ASCII characters.',
+      );
+  if (preferences.adapter === 'azure' || preferences.azure_recovery) {
+    let origin: URL | undefined;
+    try {
+      origin = cleaned.azure_endpoint ? new URL(cleaned.azure_endpoint) : undefined;
+    } catch {
+      origin = undefined;
+    }
+    if (!origin || origin.protocol !== 'https:' || !origin.hostname.endsWith('.openai.azure.com'))
+      throw new Error(
+        'The Azure resource origin must look like https://<resource>.openai.azure.com (no path).',
+      );
+    cleaned.azure_endpoint = origin.origin;
+    if (cleaned.azure_deployment && !/^[A-Za-z0-9._-]+$/.test(cleaned.azure_deployment))
+      throw new Error(
+        'The Azure deployment name may contain only letters, digits, dots, hyphens and underscores.',
+      );
+  }
+  return cleaned;
+}
+
 export function createLiveSession(
   store: LiveStore,
   audio: HTMLAudioElement,
@@ -23,10 +70,13 @@ export function createLiveSession(
   getPreferences: () => Preferences,
   getAudioConsent: () => boolean = () => false,
   getConnectionSounds: () => boolean = () => false,
+  getPersonalKeys: () => PersonalKeys | undefined = () => undefined,
+  clearPersonalKeys: () => void = () => undefined,
 ) {
   const sounds = new ConnectionSounds();
   let diagnosticId = crypto.randomUUID();
-  let reportBody: { diagnostic_id: string; category: string; state: string } | undefined;
+  let reportBody:
+    { diagnostic_id: string; category: string; state: string; adapter?: string } | undefined;
   let reportSent = false;
   let reportPending = false;
   function showState(phase: Phase, status: string, help: string): void {
@@ -35,7 +85,13 @@ export function createLiveSession(
   function showWorker(worker: string): void {
     store.update(workerState(store.getSnapshot(), worker));
   }
-  type Session = { id: string; key: string; accessCode: string; debugRecording?: boolean };
+  type Session = {
+    id: string;
+    key: string;
+    accessCode: string;
+    debugRecording?: boolean;
+    azureRecovery?: boolean;
+  };
   let eleven: ReturnType<typeof elevenSession> | undefined;
   let recording: AudioRecording | undefined;
   let disposed = false;
@@ -86,7 +142,7 @@ export function createLiveSession(
     channel = undefined;
     peer = undefined;
     session = undefined;
-    store.update({ active: false, audioBlocked: false });
+    store.update({ active: false, audioBlocked: false, speaking: undefined });
   }
 
   function requestOptions(
@@ -132,6 +188,9 @@ export function createLiveSession(
         401: 'Your invitation is missing, invalid or revoked.',
         429: 'Demo allowance reached or another conversation is active. Try again later.',
         503: 'New conversations are temporarily unavailable.',
+        502: path.endsWith('/config')
+          ? 'The backend is unavailable. For local development, start the backend with make be and retry.'
+          : 'Voice connection failed. Check backend logs and the selected provider configuration.',
       };
       throw new Error(
         messages[response.status] ??
@@ -295,7 +354,7 @@ export function createLiveSession(
   async function recover(message: string): Promise<void> {
     if (ending || recovering) return;
     const owner = session;
-    if (!owner || fallbackAttempted) {
+    if (!owner || !owner.azureRecovery || fallbackAttempted) {
       await finish(message);
       return;
     }
@@ -333,13 +392,46 @@ export function createLiveSession(
     }
   }
 
+  async function createOwned(preferences: Preferences, accessCode: string) {
+    const entered = getPersonalKeys();
+    // Validation errors keep the typed fields; they clear only once a request was attempted.
+    const keys = entered ? cleanPersonalKeys(entered, preferences) : undefined;
+    if (keys) {
+      const key =
+        preferences.adapter === 'elevenlabs'
+          ? keys.elevenlabs_key
+          : preferences.adapter === 'azure'
+            ? keys.azure_key
+            : keys.openai_key;
+      if (!key) throw new Error('Enter your API key for the selected voice provider.');
+    }
+    try {
+      return {
+        ...(await request<{ id: string; key: string }>(
+          keys ? '/personal/sessions' : '/sessions',
+          undefined,
+          keys ? { ...preferences, keys } : preferences,
+          35000,
+          keys ? '' : accessCode,
+        )),
+        accessCode: keys ? '' : accessCode,
+        debugRecording: preferences.debug_recording,
+        azureRecovery: preferences.azure_recovery === true,
+      };
+    } finally {
+      if (keys) clearPersonalKeys();
+    }
+  }
+
   async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
     const requestedPreferences = { ...getPreferences() };
+    const personal = getPersonalKeys() !== undefined;
     const audioConsent = !existing && getAudioConsent();
     if (!existing) {
       store.update({ debugStatus: '' });
       fallbackAttempted = false;
       store.update({
+        speaking: undefined,
         captions: { user: '', assistant: '' },
         messages: [],
         audioBlocked: false,
@@ -379,12 +471,20 @@ export function createLiveSession(
       const config = await request<{
         voice_available: boolean;
         transport?: string;
+        session_ui?: boolean;
         audio_timing_available?: boolean;
         intent_cancellation?: boolean;
         debug_recording_available?: boolean;
-      }>('/config');
+      }>(
+        personal ? '/personal/config' : '/config',
+        undefined,
+        { adapter: requestedPreferences.adapter },
+        35000,
+        personal ? '' : accessCode,
+      );
       if (attempt !== attemptId) return;
       store.update({
+        sessionUi: Boolean(config.session_ui),
         intentCancellation: Boolean(config.intent_cancellation),
         transport: config.transport === 'elevenlabs_agents_webrtc' ? 'elevenlabs' : 'webrtc',
       });
@@ -394,7 +494,7 @@ export function createLiveSession(
         );
       if (!config.voice_available)
         throw new Error(
-          'Set OPENAI_API_KEY on the backend to use live voice. Free demo works without a key.',
+          'Set OPENAI_API_KEY on the backend to use live voice. The offline example works without a key.',
         );
       if (config.transport === 'elevenlabs_agents_webrtc') {
         if (existing || isNativeClient())
@@ -410,17 +510,7 @@ export function createLiveSession(
           throw new Error(
             'This agent uses its server-configured language and conversation style. Select Follow the speaker and Assistant conversation.',
           );
-        const created = {
-          ...(await request<{ id: string; key: string }>(
-            '/sessions',
-            undefined,
-            requestedPreferences,
-            35000,
-            accessCode,
-          )),
-          accessCode,
-          debugRecording: requestedPreferences.debug_recording,
-        };
+        const created = await createOwned(requestedPreferences, accessCode);
         if (attempt !== attemptId) {
           await request(`/sessions/${created.id}/close`, created);
           return;
@@ -540,17 +630,7 @@ export function createLiveSession(
         existing ? 'Reconnecting with Azure…' : 'Connecting…',
         'Please wait. Select Stop to cancel.',
       );
-      const created = existing ?? {
-        ...(await request<{ id: string; key: string }>(
-          '/sessions',
-          undefined,
-          requestedPreferences,
-          35000,
-          accessCode,
-        )),
-        accessCode,
-        debugRecording: requestedPreferences.debug_recording,
-      };
+      const created = existing ?? (await createOwned(requestedPreferences, accessCode));
       if (attempt !== attemptId) {
         await request(`/sessions/${created.id}/close`, created);
         return;
@@ -582,6 +662,8 @@ export function createLiveSession(
       let timingCount = 0;
       const activityReporter = new ActivityReporter();
       let activityBusy = false;
+      // The server accepts activity only for a connected transport, i.e. after the offer.
+      let activityEnabled = false;
       store.update({
         audioTimingStatus: config.audio_timing_available
           ? 'Waiting for audio playback.'
@@ -601,10 +683,20 @@ export function createLiveSession(
             void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
           },
           audio,
-          config.audio_timing_available || config.intent_cancellation
+          config.audio_timing_available || config.intent_cancellation || config.session_ui
             ? (now, local, remote, playing, remoteEnergy) => {
                 if (attempt !== attemptId) return;
-                if (config.intent_cancellation && !activityBusy) {
+                if (config.session_ui) {
+                  const next = { user: local > 0.035, assistant: remoteEnergy > 0.02 };
+                  const previous = store.getSnapshot().speaking;
+                  if (
+                    !previous ||
+                    previous.user !== next.user ||
+                    previous.assistant !== next.assistant
+                  )
+                    store.update({ speaking: next });
+                }
+                if (config.intent_cancellation && activityEnabled && !activityBusy) {
                   const activity = activityReporter.sample(now, local, remoteEnergy);
                   if (activity) {
                     activityBusy = true;
@@ -722,6 +814,7 @@ export function createLiveSession(
       );
       if (attempt !== attemptId) return;
       await connection.setRemoteDescription({ type: 'answer', sdp: result.sdp });
+      activityEnabled = true;
     } catch (error) {
       if (attempt === attemptId) {
         await finish(error instanceof Error ? error.message : 'Could not start conversation.');
@@ -733,7 +826,12 @@ export function createLiveSession(
     if (reportPending || reportSent || !getAccessCode()) return;
     reportPending = true;
     store.update({ reportPending: true, reportLocked: true });
-    reportBody ??= { diagnostic_id: diagnosticId, category, state: store.getSnapshot().phase };
+    reportBody ??= {
+      diagnostic_id: diagnosticId,
+      category,
+      state: store.getSnapshot().phase,
+      ...(getPreferences().adapter ? { adapter: getPreferences().adapter } : {}),
+    };
     store.update({ feedbackStatus: 'Sending report…' });
     try {
       const result = await request<{ diagnostic_id: string }>('/feedback', undefined, reportBody);
@@ -753,6 +851,7 @@ export function createLiveSession(
   };
 
   const onPageHide = () => {
+    const hadConversation = session !== undefined || store.getSnapshot().active;
     sounds.dispose();
     if (session) {
       void fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/sessions/${session.id}/close`, {
@@ -762,6 +861,7 @@ export function createLiveSession(
     }
     attemptId += 1;
     release();
+    if (!hadConversation) return;
     showState('ended', 'Conversation ended.', 'Select Start conversation to begin a new session.');
     store.update(endedWorkerState(store.getSnapshot()));
   };
@@ -778,7 +878,7 @@ export function createLiveSession(
         showState(
           'ready',
           'Native live voice is disabled.',
-          'Use Free demo. Native voice requires an explicit test build and device verification.',
+          'Use the offline example. Native voice requires an explicit test build and device verification.',
         );
         return;
       }

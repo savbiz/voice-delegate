@@ -2,13 +2,13 @@
 
 ## Browser API
 
-The backend serves JSON over HTTPS in hosted deployments. All `/api` routes require the exact configured `Origin`. Except `/api/config`, they also require `Authorization: Bearer <invitation>` when invitation/shared-code authentication is configured. Every session-specific route requires `X-Session-Key`; a different principal or key receives 404. The shared-code mode is for private testing only.
+The backend serves JSON over HTTPS in hosted deployments. All `/api` routes require the exact configured `Origin`. Except configuration and personal-session creation routes, platform requests also require `Authorization: Bearer <invitation>` when invitation/shared-code authentication is configured. Every session-specific route requires `X-Session-Key`; a different principal or key receives 404. The shared-code mode is for private testing only.
 
 | Method | Route | Request / response | Success | Route-specific errors |
 |---|---|---|---|---|
 | GET | `/healthz` | `{"status":"ok"}`; process health, no provider call | 200 | — |
 | POST | `/api/config` | `requires_access_code`, `voice_available`, `feedback_available` booleans | 200 | — |
-| POST | `/api/sessions` | Optional `language` and `mode` preferences; returns `id`, `key`, `ttl_seconds` | 201 | 429 capacity/quota; 503 kill switch or quota store failure |
+| POST | `/api/sessions` | Optional `adapter`, `language`, `mode`, `azure_recovery` and debug consent preferences; returns `id`, `key`, `ttl_seconds` | 201 | 429 capacity/quota; 503 kill switch or quota store failure |
 | POST | `/api/sessions/{id}/offer` | `{"sdp":"v=0\r\n…"}` → `{"sdp":"…"}` | 200 | 409 duplicate/invalid state; 502 provider failure; 504 setup timeout |
 | POST | `/api/sessions/{id}/reconnect` | `sdp` and integer `generation` → SDP answer | 200 | 409 stale/used attempt or invalid state; 501 no replay-capable fallback; 502 provider failure; 504 timeout |
 | POST | `/api/sessions/{id}/heartbeat` | No body → status payload described below | 200 | 404 expired/removed session |
@@ -21,7 +21,10 @@ The backend serves JSON over HTTPS in hosted deployments. All `/api` routes requ
 
 Common errors: 400 invalid Host; 401 authentication; 403 Origin; 404 missing session/ownership; 413 oversized request; 422 schema validation; 429 IP rate limit. Rate-limited responses carry `Cache-Control: no-store`. CORS preflight uses OPTIONS and checks the configured origin. Framework documentation routes (`/docs`, `/redoc`, `/openapi.json`, `/docs/oauth2-redirect`) are enabled outside production. In production, set `VOICE_API_DOCS=true` temporarily to expose Swagger; default off in production. ReDoc and the OpenAPI schema follow the same switch. Enabled documentation routes remain subject to host/body/rate middleware.
 
-Preferences accept `language` = `auto`, `it`, `en`, `es`, `fr`, `de`; `mode` = `conversation` or `translate`. They are immutable during a session. SDP must start with `v=0`, contain a newline and be at most 64,000 characters. Reconnect generation must be nonnegative. Additional SDP/preference fields are rejected.
+Preferences accept `language` = `auto`, `it`, `en`, `es`, `fr`, `de`; `mode` = `conversation` or `translate`. `adapter` is `openai`, `azure` or `elevenlabs`; legacy `live`/`realtime` map to `openai`.
+`azure_recovery` defaults false, applies only to OpenAI, and requires configured Azure
+credentials. `debug_recording` defaults false and is separate recording consent.
+Preferences are immutable during a session. SDP must start with `v=0`, contain a newline and be at most 64,000 characters. Reconnect generation must be nonnegative. Additional SDP/preference fields are rejected.
 
 Heartbeat returns `state`, `delegation`, transport `generation`, `fallback_available`, `sources` and `recap`. State is one of `created`, `connecting`, `connected`, `reconnecting`, `closing`, `closed`; closed sessions are ordinarily removed and return 404. Delegation outcomes include idle/running/completed/cancelled/timeout/failed/busy/request_limit/delivery_failed. Recap has `latest_request`, `latest_reply`, `interrupted`, `revision`. Sources contain `id`, `title`, `path`, `section`, `text`, `digest`; heartbeat source text is clipped to 400 characters.
 

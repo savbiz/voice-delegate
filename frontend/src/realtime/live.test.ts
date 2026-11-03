@@ -106,12 +106,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
-async function start(getCode = () => 'invite') {
+async function start(getCode = () => 'invite', recovery = true) {
   const store = createLiveStore();
   const audio = { srcObject: null } as HTMLAudioElement;
   controller = createLiveSession(store, audio, getCode, () => ({
     language: 'auto',
     mode: 'conversation',
+    azure_recovery: recovery,
   }));
   controller.start();
   await vi.waitFor(() => expect(store.getSnapshot().status).toContain('Connected'));
@@ -487,4 +488,47 @@ test('native background closure marks worker ended while retaining last reported
   });
   expect(stopTrack).toHaveBeenCalledOnce();
   expect(requests.filter((request) => request.path.endsWith('/close'))).toHaveLength(1);
+});
+
+test('no recovery without session consent even if the server advertises it', async () => {
+  const store = await start(() => 'invite', false);
+  const peer = FakePeer.instances[0]!;
+  peer.connectionState = 'failed';
+  peer.dispatchEvent(new Event('connectionstatechange'));
+  await vi.waitFor(() => expect(store.getSnapshot().active).toBe(false));
+  expect(requests.filter((request) => request.path.endsWith('/reconnect'))).toHaveLength(0);
+  expect(FakePeer.instances).toHaveLength(1);
+});
+
+test('configuration gateway failure identifies an unavailable backend before creating a session', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(Response.json({}, { status: 502 }));
+  const store = createLiveStore();
+  controller = createLiveSession(
+    store,
+    { srcObject: null } as HTMLAudioElement,
+    () => '',
+    () => ({ language: 'auto', mode: 'conversation' }),
+  );
+  controller.start();
+  await vi.waitFor(() =>
+    expect(store.getSnapshot().status).toContain('The backend is unavailable'),
+  );
+  expect(store.getSnapshot().status).not.toContain('API key');
+  expect(requests.some((request) => request.path.endsWith('/sessions'))).toBe(false);
+});
+
+test('development effect cleanup before starting does not report an ended conversation', () => {
+  const store = createLiveStore();
+  const create = () =>
+    createLiveSession(
+      store,
+      { srcObject: null } as HTMLAudioElement,
+      () => '',
+      () => ({ language: 'auto', mode: 'conversation' }),
+    );
+  const first = create();
+  first.dispose();
+  controller = create();
+  expect(store.getSnapshot()).toMatchObject({ phase: 'ready', workerMessage: 'Worker ready.' });
+  expect(requests).toEqual([]);
 });

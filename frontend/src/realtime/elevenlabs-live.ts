@@ -201,6 +201,12 @@ export function elevenSession(
       sdk.setVolume({ volume: muted() ? 0 : 1 });
       const input = sdk.getInputVolume();
       const output = sdk.getOutputVolume();
+      if (store.getSnapshot().sessionUi) {
+        const next = { user: input > 0.035, assistant: output > 0.02 };
+        const previous = store.getSnapshot().speaking;
+        if (!previous || previous.user !== next.user || previous.assistant !== next.assistant)
+          store.update({ speaking: next });
+      }
       if (++ticks % 5 === 0 && !activityBusy) {
         activityBusy = true;
         void postEvent({

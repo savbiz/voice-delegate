@@ -44,7 +44,7 @@ test('optional connection sounds follow confirmed connection and explicit stop',
     });
   });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByText('Voice settings & recording', { exact: true }).click();
   const option = page.getByRole('checkbox', { name: 'Connection sounds', exact: true });
   await expect(option).toBeChecked();

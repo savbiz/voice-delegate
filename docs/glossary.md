@@ -101,3 +101,6 @@ does not imply that media is connected or that upstream closure is confirmed.
 
 - **Cost snapshot**: session-local estimate from numeric usage and a frozen price version;
   partial when usage or rates are missing, never a provider invoice.
+
+- **Adapter selection**: server-allowlisted transport/provider choice fixed at session creation.
+- **Observed audio activity**: browser energy indication, distinct from provider speech events.

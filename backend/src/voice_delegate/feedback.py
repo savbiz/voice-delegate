@@ -18,6 +18,7 @@ class FeedbackInput(BaseModel):
     diagnostic_id: UUID
     category: Literal["wrong_answer", "source", "audio", "connection", "other"]
     state: Literal["ready", "connecting", "connected", "working", "busy", "recovering", "ended"]
+    adapter: Literal["openai", "azure", "elevenlabs"] | None = None
 
 
 class FeedbackStore:

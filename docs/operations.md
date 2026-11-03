@@ -15,7 +15,7 @@ Edit `VOICE_INVITE_TOKENS`, a JSON map of stable pseudonymous names to unique ra
 - `VOICE_DAILY_SESSIONS_PER_USER` limits sessions reserved per principal per UTC day.
 - `VOICE_CONCURRENT_SESSIONS_PER_USER` limits active leases per principal.
 - `VOICE_MAX_SESSIONS` caps local API sessions and, with shared SQLite, global active leases.
-- `VOICE_DAILY_VOICE_SECONDS_PER_USER` and `VOICE_DAILY_VOICE_SECONDS_GLOBAL` cap reserved voice seconds per UTC day. Each admitted session reserves `ceil(session_ttl_seconds + 1)`, doubled when fallback is enabled. Early close and failed connect do not refund the reservation.
+- `VOICE_DAILY_VOICE_SECONDS_PER_USER` and `VOICE_DAILY_VOICE_SECONDS_GLOBAL` cap reserved voice seconds per UTC day for platform-funded sessions in public-demo mode; personal-key sessions skip these daily reservations. Each admitted platform session reserves `ceil(session_ttl_seconds + 1)`, doubled only when the session opts into Azure recovery. Early close and failed connect do not refund the reservation.
 - `VOICE_SESSION_TTL_SECONDS` bounds a conversation's lifetime. Heartbeat expiry reclaims abandoned sessions; neither heartbeat nor fallback extends the absolute TTL.
 - `VOICE_MAX_DELEGATIONS_PER_SESSION` caps accepted distinct worker requests. An over-limit request does not cancel already-running work.
 - Worker step, duration, result-size and concurrency limits cap application-owned work; they are not a dollar-accurate billing meter.
@@ -35,6 +35,76 @@ sqlite3 -readonly /app/.local/feedback.sqlite3 'SELECT category, state, COUNT(*)
 ```
 
 Quota principals are hashes, not invitation tokens. Leases expire even if release fails. Reservations roll over by UTC day. Feedback has no free-text field, retains reports for seven days, allows five per principal per rolling 24 hours, and caps storage at 10,000 records. Treat backups as sensitive operational data. Use SQLite's backup mechanism or a quiesced consistent volume snapshot; copying a live WAL database file alone is not a safe backup.
+
+## Reset one invitation’s daily allowance
+
+This is an operator-only exception for a known invitation name, not its secret token.
+Close that user's conversations first and take a consistent SQLite backup as described
+above. From the repository, open the linked Railway service's administrative shell:
+
+```sh
+railway ssh --service voice-delegate-api --environment production
+```
+
+Inside that shell, replace `invitation-name` with the exact stable name in
+`VOICE_INVITE_TOKENS`, then run:
+
+```sh
+python - <<'PYRESET'
+import hashlib
+import os
+import sqlite3
+import time
+from datetime import UTC, datetime
+from pathlib import Path
+
+name = "invitation-name"
+if name == "invitation-name":
+    raise SystemExit("Set the invitation name first; never paste its token")
+principal = hashlib.sha256(name.encode()).hexdigest()
+day = datetime.now(UTC).date().isoformat()
+uri = Path(os.environ["VOICE_QUOTA_DATABASE"]).resolve().as_uri() + "?mode=rw"
+with sqlite3.connect(uri, uri=True, timeout=2) as db:
+    db.execute("BEGIN IMMEDIATE")
+    active = db.execute(
+        "SELECT COUNT(*) FROM leases WHERE principal=? AND expires>?",
+        (principal, time.time()),
+    ).fetchone()[0]
+    if active:
+        raise SystemExit("Close active conversations or wait for lease expiry first")
+    removed = db.execute(
+        "DELETE FROM reservations WHERE day=? AND principal=?", (day, principal)
+    ).rowcount
+    print(f"Reset {removed} reservation row(s) for {day} UTC")
+PYRESET
+```
+
+This removes only today's reservation for that identity; it does not delete leases,
+other users, historical rows or the database. It also reduces the global total of reserved
+seconds for today. Token rotation with the same name does not reset an allowance.
+No restart is required. Failed starts and early close normally retain their reservation;
+this manual exception is not an automatic refund or evidence that upstream usage stopped.
+Provider credits, API-key limits and billing are unaffected.
+
+## ElevenLabs bootstrap and immediate disconnects
+
+Check the stages independently: an application 429 is admission; a bootstrap 502 is
+provider setup; a 200 bootstrap followed by immediate close needs the ElevenLabs
+conversation's initialization error. The private key needs ElevenAgents write permission
+for conversation-token issuance, even when reading agent configuration succeeds.
+`quota_exceeded` is a provider account/key quota rejection; inspect the current workspace,
+remaining credits and any key-specific usage limit before changing plans. A displayed
+balance alone does not establish that the selected call can start.
+
+Architect setup chats can also draw workspace credits. Inspect Agents → Architect →
+Usage → Cost separately from agent conversations and simulations. These setup charges
+are outside the application session ledger; reading an agent configuration through MCP
+is not an Architect chat. See [Architect pricing and usage](https://elevenlabs.io/docs/eleven-agents/operate/architect/pricing).
+
+`finalized=true` means provider closure was confirmed, including a failed call. A partial
+zero-dollar estimate with `unpriced: ["voice.elevenlabs.second"]` means the voice rate is
+unknown. `provider_usage: null` means no provider receipt was available; it is not a
+confirmed zero bill. Never log private keys or conversation contents to investigate this.
 
 ## Rollback while retaining data
 
@@ -73,16 +143,14 @@ alongside local server logs. Do not paste keys or invitation codes into bug repo
 
 ## Opt-in server session recording
 
-Recording is off by default in every environment. Set `VOICE_DEBUG_RECORDING=true`
-on the backend and restart it, then select Live voice and check **Record this session
-for server debugging** before starting. The checkbox is available in production builds
-as well as development. Consent is unchecked initially and resets when the session ends;
-server permission alone never records a conversation. If recording is disabled on the
-server, uncheck the option to start a normal session.
+Recording is off by default for each session. Check **Record this session for server
+debugging** before starting; it is available in both API modes. Consent starts unchecked
+and resets at session end. No environment enable flag is needed: the application ignores
+the former recording flag. Without checkbox consent, no session recording is created.
 
 For Railway, keep `VOICE_ENVIRONMENT=production` and set
 `VOICE_DEBUG_DIRECTORY=/app/.local/debug` on the existing persistent volume.
-Deploy the supporting backend and frontend commits before enabling the setting.
+Deploy the supporting backend and frontend commits together.
 The service operator can read these files; there is no public download route.
 For local development, the default directory is `.local/debug` in the repository.
 
@@ -102,11 +170,10 @@ identifiers, request credentials or raw provider payloads are collected. Feedbac
 content-free even when this separate recorder is enabled.
 
 Each file is capped at 2 MiB and at most 20 files are retained. Recording stops on a storage
-error or size limit. The running debug-enabled backend removes files older than 24 hours;
+error or size limit. The running backend removes files older than 24 hours;
 cleanup also runs when creating a recording. If the backend is stopped, files remain until
 it runs again or you delete them. Delete individual recordings in `.local/debug` whenever
-finished. Uncheck recording for the next session or set `VOICE_DEBUG_RECORDING=false` and
-restart to disable the feature. Never enable broad HTTP/header/body debug logging.
+finished. Leave recording unchecked for subsequent sessions. Never enable broad HTTP/header/body debug logging.
 
 ### Optional audio download
 

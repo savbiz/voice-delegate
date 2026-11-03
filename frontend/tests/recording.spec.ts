@@ -38,7 +38,7 @@ test('audio capture is explicit and produces a local download without uploading 
     return route.fulfill({ json: { sdp: 'v=0\r\n', finalized: true } });
   });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByText('Voice settings & recording', { exact: true }).click();
   const checkbox = page.getByLabel(/Record audio locally/);
   await expect(checkbox).not.toBeChecked();
@@ -71,7 +71,9 @@ test('audio capture is explicit and produces a local download without uploading 
   const [download] = await Promise.all([page.waitForEvent('download'), link.click()]);
   expect(download.suggestedFilename()).toMatch(/^voice-session-\d+\.(webm|ogg|m4a)$/);
   expect(await download.failure()).toBeNull();
-  expect(creates).toEqual([{ language: 'auto', mode: 'conversation', debug_recording: false }]);
+  expect(creates).toEqual([
+    { language: 'auto', mode: 'conversation', azure_recovery: false, debug_recording: false },
+  ]);
   expect(
     paths.every((path) =>
       [

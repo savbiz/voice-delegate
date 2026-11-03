@@ -29,7 +29,7 @@ class Prices(BaseModel):
         raw = (
             Path(path).read_bytes()
             if path
-            else files("voice_delegate").joinpath("prices/2026-11-02.json").read_bytes()
+            else files("voice_delegate").joinpath("prices/2026-11-03.json").read_bytes()
         )
         if len(raw) > 65536:
             message = "Price file exceeds limit"
@@ -113,13 +113,20 @@ class CostLedger:
             if not amount:
                 return
             rate = self.prices.rates.get(key)
+            if rate is None and key == "voice.live.second":
+                # Custom price files written before the Live migration use this key.
+                rate = self.prices.rates.get("voice.openai.second")
             if rate is None or rate.usd is None:
                 unpriced.append(key)
             else:
                 components[component] += amount * rate.usd
 
         for adapter, seconds in self.seconds.items():
-            price("voice", "voice." + adapter + ".second", seconds)
+            price(
+                "voice",
+                "voice." + ("live" if adapter == "openai" else adapter) + ".second",
+                seconds,
+            )
         usage = self.usage
         prefix = "worker." + self.worker_model
         price("worker", prefix + ".input_token", max(0, usage.input_tokens - usage.cached_tokens))

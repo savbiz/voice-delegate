@@ -5,7 +5,7 @@ import os
 from fastapi import FastAPI
 
 from voice_delegate.api.app import create_app
-from voice_delegate.config import load_settings
+from voice_delegate.config import Settings, load_settings
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate.providers.models import (
     DelegationRequested,
@@ -44,7 +44,8 @@ def create_demo_app() -> FastAPI:
     if os.environ.get("VOICE_OFFLINE_DEMO") != "1":
         message = "Offline demo requires VOICE_OFFLINE_DEMO=1"
         raise ValueError(message)
-    settings = load_settings()
+    # This isolated factory intentionally bypasses automatic online capabilities.
+    settings = Settings()
     if (
         settings.worker_mode != "offline"
         or settings.web_search
@@ -52,6 +53,8 @@ def create_demo_app() -> FastAPI:
         or settings.openai_api_key.get_secret_value()
         or settings.azure_api_key.get_secret_value()
         or settings.debug_recording
+        or settings.elevenlabs_enabled
+        or settings.elevenlabs_api_key.get_secret_value()
     ):
         message = "Offline demo requires offline worker, no provider keys, no fallback or recording"
         raise ValueError(message)

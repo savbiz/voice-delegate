@@ -26,22 +26,22 @@ def test_feedback_retry_isolation_limits_and_retention(
     path = str(tmp_path / "feedback.sqlite3")
     store = FeedbackStore(path, capacity=6)
     body = report()
-    first = store.submit("alice", body, "live")
-    assert store.submit("alice", body, "live") == first
+    first = store.submit("alice", body, "openai")
+    assert store.submit("alice", body, "openai") == first
     with pytest.raises(SessionError) as exc:
-        store.submit("bob", body, "live")
+        store.submit("bob", body, "openai")
     assert exc.value.status == 404
     with pytest.raises(SessionError) as exc:
-        store.submit("alice", body.model_copy(update={"category": "other"}), "live")
+        store.submit("alice", body.model_copy(update={"category": "other"}), "openai")
     assert exc.value.status == 409
     for _ in range(4):
-        store.submit("alice", report(), "live")
+        store.submit("alice", report(), "openai")
     with pytest.raises(SessionError) as exc:
-        store.submit("alice", report(), "live")
+        store.submit("alice", report(), "openai")
     assert exc.value.status == 429
-    store.submit("bob", report(), "live")
+    store.submit("bob", report(), "openai")
     with pytest.raises(SessionError) as exc:
-        store.submit("carol", report(), "live")
+        store.submit("carol", report(), "openai")
     assert exc.value.status == 503
     store.close()
     store = FeedbackStore(path, capacity=6)
@@ -52,7 +52,7 @@ def test_feedback_retry_isolation_limits_and_retention(
     monkeypatch.setattr("voice_delegate.feedback.time.time", lambda: now + 7 * 86400 + 1)
     store.purge()
     assert store.db.execute("SELECT COUNT(*) FROM feedback").fetchone()[0] == 0
-    store.submit("alice", report(), "live")
+    store.submit("alice", report(), "openai")
     store.close()
 
 
@@ -110,8 +110,35 @@ async def test_feedback_and_app_use_distribution_version(
     async with app.router.lifespan_context(app):
         store = FeedbackStore(str(tmp_path / "feedback.sqlite3"))
         try:
-            store.submit("alice", report(), "live")
+            store.submit("alice", report(), "openai")
             assert store.db.execute("SELECT version FROM feedback").fetchone() == (app.version,)
             assert app.version == "9.8.7"
         finally:
             store.close()
+
+
+async def test_feedback_records_the_selected_adapter_when_configured(
+    asgi_client: ASGIClientFactory, tmp_path: Path
+) -> None:
+    path = str(tmp_path / "feedback.sqlite3")
+    secret = "private-invitation-never-stored-123456"
+    settings = Settings(
+        feedback_database=path,
+        invite_tokens={"alice": SecretStr(secret)},
+        session_ui=True,
+        openai_api_key=SecretStr("fixture"),
+        azure_api_key=SecretStr("fixture"),
+        azure_endpoint="https://fixture.openai.azure.com",
+    )
+    app = create_app(settings, FakeProvider())
+    async with asgi_client(app) as client:
+        client.headers["Origin"] = settings.allowed_origins[0]
+        client.headers["Authorization"] = "Bearer " + secret
+        chosen = {**report().model_dump(mode="json"), "adapter": "azure"}
+        unknown = {**report().model_dump(mode="json"), "adapter": "elevenlabs"}
+        assert (await client.post("/api/feedback", json=chosen)).status_code == 201
+        assert (await client.post("/api/feedback", json=unknown)).status_code == 201
+    with closing(sqlite3.connect(path)) as database:
+        rows = dict(database.execute("SELECT id, provider FROM feedback"))
+    assert rows[chosen["diagnostic_id"]] == "azure"
+    assert rows[unknown["diagnostic_id"]] == "openai"

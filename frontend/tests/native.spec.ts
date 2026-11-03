@@ -18,7 +18,7 @@ for (const platform of ['ios', 'android']) {
     await page.getByRole('button', { name: 'Start demo', exact: true }).click();
     await page.clock.runFor(4000);
     await expect(page.getByText('310 ms · simulated')).toBeVisible();
-    await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+    await page.getByRole('link', { name: 'Live voice', exact: true }).click();
     await page.getByRole('button', { name: 'Start conversation', exact: true }).click();
     await expect(page.getByRole('status')).toHaveText('Native live voice is disabled.');
     expect(requests).toEqual([]);
@@ -42,7 +42,7 @@ test('native background transition closes the owned session and releases its pee
     });
   });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Start conversation', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('Connected');
   await page.evaluate(() => {

@@ -112,7 +112,6 @@ worker service for remote execution, then restart that process:
 
 ```sh
 VOICE_WORKER_MODE=openai
-VOICE_WEB_SEARCH=true
 TAVILY_API_KEY=<set privately in the process environment>
 VOICE_WEB_SEARCH_TIMEOUT_SECONDS=3
 VOICE_WEB_SEARCH_DOMAINS='["example.org"]'
@@ -120,9 +119,9 @@ VOICE_WEB_SEARCH_DOMAINS='["example.org"]'
 
 For natural-language requests, also configure `OPENAI_API_KEY` as described above.
 The domain list is optional; its default is empty. Do not put the key in frontend
-variables, source files or logs. In remote mode enable `VOICE_WEB_SEARCH=true` on the
-API too, so its voice instructions and result validation match the worker. The Tavily key
-is required only on the process that executes the search. Keep the existing service
+variables, source files or logs. In remote mode the API advertises delegated search, while the Tavily key is required
+only on the private worker that executes platform jobs. A platform worker without that
+key does not register search; personal jobs instead use their own Tavily key. Keep the existing service
 authentication and private networking. Hosted deployments continue to use the
 existing Railway backend and Vercel frontend; no new deployment is provisioned.
 
@@ -181,3 +180,8 @@ fakes verify the request format; no live Luna quality or cost benchmark is claim
 requires `none` for Chat Completions function calling. OpenAI lists Luna as the
 [replacement for GPT-4.1 mini](https://developers.openai.com/api/docs/deprecations),
 whose shutdown is scheduled for 2027-01-14.
+
+Personal API sessions forward only their own OpenAI/Tavily keys to `/personal-jobs` when
+remote execution is configured. Older private workers return 404 for that endpoint; no
+platform job is submitted as a fallback. Job keys are removed on terminal outcomes. See
+[personal access](personal-api.md).

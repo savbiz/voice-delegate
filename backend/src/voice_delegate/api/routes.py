@@ -10,6 +10,7 @@ from voice_delegate_agent.reference import search, source_by_id
 
 from voice_delegate.debug import DebugSample
 from voice_delegate.feedback import FeedbackInput, FeedbackStore
+from voice_delegate.personal import PersonalSession, create_personal_session
 from voice_delegate.providers.elevenlabs import ElevenLabsProvider
 from voice_delegate.providers.elevenlabs_session import ElevenLabsConnection
 from voice_delegate.providers.models import SpeechStarted, Transcript, UnsupportedCapability
@@ -55,6 +56,8 @@ def build_router(
 ) -> APIRouter:
     """Bind a router to one lifecycle-owned manager, avoiding untyped app state."""
 
+    root = manager
+
     async def check_origin(request: Request, response: Response) -> None:
         if request.headers.get("origin") not in manager.settings.allowed_origins:
             raise HTTPException(403, "Unexpected request origin")
@@ -71,15 +74,20 @@ def build_router(
     ) -> dict[str, str]:
         if feedback is None:
             raise HTTPException(503, "Feedback requires a configured invitation or access code")
-        return {"diagnostic_id": feedback.submit(principal, body, manager.settings.voice_provider)}
+        provider = body.adapter if body.adapter in manager.providers else None
+        provider = provider or manager.settings.voice_provider
+        return {"diagnostic_id": feedback.submit(principal, body, provider)}
 
     @router.post("/config")
-    async def configuration() -> dict[str, object]:
+    async def configuration(body: VoicePreferences | None = None) -> dict[str, object]:
+        adapter = manager.select_adapter(body.adapter if body else None)
         return {
-            "transport": "elevenlabs_agents_webrtc"
-            if manager.settings.voice_provider == "elevenlabs"
-            else "webrtc",
-            "audio_recording_available": manager.settings.voice_provider != "elevenlabs",
+            "adapter": adapter,
+            "session_ui": manager.settings.session_ui,
+            "available_adapters": list(manager.providers) if manager.settings.session_ui else [],
+            "transport": "elevenlabs_agents_webrtc" if adapter == "elevenlabs" else "webrtc",
+            "audio_recording_available": adapter != "elevenlabs",
+            "azure_recovery_available": manager.fallback is not None,
             "debug_recording_available": manager.settings.debug_recording,
             "audio_timing_available": manager.settings.audio_timing,
             "intent_cancellation": manager.settings.intent_cancellation,
@@ -89,22 +97,58 @@ def build_router(
             ),
             "voice_available": bool(
                 manager.settings.elevenlabs_api_key.get_secret_value()
-                if manager.settings.voice_provider == "elevenlabs"
+                if adapter == "elevenlabs"
                 else manager.settings.azure_api_key.get_secret_value()
-                if manager.settings.voice_provider == "azure"
+                if adapter == "azure"
                 else manager.settings.openai_api_key.get_secret_value()
             ),
         }
 
     async def owned(
         session_id: str,
-        principal: Annotated[str, Depends(authorize)],
+        request: Request,
         x_session_key: Annotated[str, Header()] = "",
     ) -> Session:
-        session = manager.get(session_id, x_session_key)
-        if session.principal != principal:
-            raise HTTPException(404, "Session not found")
+        session = root.get(session_id, x_session_key)
+        if session.owner is None:
+            principal = await authorize(request)
+            if session.principal != principal:
+                raise HTTPException(404, "Session not found")
         return session
+
+    @router.post("/personal/config")
+    async def personal_configuration(body: VoicePreferences | None = None) -> dict[str, object]:
+        adapter = body.adapter if body and body.adapter else "openai"
+        available = ["openai", "azure"]
+        if root.settings.elevenlabs_webhook_url:
+            available.append("elevenlabs")
+        if adapter not in available:
+            raise HTTPException(422, "Personal provider is unavailable")
+        return {
+            "adapter": adapter,
+            "available_adapters": available,
+            "session_ui": True,
+            "voice_available": True,
+            "azure_recovery_available": adapter == "openai",
+            "intent_cancellation": True,
+            "audio_timing_available": root.settings.audio_timing,
+            "debug_recording_available": True,
+            "audio_recording_available": adapter != "elevenlabs",
+            "transport": "elevenlabs_agents_webrtc" if adapter == "elevenlabs" else "webrtc",
+            "elevenlabs_webhook_url": root.settings.elevenlabs_webhook_url,
+        }
+
+    @router.post("/personal/sessions", status_code=201)
+    async def personal_create(body: PersonalSession, request: Request) -> Created:
+        if body.adapter == "elevenlabs" and request.headers.get("origin") in {
+            "capacitor://localhost",
+            "https://localhost",
+        }:
+            raise HTTPException(422, "ElevenLabs is available in browsers only")
+        session = await create_personal_session(root, body)
+        return Created(
+            id=session.id, key=session.key, ttl_seconds=root.settings.session_ttl_seconds
+        )
 
     @router.post("/reference/search")
     async def reference_search(
@@ -127,8 +171,16 @@ def build_router(
 
     @router.post("/sessions", status_code=201)
     async def create(
-        principal: Annotated[str, Depends(authorize)], body: VoicePreferences | None = None
+        principal: Annotated[str, Depends(authorize)],
+        request: Request,
+        body: VoicePreferences | None = None,
     ) -> Created:
+        adapter = manager.select_adapter(body.adapter if body else None)
+        if adapter == "elevenlabs" and request.headers.get("origin") in {
+            "capacitor://localhost",
+            "https://localhost",
+        }:
+            raise HTTPException(422, "ElevenLabs is available in browsers only")
         session = manager.create(principal, body)
         return Created(
             id=session.id, key=session.key, ttl_seconds=manager.settings.session_ttl_seconds
@@ -138,6 +190,7 @@ def build_router(
     async def record_debug(
         body: DebugSample, session: Annotated[Session, Depends(owned)]
     ) -> dict[str, bool]:
+        manager = root.owner_for(session)
         if session.debug is None:
             raise HTTPException(403, "Debug recording was not enabled for this session")
         session.debug.write(
@@ -153,6 +206,7 @@ def build_router(
     async def audio_timing(
         body: AudioTiming, session: Annotated[Session, Depends(owned)]
     ) -> dict[str, bool]:
+        manager = root.owner_for(session)
         if not manager.settings.audio_timing:
             raise HTTPException(403, "Audio timing is disabled")
         if session.state != "connected" or body.generation != session.generation:
@@ -167,6 +221,7 @@ def build_router(
     async def activity(
         body: Activity, session: Annotated[Session, Depends(owned)]
     ) -> dict[str, bool]:
+        manager = root.owner_for(session)
         if not manager.settings.intent_cancellation:
             raise HTTPException(403, "Intent cancellation is disabled")
         if session.state != "connected" or body.generation != session.generation:
@@ -181,16 +236,19 @@ def build_router(
 
     @router.post("/sessions/{session_id}/offer")
     async def offer(body: Offer, session: Annotated[Session, Depends(owned)]) -> Answer:
+        manager = root.owner_for(session)
         result = await manager.connect(session, body.sdp)
         return Answer(sdp=result.sdp)
 
     @router.post("/sessions/{session_id}/reconnect")
     async def reconnect(body: Reconnect, session: Annotated[Session, Depends(owned)]) -> Answer:
+        manager = root.owner_for(session)
         result = await manager.reconnect(session, body.sdp, body.generation)
         return Answer(sdp=result.sdp)
 
     @router.post("/sessions/{session_id}/heartbeat")
     async def heartbeat(session: Annotated[Session, Depends(owned)]) -> Status:
+        manager = root.owner_for(session)
         manager.heartbeat(session)
         return Status(
             state=session.state,
@@ -217,11 +275,15 @@ def build_router(
             if manager.settings.intent_cancellation
             else session.delegation.sources,
             recap=session.recap,
-            fallback_available=manager.fallback is not None and not session.fallback_used,
+            fallback_available=manager.fallback is not None
+            and session.adapter == "openai"
+            and session.preferences.azure_recovery
+            and not session.fallback_used,
         )
 
     @router.post("/sessions/{session_id}/close")
     async def close(session: Annotated[Session, Depends(owned)]) -> Closed:
+        manager = root.owner_for(session)
         finalized = await manager.close(session)
         return Closed(
             finalized=finalized, costs=session.costs.snapshot() if session.costs else None
@@ -231,6 +293,7 @@ def build_router(
     async def interrupt(
         session: Annotated[Session, Depends(owned)], body: Cancellation | None = None
     ) -> dict[str, str]:
+        manager = root.owner_for(session)
         manager.interrupt(session, task_id=body.task_id if body else None)
         return {
             "delegation": session.portfolio.status
@@ -240,7 +303,13 @@ def build_router(
 
     @router.post("/sessions/{session_id}/elevenlabs/bootstrap")
     async def elevenlabs_bootstrap(session: Annotated[Session, Depends(owned)]) -> dict[str, str]:
-        if elevenlabs is None or manager.settings.voice_provider != "elevenlabs":
+        manager = root.owner_for(session)
+        selected = manager.provider_for(session)
+        if session.owner is not None:
+            selected_elevenlabs = selected if isinstance(selected, ElevenLabsProvider) else None
+        else:
+            selected_elevenlabs = elevenlabs
+        if selected_elevenlabs is None or session.adapter != "elevenlabs":
             raise HTTPException(501, "ElevenLabs preview is disabled")
         async with session.lock:
             if session.state != "created" or session.sdk_bootstrap_issued:
@@ -251,11 +320,11 @@ def build_router(
             # Credential issuance does not confirm upstream media closure.
             session.previous_finalized = False
             with manager.metrics.operation("provider.connect"):
-                await elevenlabs.validate_agent(manager.settings.session_ttl_seconds)
-                bootstrap = await elevenlabs.prepare_browser()
+                await selected_elevenlabs.validate_agent(manager.settings.session_ttl_seconds)
+                bootstrap = await selected_elevenlabs.prepare_browser()
 
             async def confirm_close() -> bool:
-                return await elevenlabs.confirm_closed(
+                return await selected_elevenlabs.confirm_closed(
                     bootstrap.conversation_id,
                     session.costs.report_provider_usage if session.costs is not None else None,
                 )
@@ -277,6 +346,7 @@ def build_router(
     async def sdk_event(
         body: SDKEvent, session: Annotated[Session, Depends(owned)]
     ) -> dict[str, bool]:
+        manager = root.owner_for(session)
         connection = sdk_connection(session)
         if body.sequence <= connection.sequence:
             return {"recorded": False}

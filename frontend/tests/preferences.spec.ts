@@ -3,14 +3,14 @@ import { installFakePeers } from './fixtures';
 
 test('invitation survives refresh and clearing removes it from tab storage', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByLabel('Personal invitation code').fill('test-invitation');
   await page.reload();
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await expect(page.getByLabel('Personal invitation code')).toHaveValue('test-invitation');
   await page.getByLabel('Personal invitation code').fill('');
   await page.reload();
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await expect(page.getByLabel('Personal invitation code')).toHaveValue('');
 });
 
@@ -39,7 +39,7 @@ test('mute and caption controls preserve a pending ICE connection', async ({ pag
     });
   });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Mute assistant', exact: true }).click();
   await page.getByRole('button', { name: 'Large captions' }).click();
   await page.getByRole('button', { name: 'Start conversation' }).click();
@@ -73,7 +73,7 @@ for (const enabled of [false, true]) {
       return route.fulfill({ json: { sdp: 'v=0\r\n', finalized: true, recording: true } });
     });
     await page.goto('/');
-    await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+    await page.getByRole('link', { name: 'Live voice', exact: true }).click();
     await page.getByText('Voice settings & recording', { exact: true }).click();
     const checkbox = page.getByLabel(/Record this session for server debugging/);
     await expect(checkbox).not.toBeChecked();
@@ -81,7 +81,9 @@ for (const enabled of [false, true]) {
     await page.getByRole('button', { name: 'Start conversation' }).click();
     if (enabled) {
       await expect(page.locator('#status')).toContainText('Connected');
-      expect(creates).toEqual([{ language: 'auto', mode: 'conversation', debug_recording: true }]);
+      expect(creates).toEqual([
+        { language: 'auto', mode: 'conversation', azure_recovery: false, debug_recording: true },
+      ]);
       await page.getByRole('button', { name: 'Stop', exact: true }).click();
     } else {
       await expect(page.locator('#status')).toContainText('Server debugging is disabled');

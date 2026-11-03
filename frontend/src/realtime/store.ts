@@ -40,6 +40,8 @@ export type TaskStatus = {
 };
 export type LiveState = {
   transport: 'webrtc' | 'elevenlabs';
+  sessionUi?: boolean;
+  speaking?: { user: boolean; assistant: boolean };
   intentCancellation: boolean;
   tasks: TaskStatus[];
   costs?: CostSummary;
@@ -107,7 +109,7 @@ export function initialLiveState(): LiveState {
     audioBlocked: false,
     captionTails: {},
     audioTimings: [],
-    audioTimingStatus: 'Audio measurement disabled.',
+    audioTimingStatus: 'Audio measurements appear during a connected conversation.',
     timings: [],
     timingTransportId: 0,
     sources: [],
@@ -119,7 +121,7 @@ export function initialLiveState(): LiveState {
     audioStatus: '',
     audioUrl: '',
     audioFilename: '',
-    feedbackStatus: 'An invitation or access code is required to send feedback.',
+    feedbackStatus: 'Ready to send a report.',
   };
 }
 export function workerState(state: LiveState, worker: string): LiveState {

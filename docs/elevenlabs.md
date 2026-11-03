@@ -6,19 +6,15 @@ pending. No account configuration or paid provider calls are made by this implem
 
 ## Configuration
 
-Keep the default adapter unchanged unless explicitly testing ElevenLabs. Configure these
+ElevenLabs becomes selectable automatically with complete agent credentials. Configure these
 variables on the backend, with actual values supplied privately through the environment:
 
 ```dotenv
-VOICE_ELEVENLABS_ENABLED=true
 VOICE_ADAPTER=elevenlabs
 ELEVENLABS_API_KEY=<server API key>
 VOICE_ELEVENLABS_AGENT_ID=agent_<private agent>
 VOICE_ELEVENLABS_WEBHOOK_TOKEN=<independent random token of at least 32 characters>
 VOICE_ELEVENLABS_WEBHOOK_URL=https://<public backend>/integrations/elevenlabs/delegate
-VOICE_INTENT_CANCELLATION=true
-VOICE_FALLBACK_ENABLED=false
-VOICE_NATIVE_CLIENTS=false
 ```
 
 Generate the independent service token locally with
@@ -87,6 +83,18 @@ Execution plus delivery budgets must fit within 110 seconds. The backend respons
 115 seconds and provider tool timeout is 120 seconds. Hosting and reverse proxies must allow
 that bounded HTTP response duration. Dashboard edits can change provider behaviour after
 validation; this check does not lock remote configuration.
+
+Use a single backend instance for this integration unless the gateway routes each webhook
+to the instance that owns its conversation. The session registry is process-local: the
+round-robin two-instance scaling example can send a webhook to the wrong instance and
+return 404. Extending proxy timeouts or sharing the quota database does not solve ownership.
+
+A successful bootstrap does not guarantee that a call starts. For immediate disconnects,
+inspect the provider conversation error and distinguish account/key limits from application
+admission limits; see [operations](operations.md#elevenlabs-bootstrap-and-immediate-disconnects).
+Check [current ElevenAgents pricing](https://elevenlabs.io/pricing/agents) and the workspace
+billing dashboard: call-minute allowances and LLM credit charges can be separate, so a
+remaining shared credit balance does not alone establish available calling capacity.
 
 ## Data flow
 
@@ -178,3 +186,7 @@ Public contracts checked on 2026-11-02:
 [system variables](https://elevenlabs.io/docs/eleven-agents/customization/personalization/dynamic-variables),
 [SDK](https://elevenlabs.io/docs/eleven-agents/libraries/java-script),
 [token API](https://elevenlabs.io/docs/api-reference/conversations/get-webrtc-token).
+
+Personal-key users provide their own API key, private Agent ID and webhook token for each
+session; they must configure that agent to use this deployment’s webhook. They do not need
+a platform invitation. See [personal-key access](personal-api.md).

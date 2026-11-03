@@ -78,7 +78,7 @@ sequenceDiagram
     participant A as FastAPI
     participant S as Session manager
     participant P as Primary (GPT-Live)
-    participant F as Fallback (Azure Realtime)
+    participant F as Fallback (Azure Live)
     P--xS: sideband stream fails
     S->>S: Cancel worker, set reconnecting, close failed connection
     B->>A: POST /sessions/{id}/heartbeat
@@ -108,7 +108,7 @@ stateDiagram-v2
     created --> closing: Close, expiry or shutdown before offer
     connecting --> connected: SDP answer and sideband attached
     connecting --> closed: connect timeout 504 or provider error
-    connected --> reconnecting: Sideband failure with unused fallback
+    connected --> reconnecting: Sideband failure with consent and unused fallback
     connected --> closing: Close, expiry, shutdown or failure without fallback
     reconnecting --> connected: POST /reconnect accepted (single attempt)
     reconnecting --> closing: Close, expiry or shutdown
@@ -180,11 +180,11 @@ WebRTC audio buffers belong to the browser and provider. We do not claim to boun
 ## Provider adapters
 
 `OpenAILiveProvider` implements GPT-Live WebRTC setup, sideband events, commentary and finalization.
-`RealtimeWebRTCProvider` contains the shared Realtime WebRTC and sideband implementation.
-`OpenAIRealtimeProvider` supplies OpenAI authentication and endpoints; `AzureRealtimeProvider`
-supplies Azure resource authentication and deployment configuration. Each provider builds its
-own default session configuration and declares capabilities, including transcript timing.
-The manager uses the provider protocol and normalized events; it does not select Azure models.
+`AzureLiveProvider` uses the Azure `/openai/v1/live` namespace with Bearer authentication,
+the same Live events, and client delegation. Recovery requires session consent and seeds
+at most twelve bounded text fragments through `session.thinking.append`, never tool calls.
+Legacy Realtime classes remain only for historical wire regression tests; the app factory
+registers `openai`, `azure` and optionally `elevenlabs`. See [session flow](session-flow.md).
 
 ## Speech interruption authority
 
@@ -244,7 +244,7 @@ Natural-language planning requires the separately configured paid text model.
 
 ## Optional intent cancellation
 
-With `VOICE_INTENT_CANCELLATION=true`, speaking pauses narration while independent worker
+By default, speaking pauses narration while independent worker
 jobs continue. Up to two running or pending jobs occupy bounded slots. Speech alone no
 longer cancels work. Explicit task cancellation, session end, enabled semantic decisions
 and the existing worker execution timeouts still cancel work. The existing
@@ -283,7 +283,7 @@ Android assets; it uses the existing API, invitations, quotas and single voice
 `delegate_task` tool. It does not embed a provider key or load Vercel as a remote app.
 Native voice is disabled unless explicitly enabled in a test build. Its requests
 retain browser Origin checks: the exact iOS `capacitor://localhost` origin requires
-`VOICE_NATIVE_CLIENTS=true` and an explicit allowlist entry; Android uses
+an explicit native-origin allowlist entry; Android uses
 `https://localhost`. Backend hosts remain unchanged.
 
 Native backgrounding releases local media and requests session close. Calls do not
@@ -294,7 +294,7 @@ native WebRTC or device audio. See the [mobile preview guide](mobile.md).
 
 ## Optional public web evidence
 
-With `VOICE_WEB_SEARCH=true`, the worker registry adds a bounded Tavily `web_search`
+With a configured Tavily key, the worker registry adds a bounded `web_search`
 tool. The voice model still sees only `delegate_task`. Calculation and project
 retrieval remain local. The HTTP search adapter owns a total deadline and response
 cap; it does not fetch pages from returned URLs. Failure discloses a fallback to the
@@ -312,7 +312,7 @@ with server-selected variants matching enabled tools and cancellation behavior.
 
 ## Browser audio observations
 
-With `VOICE_AUDIO_TIMING=true` (default false), the existing WebRTC stream analyser
+The WebRTC stream analyser automatically
 observes local and remote energy every 20 ms. Remote energy is accepted only while
 playback is active and unmuted. Offer-to-first-audio includes setup; speech-end-to-audio
 uses the last local energy observation followed by at least 300 ms of silence.
@@ -394,6 +394,10 @@ The [Agents integration](elevenlabs.md) uses direct browser WebRTC media and an 
 
 [Cost estimates](cost-estimates.md) are default-on, session-scoped numeric ledgers with frozen price assumptions, remote usage propagation and fixed aggregate component labels.
 
+## Session provider selection
+
+The [session UI](session-ui.md) selects from a server-owned adapter registry before creation; each session keeps its provider, while ElevenLabs never uses Azure recovery.
+
 ## Sources
 
 Reviewed public documentation on 2026-09-20:
@@ -405,3 +409,13 @@ Reviewed public documentation on 2026-09-20:
 - [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
 
 Application limits and ownership rules are first-principles design choices, not upstream service guarantees.
+
+## Personal API access
+
+The voice workspace can create an isolated, bounded personal-key session without a platform
+invitation. Its provider clients and local/remote planner use only that session’s supplied
+keys. The platform registry retains the owned session for expiry and capacity enforcement,
+while its personal manager owns worker cancellation and client cleanup. No user key is
+written to persistent state or exposed in session/cost responses. The private worker uses
+a distinct `/personal-jobs` endpoint so old workers cannot silently spend platform keys.
+See [personal API access](personal-api.md) for lifetime, limits and ElevenLabs setup.

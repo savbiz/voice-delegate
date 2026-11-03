@@ -2,12 +2,20 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class VoicePreferences(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    adapter: Literal["openai", "azure", "elevenlabs"] | None = None
+    azure_recovery: bool = False
     debug_recording: bool = False
+
+    @field_validator("adapter", mode="before")
+    @classmethod
+    def canonical_adapter(cls, value: object) -> object:
+        return "openai" if value in ("live", "realtime") else value
+
     language: Literal["auto", "it", "en", "es", "fr", "de"] = "auto"
     mode: Literal["conversation", "translate"] = "conversation"
 

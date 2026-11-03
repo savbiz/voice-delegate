@@ -8,12 +8,12 @@
     "digest": "6b2b4470a602bb3b27525aa071264754a41a049da3feb7eaffc7ec189fdbea6c"
   },
   {
-    "id": "e28404b7c714b977",
+    "id": "6c440a1f5a393673",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Independence",
-    "text": "Ask a question, delegate a calculation or a documentation lookup, and keep talking.\nThe voice model knows one tool, `delegate_task`; a bounded LangGraph worker handles\ncalculation, cited project documentation and optional public web search. Preserving\nwork while the user speaks requires the opt-in intent-cancellation mode described below.",
-    "digest": "e28404b7c714b977fc0f0a11cffe2c8cb81d739d8f2a9737bb915e3386fa581d"
+    "text": "Ask a question, delegate a calculation or a documentation lookup, and keep talking.\nThe voice model knows one tool, `delegate_task`; a bounded LangGraph worker handles\ncalculation, cited project documentation and optional public web search. Preserving\nwork while the user speaks uses the intent-based lifecycle described below.",
+    "digest": "6c440a1f5a393673c26924393d8c026f84193d423a215501debc22515a3f0ebf"
   },
   {
     "id": "e0ef269eeba444f2",
@@ -24,12 +24,12 @@
     "digest": "e0ef269eeba444f2a73fe4e67b6e170d04b68ce93d13a3ab3aaa5e89c5fb80b1"
   },
   {
-    "id": "52d2d2b79c03e9af",
+    "id": "556618e4d24b3fde",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Try it locally",
-    "text": "Open **http://localhost:5173**, select **Free demo**, then start. It is scripted,\nsilent and free: no microphone, backend or provider key is required.",
-    "digest": "52d2d2b79c03e9afc62d84bdfe2e7a424a1b0a1d097030902c4810aee2ccfe56"
+    "text": "Open **http://localhost:5173** for the voice workspace. For a scripted example, open\n**Tools & examples → Offline example** or **http://localhost:5173/#demo**. The example\nis silent and free: no microphone, backend or provider key is required.",
+    "digest": "556618e4d24b3fde41ae4e4a4ee5bde3f26064f64e619dc7e77ef0cb8bc27db7"
   },
   {
     "id": "3ab0b038fe11393e",
@@ -48,12 +48,12 @@
     "digest": "f1ad20aff95ba9c445b9dbf747de4406a7c6ab643cad60178121187f706a7c8e"
   },
   {
-    "id": "a8299a5e2bfd2656",
+    "id": "1b0f914acd40995b",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Try it locally",
-    "text": "The server template covers the core defaults; optional provider settings are documented separately.\nIt defaults to the **offline worker planner**. To let the worker\ninterpret natural-language requests using Luna, choose the paid planner explicitly:",
-    "digest": "a8299a5e2bfd2656031ae055e0199defd3bcef436425ffc2539abf39ccbba200"
+    "text": "The [minimal template](config/local.env.template) needs only keys and deployment choices.\nThe worker uses Luna when an OpenAI key is configured, otherwise the offline planner.\nYou can explicitly select the model-backed planner:",
+    "digest": "1b0f914acd40995bc5f5546babd3c8f2f191227b4142db5c5674831dbca810bb"
   },
   {
     "id": "7ebac81355d58af6",
@@ -88,12 +88,12 @@
     "digest": "76470592f1aa9ab91c820518ed2937783b860d98ac6672617edb6402dab1e41b"
   },
   {
-    "id": "61bbac6601826ee2",
+    "id": "214bad071ed685ff",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status and verification",
-    "text": "The [hosted frontend](https://voice-delegate.vercel.app) can run the simulated demo\nwithout the backend. Railway is the canonical deployment target, but its trial\nexpired: this README does not claim the [configured API](https://voice-delegate-api-production.up.railway.app/healthz)\nis currently available or running the latest commit. Hosted documentation search\nand live voice require a healthy backend, invitations and applicable provider keys.",
-    "digest": "61bbac6601826ee26ea64a1817f3a26be45cf4c242843406d629f4997a7a2f22"
+    "text": "The [hosted frontend](https://voice-delegate.vercel.app) opens the voice workspace.\nTools & examples contains the offline example and a search of bundled project documentation;\nthese are secondary utilities rather than conversation modes.\nLive voice and hosted documentation search use the\n[configured Railway API](https://voice-delegate-api-production.up.railway.app/healthz)\nand require a healthy deployment, invitation and applicable provider credentials.\nApplication daily allowances and provider account credits are independent;\nsee [operations](docs/operations.md) for diagnosis and targeted quota resets.\nDeployment availability and provider credit balance must be checked at use time.",
+    "digest": "214bad071ed685ffa8ef943333fbbd8e6332a89cd03f5670ed8e7efbb6d8f56a"
   },
   {
     "id": "9c14fcb228778910",
@@ -112,20 +112,44 @@
     "digest": "df451ce01938ac6148946c8ccef886e205d30dae58f8ba93f2e647f581b1dc9e"
   },
   {
-    "id": "4cc15322ee3bcc5c",
+    "id": "39bee6dd76c8ff10",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Providers and worker modes",
-    "text": "`VOICE_ADAPTER` selects an integration; the old `VOICE_VOICE_PROVIDER` name remains\na deprecated alias. All adapters expose the same delegation boundary.",
-    "digest": "4cc15322ee3bcc5c7796d5298f6939d9b4988c1aca40061bf628e28d4daa8749"
+    "text": "`VOICE_ADAPTER` selects an integration; the old `VOICE_VOICE_PROVIDER` name remains\na deprecated alias. Legacy values `live` and `realtime` now select `openai` and always\nuse GPT-Live. Azure requires a deployment of `gpt-live-1`. Recovery is off by default\nand enabled only by the session checkbox. See [the session flow](docs/session-flow.md).\nAll adapters expose the same delegation boundary.",
+    "digest": "39bee6dd76c8ff1009d23bd0ba57a70af6d0cdbc50dd9275b7f2a0e82d85173b"
   },
   {
-    "id": "8977605ff6333edd",
+    "id": "0fb3a0058350f09f",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Providers and worker modes",
-    "text": "ElevenLabs Agents is an opt-in browser SDK transport with server-side webhook delegation (`VOICE_ADAPTER=elevenlabs`)\nbehind a disabled-by-default flag. Its [application contracts](docs/elevenlabs.md)\nare verified offline; live provider acceptance is pending. Cross-vendor fallback, SIP telephone entry\nand worker MCP connections are not implemented here.",
-    "digest": "8977605ff6333edd47bc9b370792cde0c617899b1acf60d319281eb6653731bc"
+    "text": "ElevenLabs requires its private backend API key, agent ID and shared webhook token;\nsee [agent setup and authentication](docs/elevenlabs.md). The browser receives a\nshort-lived conversation token, never the private provider key.",
+    "digest": "0fb3a0058350f09f6dd41b630b513d96058943d48cbbdfa4d6efa2f3d245cc10"
+  },
+  {
+    "id": "69dfba04d9a200d3",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Providers and worker modes",
+    "text": "Provider selection, observed audio activity and responsive session panels are enabled\nby default. Provider choice is fixed for each conversation;\nthis selector uses operator-configured credentials, not user-supplied keys.\n[Session controls](docs/session-ui.md) describe availability and unsupported preferences.",
+    "digest": "69dfba04d9a200d39055b5d4a2ca98724e635d81497f9e988e8a11499ccf3b89"
+  },
+  {
+    "id": "68593206f222e874",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Providers and worker modes",
+    "text": "[Cost estimates](docs/cost-estimates.md) are enabled by default. The UI retains a final\nbreakdown by voice, worker, decisions and search, labeling missing prices as partial. When available, ElevenLabs\nreported credits/USD are shown separately; estimates are not a provider invoice.\nCross-vendor fallback, SIP telephone entry and worker MCP connections are not implemented.\nThe [roadmap](docs/roadmap.md) tracks these and moderation/cascade design work separately.",
+    "digest": "68593206f222e874e87ca372e5ed6c1c47db4cec2fceabaf8449c4d0bac466b9"
+  },
+  {
+    "id": "630648d4a43cd2fb",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Providers and worker modes",
+    "text": "The UI also offers **Your API keys** without an invitation. Keys are submitted once and\nkept in memory for that session, including in a configured private remote worker; they\nare not saved to browser storage or a database. **Platform API** uses the operator's keys\nand existing invitation gate. Personal sessions never borrow platform keys or recovery.\nElevenLabs additionally needs your private agent ID and its configured webhook token.\nSee [personal-key access](docs/personal-api.md).",
+    "digest": "630648d4a43cd2fb3e9213084b69af8e0f4b62ec528b307bec57ffb497d131ee"
   },
   {
     "id": "b6416bd6d6454d69",
@@ -136,20 +160,12 @@
     "digest": "b6416bd6d6454d69995673e74c209026f7529d7a7511bcad0c3541589441a296"
   },
   {
-    "id": "967f98d556098e3a",
+    "id": "12cfee7c8dc51bf5",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Providers and worker modes",
-    "text": "The worker has `calculate` and `search_documentation`. Optional `web_search` needs\n`VOICE_WEB_SEARCH=true` and a private Tavily key on the worker host; it is off by\ndefault and may incur search-provider charges. A web result is untrusted data and\nends further tool selection for that delegation. The voice model still sees only\n`delegate_task`, never these individual tools. [Prompts](agent/src/voice_delegate_agent/prompts/)\nare versioned with the worker.",
-    "digest": "967f98d556098e3a18e8e03b3213c5230871a40af8bf1e4fb8bd353de61e0637"
-  },
-  {
-    "id": "d3743e3945b06e04",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Interruption, cancellation and delivery",
-    "text": "The default path retains the original cancellation behavior. Opt into the separate\nwork/narration lifecycle with `VOICE_INTENT_CANCELLATION=true`:",
-    "digest": "d3743e3945b06e04eaa47bf3080fc103a4ff9c80dd2e4dba96e7100f0d4e137d"
+    "text": "The worker has `calculate` and `search_documentation`. Optional `web_search` needs\na private Tavily key on the worker host; providing that key enables search and may incur\nsearch-provider charges. A web result is untrusted data and\nends further tool selection for that delegation. The voice model still sees only\n`delegate_task`, never these individual tools. [Prompts](agent/src/voice_delegate_agent/prompts/)\nare versioned with the worker.",
+    "digest": "12cfee7c8dc51bf5c2be75597736c7d1994185963ba1f085d897336c73b18a4f"
   },
   {
     "id": "0e2291a7d6ca7cf5",
@@ -176,20 +192,20 @@
     "digest": "4c535609a75d25cb32f456fe75c516749a5b9c91a9ebf4d9bc88c313dd0c3c3c"
   },
   {
-    "id": "791da2b0356f0d31",
+    "id": "dbcca4fe310169f8",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Data flow and limits",
-    "text": "Optional `VOICE_AUDIO_TIMING=true` measures browser audio onset/playback separately\nfrom the always-labeled transcript timestamp gap. A transcript gap is not acoustic\nlatency; browser measurements are proxies, not a hardware loopback measurement.\nSee [measurement methodology](docs/benchmarks.md) and [observability](observability/README.md).",
-    "digest": "791da2b0356f0d318529618586f0ee865e13bc4df4c8823241fb6e0263d36336"
+    "text": "Browser audio timing measures onset/playback separately\nfrom the always-labeled transcript timestamp gap. A transcript gap is not acoustic\nlatency; browser measurements are proxies, not a hardware loopback measurement.\nSee [measurement methodology](docs/benchmarks.md) and [observability](observability/README.md).",
+    "digest": "dbcca4fe310169f80407200366e846b7223387a1255f5863bfa528bf3c8a3a30"
   },
   {
-    "id": "98c7d446565fb423",
+    "id": "536613882f012bb8",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Data flow and limits",
-    "text": "Ordinary diagnostics exclude conversation text. Server debug recording requires\n`VOICE_DEBUG_RECORDING=true` and session consent; it stores bounded data for up to\n24 hours while the backend runs. Audio recording is a separate browser-only consent\nand download. The operator can read server debug recordings. See [operations](docs/operations.md).",
-    "digest": "98c7d446565fb423e44411ae22e18aecb5c57bb4ac768aa3141f74661479b04f"
+    "text": "Ordinary diagnostics exclude conversation text. Server debug recording requires\nexplicit session consent; it stores bounded data for up to\n24 hours while the backend runs. Audio recording is a separate browser-only consent\nand download. The operator can read server debug recordings. See [operations](docs/operations.md).",
+    "digest": "536613882f012bb8b9b8f3be58688b686e745a2418fb9a42708c5877e7dd1c39"
   },
   {
     "id": "e1cdc92b8c709e70",
@@ -224,12 +240,12 @@
     "digest": "a290f1daf6c232833b8ff9cbbe69ffb87f890adfc8e1448e3f1cc91d214ba95f"
   },
   {
-    "id": "e3194e862e273547",
+    "id": "6b590eb82700b918",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Provider adapters",
-    "text": "`OpenAILiveProvider` implements GPT-Live WebRTC setup, sideband events, commentary and finalization.\n`RealtimeWebRTCProvider` contains the shared Realtime WebRTC and sideband implementation.\n`OpenAIRealtimeProvider` supplies OpenAI authentication and endpoints; `AzureRealtimeProvider`\nsupplies Azure resource authentication and deployment configuration. Each provider builds its\nown default session configuration and declares capabilities, including transcript timing.\nThe manager uses the provider protocol and normalized events; it does not select Azure models.",
-    "digest": "e3194e862e273547bd01b31024d6c7fcceaa3651fad657ab0b71604a3622a7f2"
+    "text": "`OpenAILiveProvider` implements GPT-Live WebRTC setup, sideband events, commentary and finalization.\n`AzureLiveProvider` uses the Azure `/openai/v1/live` namespace with Bearer authentication,\nthe same Live events, and client delegation. Recovery requires session consent and seeds\nat most twelve bounded text fragments through `session.thinking.append`, never tool calls.\nLegacy Realtime classes remain only for historical wire regression tests; the app factory\nregisters `openai`, `azure` and optionally `elevenlabs`. See [session flow](session-flow.md).",
+    "digest": "6b590eb82700b9183d4e17c47926f374b72e84a9ad79b385fe0f8538bc28fd1e"
   },
   {
     "id": "8e90758fce0d0248",
@@ -320,12 +336,12 @@
     "digest": "fd3ebd44d09bb660bd0f1d0f239152f6133314a5e4c4e08cf0acd4af65b70fed"
   },
   {
-    "id": "a19a3339e61fe81a",
+    "id": "d197c1ec489df47f",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Optional intent cancellation",
-    "text": "With `VOICE_INTENT_CANCELLATION=true`, speaking pauses narration while independent worker\njobs continue. Up to two running or pending jobs occupy bounded slots. Speech alone no\nlonger cancels work. Explicit task cancellation, session end, enabled semantic decisions\nand the existing worker execution timeouts still cancel work. The existing\ninterruption path and diagrams describe the default mode; this optional path amends it.",
-    "digest": "a19a3339e61fe81a43fa87d5ecb8aff9de57f25c14ca11df64e777df6d9e3271"
+    "text": "By default, speaking pauses narration while independent worker\njobs continue. Up to two running or pending jobs occupy bounded slots. Speech alone no\nlonger cancels work. Explicit task cancellation, session end, enabled semantic decisions\nand the existing worker execution timeouts still cancel work. The existing\ninterruption path and diagrams describe the default mode; this optional path amends it.",
+    "digest": "d197c1ec489df47fcaddede02289e019b159f3ca24609c02296a29df542d128e"
   },
   {
     "id": "5196a28d1a83764e",
@@ -352,12 +368,12 @@
     "digest": "caad20e0f9608e7cc41174613144b68fb5045551a6a475f9b56e796a1b0e2e2d"
   },
   {
-    "id": "d20728028e4c4f04",
+    "id": "fa1fc226898d5dac",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Native client preview",
-    "text": "The opt-in Capacitor client packages the React frontend as local iOS/iPadOS and\nAndroid assets; it uses the existing API, invitations, quotas and single voice\n`delegate_task` tool. It does not embed a provider key or load Vercel as a remote app.\nNative voice is disabled unless explicitly enabled in a test build. Its requests\nretain browser Origin checks: the exact iOS `capacitor://localhost` origin requires\n`VOICE_NATIVE_CLIENTS=true` and an explicit allowlist entry; Android uses\n`https://localhost`. Backend hosts remain unchanged.",
-    "digest": "d20728028e4c4f0425d794a3b95c06571613519d6fc6d125670e46483db34bb3"
+    "text": "The opt-in Capacitor client packages the React frontend as local iOS/iPadOS and\nAndroid assets; it uses the existing API, invitations, quotas and single voice\n`delegate_task` tool. It does not embed a provider key or load Vercel as a remote app.\nNative voice is disabled unless explicitly enabled in a test build. Its requests\nretain browser Origin checks: the exact iOS `capacitor://localhost` origin requires\nan explicit native-origin allowlist entry; Android uses\n`https://localhost`. Backend hosts remain unchanged.",
+    "digest": "fa1fc226898d5dac63bd0d427f8aee8181c3634d80f0be4adc6f1fce48134bc6"
   },
   {
     "id": "de0461f972daecd1",
@@ -368,12 +384,12 @@
     "digest": "de0461f972daecd14953cf1b250fb7117458919822aa25c8ef1bc7f61085325a"
   },
   {
-    "id": "48b406ecc24137f4",
+    "id": "86eda89a7c555b1c",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Optional public web evidence",
-    "text": "With `VOICE_WEB_SEARCH=true`, the worker registry adds a bounded Tavily `web_search`\ntool. The voice model still sees only `delegate_task`. Calculation and project\nretrieval remain local. The HTTP search adapter owns a total deadline and response\ncap; it does not fetch pages from returned URLs. Failure discloses a fallback to the\nbundled documentation. See [worker configuration](worker.md#optional-public-web-search)\nand [ADR 011](decisions/011-read-only-web-search.md).",
-    "digest": "48b406ecc24137f4dc3ad85a4e0d62f4b9d8ad411bcd0b618d7d3060db85ebe2"
+    "text": "With a configured Tavily key, the worker registry adds a bounded `web_search`\ntool. The voice model still sees only `delegate_task`. Calculation and project\nretrieval remain local. The HTTP search adapter owns a total deadline and response\ncap; it does not fetch pages from returned URLs. Failure discloses a fallback to the\nbundled documentation. See [worker configuration](worker.md#optional-public-web-search)\nand [ADR 011](decisions/011-read-only-web-search.md).",
+    "digest": "86eda89a7c555b1c9898625e65d5730020460bbf6797c1856c0335ad94137cde"
   },
   {
     "id": "2c107b8aca3dabd6",
@@ -384,12 +400,12 @@
     "digest": "2c107b8aca3dabd68b3279e1716622f493e5b122604bab74a204334b9316e18f"
   },
   {
-    "id": "0015ca08b96d3aec",
+    "id": "ee47cad3a2f165da",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Browser audio observations",
-    "text": "With `VOICE_AUDIO_TIMING=true` (default false), the existing WebRTC stream analyser\nobserves local and remote energy every 20 ms. Remote energy is accepted only while\nplayback is active and unmuted. Offer-to-first-audio includes setup; speech-end-to-audio\nuses the last local energy observation followed by at least 300 ms of silence.\nOverlap and interrupted sampling are excluded. These browser observations do not\nmeasure acoustic output or provider-only generation latency and use no transcript timestamps.",
-    "digest": "0015ca08b96d3aec954979753db56086b77a2cf7523bf12476bb3f793dad68c2"
+    "text": "The WebRTC stream analyser automatically\nobserves local and remote energy every 20 ms. Remote energy is accepted only while\nplayback is active and unmuted. Offer-to-first-audio includes setup; speech-end-to-audio\nuses the last local energy observation followed by at least 300 ms of silence.\nOverlap and interrupted sampling are excluded. These browser observations do not\nmeasure acoustic output or provider-only generation latency and use no transcript timestamps.",
+    "digest": "ee47cad3a2f165da5a4ebd9b021bdfc9f8c31dbda984fa0c6d35c67442c2ec85"
   },
   {
     "id": "176be03310916ca7",
@@ -462,6 +478,14 @@
     "section": "Isolated voice measurement harness",
     "text": "The default path uses a local WebRTC tone pair and scripted scorer fixtures. Live mode\nrequires explicit environment and CLI opt-ins plus a session budget. Its recordings are\nlocal inputs, not bundled user data. A bounded exporter can retrieve timing-only trace\nprojections from an existing Grafana Tempo data source; the checked-in Grafana stack\nstill provisions only Prometheus. No queryable trace storage or live result is implied.",
     "digest": "5bbbd6cbe31b9310204d543a98276c622a6b822b4545796bd58eaecdbaea7571"
+  },
+  {
+    "id": "bc2cfdd3b12e8c7c",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Personal API access",
+    "text": "The voice workspace can create an isolated, bounded personal-key session without a platform\ninvitation. Its provider clients and local/remote planner use only that session’s supplied\nkeys. The platform registry retains the owned session for expiry and capacity enforcement,\nwhile its personal manager owns worker cancellation and client cleanup. No user key is\nwritten to persistent state or exposed in session/cost responses. The private worker uses\na distinct `/personal-jobs` endpoint so old workers cannot silently spend platform keys.\nSee [personal API access](personal-api.md) for lifetime, limits and ElevenLabs setup.",
+    "digest": "bc2cfdd3b12e8c7c0f35b9172e4f67b84480c66fd18fd7ac88b75a53f4997d17"
   },
   {
     "id": "c95e177cccf46e9f",
@@ -672,12 +696,12 @@
     "digest": "5028ad2326c4dff8e64d65ef2135deceb26e98adee0d1a68eebaf2a51c335688"
   },
   {
-    "id": "b97a890fa79d6064",
+    "id": "edd74eaf2dfe7428",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Local development and PyCharm",
-    "text": "Backend settings load from the existing root `.env`; process environment values take\nprecedence. Normal startup does not print API keys or configured invite codes. Only `make invite`\nprints the generated local code when explicitly requested.\nWith no overrides, code defaults are `VOICE_ADAPTER=live` for GPT-Live, `VOICE_WORKER_MODE=offline` for the\ndeterministic planner and `VOICE_WEB_SEARCH=false`. Existing `.env` values still win\nover these declared defaults. See [all configuration names](configuration.md).",
-    "digest": "b97a890fa79d60645b3737d8ca7624ce018f7680670829a282b15dbb51f78a3b"
+    "text": "Backend settings load from the existing root `.env`; process environment values take\nprecedence. Normal startup does not print API keys or configured invite codes. Only `make invite`\nprints the generated local code when explicitly requested.\nWith no overrides, the adapter is `live`. A configured OpenAI key selects the model-backed\nworker; without one, planning is offline. A Tavily key enables search. Runtime feature\nflags for costs, controls, timing and intent cancellation are no longer required. See [all configuration names](configuration.md).",
+    "digest": "edd74eaf2dfe7428fabc7e5b96720b4491591af48649bb956ef194ca2a391e69"
   },
   {
     "id": "f1d3adbb4c52ddb4",
@@ -776,12 +800,12 @@
     "digest": "65afc9304f0d877b5ea7bce7467973827c5eb18e78ed5aa8eb2074c3684ccd04"
   },
   {
-    "id": "56e0adc4d5e467ed",
+    "id": "dd6f4988650e334b",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Common local environment variables",
-    "text": "The complete generated reference is [Configuration](configuration.md). Process\nvariables override `.env`; restart the backend after changes. Keep keys only in the\nbackend environment. Setting a key does not itself enable the corresponding feature.",
-    "digest": "56e0adc4d5e467edcc3f158a91c2f19b059024e12591afa6de616f29a9561c0f"
+    "text": "The complete generated reference is [Configuration](configuration.md). Process\nvariables override `.env`; restart the backend after changes. Keep keys only in the\nbackend environment. Complete provider credentials make the corresponding integration available.",
+    "digest": "dd6f4988650e334b11e8cae5f6e752355e4d64c4ebae9251be2f2d8294fba37e"
   },
   {
     "id": "56ee299f888474fe",
@@ -792,51 +816,51 @@
     "digest": "56ee299f888474fef999cc6151363eefc889d2e130dffddd6e79004a20aa9c65"
   },
   {
-    "id": "520b788ec0b06be1",
+    "id": "45d7c4e260a85287",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Common local environment variables",
-    "text": "`VOICE_ADAPTER` is the canonical selector for the existing `live`, `realtime` and\n`azure` adapters. It selects an integration, not the commercial provider. The old\n`VOICE_VOICE_PROVIDER` name remains accepted as a deprecated alias; if both names\nare present in the same source, `VOICE_ADAPTER` wins. Keep your existing keys and change only the\nnon-sensitive selectors/model values when migrating a local configuration.",
-    "digest": "520b788ec0b06be16364bee93e8f9c8a46b3bb3e408346700cfb84976fe80d14"
+    "text": "`VOICE_ADAPTER` selects `openai`, `azure` or `elevenlabs`. Legacy `live` and\n`realtime` values migrate to `openai`; no production Realtime client is registered. The old\n`VOICE_VOICE_PROVIDER` name remains accepted as a deprecated alias; if both names\nare present in the same source, `VOICE_ADAPTER` wins. Keep your existing keys and change only the\nnon-sensitive selectors/model values when migrating a local configuration.",
+    "digest": "45d7c4e260a852875a6b51fa68436a394314359a2ee59ff781e321e51daaf93a"
   },
   {
-    "id": "77f58aacbba40489",
+    "id": "0d420d00b9426672",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Copyable local configuration",
-    "text": "After merging the dev/configuration PR and updating your main checkout, use the\ncommented [server template](../.env.example) as a starting point for core server settings.\nIt contains core declared defaults, no keys and the canonical adapter name. Optional\nprovider settings are documented in their integration guides and generated reference.\nThe [generated reference](configuration.md) lists all enums, types and bounds and the\ncross-field validation rules; model IDs, voice names, paths and account credentials\nare free-form settings rather than finite application enums.",
-    "digest": "77f58aacbba40489da25773dbdf38eb499d4d222292e02918a1fd138bdc5f7f9"
+    "text": "Use the [minimal template](../config/local.env.template) for new files. It contains\nplatform keys and deployment choices; costs, controls, audio timing and intent-based\ncancellation are automatic. Existing `.env` files still load, but obsolete feature flags\ndo not disable these behaviours. The older `.env.example` is a legacy exhaustive template.",
+    "digest": "0d420d00b9426672aed177e4dd9cf7073f3d3141862985c5b4c99d6cfad87319"
   },
   {
-    "id": "bf8c0ce8470406a7",
+    "id": "82c6d5e88a853fec",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Copyable local configuration",
-    "text": "For a simple local GPT-Live session with a model-backed worker, these are the main\nvalues to choose in your private root `.env`:",
-    "digest": "bf8c0ce8470406a73a6b8c7d3389c172fc130ca7d5414fce90ade809022fdcd0"
+    "text": "Omit the Tavily line if unused; supplying a key enables its tool. Use `make be`, `make fe`\nand `make invite`; keep the local invitation private. Your API keys mode instead accepts\nkeys per session and needs no invitation or platform provider keys. See\n[personal-key access](personal-api.md). No environment file is rewritten automatically.",
+    "digest": "82c6d5e88a853fec71a15dd684f2c780a4dfa5b886f1dae5b3b4639438ce9ba5"
   },
   {
-    "id": "06770d137a7c7db7",
+    "id": "9e57d07b70507fde",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Copyable local configuration",
-    "text": "Replace the placeholder with your existing private key before starting. Preserve\nany Azure, Tavily or evaluation keys you still need before replacing an old file;\nthis example cannot recover them. The minimal profile inherits the remaining\nresource limits from code defaults. The full template spells those limits out.\nDo not put a real key in `.env.example` or commit your `.env`.",
-    "digest": "06770d137a7c7db7b1a28e8fe89ed5e20c1abdc740de0a02b13777613963e08f"
+    "text": "For a separately started private worker, set `VOICE_WORKER_EXECUTION=remote`,\n`VOICE_WORKER_SERVICE_URL` and a shared `VOICE_WORKER_SERVICE_TOKEN`. Keep the same worker\nmodel on both hosts; platform provider keys belong on the host that uses them. Personal\nOpenAI/Tavily keys are forwarded only for that job and discarded when it ends.",
+    "digest": "9e57d07b70507fde0d379897abe44c18ab31dad3cf400860abd81735a244c7b6"
   },
   {
-    "id": "4f7abd5c24966ec0",
+    "id": "1f5eb3fc5a49db49",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Copyable local configuration",
-    "text": "Start `make be`, `make fe`, then run `make invite` in another terminal to copy the\nlocal invitation. Empty invite settings in this file are intentional: the local\nlauncher supplies its generated invitation to the backend process. A direct uvicorn\nlaunch does not inject that invitation. With both authentication settings empty,\ndevelopment requests require no access code. Configure an access code or named\ninvitation explicitly if you want authentication for direct uvicorn startup.",
-    "digest": "4f7abd5c24966ec0dd92852ee48125dd18c36d5003df5e9d9da4bae69bd8fe12"
+    "text": "Explicit `VOICE_WORKER_MODE=offline`, `openai` or `decisions` remains available. Resource\nbudgets, allowed origins/hosts, invitations, proxy trust and private-worker authentication\nremain configurable. Debug recording, telemetry and paid semantic cancellation still\nrequire deliberate setup; they are not enabled merely by supplying a voice key.",
+    "digest": "1f5eb3fc5a49db49e2afdb1bad0724808c6cc2f511b90db237c8c9c21da19470"
   },
   {
-    "id": "aafcf126d3ddbd70",
+    "id": "d71b3f3cdaf01ca6",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Copyable local configuration",
-    "text": "All changes require restarting the backend (and the private worker too if using\nremote execution). A key alone does not turn on a feature. Backend `.env` is not a\nfrontend configuration file: `make fe` already selects the local API. Native build,\noffline-stack UI and Vercel variables are listed separately in the reference.",
-    "digest": "aafcf126d3ddbd7013bf6881909caece5bb40bcbe9ddf4547043030a5d227455"
+    "text": "Restart the API and private worker after changing deployment settings. Browser API keys\nare never read from `.env` and are not stored in the frontend build.",
+    "digest": "d71b3f3cdaf01ca6455a0dd15d26e6694dca7930262ec3a3cffee3d4d870f271"
   }
 ]

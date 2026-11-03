@@ -1,6 +1,10 @@
 """Keep the complete settings reference synchronized without reading configured secrets."""
 
+import os
+from pathlib import Path
+
 import pytest
+from voice_delegate.config import load_settings
 
 from scripts.build_configuration import OUTPUT, build
 
@@ -45,6 +49,7 @@ def test_server_template_boots_with_optional_features_off(
         "VOICE_ALLOWED_ORIGIN",
         "VOICE_COST_ESTIMATES",
         "VOICE_PRICE_FILE",
+        "VOICE_SESSION_UI",
         "VOICE_ELEVENLABS_ENABLED",
         "ELEVENLABS_API_KEY",
         "VOICE_ELEVENLABS_AGENT_ID",
@@ -52,12 +57,12 @@ def test_server_template_boots_with_optional_features_off(
         "VOICE_ELEVENLABS_WEBHOOK_TOKEN",
         "VOICE_ELEVENLABS_WEBHOOK_URL",
     }
-    assert set(values) == canonical_names | {"BRAINTRUST_API_KEY"}
+    assert set(values) == canonical_names | {"BRAINTRUST_API_KEY", "VOICE_REALTIME_MODEL"}
     settings = Settings()
     assert settings.environment == "development"
     assert settings.worker_mode == "offline"
     assert settings.worker_execution == "local"
-    assert settings.voice_provider == "live"
+    assert settings.voice_provider == "openai"
     assert settings.worker_model == "gpt-6-luna"
     assert not settings.openai_api_key.get_secret_value()
     assert not settings.azure_api_key.get_secret_value()
@@ -71,9 +76,22 @@ def test_server_template_boots_with_optional_features_off(
             settings.audio_timing,
             settings.intent_cancellation,
             settings.decisions_cancel,
-            settings.debug_recording,
-            settings.otel_enabled,
             settings.web_search,
             settings.public_demo,
         )
     )
+
+
+def test_automatic_debug_and_tracing_are_available_without_environment_flags(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    for name in list(os.environ):
+        if name.startswith("VOICE_") or name in {
+            "OPENAI_API_KEY",
+            "TAVILY_API_KEY",
+            "ELEVENLABS_API_KEY",
+        }:
+            monkeypatch.delenv(name)
+    monkeypatch.chdir(tmp_path)  # No developer .env is read.
+    settings = load_settings()
+    assert settings.debug_recording and settings.otel_enabled

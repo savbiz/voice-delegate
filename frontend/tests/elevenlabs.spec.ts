@@ -13,7 +13,7 @@ test('SDK transport rejects unavailable mixed recording before session creation'
     });
   });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByText('Voice settings & recording', { exact: true }).click();
   await page.getByLabel(/Record audio locally/).check();
   await page.getByRole('button', { name: 'Start conversation' }).click();
@@ -43,7 +43,7 @@ test('the installed SDK audio worklet loads under the production CSP without ext
     const response = await route.fetch();
     await route.fulfill({ response, headers: { ...response.headers(), ...headers } });
   });
-  await page.goto('/');
+  await page.goto('/#demo');
   const loaded = await page.evaluate(
     async ({ url, name }) => {
       const context = new AudioContext();

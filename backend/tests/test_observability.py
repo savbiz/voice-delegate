@@ -23,6 +23,7 @@ from voice_delegate.providers.models import (
     Transcript,
 )
 from voice_delegate.session.manager import SessionManager
+from voice_delegate.session.preferences import VoicePreferences
 
 from test_support import eventually
 
@@ -67,7 +68,9 @@ async def test_turn_parents_delegation_and_exports_no_private_text() -> None:
 
 def test_disabled_metrics_never_construct_an_exporter() -> None:
     assert configure_metrics(Settings()) is None
-    assert configure_metrics(Settings(otel_enabled=True)) is None
+    local_metrics = configure_metrics(Settings(otel_enabled=True))
+    assert local_metrics is not None
+    local_metrics.shutdown()
 
 
 def test_histograms_use_seconds_and_distinguish_cancellation() -> None:
@@ -212,7 +215,7 @@ async def test_reconnect_starts_a_new_turn_without_old_transport_wait(
         metrics=Metrics(meters),
     )
     try:
-        session = manager.create()
+        session = manager.create(preferences=VoicePreferences(azure_recovery=True))
         await manager.connect(session, "sdp")
         primary.connections[0].queue.put_nowait(Transcript("user", "first", 10000, 11000))
         await eventually(lambda: session.turn is not None)
@@ -275,7 +278,9 @@ async def test_connection_timeouts_record_error(
         metrics=Metrics(meters),
     )
     try:
-        session = manager.create()
+        session = manager.create(
+            preferences=VoicePreferences(azure_recovery=operation == "reconnect")
+        )
         if operation == "reconnect":
             await manager.connect(session, "sdp")
         pending = (
@@ -319,7 +324,9 @@ async def test_reconnect_prechecks_do_not_record_provider_operations(rejection: 
         fallback=None if rejection == "unconfigured" else fallback,
     )
     try:
-        session = manager.create()
+        session = manager.create(
+            preferences=VoicePreferences(azure_recovery=rejection != "unconfigured")
+        )
         session.fallback_used = rejection == "used"
         with pytest.raises(SessionError) as exc:
             await manager.reconnect(session, "sdp", 1 if rejection == "stale" else 0)

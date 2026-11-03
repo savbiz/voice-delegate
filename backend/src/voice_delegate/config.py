@@ -1,14 +1,62 @@
 """Load validated server settings without exposing credentials to clients."""
 
+from ipaddress import ip_address, ip_network
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import AliasChoices, Field, HttpUrl, SecretStr, model_validator
+from pydantic import AliasChoices, Field, HttpUrl, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings.sources import DotEnvSettingsSource, EnvSettingsSource
 from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
 from voice_delegate_agent.web_search import domain_name
 
 from voice_delegate.limits.defaults import WORKER_PORT
+
+
+def azure_origin_allowed(url: str) -> bool:
+    """Accept only an HTTPS Azure OpenAI resource origin, never a path, port or credentials."""
+    try:
+        target = urlsplit(url)
+        port = target.port
+    except ValueError:
+        return False
+    return not (
+        target.scheme != "https"
+        or not target.hostname
+        or not target.hostname.endswith(".openai.azure.com")
+        or target.path not in {"", "/"}
+        or target.query
+        or target.fragment
+        or target.username
+        or target.password
+        or port not in {None, 443}
+    )
+
+
+def worker_transport_allowed(url: str) -> bool:
+    """Permit plaintext only on loopback, private IPs, the compose worker or Railway hosts."""
+    target = urlsplit(url)
+    if not target.hostname or target.username or target.password or target.query or target.fragment:
+        return False
+    if target.scheme == "https":
+        return True
+    if target.scheme != "http" or not target.hostname:
+        return False
+    if target.hostname in {"localhost", "worker"} or target.hostname.endswith(".railway.internal"):
+        return True
+    try:
+        address = ip_address(target.hostname)
+    except ValueError:
+        return False
+    return address.is_loopback or any(
+        address in ip_network(network)
+        for network in (
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16",
+            "fc00::/7",
+        )
+    )
 
 
 class Settings(BaseSettings):
@@ -20,14 +68,20 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="OPENAI_API_KEY")
     azure_endpoint: str = ""
     azure_api_key: SecretStr = SecretStr("")
-    azure_deployment: str = "gpt-realtime"
+    azure_deployment: str = "gpt-live-1"
     azure_voice: str = "marin"
     fallback_enabled: bool = False
-    voice_provider: Literal["live", "realtime", "azure", "elevenlabs"] = Field(
-        default="live",
+    voice_provider: Literal["openai", "azure", "elevenlabs"] = Field(
+        default="openai",
         validation_alias=AliasChoices("VOICE_ADAPTER", "VOICE_VOICE_PROVIDER"),
         description="Voice adapter. VOICE_VOICE_PROVIDER is a deprecated alias.",
     )
+
+    @field_validator("voice_provider", mode="before")
+    @classmethod
+    def canonical_adapter(cls, value: object) -> object:
+        return "openai" if value in ("live", "realtime") else value
+
     elevenlabs_enabled: bool = False
     elevenlabs_api_key: SecretStr = Field(
         default=SecretStr(""), validation_alias="ELEVENLABS_API_KEY"
@@ -38,7 +92,6 @@ class Settings(BaseSettings):
     elevenlabs_timeout_seconds: float = Field(default=3, gt=0, le=5)
     elevenlabs_webhook_token: SecretStr = SecretStr("")
     elevenlabs_webhook_url: str = ""
-    realtime_model: str = "gpt-realtime"
     model: str = "gpt-live-1"
     voice: str = "marin"
     native_clients: bool = False
@@ -51,6 +104,7 @@ class Settings(BaseSettings):
     trusted_proxy_hops: int = Field(default=1, ge=1, le=32)
     environment: str = "development"
     api_docs: bool = False
+    session_ui: bool = False
     cost_estimates: bool = True
     price_file: str = ""
     audio_timing: bool = False
@@ -106,7 +160,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_elevenlabs(self) -> "Settings":
         if self.voice_provider == "elevenlabs" and not self.elevenlabs_enabled:
-            message = "ElevenLabs adapter requires VOICE_ELEVENLABS_ENABLED"
+            message = "ElevenLabs adapter requires complete backend agent credentials"
             raise ValueError(message)
         if self.elevenlabs_enabled and (
             not self.elevenlabs_api_key.get_secret_value() or not self.elevenlabs_agent_id
@@ -133,8 +187,8 @@ class Settings(BaseSettings):
         if self.voice_provider == "elevenlabs" and not self.intent_cancellation:
             message = "ElevenLabs async delegation requires VOICE_INTENT_CANCELLATION"
             raise ValueError(message)
-        if self.voice_provider == "elevenlabs" and (self.fallback_enabled or self.native_clients):
-            message = "ElevenLabs does not support cross-vendor fallback or native clients"
+        if self.voice_provider == "elevenlabs" and self.fallback_enabled and not self.session_ui:
+            message = "ElevenLabs does not support cross-vendor fallback without session selection"
             raise ValueError(message)
         if (
             self.voice_provider == "elevenlabs"
@@ -211,6 +265,9 @@ class Settings(BaseSettings):
             ):
                 message = "Worker URL must be an HTTP(S) service origin"
                 raise ValueError(message)
+            if not worker_transport_allowed(self.worker_service_url):
+                message = "Worker requires HTTPS outside private IPs, loopback or compose"
+                raise ValueError(message)
             if len(self.worker_service_token.get_secret_value()) < 32:
                 message = "Remote worker requires a service token of at least 32 characters"
                 raise ValueError(message)
@@ -230,21 +287,12 @@ class Settings(BaseSettings):
         if self.public_demo and self.environment != "production":
             message = "Public demo requires production configuration"
             raise ValueError(message)
-        if self.fallback_enabled or self.voice_provider == "azure":
-            from urllib.parse import urlparse
-
-            endpoint = urlparse(self.azure_endpoint)
-            if (
-                endpoint.scheme != "https"
-                or not endpoint.hostname
-                or not endpoint.hostname.endswith(".openai.azure.com")
-                or endpoint.path not in {"", "/"}
-                or endpoint.query
-                or endpoint.fragment
-                or endpoint.username
-                or endpoint.password
-                or endpoint.port not in {None, 443}
-            ):
+        if (
+            self.fallback_enabled
+            or self.voice_provider == "azure"
+            or (self.session_ui and self.azure_endpoint and self.azure_api_key.get_secret_value())
+        ):
+            if not azure_origin_allowed(self.azure_endpoint):
                 message = "Azure endpoint must be an HTTPS Azure OpenAI resource origin"
                 raise ValueError(message)
             if not self.azure_api_key.get_secret_value():
@@ -273,7 +321,43 @@ class Settings(BaseSettings):
         return self
 
 
+# Runtime behaviour is automatic. Constructor overrides remain for offline contract tests.
+AUTOMATIC_FEATURES = {
+    "cost_estimates",
+    "session_ui",
+    "intent_cancellation",
+    "audio_timing",
+    "native_clients",
+    "elevenlabs_enabled",
+    "web_search",
+    "fallback_enabled",
+    "debug_recording",
+    "otel_enabled",
+}
+
+
 def load_settings() -> Settings:
-    """Read a local .env without overriding the process environment."""
-    # BaseSettings loads dotenv separately, preserving process precedence across aliases.
-    return Settings(_env_file=".env")  # type: ignore[call-arg]
+    """Load keys and deployment settings; obsolete feature environment flags are ignored."""
+    values = {**DotEnvSettingsSource(Settings, env_file=".env")(), **EnvSettingsSource(Settings)()}
+    values.update(
+        cost_estimates=True,
+        session_ui=True,
+        intent_cancellation=True,
+        audio_timing=True,
+        native_clients=True,
+        debug_recording=True,
+        otel_enabled=True,
+    )
+    values["elevenlabs_enabled"] = bool(
+        values.get("ELEVENLABS_API_KEY") and values.get("elevenlabs_agent_id")
+    )
+    values["web_search"] = bool(
+        values.get("TAVILY_API_KEY") or values.get("worker_execution") == "remote"
+    )
+    adapter = values.get("VOICE_ADAPTER", values.get("VOICE_VOICE_PROVIDER", "openai"))
+    values["fallback_enabled"] = bool(
+        values.get("azure_endpoint") and values.get("azure_api_key") and adapter != "azure"
+    )
+    if "worker_mode" not in values:
+        values["worker_mode"] = "openai" if values.get("OPENAI_API_KEY") else "offline"
+    return Settings(**values)

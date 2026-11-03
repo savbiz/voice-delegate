@@ -10,6 +10,7 @@ from voice_delegate.providers.fake import FakeProvider
 from voice_delegate.providers.models import ProviderCapabilities, ProviderFailure
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
+from voice_delegate.session.preferences import VoicePreferences
 
 from test_support import eventually
 
@@ -53,7 +54,7 @@ async def test_concurrent_close_and_reconnect_release_all_connections(
     primary = FakeProvider()
     blocking_provider.capabilities = ProviderCapabilities(text_replay=True)
     manager = SessionManager(primary, Settings(), fallback=blocking_provider)
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=True))
     await manager.connect(session, "sdp")
     if close_first:
         entered, release = asyncio.Event(), asyncio.Event()
@@ -92,7 +93,7 @@ async def test_reconnecting_session_expires_without_browser_request(fake_clock: 
     manager = SessionManager(
         primary, Settings(heartbeat_timeout_seconds=5), clock=fake_clock, fallback=fallback
     )
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=True))
     await manager.connect(session, "sdp")
     primary.connections[0].queue.put_nowait(ProviderFailure())
     await eventually(lambda: session.state == "reconnecting" and session.connection is None)
@@ -110,7 +111,7 @@ async def test_reconnect_rejects_missing_fallback_or_created_session(
     fallback = FakeProvider()
     fallback.capabilities = ProviderCapabilities(text_replay=True)
     manager = SessionManager(FakeProvider(), Settings(), fallback=fallback if configured else None)
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=configured))
     with pytest.raises(SessionError) as error:
         await manager.reconnect(session, "sdp", 0)
     assert error.value.status == status

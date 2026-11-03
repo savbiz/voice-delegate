@@ -189,6 +189,22 @@ calls or cloud/account changes were made.
 
 ## Session cost estimates
 
-Default-on session accounting uses versioned prices, observed voice duration and numeric worker,
-Decisions and search usage. Offline arithmetic, isolation and remote propagation are verified.
+Session accounting is enabled by default and uses versioned prices, observed voice duration,
+and numeric usage for the worker, Decisions, and search. Offline arithmetic, isolation and remote propagation are verified.
 Live billing reconciliation is pending; see [cost estimates](cost-estimates.md).
+
+## Session controls
+
+The automatically enabled [session UI](session-ui.md) provides server-controlled provider selection,
+observed audio activity and cost breakdowns. Offline and narrow-viewport checks are verified;
+actual device/provider voice acceptance remains pending.
+
+## Personal API sessions and simpler runtime defaults
+
+The voice workspace offers invited Platform API access and invitation-free personal keys.
+Provider and worker clients are isolated per personal session, keys are not persisted,
+and a distinct private-worker endpoint prevents accidental platform-key use by old workers.
+Costs, controls, timing and intent cancellation are automatic; credential presence enables
+search and ElevenLabs, while native clients filter ElevenLabs out. Offline contracts are
+covered by tests; live account billing and device audio acceptance remain pending. See
+[personal-key access and migration](personal-api.md).
