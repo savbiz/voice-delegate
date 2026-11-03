@@ -74,7 +74,9 @@ def build_router(
     ) -> dict[str, str]:
         if feedback is None:
             raise HTTPException(503, "Feedback requires a configured invitation or access code")
-        return {"diagnostic_id": feedback.submit(principal, body, manager.settings.voice_provider)}
+        provider = body.adapter if body.adapter in manager.providers else None
+        provider = provider or manager.settings.voice_provider
+        return {"diagnostic_id": feedback.submit(principal, body, provider)}
 
     @router.post("/config")
     async def configuration(body: VoicePreferences | None = None) -> dict[str, object]:

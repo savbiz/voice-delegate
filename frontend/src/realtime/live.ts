@@ -75,7 +75,8 @@ export function createLiveSession(
 ) {
   const sounds = new ConnectionSounds();
   let diagnosticId = crypto.randomUUID();
-  let reportBody: { diagnostic_id: string; category: string; state: string } | undefined;
+  let reportBody:
+    { diagnostic_id: string; category: string; state: string; adapter?: string } | undefined;
   let reportSent = false;
   let reportPending = false;
   function showState(phase: Phase, status: string, help: string): void {
@@ -825,7 +826,12 @@ export function createLiveSession(
     if (reportPending || reportSent || !getAccessCode()) return;
     reportPending = true;
     store.update({ reportPending: true, reportLocked: true });
-    reportBody ??= { diagnostic_id: diagnosticId, category, state: store.getSnapshot().phase };
+    reportBody ??= {
+      diagnostic_id: diagnosticId,
+      category,
+      state: store.getSnapshot().phase,
+      ...(getPreferences().adapter ? { adapter: getPreferences().adapter } : {}),
+    };
     store.update({ feedbackStatus: 'Sending report…' });
     try {
       const result = await request<{ diagnostic_id: string }>('/feedback', undefined, reportBody);

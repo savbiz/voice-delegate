@@ -1,5 +1,7 @@
 """Provider selection is server-gated, immutable per session and offline-testable."""
 
+import json
+from pathlib import Path
 from typing import Literal
 
 import pytest
@@ -102,3 +104,18 @@ async def test_non_openai_sessions_never_transition_to_azure_fallback(
     assert session.state == "closed"
     assert not fallback.connections
     await manager.aclose()
+
+
+def test_debug_recording_names_the_session_adapter(tmp_path: Path) -> None:
+    live, azure = FakeProvider(), FakeProvider()
+    manager = SessionManager(
+        live,
+        Settings(session_ui=True, debug_recording=True, debug_directory=str(tmp_path)),
+        providers={"openai": live, "azure": azure},
+    )
+    session = manager.create(
+        preferences=VoicePreferences(adapter="azure", debug_recording=True),
+    )
+    first = json.loads((tmp_path / f"{session.id}.jsonl").read_text().splitlines()[0])
+    assert first["event"] == "consent"
+    assert first["provider"] == "azure"

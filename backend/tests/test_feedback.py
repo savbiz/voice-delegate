@@ -115,3 +115,30 @@ async def test_feedback_and_app_use_distribution_version(
             assert app.version == "9.8.7"
         finally:
             store.close()
+
+
+async def test_feedback_records_the_selected_adapter_when_configured(
+    asgi_client: ASGIClientFactory, tmp_path: Path
+) -> None:
+    path = str(tmp_path / "feedback.sqlite3")
+    secret = "private-invitation-never-stored-123456"
+    settings = Settings(
+        feedback_database=path,
+        invite_tokens={"alice": SecretStr(secret)},
+        session_ui=True,
+        openai_api_key=SecretStr("fixture"),
+        azure_api_key=SecretStr("fixture"),
+        azure_endpoint="https://fixture.openai.azure.com",
+    )
+    app = create_app(settings, FakeProvider())
+    async with asgi_client(app) as client:
+        client.headers["Origin"] = settings.allowed_origins[0]
+        client.headers["Authorization"] = "Bearer " + secret
+        chosen = {**report().model_dump(mode="json"), "adapter": "azure"}
+        unknown = {**report().model_dump(mode="json"), "adapter": "elevenlabs"}
+        assert (await client.post("/api/feedback", json=chosen)).status_code == 201
+        assert (await client.post("/api/feedback", json=unknown)).status_code == 201
+    with closing(sqlite3.connect(path)) as database:
+        rows = dict(database.execute("SELECT id, provider FROM feedback"))
+    assert rows[chosen["diagnostic_id"]] == "azure"
+    assert rows[unknown["diagnostic_id"]] == "openai"

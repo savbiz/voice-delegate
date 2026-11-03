@@ -132,7 +132,7 @@ class SessionManager:
                 session.debug = DebugRecording(Path(self.settings.debug_directory), session.id)
                 session.debug.write(
                     "consent",
-                    provider=self.settings.voice_provider,
+                    provider=session.adapter,
                     model=self.config(session).model,
                 )
             except OSError as exc:
