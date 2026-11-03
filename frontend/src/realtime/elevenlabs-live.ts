@@ -1,6 +1,7 @@
 import type { CostSummary } from './costs';
 /** SDK media and UI events; tools execute over authenticated server webhooks. */
 import type { PartialOptions, VoiceConversation } from '@elevenlabs/client';
+import rawAudioProcessor from '@elevenlabs/client/worklets/rawAudioProcessor.js?url&no-inline';
 import type { LiveStore, TaskStatus } from './store';
 import { processEvent, recapText, workerState } from './store';
 import { AudioTimingMeter } from './audio-timing';
@@ -86,6 +87,7 @@ export function elevenSession(
     const opening = factory({
       conversationToken: bootstrap.token,
       connectionType: 'webrtc',
+      workletPaths: { rawAudioProcessor },
       onConnect: ({ conversationId }) => {
         if (stopped || conversationId !== bootstrap.conversation_id) {
           ended('Voice conversation identity mismatch.');
