@@ -80,12 +80,12 @@
     "digest": "5504dca48c4f58ee393b8fe041b29c9cdf347bac14bcef0661d5139cec21863b"
   },
   {
-    "id": "76470592f1aa9ab9",
+    "id": "705a89c80e2b30ba",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status and verification",
-    "text": "**v0.1.0 is an implementation release.** Offline tests cover session ownership,\nlimits, worker tools, cancellation, recovery, metrics and browser behavior.\nThe maintainer reported successful local GPT-Live conversations and tool use; the\nfull recorded live acceptance checklist is still pending. A small live Decisions\nAPI smoke is recorded separately; it does not establish cancellation quality.",
-    "digest": "76470592f1aa9ab91c820518ed2937783b860d98ac6672617edb6402dab1e41b"
+    "text": "**v0.2.0 is an implementation release.** Offline tests cover session ownership,\nlimits, worker tools, cancellation, recovery, metrics and browser behavior.\nThe maintainer reported successful local GPT-Live conversations and tool use; the\nfull recorded live acceptance checklist is still pending. A small live Decisions\nAPI smoke is recorded separately; it does not establish cancellation quality.",
+    "digest": "705a89c80e2b30ba2e6d69a9ae5262b6e1a60f8d6e5f6bc61fda9e62c9d4a8c0"
   },
   {
     "id": "214bad071ed685ff",
