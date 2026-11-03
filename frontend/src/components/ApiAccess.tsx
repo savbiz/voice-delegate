@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Adapter } from '../realtime/provider-options';
 
 export type ApiSource = 'platform' | 'personal';
@@ -45,6 +45,7 @@ export function ApiAccess({
   recoveryAvailable: boolean;
   onRecovery: (enabled: boolean) => void;
 }) {
+  const [showKeys, setShowKeys] = useState(false);
   const placeholders: Partial<Record<keyof PersonalKeys, string>> = {
     azure_endpoint: 'https://<resource>.openai.azure.com',
     azure_deployment: 'gpt-live-1',
@@ -54,7 +55,7 @@ export function ApiAccess({
     <label key={name}>
       {label}
       <input
-        type={secret ? 'password' : 'text'}
+        type={secret && !showKeys ? 'password' : 'text'}
         autoComplete="off"
         spellCheck={false}
         placeholder={placeholders[name]}
@@ -116,11 +117,26 @@ export function ApiAccess({
       ) : (
         <>
           <p className="muted">
-            No invitation required. Your providers bill your accounts. Keys are sent to this backend
-            and its configured worker and held in memory for this session only. They are not saved
-            in your browser or a database. Fields clear after submission; re-enter keys for another
-            session.
+            No invitation required. Your providers bill your accounts. Keys are held in memory for
+            this session only and clear after you start.
           </p>
+          <details className="key-details">
+            <summary>How your keys are handled</summary>
+            <p className="muted">
+              Keys are sent once to this backend and its configured worker, and held in memory for
+              this session only. They are not saved in your browser or a database. Fields clear
+              after submission; re-enter keys for another session.
+            </p>
+          </details>
+          <label className="show-keys">
+            <input
+              type="checkbox"
+              checked={showKeys}
+              disabled={disabled}
+              onChange={(event) => setShowKeys(event.target.checked)}
+            />{' '}
+            Show keys while typing
+          </label>
           {field(
             'openai_key',
             adapter === 'elevenlabs' || adapter === 'azure'

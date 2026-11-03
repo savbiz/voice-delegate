@@ -37,6 +37,18 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
   const selectedAdapter = adapter ?? options?.adapter;
   const sdkSelected = selectedAdapter === 'elevenlabs';
   const noProvider = options !== undefined && options.available_adapters.length === 0;
+  const missingKeys =
+    apiSource === 'personal'
+      ? sdkSelected
+        ? !(
+            keys.elevenlabs_key?.trim() &&
+            keys.elevenlabs_agent_id?.trim() &&
+            keys.elevenlabs_webhook_token?.trim()
+          )
+        : selectedAdapter === 'azure'
+          ? !(keys.azure_key?.trim() && keys.azure_endpoint?.trim())
+          : !keys.openai_key?.trim()
+      : false;
   useEffect(() => {
     if (!canStartVoice()) return;
     const abort = new AbortController();
@@ -184,6 +196,15 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
         <p id="task-status" className="muted" aria-live="polite">
           {state.workerMessage}
         </p>
+        {missingKeys && !state.active && !state.ending && (
+          <p id="start-hint" className="muted">
+            {sdkSelected
+              ? 'Enter your ElevenLabs API key, agent ID and webhook token to start.'
+              : selectedAdapter === 'azure'
+                ? 'Enter your Azure API key and resource origin to start.'
+                : 'Enter your OpenAI API key to start.'}
+          </p>
+        )}
         {state.worker === 'running' && !state.intentCancellation && (
           <Button
             id="cancel-task"
@@ -241,7 +262,8 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
           <Button
             id="start"
             variant="primary"
-            disabled={state.active || state.ending || state.recovering || noProvider}
+            disabled={state.active || state.ending || state.recovering || noProvider || missingKeys}
+            aria-describedby={missingKeys ? 'start-hint' : undefined}
             onClick={() => controller.current?.start()}
           >
             Start conversation

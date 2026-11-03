@@ -198,3 +198,35 @@ test('Azure values retained from an earlier provider choice are not sent for Ope
   expect(keys).not.toHaveProperty('azure_endpoint');
   expect(keys).not.toHaveProperty('azure_deployment');
 });
+
+test('personal Start waits for the selected provider credentials and keys can be revealed', async ({
+  page,
+}) => {
+  await page.route('**/api/**', (route) =>
+    route.fulfill({
+      json: {
+        session_ui: true,
+        adapter: 'openai',
+        available_adapters: ['openai', 'azure'],
+        voice_available: true,
+      },
+    }),
+  );
+  await page.goto('/');
+  await page.getByRole('radio', { name: 'Your API keys', exact: true }).check();
+  const start = page.getByRole('button', { name: 'Start conversation', exact: true });
+  await expect(start).toBeDisabled();
+  await expect(page.locator('#start-hint')).toContainText('Enter your OpenAI API key');
+  const key = page.getByLabel('OpenAI API key (voice and worker)', { exact: true });
+  await expect(key).toHaveAttribute('type', 'password');
+  await key.fill('own-openai');
+  await expect(start).toBeEnabled();
+  await expect(page.locator('#start-hint')).toHaveCount(0);
+  await page.getByLabel('Show keys while typing').check();
+  await expect(key).toHaveAttribute('type', 'text');
+  await page.getByRole('combobox', { name: 'Voice provider', exact: false }).selectOption('azure');
+  await expect(start).toBeDisabled();
+  await expect(page.locator('#start-hint')).toContainText('Azure API key and resource origin');
+  await page.getByText('How your keys are handled').click();
+  await expect(page.getByText('not saved in your browser or a database')).toBeVisible();
+});
