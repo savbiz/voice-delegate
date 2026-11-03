@@ -63,8 +63,10 @@ class Metrics:
 
 
 def configure_metrics(settings: Settings) -> MeterProvider | None:
-    if not settings.otel_enabled or not settings.otel_metrics_endpoint:
+    if not settings.otel_enabled:
         return None
+    if not settings.otel_metrics_endpoint:
+        return MeterProvider()
     reader = PeriodicExportingMetricReader(
         OTLPMetricExporter(endpoint=settings.otel_metrics_endpoint, timeout=3),
         export_interval_millis=10000,

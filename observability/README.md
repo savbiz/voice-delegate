@@ -1,10 +1,10 @@
 # Backend observability
 
 Set `GF_SECURITY_ADMIN_PASSWORD` to a private admin password, then start the local stack with `docker compose -f observability/compose.yaml up -d`.
-Set these backend variables and restart the API:
+OTel is enabled automatically. Without exporter endpoints, traces go to the local console
+and metrics have no external exporter. Set these backend variables and restart the API:
 
 ```dotenv
-VOICE_OTEL_ENABLED=true
 VOICE_OTEL_ENDPOINT=http://localhost:4318/v1/traces
 VOICE_OTEL_METRICS_ENDPOINT=http://localhost:4318/v1/metrics
 ```

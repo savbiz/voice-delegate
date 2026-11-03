@@ -120,8 +120,8 @@ VOICE_WEB_SEARCH_DOMAINS='["example.org"]'
 For natural-language requests, also configure `OPENAI_API_KEY` as described above.
 The domain list is optional; its default is empty. Do not put the key in frontend
 variables, source files or logs. In remote mode the API advertises delegated search, while the Tavily key is required
-only on the private worker that executes it. A worker without that key does not register
-the search tool. Keep the existing service
+only on the private worker that executes platform jobs. A platform worker without that
+key does not register search; personal jobs instead use their own Tavily key. Keep the existing service
 authentication and private networking. Hosted deployments continue to use the
 existing Railway backend and Vercel frontend; no new deployment is provisioned.
 

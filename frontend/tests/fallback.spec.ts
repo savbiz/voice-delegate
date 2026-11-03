@@ -2,7 +2,7 @@
 import { expect, test } from '@playwright/test';
 import { installFakePeers, failLatestPeer } from './fixtures';
 
-for (const defaultAdapter of ['live', 'elevenlabs']) {
+for (const defaultAdapter of ['openai', 'elevenlabs']) {
   test(`media failure preserves selection with ${defaultAdapter} default and closes the owned session`, async ({
     page,
   }) => {
@@ -21,7 +21,8 @@ for (const defaultAdapter of ['live', 'elevenlabs']) {
             voice_available: true,
             adapter,
             session_ui: true,
-            available_adapters: ['live', 'elevenlabs'],
+            azure_recovery_available: true,
+            available_adapters: ['openai', 'elevenlabs'],
             transport: adapter === 'elevenlabs' ? 'elevenlabs_agents_webrtc' : 'webrtc',
           },
         });
@@ -49,7 +50,10 @@ for (const defaultAdapter of ['live', 'elevenlabs']) {
     });
     await page.goto('/');
     await page.getByRole('link', { name: 'Live voice', exact: true }).click();
-    await page.getByRole('combobox', { name: 'Voice provider', exact: false }).selectOption('live');
+    await page
+      .getByRole('combobox', { name: 'Voice provider', exact: false })
+      .selectOption('openai');
+    await page.getByLabel('Allow one Azure recovery', { exact: false }).check();
     await page.getByLabel('Personal invitation code').fill('original-invitation');
     await page.getByRole('button', { name: 'Start conversation' }).click();
     await expect(page.getByRole('status')).toContainText('Connected.');
@@ -86,7 +90,16 @@ test('busy work and failed recovery explain manual actions without replay', asyn
   await page.route('**/api/**', (route) => {
     const path = new URL(route.request().url()).pathname;
     calls.push(path);
-    if (path.endsWith('/config')) return route.fulfill({ json: { voice_available: true } });
+    if (path.endsWith('/config'))
+      return route.fulfill({
+        json: {
+          voice_available: true,
+          session_ui: true,
+          adapter: 'openai',
+          available_adapters: ['openai'],
+          azure_recovery_available: true,
+        },
+      });
     if (path.endsWith('/sessions')) return route.fulfill({ json: { id: 'owned', key: 'key' } });
     if (path.endsWith('/heartbeat'))
       return route.fulfill({
@@ -99,6 +112,7 @@ test('busy work and failed recovery explain manual actions without replay', asyn
   });
   await page.goto('/');
   await page.getByRole('link', { name: 'Live voice', exact: true }).click();
+  await page.getByLabel('Allow one Azure recovery', { exact: false }).check();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.getByRole('status')).toContainText('Connected.');
   await page.clock.fastForward(10000);

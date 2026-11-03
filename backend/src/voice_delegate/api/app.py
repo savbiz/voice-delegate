@@ -21,12 +21,11 @@ from voice_delegate.limits.http import BodyLimitMiddleware
 from voice_delegate.limits.ratelimit import RateLimitMiddleware
 from voice_delegate.observability.metrics import Metrics, configure_metrics
 from voice_delegate.observability.tracing import configure_tracing, get_tracer
-from voice_delegate.providers.azure import AzureRealtimeProvider
+from voice_delegate.providers.azure import AzureLiveProvider
 from voice_delegate.providers.base import RealtimeProvider
 from voice_delegate.providers.elevenlabs import ElevenLabsProvider
 from voice_delegate.providers.models import ProviderError, UnsupportedCapability
 from voice_delegate.providers.openai import OpenAILiveProvider
-from voice_delegate.providers.realtime import OpenAIRealtimeProvider
 from voice_delegate.scaling.remote import RemoteWorker
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
@@ -55,17 +54,13 @@ def create_app(
             assert elevenlabs is not None
             provider = elevenlabs
         elif settings.voice_provider == "azure":
-            azure = AzureRealtimeProvider(
-                settings.azure_endpoint, settings.azure_api_key.get_secret_value()
+            azure = AzureLiveProvider(
+                settings.azure_endpoint,
+                settings.azure_api_key.get_secret_value(),
+                close_timeout=settings.close_timeout_seconds,
             )
-            azure.close_timeout = settings.close_timeout_seconds
             azure.model, azure.voice = settings.azure_deployment, settings.azure_voice
             provider = azure
-        elif settings.voice_provider == "realtime":
-            realtime = OpenAIRealtimeProvider(settings.openai_api_key.get_secret_value())
-            realtime.close_timeout = settings.close_timeout_seconds
-            realtime.model, realtime.voice = settings.realtime_model, settings.voice
-            provider = realtime
         else:
             live = OpenAILiveProvider(
                 settings.openai_api_key.get_secret_value(), settings.close_timeout_seconds
@@ -73,35 +68,35 @@ def create_app(
             live.model, live.voice = settings.model, settings.voice
             provider = live
     fallback = None
-    if settings.fallback_enabled:
-        fallback = AzureRealtimeProvider(
-            settings.azure_endpoint, settings.azure_api_key.get_secret_value()
+    if settings.fallback_enabled or (
+        settings.session_ui
+        and settings.azure_endpoint
+        and settings.azure_api_key.get_secret_value()
+    ):
+        fallback = AzureLiveProvider(
+            settings.azure_endpoint,
+            settings.azure_api_key.get_secret_value(),
+            close_timeout=settings.close_timeout_seconds,
         )
-        fallback.close_timeout = settings.close_timeout_seconds
         fallback.model, fallback.voice = settings.azure_deployment, settings.azure_voice
     providers: dict[str, RealtimeProvider] = {settings.voice_provider: provider}
     if settings.session_ui:
-        if settings.openai_api_key.get_secret_value():
-            if "live" not in providers:
-                live = OpenAILiveProvider(
-                    settings.openai_api_key.get_secret_value(), settings.close_timeout_seconds
-                )
-                live.model, live.voice = settings.model, settings.voice
-                providers["live"] = live
-            if "realtime" not in providers:
-                realtime = OpenAIRealtimeProvider(settings.openai_api_key.get_secret_value())
-                realtime.close_timeout = settings.close_timeout_seconds
-                realtime.model, realtime.voice = settings.realtime_model, settings.voice
-                providers["realtime"] = realtime
+        if settings.openai_api_key.get_secret_value() and "openai" not in providers:
+            live = OpenAILiveProvider(
+                settings.openai_api_key.get_secret_value(), settings.close_timeout_seconds
+            )
+            live.model, live.voice = settings.model, settings.voice
+            providers["openai"] = live
         if (
             settings.azure_api_key.get_secret_value()
             and settings.azure_endpoint
             and "azure" not in providers
         ):
-            azure = AzureRealtimeProvider(
-                settings.azure_endpoint, settings.azure_api_key.get_secret_value()
+            azure = AzureLiveProvider(
+                settings.azure_endpoint,
+                settings.azure_api_key.get_secret_value(),
+                close_timeout=settings.close_timeout_seconds,
             )
-            azure.close_timeout = settings.close_timeout_seconds
             azure.model, azure.voice = settings.azure_deployment, settings.azure_voice
             providers["azure"] = azure
         if (

@@ -15,6 +15,7 @@ from voice_delegate.providers.models import (
 )
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
+from voice_delegate.session.preferences import VoicePreferences
 
 from test_support import eventually
 
@@ -221,7 +222,7 @@ async def test_watcher_logs_unexpected_stream_failure(
     provider = FakeProvider()
     provider.capabilities = ProviderCapabilities(text_replay=True)
     manager = SessionManager(FakeProvider(), Settings(), fallback=provider)
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=fallback))
     if fallback:
         await manager.connect(session, "v=0\r\n")
         monkeypatch.setattr(FakeConnection, "events", events)

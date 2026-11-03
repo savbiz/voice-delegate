@@ -14,8 +14,8 @@ test('personal keys are submitted once without an invitation and cleared from th
       return route.fulfill({
         json: {
           session_ui: true,
-          adapter: 'live',
-          available_adapters: ['live', 'realtime', 'elevenlabs'],
+          adapter: 'openai',
+          available_adapters: ['openai', 'azure', 'elevenlabs'],
           voice_available: true,
           intent_cancellation: true,
         },
@@ -54,7 +54,7 @@ test('personal keys are submitted once without an invitation and cleared from th
   expect(creations).toEqual([
     {
       body: expect.objectContaining({
-        adapter: 'live',
+        adapter: 'openai',
         keys: { openai_key: 'my-private-openai', tavily_key: 'my-private-tavily' },
       }),
       authorization: undefined,
@@ -82,7 +82,7 @@ test('native runtime filters ElevenLabs from both platform and personal choices'
       json: {
         session_ui: true,
         adapter: 'elevenlabs',
-        available_adapters: ['elevenlabs', 'live', 'realtime'],
+        available_adapters: ['elevenlabs', 'openai', 'azure'],
         voice_available: true,
       },
     }),
@@ -95,9 +95,64 @@ test('native runtime filters ElevenLabs from both platform and personal choices'
   });
   await page.getByRole('radio', { name: 'Your API keys', exact: true }).check();
   const provider = page.getByRole('combobox', { name: 'Voice provider', exact: false });
-  await expect(provider).toHaveValue('live');
+  await expect(provider).toHaveValue('openai');
   await expect(provider.locator('option[value="elevenlabs"]')).toHaveCount(0);
   await page.getByRole('radio', { name: 'Platform API', exact: true }).check();
-  await expect(provider).toHaveValue('live');
+  await expect(provider).toHaveValue('openai');
   await expect(provider.locator('option[value="elevenlabs"]')).toHaveCount(0);
+});
+
+test('Azure recovery requires per-session choice and personal Azure fields', async ({ page }) => {
+  await page.addInitScript(installFakePeers);
+  let submitted: Record<string, unknown> | undefined;
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/config'))
+      return route.fulfill({
+        json: {
+          session_ui: true,
+          adapter: 'openai',
+          available_adapters: ['openai', 'azure'],
+          voice_available: true,
+          azure_recovery_available: true,
+        },
+      });
+    if (path === '/api/personal/sessions') {
+      submitted = route.request().postDataJSON();
+      return route.fulfill({ json: { id: 'owned', key: 'key' } });
+    }
+    return route.fulfill({
+      json: path.endsWith('/close') ? { finalized: true } : { sdp: 'answer' },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('radio', { name: 'Your API keys', exact: true }).check();
+  const recovery = page.getByLabel('Allow one Azure recovery', { exact: false });
+  await expect(recovery).not.toBeChecked();
+  await expect(page.getByLabel('Azure API key', { exact: true })).toHaveCount(0);
+  await recovery.check();
+  await page.getByLabel('Azure API key', { exact: true }).fill('discarded');
+  await recovery.uncheck();
+  await recovery.check();
+  await expect(page.getByLabel('Azure API key', { exact: true })).toHaveValue('');
+  await page.getByLabel('OpenAI API key (voice and worker)', { exact: true }).fill('own-openai');
+  await page.getByLabel('Azure API key', { exact: true }).fill('own-azure');
+  await page.getByLabel('Azure resource HTTPS origin').fill('https://own.openai.azure.com');
+  await page.getByLabel('Azure deployment', { exact: false }).fill('own-live');
+  await page.getByRole('button', { name: 'Start conversation', exact: true }).click();
+  await expect(page.locator('#status')).toContainText('Connected');
+  expect(submitted).toMatchObject({
+    azure_recovery: true,
+    keys: {
+      openai_key: 'own-openai',
+      azure_key: 'own-azure',
+      azure_endpoint: 'https://own.openai.azure.com',
+      azure_deployment: 'own-live',
+    },
+  });
+  await expect(recovery).toBeDisabled();
+  await expect(page.getByLabel('Azure API key', { exact: true })).toHaveValue('');
+  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+  await expect(recovery).not.toBeChecked();
+  await expect(page.getByLabel('Azure API key', { exact: true })).toHaveCount(0);
 });

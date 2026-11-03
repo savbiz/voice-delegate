@@ -449,3 +449,16 @@ fieldset label {
   width: auto;
   margin: 0;
 }
+
+.api-access .recovery-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+.api-access .recovery-choice input[type='checkbox'] {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0.3rem 0 0;
+  accent-color: var(--accent-deep);
+}

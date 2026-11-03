@@ -23,6 +23,7 @@ from voice_delegate.providers.models import (
 )
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
+from voice_delegate.session.preferences import VoicePreferences
 
 from test_support import eventually
 
@@ -44,7 +45,7 @@ async def test_failure_preserves_owner_and_seals_trailing_history() -> None:
     primary.model, fallback.model = "primary-model", "fallback-model"
     primary.voice, fallback.voice = "primary-voice", "fallback-voice"
     manager = SessionManager(primary, Settings(), fallback=fallback)
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=True))
     await manager.connect(session, "v=0\r\n")
     events: list[ProviderEvent] = [
         Transcript("user", "hello", 0, 100),
@@ -85,7 +86,7 @@ async def test_reconnect_timeout_does_not_reset_lifetime_or_retry() -> None:
     manager = SessionManager(
         FakeProvider(), Settings(connect_timeout_seconds=0.01), fallback=Slow()
     )
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=True))
     created = session.created_at
     await manager.connect(session, "v=0\r\n")
     with pytest.raises(SessionError, match="Provider connection timed out") as error:
@@ -101,7 +102,7 @@ async def test_reconnect_timeout_does_not_reset_lifetime_or_retry() -> None:
 async def test_concurrent_fallback_creates_one_call() -> None:
     fallback = ReplayProvider()
     manager = SessionManager(FakeProvider(), Settings(), fallback=fallback)
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=True))
     await manager.connect(session, "v=0\r\n")
     results = await asyncio.gather(
         *(manager.reconnect(session, "v=0\r\n", 0) for _ in range(2)), return_exceptions=True
@@ -233,7 +234,7 @@ async def test_failed_connection_is_closed_before_browser_reconnects(
 ) -> None:
     primary, fallback = FakeProvider(), ReplayProvider()
     manager = SessionManager(primary, Settings(), fallback=fallback)
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=True))
     await manager.connect(session, "v=0\r\n")
     connection = primary.connections[0]
     closing, release, closed = asyncio.Event(), asyncio.Event(), asyncio.Event()
@@ -267,7 +268,7 @@ async def test_failover_replays_inflight_question_and_paused_same_speaker_segmen
 ) -> None:
     primary, fallback = FakeProvider(), ReplayProvider()
     manager = SessionManager(primary, Settings(), fallback=fallback)
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=True))
     await manager.connect(session, "sdp")
     connection = primary.connections[0]
     for index in range(segments):

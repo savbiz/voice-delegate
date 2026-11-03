@@ -48,7 +48,7 @@ async def test_personal_session_isolated_and_released(personal_runtime: dict[str
             openai_api_key=SecretStr("platform-key"), tavily_api_key=SecretStr("platform-search")
         ),
     )
-    body = PersonalSession(adapter="live", keys=PersonalKeys(openai_key=SecretStr("my-key")))
+    body = PersonalSession(adapter="openai", keys=PersonalKeys(openai_key=SecretStr("my-key")))
     session = await create_personal_session(root, body)
     owner = root.owner_for(session)
     assert owner is not root
@@ -56,7 +56,7 @@ async def test_personal_session_isolated_and_released(personal_runtime: dict[str
     assert personal_runtime["workers"][0].openai_api_key.get_secret_value() == "my-key"
     assert not personal_runtime["workers"][0].tavily_api_key.get_secret_value()
     assert not owner.settings.fallback_enabled and owner.fallback is None
-    assert not owner.settings.debug_recording
+    assert owner.settings.debug_recording and session.debug is None
     with pytest.raises(SessionError):
         await create_personal_session(root, body)
     await owner.connect(session, "v=0\r\n")
@@ -76,7 +76,7 @@ async def test_personal_without_invitation_platform_still_gated(
         assert (await client.post("/api/sessions", json={})).status_code == 401
         created = await client.post(
             "/api/personal/sessions",
-            json={"adapter": "live", "keys": {"openai_key": "my-private-key"}},
+            json={"adapter": "openai", "keys": {"openai_key": "my-private-key"}},
         )
         assert created.status_code == 201
         assert "my-private-key" not in created.text
@@ -92,13 +92,13 @@ async def test_personal_without_invitation_platform_still_gated(
 @pytest.mark.parametrize(
     "body",
     [
-        {"adapter": "live", "keys": {"openai_key": {"secret": "do-not-echo"}}},
-        {"adapter": "live", "keys": {"openai_key": "do-not-echo", "unknown": "do-not-echo"}},
+        {"adapter": "openai", "keys": {"openai_key": {"secret": "do-not-echo"}}},
+        {"adapter": "openai", "keys": {"openai_key": "do-not-echo", "unknown": "do-not-echo"}},
         {
             "adapter": "azure",
             "keys": {"azure_key": "do-not-echo", "azure_endpoint": "http://localhost"},
         },
-        {"adapter": "live", "keys": {}},
+        {"adapter": "openai", "keys": {}},
     ],
 )
 async def test_invalid_personal_inputs_never_echo_keys(
@@ -196,11 +196,14 @@ def test_runtime_flags_are_automatic_and_old_flags_do_not_disable_them(
         "VOICE_INTENT_CANCELLATION",
         "VOICE_AUDIO_TIMING",
         "VOICE_NATIVE_CLIENTS",
+        "VOICE_DEBUG_RECORDING",
+        "VOICE_OTEL_ENABLED",
     ]:
         monkeypatch.setenv(name, "false")
     settings = load_settings()
     assert settings.cost_estimates and settings.session_ui and settings.intent_cancellation
     assert settings.audio_timing and settings.native_clients
+    assert settings.debug_recording and settings.otel_enabled
 
 
 async def test_personal_close_failure_still_discards_the_session(
@@ -327,7 +330,7 @@ async def test_personal_leases_share_capacity_without_spending_platform_daily_al
     tmp_path: Path,
     personal_runtime: dict[str, Any],
 ) -> None:
-    settings = public_settings(tmp_path, max_sessions=1)
+    settings = public_settings(tmp_path, max_sessions=2)
     first = SessionManager(FakeProvider(), settings)
     second = SessionManager(FakeProvider(), settings)
     session = await create_personal_session(
@@ -339,10 +342,12 @@ async def test_personal_leases_share_capacity_without_spending_platform_daily_al
     assert db.execute("SELECT COUNT(*) FROM leases").fetchone()[0] == 1
     assert "private-personal-key" not in str(db.execute("SELECT * FROM leases").fetchall())
     with pytest.raises(SessionError) as busy:
-        second.create("alice")
+        await create_personal_session(
+            second, PersonalSession(keys=PersonalKeys(openai_key=SecretStr("another-personal-key")))
+        )
     assert busy.value.status == 429
-    await first.close(session)
     platform = second.create("alice")
+    await first.close(session)
     assert platform.principal == "alice"
     assert db.execute("SELECT SUM(sessions) FROM reservations").fetchone()[0] == 1
     await first.aclose()

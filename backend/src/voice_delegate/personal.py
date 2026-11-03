@@ -7,11 +7,10 @@ from pydantic import Field, SecretStr
 from voice_delegate.config import Settings
 from voice_delegate.delegation.contracts import Worker
 from voice_delegate.delegation.planner import PlannerRuntime, build_planner
-from voice_delegate.providers.azure import AzureRealtimeProvider
+from voice_delegate.providers.azure import AzureLiveProvider
 from voice_delegate.providers.base import RealtimeProvider
 from voice_delegate.providers.elevenlabs import ElevenLabsProvider
 from voice_delegate.providers.openai import OpenAILiveProvider
-from voice_delegate.providers.realtime import OpenAIRealtimeProvider
 from voice_delegate.scaling.remote import RemoteWorker
 from voice_delegate.session.access import PersonalKeys
 from voice_delegate.session.manager import SessionManager
@@ -27,7 +26,7 @@ async def create_personal_session(root: SessionManager, body: PersonalSession) -
     """Allocate only after local validation; no paid validation calls or persistent key store."""
     if root._shutting_down or len(root.sessions) >= root.settings.max_sessions:
         raise SessionError(429, "Session capacity reached")
-    adapter = body.adapter or "live"
+    adapter = body.adapter or "openai"
     key = (
         body.keys.elevenlabs_key
         if adapter == "elevenlabs"
@@ -48,8 +47,8 @@ async def create_personal_session(root: SessionManager, body: PersonalSession) -
         public_demo=False,
         invite_tokens={},
         access_token=SecretStr(""),
-        fallback_enabled=False,
-        debug_recording=False,
+        fallback_enabled=body.azure_recovery,
+        debug_recording=True,
         session_ui=True,
         intent_cancellation=True,
         native_clients=False,
@@ -70,19 +69,28 @@ async def create_personal_session(root: SessionManager, body: PersonalSession) -
             webhook_url=settings.elevenlabs_webhook_url,
         )
     elif adapter == "azure":
-        azure = AzureRealtimeProvider(settings.azure_endpoint, key.get_secret_value())
+        azure = AzureLiveProvider(
+            settings.azure_endpoint,
+            key.get_secret_value(),
+            close_timeout=settings.close_timeout_seconds,
+        )
         azure.model, azure.voice = settings.azure_deployment, settings.azure_voice
-        azure.close_timeout = settings.close_timeout_seconds
         provider = azure
-    elif adapter == "realtime":
-        realtime = OpenAIRealtimeProvider(key.get_secret_value())
-        realtime.model, realtime.voice = settings.realtime_model, settings.voice
-        realtime.close_timeout = settings.close_timeout_seconds
-        provider = realtime
     else:
         live = OpenAILiveProvider(key.get_secret_value(), settings.close_timeout_seconds)
         live.model, live.voice = settings.model, settings.voice
         provider = live
+    fallback = None
+    if body.azure_recovery:
+        if adapter != "openai":
+            await provider.aclose()
+            raise SessionError(422, "Azure recovery requires an OpenAI primary session")
+        fallback = AzureLiveProvider(
+            settings.azure_endpoint,
+            settings.azure_api_key.get_secret_value(),
+            close_timeout=settings.close_timeout_seconds,
+        )
+        fallback.model, fallback.voice = settings.azure_deployment, settings.azure_voice
     runtime: PlannerRuntime | None = None
     remote: RemoteWorker | None = None
     worker: Worker
@@ -93,7 +101,11 @@ async def create_personal_session(root: SessionManager, body: PersonalSession) -
             if current is not None:
                 await current.aclose()
             else:
-                await provider.aclose()
+                try:
+                    await provider.aclose()
+                finally:
+                    if fallback is not None:
+                        await fallback.aclose()
         finally:
             try:
                 if runtime is not None:
@@ -110,7 +122,12 @@ async def create_personal_session(root: SessionManager, body: PersonalSession) -
             runtime = build_planner(settings)
             worker = runtime.worker(settings.worker_max_steps)
         owner = SessionManager(
-            provider, settings, worker=worker, metrics=root.metrics, clock=root.clock
+            provider,
+            settings,
+            worker=worker,
+            metrics=root.metrics,
+            clock=root.clock,
+            fallback=fallback,
         )
         preferences = VoicePreferences.model_validate(body.model_dump(exclude={"keys"}))
         session = owner.create(principal, preferences)

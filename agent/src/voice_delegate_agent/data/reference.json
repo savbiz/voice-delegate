@@ -112,12 +112,12 @@
     "digest": "df451ce01938ac6148946c8ccef886e205d30dae58f8ba93f2e647f581b1dc9e"
   },
   {
-    "id": "4cc15322ee3bcc5c",
+    "id": "39bee6dd76c8ff10",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Providers and worker modes",
-    "text": "`VOICE_ADAPTER` selects an integration; the old `VOICE_VOICE_PROVIDER` name remains\na deprecated alias. All adapters expose the same delegation boundary.",
-    "digest": "4cc15322ee3bcc5c7796d5298f6939d9b4988c1aca40061bf628e28d4daa8749"
+    "text": "`VOICE_ADAPTER` selects an integration; the old `VOICE_VOICE_PROVIDER` name remains\na deprecated alias. Legacy values `live` and `realtime` now select `openai` and always\nuse GPT-Live. Azure requires a deployment of `gpt-live-1`. Recovery is off by default\nand enabled only by the session checkbox. See [the session flow](docs/session-flow.md).\nAll adapters expose the same delegation boundary.",
+    "digest": "39bee6dd76c8ff1009d23bd0ba57a70af6d0cdbc50dd9275b7f2a0e82d85173b"
   },
   {
     "id": "0fb3a0058350f09f",
@@ -200,12 +200,12 @@
     "digest": "dbcca4fe310169f80407200366e846b7223387a1255f5863bfa528bf3c8a3a30"
   },
   {
-    "id": "98c7d446565fb423",
+    "id": "536613882f012bb8",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Data flow and limits",
-    "text": "Ordinary diagnostics exclude conversation text. Server debug recording requires\n`VOICE_DEBUG_RECORDING=true` and session consent; it stores bounded data for up to\n24 hours while the backend runs. Audio recording is a separate browser-only consent\nand download. The operator can read server debug recordings. See [operations](docs/operations.md).",
-    "digest": "98c7d446565fb423e44411ae22e18aecb5c57bb4ac768aa3141f74661479b04f"
+    "text": "Ordinary diagnostics exclude conversation text. Server debug recording requires\nexplicit session consent; it stores bounded data for up to\n24 hours while the backend runs. Audio recording is a separate browser-only consent\nand download. The operator can read server debug recordings. See [operations](docs/operations.md).",
+    "digest": "536613882f012bb8b9b8f3be58688b686e745a2418fb9a42708c5877e7dd1c39"
   },
   {
     "id": "e1cdc92b8c709e70",
@@ -240,12 +240,12 @@
     "digest": "a290f1daf6c232833b8ff9cbbe69ffb87f890adfc8e1448e3f1cc91d214ba95f"
   },
   {
-    "id": "e3194e862e273547",
+    "id": "6b590eb82700b918",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Provider adapters",
-    "text": "`OpenAILiveProvider` implements GPT-Live WebRTC setup, sideband events, commentary and finalization.\n`RealtimeWebRTCProvider` contains the shared Realtime WebRTC and sideband implementation.\n`OpenAIRealtimeProvider` supplies OpenAI authentication and endpoints; `AzureRealtimeProvider`\nsupplies Azure resource authentication and deployment configuration. Each provider builds its\nown default session configuration and declares capabilities, including transcript timing.\nThe manager uses the provider protocol and normalized events; it does not select Azure models.",
-    "digest": "e3194e862e273547bd01b31024d6c7fcceaa3651fad657ab0b71604a3622a7f2"
+    "text": "`OpenAILiveProvider` implements GPT-Live WebRTC setup, sideband events, commentary and finalization.\n`AzureLiveProvider` uses the Azure `/openai/v1/live` namespace with Bearer authentication,\nthe same Live events, and client delegation. Recovery requires session consent and seeds\nat most twelve bounded text fragments through `session.thinking.append`, never tool calls.\nLegacy Realtime classes remain only for historical wire regression tests; the app factory\nregisters `openai`, `azure` and optionally `elevenlabs`. See [session flow](session-flow.md).",
+    "digest": "6b590eb82700b9183d4e17c47926f374b72e84a9ad79b385fe0f8538bc28fd1e"
   },
   {
     "id": "8e90758fce0d0248",
@@ -800,12 +800,12 @@
     "digest": "65afc9304f0d877b5ea7bce7467973827c5eb18e78ed5aa8eb2074c3684ccd04"
   },
   {
-    "id": "56e0adc4d5e467ed",
+    "id": "dd6f4988650e334b",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Common local environment variables",
-    "text": "The complete generated reference is [Configuration](configuration.md). Process\nvariables override `.env`; restart the backend after changes. Keep keys only in the\nbackend environment. Setting a key does not itself enable the corresponding feature.",
-    "digest": "56e0adc4d5e467edcc3f158a91c2f19b059024e12591afa6de616f29a9561c0f"
+    "text": "The complete generated reference is [Configuration](configuration.md). Process\nvariables override `.env`; restart the backend after changes. Keep keys only in the\nbackend environment. Complete provider credentials make the corresponding integration available.",
+    "digest": "dd6f4988650e334b11e8cae5f6e752355e4d64c4ebae9251be2f2d8294fba37e"
   },
   {
     "id": "56ee299f888474fe",
@@ -816,12 +816,12 @@
     "digest": "56ee299f888474fef999cc6151363eefc889d2e130dffddd6e79004a20aa9c65"
   },
   {
-    "id": "520b788ec0b06be1",
+    "id": "45d7c4e260a85287",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Common local environment variables",
-    "text": "`VOICE_ADAPTER` is the canonical selector for the existing `live`, `realtime` and\n`azure` adapters. It selects an integration, not the commercial provider. The old\n`VOICE_VOICE_PROVIDER` name remains accepted as a deprecated alias; if both names\nare present in the same source, `VOICE_ADAPTER` wins. Keep your existing keys and change only the\nnon-sensitive selectors/model values when migrating a local configuration.",
-    "digest": "520b788ec0b06be16364bee93e8f9c8a46b3bb3e408346700cfb84976fe80d14"
+    "text": "`VOICE_ADAPTER` selects `openai`, `azure` or `elevenlabs`. Legacy `live` and\n`realtime` values migrate to `openai`; no production Realtime client is registered. The old\n`VOICE_VOICE_PROVIDER` name remains accepted as a deprecated alias; if both names\nare present in the same source, `VOICE_ADAPTER` wins. Keep your existing keys and change only the\nnon-sensitive selectors/model values when migrating a local configuration.",
+    "digest": "45d7c4e260a852875a6b51fa68436a394314359a2ee59ff781e321e51daaf93a"
   },
   {
     "id": "0d420d00b9426672",

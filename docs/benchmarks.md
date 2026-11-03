@@ -11,7 +11,7 @@ Neither measures provider quality, voice recognition or physical speaker latency
 | --- | --- | --- | --- | --- | --- | --- |
 | GPT-Live | Direct WebRTC | Pending: record configured model | 0 | Pending | Pending | Pending |
 | OpenAI Realtime | Direct WebRTC | Pending: record configured model | 0 | Pending | Pending | Pending |
-| Azure Realtime | Direct WebRTC | Pending: record deployment and underlying model version | 0 | Pending | Pending | Pending |
+| Azure Live | Direct WebRTC | Pending: record deployment and underlying model version | 0 | Pending | Pending | Pending |
 | ElevenLabs | Not implemented | Pending transport decision | 0 | Unsupported | Unsupported | Unsupported |
 
 Do not replace Pending with scripted numbers. Earlier exploratory conversations are not
@@ -122,7 +122,7 @@ Use a clean committed checkout. Start a **dedicated local** backend with the exi
 environment credentials, selecting one provider per run. Example for GPT-Live:
 
 ```sh
-VOICE_ADAPTER=live VOICE_WORKER_MODE=offline \
+VOICE_ADAPTER=openai VOICE_WORKER_MODE=offline \
 VOICE_PUBLIC_DEMO=false VOICE_ENVIRONMENT=development \
 VOICE_ALLOWED_ORIGINS='["http://127.0.0.1:4175"]' \
 uv run uvicorn voice_delegate.api.app:create_app --factory --host 127.0.0.1 --port 8000

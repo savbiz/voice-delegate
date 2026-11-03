@@ -188,14 +188,13 @@ Codespaces allowance; check that allowance before enabling them. Keep ports priv
 
 The complete generated reference is [Configuration](configuration.md). Process
 variables override `.env`; restart the backend after changes. Keep keys only in the
-backend environment. Setting a key does not itself enable the corresponding feature.
+backend environment. Complete provider credentials make the corresponding integration available.
 
 | Variable | Purpose |
 |---|---|
 | `OPENAI_API_KEY` | OpenAI voice and, when selected, paid text/Decisions worker access. |
-| `VOICE_ADAPTER` | Voice adapter: `live`, `realtime` or `azure`; default `live`. |
-| `VOICE_MODEL` | GPT-Live model; applies to the `live` voice adapter. |
-| `VOICE_REALTIME_MODEL` | Model used only by the OpenAI Realtime voice adapter. |
+| `VOICE_ADAPTER` | Voice provider: `openai`, `azure` or `elevenlabs`; default `openai`. |
+| `VOICE_MODEL` | GPT-Live model; applies to OpenAI. |
 | `VOICE_VOICE` | Voice selection for the OpenAI voice adapters. |
 | `VOICE_ACCESS_TOKEN` | Shared access code, used only when no named invitation map is configured. |
 | `VOICE_INVITE_TOKENS` | JSON map of invitation names to individual codes; takes precedence over shared access. |
@@ -207,8 +206,6 @@ backend environment. Setting a key does not itself enable the corresponding feat
 | `VOICE_WORKER_EXECUTION` | `local` in-process worker or `remote` private worker service. |
 | `VOICE_WORKER_MODE` | Planner choice: deterministic `offline`, text-model `openai`, or `decisions`. |
 | `VOICE_WORKER_MODEL` | Text model for the model-backed worker, independent of the voice model. |
-| `VOICE_OTEL_ENABLED` | Enables optional backend OpenTelemetry tracing; it does not enable transcript recording. |
-| `VOICE_DEBUG_RECORDING` | Makes consent-based server debug recording available; a session must explicitly opt in. |
 | `TAVILY_API_KEY` | Supplying this private worker key enables web search. |
 | `BRAINTRUST_API_KEY` | Optional evaluation upload credential; unused by ordinary voice sessions. |
 
@@ -218,8 +215,8 @@ entry point; they are rejected by the local launcher. `make fe` uses an empty
 `VITE_API_BASE_URL` by default to proxy to the local backend. Override that public URL
 only when explicitly selecting a hosted API; it is not a place for credentials.
 
-`VOICE_ADAPTER` is the canonical selector for the existing `live`, `realtime` and
-`azure` adapters. It selects an integration, not the commercial provider. The old
+`VOICE_ADAPTER` selects `openai`, `azure` or `elevenlabs`. Legacy `live` and
+`realtime` values migrate to `openai`; no production Realtime client is registered. The old
 `VOICE_VOICE_PROVIDER` name remains accepted as a deprecated alias; if both names
 are present in the same source, `VOICE_ADAPTER` wins. Keep your existing keys and change only the
 non-sensitive selectors/model values when migrating a local configuration.
@@ -236,7 +233,7 @@ For platform-funded local voice and model-backed delegation:
 ```dotenv
 OPENAI_API_KEY=REPLACE_WITH_YOUR_KEY
 TAVILY_API_KEY=REPLACE_WITH_YOUR_OPTIONAL_SEARCH_KEY
-VOICE_ADAPTER=live
+VOICE_ADAPTER=openai
 VOICE_WORKER_EXECUTION=local
 ```
 

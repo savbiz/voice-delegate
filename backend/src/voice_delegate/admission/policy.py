@@ -36,6 +36,14 @@ class Admission:
                 "(session_id TEXT PRIMARY KEY, principal TEXT, expires REAL)"
             )
             self.database.commit()
+            # Serialize the additive migration across same-host API processes.
+            self.database.execute("BEGIN IMMEDIATE")
+            columns = {row[1] for row in self.database.execute("PRAGMA table_info(leases)")}
+            if "personal" not in columns:
+                self.database.execute(
+                    "ALTER TABLE leases ADD COLUMN personal INTEGER NOT NULL DEFAULT 0"
+                )
+            self.database.commit()
 
     def authenticate(self, authorization: str) -> str:
         actual = (
@@ -54,7 +62,14 @@ class Admission:
             raise SessionError(401, "A valid demo access code is required")
         return "local"
 
-    def reserve(self, principal: str, session_id: str, *, personal: bool = False) -> None:
+    def reserve(
+        self,
+        principal: str,
+        session_id: str,
+        *,
+        personal: bool = False,
+        recovery: bool | None = None,
+    ) -> None:
         if not self.settings.demo_enabled:
             raise SessionError(503, "New conversations are temporarily disabled")
         database = self.database
@@ -65,7 +80,7 @@ class Admission:
         identity = hashlib.sha256(principal.encode()).hexdigest()
         # Reserve both providers for a whole TTL, including one-second janitor granularity.
         seconds = math.ceil(self.settings.session_ttl_seconds + 1) * (
-            2 if self.settings.fallback_enabled else 1
+            2 if (self.settings.fallback_enabled if recovery is None else recovery) else 1
         )
         try:
             self._reserve(database, day, identity, seconds, now, session_id, personal=personal)
@@ -91,6 +106,12 @@ class Admission:
         database.execute("DELETE FROM reservations WHERE day < ?", (day,))
         database.execute("DELETE FROM leases WHERE expires <= ?", (now,))
         active = database.execute("SELECT COUNT(*) FROM leases").fetchone()[0]
+        if personal:
+            personal_active = database.execute(
+                "SELECT COUNT(*) FROM leases WHERE personal=1"
+            ).fetchone()[0]
+            if personal_active >= max(0, self.settings.max_sessions - 1):
+                raise SessionError(429, "Personal session capacity reached")
         active_personal = database.execute(
             "SELECT COUNT(*) FROM leases WHERE principal=?", (identity,)
         ).fetchone()[0]
@@ -119,7 +140,7 @@ class Admission:
                 (day, identity, seconds),
             )
         database.execute(
-            "INSERT INTO leases VALUES (?, ?, ?)",
+            "INSERT INTO leases (session_id, principal, expires, personal) VALUES (?, ?, ?, ?)",
             (
                 session_id,
                 identity,
@@ -129,6 +150,7 @@ class Admission:
                 + self.settings.connect_timeout_seconds
                 + self.settings.close_timeout_seconds
                 + 3,
+                int(personal),
             ),
         )
         database.commit()

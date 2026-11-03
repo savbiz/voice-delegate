@@ -27,6 +27,9 @@ export function ApiAccess({
   onCode,
   webhookUrl,
   children,
+  recovery,
+  recoveryAvailable,
+  onRecovery,
 }: {
   source: ApiSource;
   onSource: (source: ApiSource) => void;
@@ -38,6 +41,9 @@ export function ApiAccess({
   onCode: (code: string) => void;
   webhookUrl?: string;
   children?: ReactNode;
+  recovery: boolean;
+  recoveryAvailable: boolean;
+  onRecovery: (enabled: boolean) => void;
 }) {
   const field = (name: keyof PersonalKeys, label: string, secret = true) => (
     <label key={name}>
@@ -79,6 +85,17 @@ export function ApiAccess({
         </label>
       </div>
       {children}
+      {adapter === 'openai' && recoveryAvailable && (
+        <label className="recovery-choice">
+          <input
+            type="checkbox"
+            checked={recovery}
+            disabled={disabled}
+            onChange={(event) => onRecovery(event.target.checked)}
+          />{' '}
+          Allow one Azure recovery for this session. Both providers may incur charges.
+        </label>
+      )}
       {source === 'platform' ? (
         <label>
           Personal invitation code
@@ -124,11 +141,11 @@ export function ApiAccess({
               )}
             </>
           )}
-          {adapter === 'azure' && (
+          {(adapter === 'azure' || recovery) && (
             <>
               {field('azure_key', 'Azure API key')}
               {field('azure_endpoint', 'Azure resource HTTPS origin', false)}
-              {field('azure_deployment', 'Azure deployment (default gpt-realtime)', false)}
+              {field('azure_deployment', 'Azure deployment (default gpt-live-1)', false)}
             </>
           )}
           {field('tavily_key', 'Tavily API key (optional web search)')}

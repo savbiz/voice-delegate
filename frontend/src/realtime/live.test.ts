@@ -106,12 +106,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
-async function start(getCode = () => 'invite') {
+async function start(getCode = () => 'invite', recovery = true) {
   const store = createLiveStore();
   const audio = { srcObject: null } as HTMLAudioElement;
   controller = createLiveSession(store, audio, getCode, () => ({
     language: 'auto',
     mode: 'conversation',
+    azure_recovery: recovery,
   }));
   controller.start();
   await vi.waitFor(() => expect(store.getSnapshot().status).toContain('Connected'));
@@ -487,4 +488,14 @@ test('native background closure marks worker ended while retaining last reported
   });
   expect(stopTrack).toHaveBeenCalledOnce();
   expect(requests.filter((request) => request.path.endsWith('/close'))).toHaveLength(1);
+});
+
+test('no recovery without session consent even if the server advertises it', async () => {
+  const store = await start(() => 'invite', false);
+  const peer = FakePeer.instances[0]!;
+  peer.connectionState = 'failed';
+  peer.dispatchEvent(new Event('connectionstatechange'));
+  await vi.waitFor(() => expect(store.getSnapshot().active).toBe(false));
+  expect(requests.filter((request) => request.path.endsWith('/reconnect'))).toHaveLength(0);
+  expect(FakePeer.instances).toHaveLength(1);
 });

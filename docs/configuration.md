@@ -19,15 +19,14 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `openai_api_key` | `OPENAI_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
 | `azure_endpoint` | `VOICE_AZURE_ENDPOINT` | `""` | `{"type": "string"}` |
 | `azure_api_key` | `VOICE_AZURE_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
-| `azure_deployment` | `VOICE_AZURE_DEPLOYMENT` | `"gpt-realtime"` | `{"type": "string"}` |
+| `azure_deployment` | `VOICE_AZURE_DEPLOYMENT` | `"gpt-live-1"` | `{"type": "string"}` |
 | `azure_voice` | `VOICE_AZURE_VOICE` | `"marin"` | `{"type": "string"}` |
-| `voice_provider` | `VOICE_ADAPTER` | `"live"` | `{"type": "string", "enum": ["live", "realtime", "azure", "elevenlabs"]}` |
+| `voice_provider` | `VOICE_ADAPTER` | `"openai"` | `{"type": "string", "enum": ["openai", "azure", "elevenlabs"]}` |
 | `elevenlabs_api_key` | `ELEVENLABS_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
 | `elevenlabs_agent_id` | `VOICE_ELEVENLABS_AGENT_ID` | `""` | `{"type": "string", "pattern": "^(agent_[a-zA-Z0-9_-]+)?$", "maxLength": 200}` |
 | `elevenlabs_timeout_seconds` | `VOICE_ELEVENLABS_TIMEOUT_SECONDS` | `3` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
 | `elevenlabs_webhook_token` | `VOICE_ELEVENLABS_WEBHOOK_TOKEN` | `""` | `{"type": "string", "format": "password"}` |
 | `elevenlabs_webhook_url` | `VOICE_ELEVENLABS_WEBHOOK_URL` | `""` | `{"type": "string"}` |
-| `realtime_model` | `VOICE_REALTIME_MODEL` | `"gpt-realtime"` | `{"type": "string"}` |
 | `model` | `VOICE_MODEL` | `"gpt-live-1"` | `{"type": "string"}` |
 | `voice` | `VOICE_VOICE` | `"marin"` | `{"type": "string"}` |
 | `allowed_origins` | `VOICE_ALLOWED_ORIGINS` | `["http://localhost:5173"]` | `{"type": "array", "items": {"type": "string"}, "minItems": 1}` |
@@ -47,7 +46,6 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `decisions_timeout_seconds` | `VOICE_DECISIONS_TIMEOUT_SECONDS` | `1` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
 | `decisions_max_calls` | `VOICE_DECISIONS_MAX_CALLS` | `60` | `{"type": "integer", "minimum": 1, "maximum": 300}` |
 | `decisions_input_usd_per_million` | `VOICE_DECISIONS_INPUT_USD_PER_MILLION` | `0.1` | `{"type": "number", "minimum": 0, "maximum": 100}` |
-| `debug_recording` | `VOICE_DEBUG_RECORDING` | `false` | `{"type": "boolean"}` |
 | `debug_directory` | `VOICE_DEBUG_DIRECTORY` | `".local/debug"` | `{"type": "string"}` |
 | `access_token` | `VOICE_ACCESS_TOKEN` | `""` | `{"type": "string", "format": "password"}` |
 | `invite_tokens` | `VOICE_INVITE_TOKENS` | `{}` | `{"type": "object", "additionalProperties": {"format": "password", "type": "string", "writeOnly": true}}` |
@@ -60,7 +58,6 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `daily_voice_seconds_per_user` | `VOICE_DAILY_VOICE_SECONDS_PER_USER` | `1500` | `{"type": "integer", "minimum": 1}` |
 | `daily_voice_seconds_global` | `VOICE_DAILY_VOICE_SECONDS_GLOBAL` | `6000` | `{"type": "integer", "minimum": 1}` |
 | `max_delegations_per_session` | `VOICE_MAX_DELEGATIONS_PER_SESSION` | `8` | `{"type": "integer", "minimum": 1, "maximum": 64}` |
-| `otel_enabled` | `VOICE_OTEL_ENABLED` | `false` | `{"type": "boolean"}` |
 | `otel_endpoint` | `VOICE_OTEL_ENDPOINT` | `""` | `{"type": "string"}` |
 | `otel_metrics_endpoint` | `VOICE_OTEL_METRICS_ENDPOINT` | `""` | `{"type": "string"}` |
 | `instance_id` | `VOICE_INSTANCE_ID` | `""` | `{"type": "string", "pattern": "^[a-z0-9]{0,16}$"}` |
@@ -92,7 +89,10 @@ The application loader always enables cost accounting, provider selection, inten
 cancellation and audio timing. Native origins still require an explicit origin allowlist;
 ElevenLabs is filtered out on native clients. ElevenLabs becomes available with complete
 agent credentials; Tavily search with a key on the worker. Configured Azure credentials
-enable recovery only for OpenAI sessions. With a key, the worker uses OpenAI;
+make recovery available for OpenAI sessions, off until selected per session. Debug
+recording needs checkbox consent; OTel is on, exporting only to configured endpoints
+or local console traces. No separate enable flags are required. With a key, the worker
+uses OpenAI;
 otherwise offline planning; an explicit worker mode still takes precedence.
 The former environment flags for these behaviours are ignored by the application loader.
 Low-level Settings constructor overrides remain for deterministic offline tests.
@@ -218,6 +218,9 @@ def validate_production(self) -> "Settings":
         ):
             message = "Worker URL must be an HTTP(S) service origin"
             raise ValueError(message)
+        if not worker_transport_allowed(self.worker_service_url):
+            message = "Worker requires HTTPS outside private IPs, loopback or compose"
+            raise ValueError(message)
         if len(self.worker_service_token.get_secret_value()) < 32:
             message = "Remote worker requires a service token of at least 32 characters"
             raise ValueError(message)
@@ -289,8 +292,8 @@ def validate_production(self) -> "Settings":
 Use `VOICE_ALLOWED_ORIGINS` as a JSON array of exact origins. The deprecated
 `VOICE_ALLOWED_ORIGIN` accepts one origin only when no list was supplied.
 The list takes precedence if both variables are configured. Production requires
-HTTPS for every browser origin. An explicitly configured native origin allows
-`capacitor://localhost` iOS origin may also be explicitly listed. Android uses
+HTTPS for every browser origin. The `capacitor://localhost` iOS origin may also
+be explicitly listed. Android uses
 `https://localhost`. Neither native origin is added automatically. Routes, CORS
 and limiter responses share the list.
 Origins must use browser serialization: lowercase/punycode hostnames and no

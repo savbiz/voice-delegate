@@ -201,6 +201,25 @@ class OpenAILiveConnection:
             message = "Provider command failed"
             raise ProviderError(message) from exc
 
+    async def append_context(self, content: str) -> None:
+        """Seed bounded recovery context without speaking or requesting new work."""
+        if len(content.encode()) > COMMENTARY_MAX_BYTES or self._closed:
+            message = "Recovery context unavailable or over budget"
+            raise ProviderError(message)
+        try:
+            await self._socket.send(
+                json.dumps(
+                    {
+                        "type": "session.thinking.append",
+                        "delegation_id": None,
+                        "content": content,
+                    }
+                )
+            )
+        except (WebSocketException, OSError) as exc:
+            message = "Recovery context failed"
+            raise ProviderError(message) from exc
+
     async def aclose(self) -> bool:
         """Keep the receiver alive until finalization or a bounded deadline."""
         async with self._close_lock:
@@ -225,6 +244,7 @@ class OpenAILiveConnection:
 class OpenAILiveProvider:
     """Create sessions with server credentials; never retry billable creation."""
 
+    base_url = "https://api.openai.com/v1/live"
     model = "gpt-live-1"
     voice = "marin"
     capabilities = ProviderCapabilities(transcript_timing=True)
@@ -248,8 +268,9 @@ class OpenAILiveProvider:
         raise UnsupportedCapability(message)
 
     async def _attach(self, session_id: str) -> SidebandSocket:
+        base = self.base_url.replace("https://", "wss://", 1)
         return await connect(
-            f"wss://api.openai.com/v1/live/sessions/{quote(session_id, safe='')}/attach",
+            f"{base}/sessions/{quote(session_id, safe='')}/attach",
             additional_headers={"Authorization": f"Bearer {self._api_key}"},
             max_queue=16,
             max_size=1048576,
@@ -257,6 +278,15 @@ class OpenAILiveProvider:
             open_timeout=8,
             close_timeout=2,
         )
+
+    def session_payload(self, config: SessionConfig) -> dict[str, object]:
+        return {
+            "model": config.model,
+            "instructions": config.instructions,
+            "audio": {"output": {"voice": config.voice}},
+            "delegation": {"type": "client"},
+            "store": False,
+        }
 
     async def connect(self, *, config: SessionConfig, offer_sdp: str) -> OpenAILiveConnection:
         """Exchange JSON SDP and attach before returning the browser's answer."""
@@ -266,16 +296,10 @@ class OpenAILiveProvider:
         answer: WebRTCAnswer | None = None
         try:
             response = await self._http.post(
-                "https://api.openai.com/v1/live/sessions",
+                self.base_url + "/sessions",
                 headers={"Authorization": f"Bearer {self._api_key}"},
                 json={
-                    "session": {
-                        "model": config.model,
-                        "instructions": config.instructions,
-                        "audio": {"output": {"voice": config.voice}},
-                        "delegation": {"type": "client"},
-                        "store": False,
-                    },
+                    "session": self.session_payload(config),
                     "transport": {"type": "webrtc", "sdp": offer_sdp},
                 },
             )

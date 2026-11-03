@@ -17,7 +17,7 @@ class PersonalKeys(BaseModel):
     azure_key: SecretStr = Field(default=SecretStr(""), max_length=4096)
     azure_endpoint: str = Field(default="", max_length=512)
     azure_deployment: str = Field(
-        default="gpt-realtime", min_length=1, max_length=200, pattern=r"^[a-zA-Z0-9._-]+$"
+        default="gpt-live-1", min_length=1, max_length=200, pattern=r"^[a-zA-Z0-9._-]+$"
     )
 
     @field_validator(

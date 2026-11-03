@@ -12,21 +12,21 @@ test('provider discovery validates the complete allowlist and deduplicates', asy
     vi.fn().mockResolvedValue(
       Response.json({
         session_ui: true,
-        adapter: 'live',
-        available_adapters: ['live', 'realtime', 'live'],
+        adapter: 'openai',
+        available_adapters: ['openai', 'azure', 'openai'],
       }),
     ),
   );
   expect((await voiceOptions(new AbortController().signal))?.available_adapters).toEqual([
-    'live',
-    'realtime',
+    'openai',
+    'azure',
   ]);
 });
 
 test.each([
   { session_ui: false },
-  { session_ui: true, adapter: 'live', available_adapters: ['unknown'] },
-  { session_ui: true, adapter: 'live', available_adapters: ['realtime'] },
+  { session_ui: true, adapter: 'openai', available_adapters: ['unknown'] },
+  { session_ui: true, adapter: 'openai', available_adapters: ['azure'] },
 ])('invalid or disabled discovery preserves the existing fixed provider UI', async (json) => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(json)));
   expect(await voiceOptions(new AbortController().signal)).toBeUndefined();
@@ -68,21 +68,21 @@ test('native clients never offer ElevenLabs and choose a compatible default', as
       Response.json({
         session_ui: true,
         adapter: 'elevenlabs',
-        available_adapters: ['elevenlabs', 'live', 'realtime'],
+        available_adapters: ['elevenlabs', 'openai', 'azure'],
       }),
     ),
   );
   const options = await voiceOptions(new AbortController().signal, 'platform', true);
-  expect(options?.adapter).toBe('live');
-  expect(options?.available_adapters).toEqual(['live', 'realtime']);
+  expect(options?.adapter).toBe('openai');
+  expect(options?.available_adapters).toEqual(['openai', 'azure']);
 });
 
 test('personal discovery uses its own endpoint without keys or platform authorization', async () => {
   const fetch = vi.fn().mockResolvedValue(
     Response.json({
       session_ui: true,
-      adapter: 'live',
-      available_adapters: ['live'],
+      adapter: 'openai',
+      available_adapters: ['openai'],
     }),
   );
   vi.stubGlobal('fetch', fetch);

@@ -62,7 +62,7 @@ async def test_lifespan_closes_active_session() -> None:
             headers={"Origin": "http://localhost:5173"},
         ) as client,
     ):
-        payload = (await client.post("/api/sessions")).json()
+        payload = (await client.post("/api/sessions", json={})).json()
         response = await client.post(
             f"/api/sessions/{payload['id']}/offer",
             headers={"X-Session-Key": payload["key"]},
@@ -130,11 +130,10 @@ async def test_provider_configuration_uses_existing_settings(
     from typing import Literal
 
     from pydantic import SecretStr
-    from voice_delegate.providers.azure import AzureRealtimeProvider
+    from voice_delegate.providers.azure import AzureLiveProvider
     from voice_delegate.providers.fake import FakeConnection
     from voice_delegate.providers.models import SessionConfig
     from voice_delegate.providers.openai import OpenAILiveProvider
-    from voice_delegate.providers.realtime import OpenAIRealtimeProvider
     from voice_delegate.providers.webrtc import RealtimeWebRTCProvider
 
     configs: list[SessionConfig] = []
@@ -152,16 +151,15 @@ async def test_provider_configuration_uses_existing_settings(
         )
         return FakeConnection()
 
-    for cls in (OpenAILiveProvider, OpenAIRealtimeProvider, AzureRealtimeProvider):
+    for cls in (OpenAILiveProvider, AzureLiveProvider):
         monkeypatch.setattr(cls, "connect", connect)
-    kinds: tuple[Literal["live", "realtime", "azure"], ...] = ("live", "realtime", "azure")
+    kinds: tuple[Literal["openai", "azure"], ...] = ("openai", "azure")
     for kind in kinds:
         app = create_app(
             Settings(
                 voice_provider=kind,
                 close_timeout_seconds=0.125,
                 model="custom-live",
-                realtime_model="custom-realtime",
                 voice="custom-voice",
                 azure_deployment="custom-azure",
                 azure_voice="custom-azure-voice",
@@ -178,12 +176,14 @@ async def test_provider_configuration_uses_existing_settings(
                 headers={"Origin": "http://localhost:5173"},
             ) as client,
         ):
-            payload = (await client.post("/api/sessions")).json()
+            payload = (
+                await client.post("/api/sessions", json={"azure_recovery": kind == "openai"})
+            ).json()
             path = f"/api/sessions/{payload['id']}"
             client.headers["X-Session-Key"] = payload["key"]
             assert (await client.post(path + "/offer", json={"sdp": "v=0\r\n"})).status_code == 200
             assert timeouts[-1] == 0.125
-            assert configs[-1].model == f"custom-{kind}"
+            assert configs[-1].model == ("custom-live" if kind == "openai" else "custom-azure")
             assert configs[-1].voice == (
                 "custom-azure-voice" if kind == "azure" else "custom-voice"
             )
@@ -283,17 +283,17 @@ async def test_reconnect_http_errors(
     import asyncio
 
     from pydantic import SecretStr
-    from voice_delegate.providers.azure import AzureRealtimeProvider
+    from voice_delegate.providers.azure import AzureLiveProvider
     from voice_delegate.providers.fake import FakeConnection
     from voice_delegate.providers.models import SessionConfig
 
     async def never_connect(
-        self: AzureRealtimeProvider, *, config: SessionConfig, offer_sdp: str
+        self: AzureLiveProvider, *, config: SessionConfig, offer_sdp: str
     ) -> FakeConnection:
         await asyncio.Event().wait()
         raise AssertionError("unreachable")
 
-    monkeypatch.setattr(AzureRealtimeProvider, "connect", never_connect)
+    monkeypatch.setattr(AzureLiveProvider, "connect", never_connect)
     settings = Settings(
         fallback_enabled=expected_status != 501,
         azure_endpoint="https://test.openai.azure.com",
@@ -304,7 +304,9 @@ async def test_reconnect_http_errors(
     app = create_app(settings, provider)
     async with asgi_client(app) as client:
         client.headers["Origin"] = settings.allowed_origins[0]
-        created = (await client.post("/api/sessions")).json()
+        created = (
+            await client.post("/api/sessions", json={"azure_recovery": expected_status != 501})
+        ).json()
         client.headers["X-Session-Key"] = created["key"]
         path = f"/api/sessions/{created['id']}"
         assert (await client.post(path + "/offer", json={"sdp": "v=0\r\n"})).status_code == 200

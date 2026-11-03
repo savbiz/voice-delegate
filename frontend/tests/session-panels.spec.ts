@@ -25,8 +25,8 @@ test('mobile session chooses a server-enabled provider and retains final costs',
       return route.fulfill({
         json: {
           session_ui: true,
-          adapter: 'live',
-          available_adapters: ['live', 'realtime', 'elevenlabs'],
+          adapter: 'openai',
+          available_adapters: ['openai', 'azure', 'elevenlabs'],
           voice_available: true,
           intent_cancellation: true,
         },
@@ -51,12 +51,12 @@ test('mobile session chooses a server-enabled provider and retains final costs',
   await page.getByText('Voice settings & recording', { exact: true }).click();
   await expect(page.getByLabel('Response language')).toBeDisabled();
   await expect(page.getByLabel('Record audio locally.', { exact: false })).toBeDisabled();
-  await provider.selectOption('realtime');
+  await provider.selectOption('azure');
   await expect(page.getByLabel('Response language')).toBeEnabled();
   await page.getByRole('button', { name: 'Start conversation', exact: true }).click();
   await expect(page.locator('#status')).toContainText('Connected');
   await expect(provider).toBeDisabled();
-  expect(selected).toEqual([expect.objectContaining({ adapter: 'realtime' })]);
+  expect(selected).toEqual([expect.objectContaining({ adapter: 'azure' })]);
   await page.clock.runFor(2100);
   const panel = page.getByRole('region', { name: 'Session cost estimate' });
   await expect(panel).toContainText('$0.012000');

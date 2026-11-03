@@ -78,7 +78,7 @@ sequenceDiagram
     participant A as FastAPI
     participant S as Session manager
     participant P as Primary (GPT-Live)
-    participant F as Fallback (Azure Realtime)
+    participant F as Fallback (Azure Live)
     P--xS: sideband stream fails
     S->>S: Cancel worker, set reconnecting, close failed connection
     B->>A: POST /sessions/{id}/heartbeat
@@ -108,7 +108,7 @@ stateDiagram-v2
     created --> closing: Close, expiry or shutdown before offer
     connecting --> connected: SDP answer and sideband attached
     connecting --> closed: connect timeout 504 or provider error
-    connected --> reconnecting: Sideband failure with unused fallback
+    connected --> reconnecting: Sideband failure with consent and unused fallback
     connected --> closing: Close, expiry, shutdown or failure without fallback
     reconnecting --> connected: POST /reconnect accepted (single attempt)
     reconnecting --> closing: Close, expiry or shutdown
@@ -180,11 +180,11 @@ WebRTC audio buffers belong to the browser and provider. We do not claim to boun
 ## Provider adapters
 
 `OpenAILiveProvider` implements GPT-Live WebRTC setup, sideband events, commentary and finalization.
-`RealtimeWebRTCProvider` contains the shared Realtime WebRTC and sideband implementation.
-`OpenAIRealtimeProvider` supplies OpenAI authentication and endpoints; `AzureRealtimeProvider`
-supplies Azure resource authentication and deployment configuration. Each provider builds its
-own default session configuration and declares capabilities, including transcript timing.
-The manager uses the provider protocol and normalized events; it does not select Azure models.
+`AzureLiveProvider` uses the Azure `/openai/v1/live` namespace with Bearer authentication,
+the same Live events, and client delegation. Recovery requires session consent and seeds
+at most twelve bounded text fragments through `session.thinking.append`, never tool calls.
+Legacy Realtime classes remain only for historical wire regression tests; the app factory
+registers `openai`, `azure` and optionally `elevenlabs`. See [session flow](session-flow.md).
 
 ## Speech interruption authority
 

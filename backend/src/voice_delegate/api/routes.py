@@ -85,6 +85,7 @@ def build_router(
             "available_adapters": list(manager.providers) if manager.settings.session_ui else [],
             "transport": "elevenlabs_agents_webrtc" if adapter == "elevenlabs" else "webrtc",
             "audio_recording_available": adapter != "elevenlabs",
+            "azure_recovery_available": manager.fallback is not None,
             "debug_recording_available": manager.settings.debug_recording,
             "audio_timing_available": manager.settings.audio_timing,
             "intent_cancellation": manager.settings.intent_cancellation,
@@ -115,8 +116,8 @@ def build_router(
 
     @router.post("/personal/config")
     async def personal_configuration(body: VoicePreferences | None = None) -> dict[str, object]:
-        adapter = body.adapter if body and body.adapter else "live"
-        available = ["live", "realtime", "azure"]
+        adapter = body.adapter if body and body.adapter else "openai"
+        available = ["openai", "azure"]
         if root.settings.elevenlabs_webhook_url:
             available.append("elevenlabs")
         if adapter not in available:
@@ -126,9 +127,10 @@ def build_router(
             "available_adapters": available,
             "session_ui": True,
             "voice_available": True,
+            "azure_recovery_available": adapter == "openai",
             "intent_cancellation": True,
             "audio_timing_available": root.settings.audio_timing,
-            "debug_recording_available": False,
+            "debug_recording_available": True,
             "audio_recording_available": adapter != "elevenlabs",
             "transport": "elevenlabs_agents_webrtc" if adapter == "elevenlabs" else "webrtc",
             "elevenlabs_webhook_url": root.settings.elevenlabs_webhook_url,
@@ -272,7 +274,8 @@ def build_router(
             else session.delegation.sources,
             recap=session.recap,
             fallback_available=manager.fallback is not None
-            and session.adapter in {"live", "realtime"}
+            and session.adapter == "openai"
+            and session.preferences.azure_recovery
             and not session.fallback_used,
         )
 

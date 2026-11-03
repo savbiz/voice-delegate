@@ -20,11 +20,13 @@ def test_adapter_alias_precedence_and_programmatic_configuration(
 ) -> None:
     """Canonical aliases win within a source while constructor overrides retain priority."""
     monkeypatch.setenv("VOICE_VOICE_PROVIDER", "realtime")
-    assert Settings().voice_provider == "realtime"
-    monkeypatch.setenv("VOICE_ADAPTER", "live")
-    assert Settings().voice_provider == "live"
+    assert Settings().voice_provider == "openai"
+    monkeypatch.setenv("VOICE_ADAPTER", "azure")
+    monkeypatch.setenv("VOICE_AZURE_ENDPOINT", "https://test.openai.azure.com")
+    monkeypatch.setenv("VOICE_AZURE_API_KEY", "fixture")
+    assert Settings().voice_provider == "azure"
     # Explicit constructor settings retain their normal priority over the environment.
-    assert Settings(voice_provider="realtime").voice_provider == "realtime"
+    assert Settings.model_validate({"voice_provider": "realtime"}).voice_provider == "openai"
     monkeypatch.setenv("VOICE_ADAPTER", "unsupported")
     with pytest.raises(ValidationError):
         Settings()
@@ -133,9 +135,9 @@ def test_process_adapter_overrides_dotenv_across_aliases_without_mutating_enviro
         if key.startswith("VOICE_"):
             monkeypatch.delenv(key)
     monkeypatch.chdir(tmp_path)
-    (tmp_path / ".env").write_text(f"{file_name}=live\nVOICE_WORKER_MODEL=file-model\n")
+    (tmp_path / ".env").write_text(f"{file_name}=azure\nVOICE_WORKER_MODEL=file-model\n")
     monkeypatch.setenv(process_name, "realtime")
-    assert load_settings().voice_provider == "realtime"
+    assert load_settings().voice_provider == "openai"
     assert load_settings().worker_model == "file-model"
     assert file_name not in os.environ
     assert "VOICE_WORKER_MODEL" not in os.environ

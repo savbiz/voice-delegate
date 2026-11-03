@@ -37,7 +37,7 @@ Use this shared backend configuration. Secrets stay in platform dashboards; the 
 
 Railway's healthcheck hostname is required by [Railway healthchecks](https://docs.railway.com/deployments/healthchecks). Railway-specific `RAILWAY_DOCKERFILE_PATH` and `RAILWAY_RUN_UID` are described below; they are not shared application settings.
 
-To verify the hop count, send `/healthz` from a known public IP and correlate its timestamp/request ID with a trusted ingress request log showing the socket peer and raw `X-Forwarded-For`. With one trusted hop, the rightmost entry must be the caller. Repeat with `X-Forwarded-For: 198.51.100.123` supplied by the caller: that prefix must not become the selected client. Count additional trusted proxies from the right. Standard Uvicorn access logs do not contain the raw header; use an ingress log or temporary restricted diagnostic logging of only peer and XFF, never authorization headers, invitations or bodies, and remove that logging afterwards. Do not claim the hop count is verified from a normal access log alone.
+To verify the hop count, send `/healthz` from a known public IP and correlate its timestamp/request ID with a trusted ingress request log showing the socket peer and raw `X-Forwarded-For`. With one trusted hop, the rightmost entry must be the caller. Repeat with `X-Forwarded-For: 198.51.100.123` supplied by the caller: that prefix must not become the selected client. Count additional trusted proxies from the right. Standard Uvicorn access logs do not contain the raw header; use an ingress log or temporary restricted diagnostic logging of only peer and XFF, never authorization headers, invitations or bodies, and remove that logging afterward. Do not claim the hop count is verified from a normal access log alone.
 
 ## Switching platform
 
@@ -121,8 +121,8 @@ allowances, not currency or measured billing. Daily counters reset at UTC midnig
 | `VOICE_WORKER_SERVICE_CAPACITY` | `4` | Concurrent tasks in the optional remote worker; excess work is rejected. |
 | `VOICE_WORKER_MAX_RECORDS` | `128` | Maximum remote job/cancellation records retained at once. |
 
-Each admission reserves `ceil(VOICE_SESSION_TTL_SECONDS + 1)` seconds, doubled when
-Azure recovery is available when its credentials are configured, so reservations cover both providers. Failed setup, early close and
+Each admission reserves `ceil(VOICE_SESSION_TTL_SECONDS + 1)` seconds, doubled only for OpenAI
+sessions whose Azure recovery checkbox is selected, so those reservations cover both providers. Failed setup, early close and
 interruption do not refund daily reservations. Active leases are released on close or
 expire after the lifetime plus setup/close allowances. Text-worker token charges and
 hosting/storage charges are separate from the voice-second allowance.
@@ -208,7 +208,7 @@ The gateway's dedicated `/healthz` location bypasses its request limiter; applic
 Use the existing Railway service `voice-delegate-api-production.up.railway.app` and
 Vercel frontend `voice-delegate.vercel.app`. This procedure does not create services.
 Follow the shared Variables table above, retaining invitation and database settings.
-Audio timing is enabled automatically; keep `VOICE_DEBUG_RECORDING=false` for this run.
+Audio timing is enabled automatically; leave the session recording checkbox unchecked for this run.
 Enable OTLP only if the existing collector is reachable; no new public collector is
 required. Restart/redeploy the existing backend after changing environment variables.
 On Vercel retain `VITE_API_BASE_URL=https://voice-delegate-api-production.up.railway.app`.
@@ -224,7 +224,7 @@ For a local authorized run, inject the provider key and invitation settings thro
 process environment, without writing them into a file. Then run from the repository:
 
 ```sh
-VOICE_ALLOWED_ORIGIN=http://127.0.0.1:5173 VOICE_DEBUG_RECORDING=false uv run uvicorn voice_delegate.api.app:create_app --factory --host 127.0.0.1 --port 8000
+VOICE_ALLOWED_ORIGIN=http://127.0.0.1:5173 uv run uvicorn voice_delegate.api.app:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
 From `frontend/`, in another terminal:
@@ -238,7 +238,7 @@ Retain the configured local origin expected by the backend. For Azure also confi
 `VOICE_AZURE_DEPLOYMENT` and `VOICE_AZURE_VOICE` on the backend only; see
 [Azure setup](../docs/azure-setup.md). Authorization for a GPT-Live run does not authorize
 an Azure run. Execute the [acceptance checklist](../docs/milestones/live-verification.md)
-and retain the measured evidence afterwards. No live success is claimed by this runbook.
+and retain the measured evidence afterward. No live success is claimed by this runbook.
 
 ## Offline stack in one command
 
@@ -295,8 +295,9 @@ Stop or leaving the tab cancels polling and attempts session close; normal serve
 still bounds cleanup if the connection is lost before ownership is received.
 
 Worker web search is enabled by `TAVILY_API_KEY` on the
-process that executes tools. The key is never a Vercel frontend variable. In private
-worker mode also enable the flag on the API so its advertised capabilities match.
+process that executes tools. The key is never a Vercel frontend variable. In remote-worker
+mode the API advertises search automatically; platform jobs require Tavily on that worker,
+while personal jobs use the user-supplied Tavily key.
 See [worker search setup and data flow](../docs/worker.md#optional-public-web-search).
 Default deployments and the offline demo continue without external search.
 

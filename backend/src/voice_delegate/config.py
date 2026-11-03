@@ -1,15 +1,42 @@
 """Load validated server settings without exposing credentials to clients."""
 
+from ipaddress import ip_address, ip_network
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import AliasChoices, Field, HttpUrl, SecretStr, model_validator
+from pydantic import AliasChoices, Field, HttpUrl, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import DotEnvSettingsSource, EnvSettingsSource
 from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
 from voice_delegate_agent.web_search import domain_name
 
 from voice_delegate.limits.defaults import WORKER_PORT
+
+
+def worker_transport_allowed(url: str) -> bool:
+    """Permit plaintext only on loopback, RFC1918/ULA IPs or our compose worker service."""
+    target = urlsplit(url)
+    if not target.hostname or target.username or target.password or target.query or target.fragment:
+        return False
+    if target.scheme == "https":
+        return True
+    if target.scheme != "http" or not target.hostname:
+        return False
+    if target.hostname in {"localhost", "worker"}:
+        return True
+    try:
+        address = ip_address(target.hostname)
+    except ValueError:
+        return False
+    return address.is_loopback or any(
+        address in ip_network(network)
+        for network in (
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16",
+            "fc00::/7",
+        )
+    )
 
 
 class Settings(BaseSettings):
@@ -21,14 +48,20 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="OPENAI_API_KEY")
     azure_endpoint: str = ""
     azure_api_key: SecretStr = SecretStr("")
-    azure_deployment: str = "gpt-realtime"
+    azure_deployment: str = "gpt-live-1"
     azure_voice: str = "marin"
     fallback_enabled: bool = False
-    voice_provider: Literal["live", "realtime", "azure", "elevenlabs"] = Field(
-        default="live",
+    voice_provider: Literal["openai", "azure", "elevenlabs"] = Field(
+        default="openai",
         validation_alias=AliasChoices("VOICE_ADAPTER", "VOICE_VOICE_PROVIDER"),
         description="Voice adapter. VOICE_VOICE_PROVIDER is a deprecated alias.",
     )
+
+    @field_validator("voice_provider", mode="before")
+    @classmethod
+    def canonical_adapter(cls, value: object) -> object:
+        return "openai" if value in ("live", "realtime") else value
+
     elevenlabs_enabled: bool = False
     elevenlabs_api_key: SecretStr = Field(
         default=SecretStr(""), validation_alias="ELEVENLABS_API_KEY"
@@ -39,7 +72,6 @@ class Settings(BaseSettings):
     elevenlabs_timeout_seconds: float = Field(default=3, gt=0, le=5)
     elevenlabs_webhook_token: SecretStr = SecretStr("")
     elevenlabs_webhook_url: str = ""
-    realtime_model: str = "gpt-realtime"
     model: str = "gpt-live-1"
     voice: str = "marin"
     native_clients: bool = False
@@ -213,6 +245,9 @@ class Settings(BaseSettings):
             ):
                 message = "Worker URL must be an HTTP(S) service origin"
                 raise ValueError(message)
+            if not worker_transport_allowed(self.worker_service_url):
+                message = "Worker requires HTTPS outside private IPs, loopback or compose"
+                raise ValueError(message)
             if len(self.worker_service_token.get_secret_value()) < 32:
                 message = "Remote worker requires a service token of at least 32 characters"
                 raise ValueError(message)
@@ -289,6 +324,8 @@ AUTOMATIC_FEATURES = {
     "elevenlabs_enabled",
     "web_search",
     "fallback_enabled",
+    "debug_recording",
+    "otel_enabled",
 }
 
 
@@ -301,6 +338,8 @@ def load_settings() -> Settings:
         intent_cancellation=True,
         audio_timing=True,
         native_clients=True,
+        debug_recording=True,
+        otel_enabled=True,
     )
     values["elevenlabs_enabled"] = bool(
         values.get("ELEVENLABS_API_KEY") and values.get("elevenlabs_agent_id")
@@ -308,7 +347,7 @@ def load_settings() -> Settings:
     values["web_search"] = bool(
         values.get("TAVILY_API_KEY") or values.get("worker_execution") == "remote"
     )
-    adapter = values.get("VOICE_ADAPTER", values.get("VOICE_VOICE_PROVIDER", "live"))
+    adapter = values.get("VOICE_ADAPTER", values.get("VOICE_VOICE_PROVIDER", "openai"))
     values["fallback_enabled"] = bool(
         values.get("azure_endpoint") and values.get("azure_api_key") and adapter != "azure"
     )

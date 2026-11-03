@@ -50,6 +50,7 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
   soundsRef.current = connectionSounds;
   const [voiceMode, setVoiceMode] = useState('conversation');
   const [debugRecording, setDebugRecording] = useState(false);
+  const [azureRecovery, setAzureRecovery] = useState(false);
   const [audioRecording, setAudioRecording] = useState(false);
   const recordingRef = useRef(audioRecording);
   recordingRef.current = audioRecording;
@@ -57,12 +58,14 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
     language,
     mode: voiceMode,
     debug_recording: debugRecording,
+    azure_recovery: azureRecovery,
     adapter: selectedAdapter,
   });
   preferences.current = {
     language,
     mode: voiceMode,
     debug_recording: debugRecording,
+    azure_recovery: azureRecovery,
     adapter: selectedAdapter,
   };
   const [muted, setMuted] = useState(false);
@@ -89,6 +92,7 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
   useEffect(() => {
     if (state.phase === 'ended') {
       setDebugRecording(false);
+      setAzureRecovery(false);
       setAudioRecording(false);
     }
   }, [state.phase]);
@@ -99,6 +103,18 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
         keys={keys}
         onKeys={setKeys}
         adapter={selectedAdapter}
+        recovery={azureRecovery}
+        onRecovery={(enabled) => {
+          setAzureRecovery(enabled);
+          if (!enabled && selectedAdapter === 'openai')
+            setKeys({
+              ...keys,
+              azure_key: undefined,
+              azure_endpoint: undefined,
+              azure_deployment: undefined,
+            });
+        }}
+        recoveryAvailable={apiSource === 'personal' || options?.azure_recovery_available === true}
         disabled={state.active || state.ending}
         code={code}
         webhookUrl={options?.elevenlabs_webhook_url}
@@ -111,6 +127,7 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
           setLanguage('auto');
           setVoiceMode('conversation');
           setDebugRecording(false);
+          setAzureRecovery(false);
           setAudioRecording(false);
         }}
       >
@@ -121,6 +138,7 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
             disabled={state.active || state.ending}
             onChange={(value) => {
               setAdapter(value);
+              setAzureRecovery(false);
               setLanguage('auto');
               setVoiceMode('conversation');
               setAudioRecording(false);
@@ -296,14 +314,12 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
             <input
               type="checkbox"
               checked={debugRecording}
-              disabled={apiSource === 'personal'}
               onChange={(event) => setDebugRecording(event.target.checked)}
             />
             Record this session for server debugging. I consent to saving transcripts, bounded
             worker results, session events and selected audio connection statistics on this backend
             for up to 24 hours while it is running. No audio recording, request credentials or
-            network addresses. Requires server debug mode. The service operator can read these
-            recordings.
+            network addresses. The service operator can read these recordings.
           </label>
           <label>
             <input

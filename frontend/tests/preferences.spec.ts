@@ -81,7 +81,9 @@ for (const enabled of [false, true]) {
     await page.getByRole('button', { name: 'Start conversation' }).click();
     if (enabled) {
       await expect(page.locator('#status')).toContainText('Connected');
-      expect(creates).toEqual([{ language: 'auto', mode: 'conversation', debug_recording: true }]);
+      expect(creates).toEqual([
+        { language: 'auto', mode: 'conversation', azure_recovery: false, debug_recording: true },
+      ]);
       await page.getByRole('button', { name: 'Stop', exact: true }).click();
     } else {
       await expect(page.locator('#status')).toContainText('Server debugging is disabled');

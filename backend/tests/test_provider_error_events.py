@@ -16,6 +16,7 @@ from voice_delegate.providers.models import (
 from voice_delegate.providers.openai import normalize_event as live_event
 from voice_delegate.providers.webrtc import normalize_event as realtime_event
 from voice_delegate.session.manager import SessionManager
+from voice_delegate.session.preferences import VoicePreferences
 
 from test_support import eventually
 
@@ -28,7 +29,7 @@ async def test_command_error_preserves_session_and_running_worker(
 ) -> None:
     provider = FakeProvider()
     manager = SessionManager(provider, Settings(), worker=blocking_worker, fallback=FakeProvider())
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=True))
     await manager.connect(session, "v=0\r\n")
     connection = provider.connections[0]
     connection.queue.put_nowait(DelegationRequested("job", goal="calculate 2+2"))

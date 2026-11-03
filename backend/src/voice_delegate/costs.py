@@ -119,7 +119,11 @@ class CostLedger:
                 components[component] += amount * rate.usd
 
         for adapter, seconds in self.seconds.items():
-            price("voice", "voice." + adapter + ".second", seconds)
+            price(
+                "voice",
+                "voice." + ("live" if adapter == "openai" else adapter) + ".second",
+                seconds,
+            )
         usage = self.usage
         prefix = "worker." + self.worker_model
         price("worker", prefix + ".input_token", max(0, usage.input_tokens - usage.cached_tokens))

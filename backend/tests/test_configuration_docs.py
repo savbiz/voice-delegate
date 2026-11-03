@@ -1,6 +1,7 @@
 """Keep the complete settings reference synchronized without reading configured secrets."""
 
 import pytest
+from voice_delegate.config import load_settings
 
 from scripts.build_configuration import OUTPUT, build
 
@@ -53,12 +54,12 @@ def test_server_template_boots_with_optional_features_off(
         "VOICE_ELEVENLABS_WEBHOOK_TOKEN",
         "VOICE_ELEVENLABS_WEBHOOK_URL",
     }
-    assert set(values) == canonical_names | {"BRAINTRUST_API_KEY"}
+    assert set(values) == canonical_names | {"BRAINTRUST_API_KEY", "VOICE_REALTIME_MODEL"}
     settings = Settings()
     assert settings.environment == "development"
     assert settings.worker_mode == "offline"
     assert settings.worker_execution == "local"
-    assert settings.voice_provider == "live"
+    assert settings.voice_provider == "openai"
     assert settings.worker_model == "gpt-6-luna"
     assert not settings.openai_api_key.get_secret_value()
     assert not settings.azure_api_key.get_secret_value()
@@ -72,9 +73,12 @@ def test_server_template_boots_with_optional_features_off(
             settings.audio_timing,
             settings.intent_cancellation,
             settings.decisions_cancel,
-            settings.debug_recording,
-            settings.otel_enabled,
             settings.web_search,
             settings.public_demo,
         )
     )
+
+
+def test_automatic_debug_and_tracing_are_available_without_environment_flags() -> None:
+    settings = load_settings()
+    assert settings.debug_recording and settings.otel_enabled

@@ -111,13 +111,15 @@ or Azure recovery result is claimed.
 ## Providers and worker modes
 
 `VOICE_ADAPTER` selects an integration; the old `VOICE_VOICE_PROVIDER` name remains
-a deprecated alias. All adapters expose the same delegation boundary.
+a deprecated alias. Legacy values `live` and `realtime` now select `openai` and always
+use GPT-Live. Azure requires a deployment of `gpt-live-1`. Recovery is off by default
+and enabled only by the session checkbox. See [the session flow](docs/session-flow.md).
+All adapters expose the same delegation boundary.
 
 | Adapter | Voice service and transport | State |
 |---|---|---|
-| `live` | OpenAI GPT-Live; browser WebRTC audio and backend sideband | Default; partial local smoke reported |
-| `realtime` | OpenAI Realtime; browser WebRTC audio and backend sideband | Implemented; full live acceptance pending |
-| `azure` | Azure OpenAI Realtime; browser WebRTC and backend sideband | Primary or optional one-attempt recovery; live acceptance pending |
+| `openai` | OpenAI GPT-Live; browser WebRTC audio and backend sideband | Default; partial local smoke reported |
+| `azure` | Azure GPT-Live; browser WebRTC and backend sideband | Primary or one recovery attempt with session consent; live acceptance pending |
 | `elevenlabs` | ElevenLabs Agents; browser SDK WebRTC and authenticated backend webhook | Opt-in; offline contracts tested, full live acceptance pending |
 
 ElevenLabs requires its private backend API key, agent ID and shared webhook token;
@@ -205,7 +207,7 @@ latency; browser measurements are proxies, not a hardware loopback measurement.
 See [measurement methodology](docs/benchmarks.md) and [observability](observability/README.md).
 
 Ordinary diagnostics exclude conversation text. Server debug recording requires
-`VOICE_DEBUG_RECORDING=true` and session consent; it stores bounded data for up to
+explicit session consent; it stores bounded data for up to
 24 hours while the backend runs. Audio recording is a separate browser-only consent
 and download. The operator can read server debug recordings. See [operations](docs/operations.md).
 

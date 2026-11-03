@@ -118,7 +118,10 @@ class SessionManager:
         identity = (self.settings.instance_id + "-" if self.settings.instance_id else "") + str(
             uuid4()
         )
-        self.admission.reserve(principal, identity)
+        recovery = bool(preferences and preferences.azure_recovery)
+        if recovery and (adapter != "openai" or self.fallback is None):
+            raise SessionError(422, "Azure recovery is unavailable for this session")
+        self.admission.reserve(principal, identity, recovery=recovery)
         now = self.clock()
         session = Session(identity, secrets.token_urlsafe(32), now, now)
         session.adapter = adapter
@@ -372,7 +375,8 @@ class SessionManager:
             if session.state not in {"closing", "closed", "reconnecting"}:
                 if (
                     self.fallback is not None
-                    and session.adapter in {"live", "realtime"}
+                    and session.adapter == "openai"
+                    and session.preferences.azure_recovery
                     and not session.fallback_used
                     and not session.finalized
                 ):
@@ -429,7 +433,8 @@ class SessionManager:
         """Consume one fallback attempt; never retry an ambiguous billable POST."""
         async with session.lock:
             if (
-                session.adapter not in {"live", "realtime"}
+                session.adapter != "openai"
+                or not session.preferences.azure_recovery
                 or self.fallback is None
                 or not self.fallback.capabilities.text_replay
             ):

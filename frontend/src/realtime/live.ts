@@ -19,6 +19,7 @@ import type { LiveStore, Phase } from './store';
 export type Preferences = {
   language: string;
   mode: string;
+  azure_recovery?: boolean;
   debug_recording?: boolean;
   adapter?: string;
 };
@@ -43,7 +44,13 @@ export function createLiveSession(
   function showWorker(worker: string): void {
     store.update(workerState(store.getSnapshot(), worker));
   }
-  type Session = { id: string; key: string; accessCode: string; debugRecording?: boolean };
+  type Session = {
+    id: string;
+    key: string;
+    accessCode: string;
+    debugRecording?: boolean;
+    azureRecovery?: boolean;
+  };
   let eleven: ReturnType<typeof elevenSession> | undefined;
   let recording: AudioRecording | undefined;
   let disposed = false;
@@ -304,7 +311,7 @@ export function createLiveSession(
   async function recover(message: string): Promise<void> {
     if (ending || recovering) return;
     const owner = session;
-    if (!owner || fallbackAttempted) {
+    if (!owner || !owner.azureRecovery || fallbackAttempted) {
       await finish(message);
       return;
     }
@@ -364,6 +371,7 @@ export function createLiveSession(
         )),
         accessCode: keys ? '' : accessCode,
         debugRecording: preferences.debug_recording,
+        azureRecovery: preferences.azure_recovery === true,
       };
     } finally {
       if (keys) clearPersonalKeys();

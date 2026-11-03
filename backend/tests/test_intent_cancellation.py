@@ -20,6 +20,7 @@ from voice_delegate.providers.models import (
     Transcript,
 )
 from voice_delegate.session.manager import SessionManager
+from voice_delegate.session.preferences import VoicePreferences
 from voice_delegate_agent.reference import WorkerResult
 
 from test_support import eventually
@@ -211,7 +212,7 @@ async def test_reconnect_preserves_work_and_detaches_old_call_identity(
         worker=blocking_worker,
         fallback=fallback,
     )
-    session = manager.create()
+    session = manager.create(preferences=VoicePreferences(azure_recovery=True))
     await manager.connect(session, "v=0\r\n")
     try:
         provider.connections[0].queue.put_nowait(DelegationRequested("a", goal="calculate 2+2"))
