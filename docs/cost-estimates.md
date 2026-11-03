@@ -1,7 +1,7 @@
 # Session cost estimates
 
 Cost accounting is enabled by default; no environment variable is needed.
-`VOICE_COST_ESTIMATES=false` is an optional operator opt-out. No extra API calls,
+The former `VOICE_COST_ESTIMATES` flag is ignored by the application loader. No extra API calls,
 credentials or account-wide billing access are needed. The owned heartbeat returns `costs`; close returns
 a final snapshot. The frontend shows the estimate in the standalone “Session estimate” panel above the
 transcript, including after stop.

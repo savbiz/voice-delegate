@@ -1,5 +1,7 @@
 """Provider selection is server-gated, immutable per session and offline-testable."""
 
+from typing import Literal
+
 import pytest
 from conftest import ASGIClientFactory
 from pydantic import SecretStr
@@ -59,3 +61,44 @@ async def test_config_exposes_only_enabled_adapters_and_sdk_route_is_scoped(
         assert (
             await client.post("/api/sessions/" + created["id"] + "/elevenlabs/bootstrap")
         ).status_code == 501
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "http://localhost",
+        "https://example.org",
+        "https://resource.openai.azure.com/path",
+        "https://user@resource.openai.azure.com",
+        "https://resource.openai.azure.com:444",
+    ],
+)
+def test_selectable_azure_requires_a_trusted_resource_origin(endpoint: str) -> None:
+    with pytest.raises(ValueError, match="HTTPS Azure"):
+        Settings(session_ui=True, azure_endpoint=endpoint, azure_api_key=SecretStr("fixture"))
+
+
+@pytest.mark.parametrize("adapter", ["azure", "elevenlabs"])
+async def test_non_openai_sessions_never_transition_to_azure_fallback(
+    adapter: Literal["azure", "elevenlabs"],
+) -> None:
+    from voice_delegate.providers.models import ProviderFailure
+
+    primary, fallback = FakeProvider(), FakeProvider()
+    manager = SessionManager(
+        primary,
+        Settings(session_ui=True),
+        fallback=fallback,
+        providers={"live": FakeProvider(), adapter: primary},
+    )
+    session = manager.create(preferences=VoicePreferences(adapter=adapter))
+    await manager.connect(session, "v=0\r\n")
+    with pytest.raises(SessionError) as error:
+        await manager.reconnect(session, "v=0\r\n", 0)
+    assert error.value.status == 501
+    primary.connections[0].queue.put_nowait(ProviderFailure())
+    assert session.watcher is not None
+    await session.watcher
+    assert session.state == "closed"
+    assert not fallback.connections
+    await manager.aclose()

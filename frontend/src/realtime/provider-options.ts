@@ -6,15 +6,27 @@ export const adapterNames = {
   elevenlabs: 'ElevenLabs · Agents',
 } as const;
 export type Adapter = keyof typeof adapterNames;
-export type VoiceOptions = { adapter: Adapter; available_adapters: Adapter[]; session_ui: true };
-export async function voiceOptions(signal: AbortSignal): Promise<VoiceOptions | undefined> {
+export type VoiceOptions = {
+  adapter: Adapter;
+  available_adapters: Adapter[];
+  session_ui: true;
+  elevenlabs_webhook_url?: string;
+};
+export async function voiceOptions(
+  signal: AbortSignal,
+  source: 'platform' | 'personal' = 'platform',
+  native = false,
+): Promise<VoiceOptions | undefined> {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/config`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{}',
-      signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
-    });
+    const response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/${source === 'personal' ? 'personal/' : ''}config`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+        signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]),
+      },
+    );
     if (!response.ok || !response.body) return;
     const reader = response.body.getReader();
     let raw = '';
@@ -45,10 +57,18 @@ export async function voiceOptions(signal: AbortSignal): Promise<VoiceOptions | 
       !data.available_adapters.includes(data.adapter)
     )
       return;
+    const adapters = [...new Set<Adapter>(data.available_adapters)].filter(
+      (adapter) => !native || adapter !== 'elevenlabs',
+    );
+    if (!adapters.length) return;
     return {
-      adapter: data.adapter,
-      available_adapters: [...new Set<Adapter>(data.available_adapters)],
+      adapter: adapters.includes(data.adapter) ? data.adapter : adapters[0]!,
+      available_adapters: adapters,
       session_ui: true,
+      elevenlabs_webhook_url:
+        typeof data.elevenlabs_webhook_url === 'string' && data.elevenlabs_webhook_url.length <= 512
+          ? data.elevenlabs_webhook_url
+          : undefined,
     };
   } catch {
     return;

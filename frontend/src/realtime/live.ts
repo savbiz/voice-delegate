@@ -1,3 +1,4 @@
+import type { PersonalKeys } from '../components/ApiAccess';
 import type { CostSummary } from './costs';
 import { elevenSession } from './elevenlabs-live';
 import { canStartVoice, isNativeClient } from '../native';
@@ -28,6 +29,8 @@ export function createLiveSession(
   getPreferences: () => Preferences,
   getAudioConsent: () => boolean = () => false,
   getConnectionSounds: () => boolean = () => false,
+  getPersonalKeys: () => PersonalKeys | undefined = () => undefined,
+  clearPersonalKeys: () => void = () => undefined,
 ) {
   const sounds = new ConnectionSounds();
   let diagnosticId = crypto.randomUUID();
@@ -137,6 +140,7 @@ export function createLiveSession(
         401: 'Your invitation is missing, invalid or revoked.',
         429: 'Demo allowance reached or another conversation is active. Try again later.',
         503: 'New conversations are temporarily unavailable.',
+        502: 'Provider setup failed. Check the API key, account allowance and agent/webhook configuration.',
       };
       throw new Error(
         messages[response.status] ??
@@ -338,8 +342,37 @@ export function createLiveSession(
     }
   }
 
+  async function createOwned(preferences: Preferences, accessCode: string) {
+    const keys = getPersonalKeys();
+    try {
+      if (keys) {
+        const key =
+          preferences.adapter === 'elevenlabs'
+            ? keys.elevenlabs_key
+            : preferences.adapter === 'azure'
+              ? keys.azure_key
+              : keys.openai_key;
+        if (!key?.trim()) throw new Error('Enter your API key for the selected voice provider.');
+      }
+      return {
+        ...(await request<{ id: string; key: string }>(
+          keys ? '/personal/sessions' : '/sessions',
+          undefined,
+          keys ? { ...preferences, keys } : preferences,
+          35000,
+          keys ? '' : accessCode,
+        )),
+        accessCode: keys ? '' : accessCode,
+        debugRecording: preferences.debug_recording,
+      };
+    } finally {
+      if (keys) clearPersonalKeys();
+    }
+  }
+
   async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
     const requestedPreferences = { ...getPreferences() };
+    const personal = getPersonalKeys() !== undefined;
     const audioConsent = !existing && getAudioConsent();
     if (!existing) {
       store.update({ debugStatus: '' });
@@ -389,7 +422,13 @@ export function createLiveSession(
         audio_timing_available?: boolean;
         intent_cancellation?: boolean;
         debug_recording_available?: boolean;
-      }>('/config', undefined, { adapter: requestedPreferences.adapter });
+      }>(
+        personal ? '/personal/config' : '/config',
+        undefined,
+        { adapter: requestedPreferences.adapter },
+        35000,
+        personal ? '' : accessCode,
+      );
       if (attempt !== attemptId) return;
       store.update({
         sessionUi: Boolean(config.session_ui),
@@ -418,17 +457,7 @@ export function createLiveSession(
           throw new Error(
             'This agent uses its server-configured language and conversation style. Select Follow the speaker and Assistant conversation.',
           );
-        const created = {
-          ...(await request<{ id: string; key: string }>(
-            '/sessions',
-            undefined,
-            requestedPreferences,
-            35000,
-            accessCode,
-          )),
-          accessCode,
-          debugRecording: requestedPreferences.debug_recording,
-        };
+        const created = await createOwned(requestedPreferences, accessCode);
         if (attempt !== attemptId) {
           await request(`/sessions/${created.id}/close`, created);
           return;
@@ -548,17 +577,7 @@ export function createLiveSession(
         existing ? 'Reconnecting with Azure…' : 'Connecting…',
         'Please wait. Select Stop to cancel.',
       );
-      const created = existing ?? {
-        ...(await request<{ id: string; key: string }>(
-          '/sessions',
-          undefined,
-          requestedPreferences,
-          35000,
-          accessCode,
-        )),
-        accessCode,
-        debugRecording: requestedPreferences.debug_recording,
-      };
+      const created = existing ?? (await createOwned(requestedPreferences, accessCode));
       if (attempt !== attemptId) {
         await request(`/sessions/${created.id}/close`, created);
         return;

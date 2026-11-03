@@ -255,7 +255,7 @@ async def test_waiter_limit_and_response_deadline_are_bounded(
     assert len(f.connection.calls) == 2
 
 
-async def test_default_application_has_no_service_ingress() -> None:
+async def test_unconfigured_service_ingress_rejects_requests() -> None:
     from voice_delegate.api.app import create_app
 
     app = create_app(Settings(), FakeProvider())
@@ -267,7 +267,7 @@ async def test_default_application_has_no_service_ingress() -> None:
     ):
         assert (
             await client.post(PATH, headers=HEADERS, json={"goal": "calculate 2+2"})
-        ).status_code == 404
+        ).status_code == 401
 
 
 @pytest.mark.parametrize(

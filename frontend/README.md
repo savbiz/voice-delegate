@@ -66,8 +66,8 @@ to the single application API host. Backend configuration still controls availab
 this CSP allowance does not start a session. Native builds keep their existing
 restricted policy and do not support this transport yet.
 
-Optional [session controls](../docs/session-ui.md) expose a server-controlled provider selector,
-observed audio activity and a separate cost panel. Flags default off; live/device acceptance
+[Session controls](../docs/session-ui.md) expose a server-controlled provider selector,
+observed audio activity and a separate cost panel. They are enabled by default; live/device acceptance
 is tracked separately from browser tests.
 
 The browser opens Live voice by default without requesting microphone access or creating
@@ -75,3 +75,9 @@ a provider session. The offline stack and disabled native previews still open th
 example. Opening `#demo` directly makes no backend requests; `#reference` opens project
 search without mounting the voice workspace. Changing workspaces releases an active voice
 session or stops the simulated example through the existing lifecycle cleanup.
+
+API access offers Platform API (the existing invitation gate) and Your API keys (no
+invitation). Personal keys live only in React state until submission, then the inputs clear.
+The backend keeps transient session clients; configured private workers receive only the
+personal OpenAI/Tavily keys required by a job. No localStorage/sessionStorage key store or
+platform-key fallback is used. Native discovery filters ElevenLabs in both access modes.

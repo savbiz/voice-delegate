@@ -31,7 +31,8 @@ export function ProviderChoice({
         ))}
       </select>
       <small>
-        Chosen for the next session. Credentials and enabled providers are managed by the server.
+        Chosen for the next session. Provider availability and model choices are controlled by this
+        service.
       </small>
     </label>
   );

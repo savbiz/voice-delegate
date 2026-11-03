@@ -168,6 +168,9 @@ class SessionManager:
             raise SessionError(422, "Voice adapter is not enabled on this server")
         return adapter
 
+    def owner_for(self, session: Session) -> "SessionManager":
+        return session.owner or self
+
     def provider_for(self, session: Session | None = None) -> RealtimeProvider:
         return self.providers[session.adapter] if session and session.adapter else self.provider
 
@@ -369,6 +372,7 @@ class SessionManager:
             if session.state not in {"closing", "closed", "reconnecting"}:
                 if (
                     self.fallback is not None
+                    and session.adapter in {"live", "realtime"}
                     and not session.fallback_used
                     and not session.finalized
                 ):
@@ -425,7 +429,7 @@ class SessionManager:
         """Consume one fallback attempt; never retry an ambiguous billable POST."""
         async with session.lock:
             if (
-                session.adapter == "elevenlabs"
+                session.adapter not in {"live", "realtime"}
                 or self.fallback is None
                 or not self.fallback.capabilities.text_replay
             ):
@@ -497,33 +501,42 @@ class SessionManager:
 
     async def close(self, session: Session) -> bool:
         """Idempotently close upstream before canceling the event consumer."""
-        async with session.lock:
-            if session.state == "closed":
-                return session.finalized and session.previous_finalized
-            session.state = "closing"
-            await self.intent.close(session.portfolio)
-            self.delegator.cancel(session.delegation)
-            try:
-                if session.connection is not None:
-                    session.finalized = await session.connection.aclose() or session.finalized
-            finally:
-                # Set "closing" first: the watcher's finally must not re-enter close()
-                # while this task holds session.lock, which would deadlock.
-                watcher = session.watcher
-                if watcher is not None and watcher is not asyncio.current_task():
-                    watcher.cancel()
-                    await asyncio.gather(watcher, return_exceptions=True)
-                if session.debug:
-                    session.debug.close(session.finalized and session.previous_finalized)
-                if session.costs is not None:
-                    session.costs.close(session.finalized and session.previous_finalized)
-                session.state = "closed"
-                self.sessions.pop(session.id, None)
-                self.admission.release(session.id)
-                if session.turn is not None:
-                    session.turn.span.end()
-                    session.turn = None
-            return session.finalized and session.previous_finalized
+        if session.owner is not None and session.owner is not self:
+            return await session.owner.close(session)
+        try:
+            async with session.lock:
+                if session.state == "closed":
+                    return session.finalized and session.previous_finalized
+                session.state = "closing"
+                await self.intent.close(session.portfolio)
+                self.delegator.cancel(session.delegation)
+                try:
+                    if session.connection is not None:
+                        session.finalized = await session.connection.aclose() or session.finalized
+                finally:
+                    # Set "closing" first: the watcher's finally must not re-enter close()
+                    # while this task holds session.lock, which would deadlock.
+                    watcher = session.watcher
+                    if watcher is not None and watcher is not asyncio.current_task():
+                        watcher.cancel()
+                        await asyncio.gather(watcher, return_exceptions=True)
+                    if session.debug:
+                        session.debug.close(session.finalized and session.previous_finalized)
+                    if session.costs is not None:
+                        session.costs.close(session.finalized and session.previous_finalized)
+                    session.state = "closed"
+                    self.sessions.pop(session.id, None)
+                    self.admission.release(session.id)
+                    if session.turn is not None:
+                        session.turn.span.end()
+                        session.turn = None
+                finalized = session.finalized and session.previous_finalized
+            return finalized
+        finally:
+            if session.state == "closed" and session.release_personal is not None:
+                release = session.release_personal
+                session.release_personal = None
+                await release()
 
     async def expire(self) -> None:
         """Expire abandoned setup, lost browsers, and absolute time budgets."""

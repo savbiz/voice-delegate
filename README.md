@@ -16,7 +16,7 @@ Bizzoca, Apache-2.0.
 Ask a question, delegate a calculation or a documentation lookup, and keep talking.
 The voice model knows one tool, `delegate_task`; a bounded LangGraph worker handles
 calculation, cited project documentation and optional public web search. Preserving
-work while the user speaks requires the opt-in intent-cancellation mode described below.
+work while the user speaks uses the intent-based lifecycle described below.
 
 ## Try it locally
 
@@ -25,7 +25,7 @@ repository root, install dependencies once:
 
 ```sh
 uv sync --locked
-if [ ! -e .env ]; then cp .env.example .env; fi
+if [ ! -e .env ]; then cp config/local.env.template .env; fi
 cd frontend
 pnpm install --frozen-lockfile
 cd ..
@@ -51,9 +51,9 @@ Paste that invitation in the browser and select **Live voice**. Stop each server
 with Ctrl+C. `make` shows help. Existing `.env` values override code defaults; the
 launcher changes local admission only, never your file or provider key.
 
-The server template covers the core defaults; optional provider settings are documented separately.
-It defaults to the **offline worker planner**. To let the worker
-interpret natural-language requests using Luna, choose the paid planner explicitly:
+The [minimal template](config/local.env.template) needs only keys and deployment choices.
+The worker uses Luna when an OpenAI key is configured, otherwise the offline planner.
+You can explicitly select the model-backed planner:
 
 ```sh
 VOICE_WORKER_MODE=openai make be
@@ -124,8 +124,8 @@ ElevenLabs requires its private backend API key, agent ID and shared webhook tok
 see [agent setup and authentication](docs/elevenlabs.md). The browser receives a
 short-lived conversation token, never the private provider key.
 
-Enable `VOICE_SESSION_UI=true` for a server-allowlisted provider selector, observed audio
-activity and responsive session panels. Provider choice is fixed for each conversation;
+Provider selection, observed audio activity and responsive session panels are enabled
+by default. Provider choice is fixed for each conversation;
 this selector uses operator-configured credentials, not user-supplied keys.
 [Session controls](docs/session-ui.md) describe availability and unsupported preferences.
 
@@ -134,6 +134,13 @@ breakdown by voice, worker, decisions and search, labeling missing prices as par
 reported credits/USD are shown separately; estimates are not a provider invoice.
 Cross-vendor fallback, SIP telephone entry and worker MCP connections are not implemented.
 The [roadmap](docs/roadmap.md) tracks these and moderation/cascade design work separately.
+
+The UI also offers **Your API keys** without an invitation. Keys are submitted once and
+kept in memory for that session, including in a configured private remote worker; they
+are not saved to browser storage or a database. **Platform API** uses the operator's keys
+and existing invitation gate. Personal sessions never borrow platform keys or recovery.
+ElevenLabs additionally needs your private agent ID and its configured webhook token.
+See [personal-key access](docs/personal-api.md).
 
 The worker uses **LangGraph for orchestration** and a selected planner for decisions:
 
@@ -149,8 +156,8 @@ on the same machine. It does not automatically deploy another service. Both mode
 retain the selected planner and limits. See [worker configuration](docs/worker.md).
 
 The worker has `calculate` and `search_documentation`. Optional `web_search` needs
-`VOICE_WEB_SEARCH=true` and a private Tavily key on the worker host; it is off by
-default and may incur search-provider charges. A web result is untrusted data and
+a private Tavily key on the worker host; providing that key enables search and may incur
+search-provider charges. A web result is untrusted data and
 ends further tool selection for that delegation. The voice model still sees only
 `delegate_task`, never these individual tools. [Prompts](agent/src/voice_delegate_agent/prompts/)
 are versioned with the worker.
@@ -159,8 +166,7 @@ are versioned with the worker.
 
 ## Interruption, cancellation and delivery
 
-The default path retains the original cancellation behavior. Opt into the separate
-work/narration lifecycle with `VOICE_INTENT_CANCELLATION=true`:
+The default work/narration lifecycle preserves tasks through speech interruptions:
 
 - Speaking interrupts narration while delegated work continues.
 - Up to two tasks run independently; a new delegation does not cancel the previous one.
@@ -193,7 +199,7 @@ queues, history, model steps, results and external requests have explicit limits
 Invitations, quota SQLite stores and leases control public access. Provider recovery
 creates a new browser peer and replays bounded text, never tool executions.
 
-Optional `VOICE_AUDIO_TIMING=true` measures browser audio onset/playback separately
+Browser audio timing measures onset/playback separately
 from the always-labeled transcript timestamp gap. A transcript gap is not acoustic
 latency; browser measurements are proxies, not a hardware loopback measurement.
 See [measurement methodology](docs/benchmarks.md) and [observability](observability/README.md).

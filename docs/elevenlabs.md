@@ -6,19 +6,15 @@ pending. No account configuration or paid provider calls are made by this implem
 
 ## Configuration
 
-Keep the default adapter unchanged unless explicitly testing ElevenLabs. Configure these
+ElevenLabs becomes selectable automatically with complete agent credentials. Configure these
 variables on the backend, with actual values supplied privately through the environment:
 
 ```dotenv
-VOICE_ELEVENLABS_ENABLED=true
 VOICE_ADAPTER=elevenlabs
 ELEVENLABS_API_KEY=<server API key>
 VOICE_ELEVENLABS_AGENT_ID=agent_<private agent>
 VOICE_ELEVENLABS_WEBHOOK_TOKEN=<independent random token of at least 32 characters>
 VOICE_ELEVENLABS_WEBHOOK_URL=https://<public backend>/integrations/elevenlabs/delegate
-VOICE_INTENT_CANCELLATION=true
-VOICE_FALLBACK_ENABLED=false
-VOICE_NATIVE_CLIENTS=false
 ```
 
 Generate the independent service token locally with
@@ -190,3 +186,7 @@ Public contracts checked on 2026-11-02:
 [system variables](https://elevenlabs.io/docs/eleven-agents/customization/personalization/dynamic-variables),
 [SDK](https://elevenlabs.io/docs/eleven-agents/libraries/java-script),
 [token API](https://elevenlabs.io/docs/api-reference/conversations/get-webrtc-token).
+
+Personal-key users provide their own API key, private Agent ID and webhook token for each
+session; they must configure that agent to use this deployment’s webhook. They do not need
+a platform invitation. See [personal-key access](personal-api.md).

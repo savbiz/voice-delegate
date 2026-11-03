@@ -244,7 +244,7 @@ Natural-language planning requires the separately configured paid text model.
 
 ## Optional intent cancellation
 
-With `VOICE_INTENT_CANCELLATION=true`, speaking pauses narration while independent worker
+By default, speaking pauses narration while independent worker
 jobs continue. Up to two running or pending jobs occupy bounded slots. Speech alone no
 longer cancels work. Explicit task cancellation, session end, enabled semantic decisions
 and the existing worker execution timeouts still cancel work. The existing
@@ -283,7 +283,7 @@ Android assets; it uses the existing API, invitations, quotas and single voice
 `delegate_task` tool. It does not embed a provider key or load Vercel as a remote app.
 Native voice is disabled unless explicitly enabled in a test build. Its requests
 retain browser Origin checks: the exact iOS `capacitor://localhost` origin requires
-`VOICE_NATIVE_CLIENTS=true` and an explicit allowlist entry; Android uses
+an explicit native-origin allowlist entry; Android uses
 `https://localhost`. Backend hosts remain unchanged.
 
 Native backgrounding releases local media and requests session close. Calls do not
@@ -294,7 +294,7 @@ native WebRTC or device audio. See the [mobile preview guide](mobile.md).
 
 ## Optional public web evidence
 
-With `VOICE_WEB_SEARCH=true`, the worker registry adds a bounded Tavily `web_search`
+With a configured Tavily key, the worker registry adds a bounded `web_search`
 tool. The voice model still sees only `delegate_task`. Calculation and project
 retrieval remain local. The HTTP search adapter owns a total deadline and response
 cap; it does not fetch pages from returned URLs. Failure discloses a fallback to the
@@ -312,7 +312,7 @@ with server-selected variants matching enabled tools and cancellation behavior.
 
 ## Browser audio observations
 
-With `VOICE_AUDIO_TIMING=true` (default false), the existing WebRTC stream analyser
+The WebRTC stream analyser automatically
 observes local and remote energy every 20 ms. Remote energy is accepted only while
 playback is active and unmuted. Offer-to-first-audio includes setup; speech-end-to-audio
 uses the last local energy observation followed by at least 300 ms of silence.
@@ -409,3 +409,13 @@ Reviewed public documentation on 2026-09-20:
 - [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
 
 Application limits and ownership rules are first-principles design choices, not upstream service guarantees.
+
+## Personal API access
+
+The voice workspace can create an isolated, bounded personal-key session without a platform
+invitation. Its provider clients and local/remote planner use only that session’s supplied
+keys. The platform registry retains the owned session for expiry and capacity enforcement,
+while its personal manager owns worker cancellation and client cleanup. No user key is
+written to persistent state or exposed in session/cost responses. The private worker uses
+a distinct `/personal-jobs` endpoint so old workers cannot silently spend platform keys.
+See [personal API access](personal-api.md) for lifetime, limits and ElevenLabs setup.

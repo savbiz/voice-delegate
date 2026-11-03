@@ -1,13 +1,13 @@
 # Session controls
 
-Set `VOICE_SESSION_UI=true` on the backend to enable provider discovery and the audio
-activity indicator. Default: false. Existing fixed-adapter operation is unchanged when off.
+Provider discovery and the audio activity indicator are enabled automatically by the
+application loader; no feature flag is required.
 The selector takes its allowlist from `/api/config`, never from a client model name or URL.
 It is locked while a conversation is starting, active or closing. Selection applies only
 to a new owned session; existing calls retain their provider.
 
 OpenAI Live and Realtime appear when the OpenAI key is configured. Azure also requires its
-endpoint and key. ElevenLabs additionally requires its opt-in flag, agent credentials,
+endpoint and key. ElevenLabs additionally requires complete agent credentials,
 intent-based delegation, compatible webhook deadlines and browser transport. The existing
 server default remains visible even before a key is configured; Start still checks voice
 availability. No key, agent ID or token appears in the selector.
@@ -22,7 +22,7 @@ It is not speech recognition, acoustic ground truth or the cancellation authorit
 speech events continue to control interruption. If analysis is unavailable it says so;
 stopping or leaving the session clears the observation.
 
-Cost estimates are enabled by default (`VOICE_COST_ESTIMATES=true`). The panel shows each component,
+Cost estimates are enabled by default. The panel shows each component,
 price version, missing rates and the final snapshot after stop. See
 [cost estimate limitations](cost-estimates.md). Existing task cards retain independent IDs,
 worker/delivery timing and targeted cancellation; transcripts remain a chronological chat.
@@ -56,3 +56,9 @@ support keyboard access, direct `#live`, `#demo`, `#reference` URLs and browser 
 Direct offline examples do not mount the voice workspace or request backend configuration.
 The offline stack and native previews with voice disabled keep their offline starting page.
 Switching workspaces uses the existing cleanup for voice sessions and demonstration timers.
+
+The API access switch distinguishes invited Platform API sessions from Your API keys.
+Personal keys require no invitation and are held only for the session. They also enable
+only the personally supplied worker/search credentials; no platform-funded fallback is
+allowed. See [personal-key access](personal-api.md). ElevenLabs is filtered from native
+provider discovery in both modes; native audio acceptance remains separate.

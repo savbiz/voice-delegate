@@ -53,13 +53,23 @@ class WebhookInput(BaseModel):
 
 def build_webhook_router(manager: SessionManager) -> APIRouter:
     router = APIRouter(route_class=ServiceRoute)
-    if not manager.settings.elevenlabs_enabled:
-        return router
 
     async def authenticated(
-        request: Request, x_voice_webhook_token: Annotated[str, Header()] = ""
+        request: Request,
+        x_voice_webhook_token: Annotated[str, Header()] = "",
+        x_voice_conversation_id: Annotated[str, Header()] = "",
     ) -> None:
-        expected = manager.settings.elevenlabs_webhook_token.get_secret_value()
+        matching = next(
+            (
+                s
+                for s in manager.sessions.values()
+                if isinstance(s.connection, ElevenLabsConnection)
+                and s.connection.conversation_id == x_voice_conversation_id
+            ),
+            None,
+        )
+        owner = manager.owner_for(matching) if matching is not None else manager
+        expected = owner.settings.elevenlabs_webhook_token.get_secret_value()
         if len(expected) < 32 or not compare_digest(
             expected.encode(), x_voice_webhook_token.encode()
         ):
@@ -88,10 +98,11 @@ def build_webhook_router(manager: SessionManager) -> APIRouter:
         )
         if session is None or session.state not in {"connecting", "connected"}:
             raise HTTPException(404, "Conversation unavailable")
-        now = manager.clock()
+        owner = manager.owner_for(session)
+        now = owner.clock()
         if (
-            now - session.created_at >= manager.settings.session_ttl_seconds
-            or now - session.last_heartbeat >= manager.settings.heartbeat_timeout_seconds
+            now - session.created_at >= owner.settings.session_ttl_seconds
+            or now - session.last_heartbeat >= owner.settings.heartbeat_timeout_seconds
         ):
             raise HTTPException(404, "Conversation unavailable")
         connection = session.connection
@@ -100,7 +111,7 @@ def build_webhook_router(manager: SessionManager) -> APIRouter:
             raise HTTPException(404, "Conversation unavailable")
         if not connection.started:
             connection.start()
-            manager.attach_sdk(session, connection)
+            owner.attach_sdk(session, connection)
         if sum(c.waiters for c in connection.calls.values()) >= 8:
             raise HTTPException(429, "Webhook waiter capacity reached")
         try:

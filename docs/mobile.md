@@ -99,12 +99,11 @@ Configure these backend values through its environment, preserving the existing
 web origin and all invitations/quotas:
 
 ```sh
-VOICE_NATIVE_CLIENTS=true
 VOICE_ALLOWED_ORIGINS='["https://voice-delegate.vercel.app","capacitor://localhost","https://localhost"]'
 ```
 
 The exact `capacitor://localhost` iOS origin is accepted only when
-`VOICE_NATIVE_CLIENTS=true`; the flag does not add any origins automatically.
+explicit native origins; no origin is added automatically.
 Android uses `https://localhost`. Origins identify the app's local web content,
 not the backend's address. Keep `VOICE_ALLOWED_HOSTS` set to the backend's own host.
 No deployed environment is changed by this PR or by building the mobile preview.

@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 
 from pydantic import AliasChoices, Field, HttpUrl, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings.sources import DotEnvSettingsSource, EnvSettingsSource
 from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
 from voice_delegate_agent.web_search import domain_name
 
@@ -107,7 +108,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_elevenlabs(self) -> "Settings":
         if self.voice_provider == "elevenlabs" and not self.elevenlabs_enabled:
-            message = "ElevenLabs adapter requires VOICE_ELEVENLABS_ENABLED"
+            message = "ElevenLabs adapter requires complete backend agent credentials"
             raise ValueError(message)
         if self.elevenlabs_enabled and (
             not self.elevenlabs_api_key.get_secret_value() or not self.elevenlabs_agent_id
@@ -134,8 +135,8 @@ class Settings(BaseSettings):
         if self.voice_provider == "elevenlabs" and not self.intent_cancellation:
             message = "ElevenLabs async delegation requires VOICE_INTENT_CANCELLATION"
             raise ValueError(message)
-        if self.voice_provider == "elevenlabs" and (self.fallback_enabled or self.native_clients):
-            message = "ElevenLabs does not support cross-vendor fallback or native clients"
+        if self.voice_provider == "elevenlabs" and self.fallback_enabled and not self.session_ui:
+            message = "ElevenLabs does not support cross-vendor fallback without session selection"
             raise ValueError(message)
         if (
             self.voice_provider == "elevenlabs"
@@ -231,7 +232,11 @@ class Settings(BaseSettings):
         if self.public_demo and self.environment != "production":
             message = "Public demo requires production configuration"
             raise ValueError(message)
-        if self.fallback_enabled or self.voice_provider == "azure":
+        if (
+            self.fallback_enabled
+            or self.voice_provider == "azure"
+            or (self.session_ui and self.azure_endpoint and self.azure_api_key.get_secret_value())
+        ):
             from urllib.parse import urlparse
 
             endpoint = urlparse(self.azure_endpoint)
@@ -274,7 +279,39 @@ class Settings(BaseSettings):
         return self
 
 
+# Runtime behaviour is automatic. Constructor overrides remain for offline contract tests.
+AUTOMATIC_FEATURES = {
+    "cost_estimates",
+    "session_ui",
+    "intent_cancellation",
+    "audio_timing",
+    "native_clients",
+    "elevenlabs_enabled",
+    "web_search",
+    "fallback_enabled",
+}
+
+
 def load_settings() -> Settings:
-    """Read a local .env without overriding the process environment."""
-    # BaseSettings loads dotenv separately, preserving process precedence across aliases.
-    return Settings(_env_file=".env")  # type: ignore[call-arg]
+    """Load keys and deployment settings; obsolete feature environment flags are ignored."""
+    values = {**DotEnvSettingsSource(Settings, env_file=".env")(), **EnvSettingsSource(Settings)()}
+    values.update(
+        cost_estimates=True,
+        session_ui=True,
+        intent_cancellation=True,
+        audio_timing=True,
+        native_clients=True,
+    )
+    values["elevenlabs_enabled"] = bool(
+        values.get("ELEVENLABS_API_KEY") and values.get("elevenlabs_agent_id")
+    )
+    values["web_search"] = bool(
+        values.get("TAVILY_API_KEY") or values.get("worker_execution") == "remote"
+    )
+    adapter = values.get("VOICE_ADAPTER", values.get("VOICE_VOICE_PROVIDER", "live"))
+    values["fallback_enabled"] = bool(
+        values.get("azure_endpoint") and values.get("azure_api_key") and adapter != "azure"
+    )
+    if "worker_mode" not in values:
+        values["worker_mode"] = "openai" if values.get("OPENAI_API_KEY") else "offline"
+    return Settings(**values)

@@ -11,7 +11,9 @@ from secrets import compare_digest
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from voice_delegate_agent.reference import Source
 from voice_delegate_agent.usage import Usage, usage_sink
 from voice_delegate_agent.web_search import verified_web_source
@@ -21,9 +23,12 @@ from voice_delegate.delegation.contracts import Worker
 from voice_delegate.delegation.planner import build_planner
 from voice_delegate.limits.http import BodyLimitMiddleware
 from voice_delegate.limits.results import clip_worker_result
+from voice_delegate.session.access import PersonalKeys
 
 
 class JobInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", hide_input_in_errors=True)
+    personal_keys: PersonalKeys | None = Field(default=None, repr=False)
     request_id: UUID
     goal: str = Field(min_length=1, max_length=8192)
     context: str = Field(default="", max_length=32768)
@@ -97,7 +102,11 @@ class Jobs:
         now = time.time()
         if not now < body.deadline <= now + 120:
             raise HTTPException(422, "Job deadline expired or exceeds maximum lifetime")
-        fingerprint = hashlib.sha256((body.goal + "\0" + body.context).encode()).hexdigest()
+        fingerprint_data = body.goal + "\0" + body.context
+        if body.personal_keys is not None:
+            fingerprint_data += "\0personal\0" + body.personal_keys.openai_key.get_secret_value()
+            fingerprint_data += "\0" + body.personal_keys.tavily_key.get_secret_value()
+        fingerprint = hashlib.sha256(fingerprint_data.encode()).hexdigest()
         if body.request_id in self.items:
             job = self.items[body.request_id]
             if job.fingerprint and job.fingerprint != fingerprint:
@@ -115,7 +124,12 @@ class Jobs:
         return job
 
     async def run(self, job: Job, body: JobInput) -> None:
+        runtime = None
         try:
+            worker = self.worker
+            if body.personal_keys is not None:
+                runtime = build_planner(body.personal_keys.worker_settings(self.settings))
+                worker = runtime.worker(self.settings.worker_max_steps)
             async with asyncio.timeout(
                 min(
                     self.settings.delegation_timeout_seconds,
@@ -123,7 +137,7 @@ class Jobs:
                 )
             ):
                 with usage_sink(job.record_usage):
-                    result = await self.worker.delegate_task(body.goal, body.context)
+                    result = await worker.delegate_task(body.goal, body.context)
             if job.status != "cancelled":
                 result = clip_worker_result(result, self.settings.delegation_result_tokens)
                 job.text = result.text
@@ -137,6 +151,10 @@ class Jobs:
             job.status = "timeout"
         except Exception:
             job.status = "failed"
+        finally:
+            body.personal_keys = None
+            if runtime is not None:
+                await runtime.aclose()
 
     async def aclose(self) -> None:
         tasks = [job.task for job in self.items.values() if job.task is not None]
@@ -154,6 +172,8 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
         raise ValueError(message)
     runtime = None
     if worker is None:
+        if not settings.tavily_api_key.get_secret_value():
+            settings = settings.model_copy(update={"web_search": False})
         runtime = build_planner(settings)
         worker = runtime.worker(settings.worker_max_steps)
     jobs = Jobs(worker, settings)
@@ -193,8 +213,21 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
     )
     app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_body_bytes)
 
+    @app.exception_handler(RequestValidationError)
+    async def invalid_job(_request: object, _error: RequestValidationError) -> JSONResponse:
+        return JSONResponse({"detail": "Invalid worker request"}, status_code=422)
+
     @app.post("/jobs", status_code=202)
     async def start(body: JobInput) -> JobOutput:
+        if body.personal_keys is not None:
+            raise HTTPException(422, "Personal keys require the personal worker endpoint")
+        job = jobs.start(body)
+        return JobOutput(status=job.status)
+
+    @app.post("/personal-jobs", status_code=202)
+    async def start_personal(body: JobInput) -> JobOutput:
+        if body.personal_keys is None:
+            raise HTTPException(422, "Personal worker keys are required")
         job = jobs.start(body)
         return JobOutput(status=job.status)
 

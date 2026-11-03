@@ -1,3 +1,5 @@
+import { ApiAccess, type ApiSource, type PersonalKeys } from './components/ApiAccess';
+import { isNativeClient } from './native';
 import { CostPanel, ProviderChoice, SpeakingStatus } from './components/SessionPanels';
 import { voiceOptions, type Adapter, type VoiceOptions } from './realtime/provider-options';
 /** React shell separating a free scripted demo from the live WebRTC lifecycle. */
@@ -16,7 +18,13 @@ import { version } from '../package.json';
 import { readInvitation, saveInvitation } from './invitation';
 import { sourceUrl } from './source-url';
 
-function Live({ code }: { code: string }) {
+function Live({ code, onCode }: { code: string; onCode: (code: string) => void }) {
+  const [apiSource, setApiSource] = useState<ApiSource>('platform');
+  const [keys, setKeys] = useState<PersonalKeys>({});
+  const keysRef = useRef(keys);
+  keysRef.current = keys;
+  const apiSourceRef = useRef(apiSource);
+  apiSourceRef.current = apiSource;
   const [store] = useState(createLiveStore);
   const storeRef = useRef(store);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot);
@@ -31,11 +39,11 @@ function Live({ code }: { code: string }) {
   useEffect(() => {
     if (!canStartVoice()) return;
     const abort = new AbortController();
-    void voiceOptions(abort.signal).then((value) => {
+    void voiceOptions(abort.signal, apiSource, isNativeClient()).then((value) => {
       if (!abort.signal.aborted) setOptions(value);
     });
     return () => abort.abort();
-  }, []);
+  }, [apiSource]);
   const [language, setLanguage] = useState('auto');
   const [connectionSounds, setConnectionSounds] = useState(true);
   const soundsRef = useRef(connectionSounds);
@@ -49,9 +57,14 @@ function Live({ code }: { code: string }) {
     language,
     mode: voiceMode,
     debug_recording: debugRecording,
-    adapter,
+    adapter: selectedAdapter,
   });
-  preferences.current = { language, mode: voiceMode, debug_recording: debugRecording, adapter };
+  preferences.current = {
+    language,
+    mode: voiceMode,
+    debug_recording: debugRecording,
+    adapter: selectedAdapter,
+  };
   const [muted, setMuted] = useState(false);
   const [largeCaptions, setLargeCaptions] = useState(false);
   const [category, setCategory] = useState('wrong_answer');
@@ -64,6 +77,8 @@ function Live({ code }: { code: string }) {
       () => preferences.current,
       () => recordingRef.current,
       () => soundsRef.current,
+      () => (apiSourceRef.current === 'personal' ? keysRef.current : undefined),
+      () => setKeys({}),
     );
     controller.current = session;
     return () => {
@@ -79,6 +94,40 @@ function Live({ code }: { code: string }) {
   }, [state.phase]);
   return (
     <div className={largeCaptions ? 'large-captions' : undefined}>
+      <ApiAccess
+        source={apiSource}
+        keys={keys}
+        onKeys={setKeys}
+        adapter={selectedAdapter}
+        disabled={state.active || state.ending}
+        code={code}
+        webhookUrl={options?.elevenlabs_webhook_url}
+        onCode={onCode}
+        onSource={(source) => {
+          setApiSource(source);
+          setKeys({});
+          setAdapter(undefined);
+          setOptions(undefined);
+          setLanguage('auto');
+          setVoiceMode('conversation');
+          setDebugRecording(false);
+          setAudioRecording(false);
+        }}
+      >
+        {options && selectedAdapter && (
+          <ProviderChoice
+            options={options}
+            value={selectedAdapter}
+            disabled={state.active || state.ending}
+            onChange={(value) => {
+              setAdapter(value);
+              setLanguage('auto');
+              setVoiceMode('conversation');
+              setAudioRecording(false);
+            }}
+          />
+        )}
+      </ApiAccess>
       {!canStartVoice() && (
         <p className="notice">
           Native preview: The offline example works without a connection. Live voice is disabled
@@ -90,19 +139,6 @@ function Live({ code }: { code: string }) {
         Live voice requires a server API key and incurs provider usage charges. Your microphone is
         requested only when you start.
       </p>
-      {options && selectedAdapter && (
-        <ProviderChoice
-          options={options}
-          value={selectedAdapter}
-          disabled={state.active || state.ending}
-          onChange={(value) => {
-            setAdapter(value);
-            setLanguage('auto');
-            setVoiceMode('conversation');
-            setAudioRecording(false);
-          }}
-        />
-      )}
       {state.sessionUi && state.active && <SpeakingStatus activity={state.speaking} />}
       <div className="session-controls">
         <p id="status" role="status">
@@ -260,6 +296,7 @@ function Live({ code }: { code: string }) {
             <input
               type="checkbox"
               checked={debugRecording}
+              disabled={apiSource === 'personal'}
               onChange={(event) => setDebugRecording(event.target.checked)}
             />
             Record this session for server debugging. I consent to saving transcripts, bounded
@@ -388,7 +425,7 @@ function Live({ code }: { code: string }) {
         </label>
         <Button
           id="send-feedback"
-          disabled={!code || state.reportPending || state.reportSent}
+          disabled={apiSource === 'personal' || !code || state.reportPending || state.reportSent}
           onClick={() => {
             void controller.current?.feedback(category);
           }}
@@ -553,7 +590,7 @@ export default function App() {
               : 'Project documentation'
         }
       >
-        {mode !== 'demo' && (
+        {mode === 'reference' && (
           <label className="block my-5">
             Personal invitation code{' '}
             <input
@@ -574,7 +611,7 @@ export default function App() {
         ) : mode === 'reference' ? (
           <Reference code={code} />
         ) : (
-          <Live code={code} />
+          <Live code={code} onCode={setCode} />
         )}
       </div>
       <footer className="app-footer">

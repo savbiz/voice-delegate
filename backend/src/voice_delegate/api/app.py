@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager, suppress
 from importlib.metadata import version
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -106,7 +107,6 @@ def create_app(
         if (
             elevenlabs is not None
             and settings.intent_cancellation
-            and not settings.native_clients
             and settings.delegation_timeout_seconds + settings.delivery_timeout_seconds <= 110
         ):
             providers["elevenlabs"] = elevenlabs
@@ -198,14 +198,24 @@ def create_app(
         allowed_origins=settings.allowed_origins,
     )
 
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(_request: Request, _error: RequestValidationError) -> JSONResponse:
+        return JSONResponse(
+            {"detail": "Invalid request"}, status_code=422, headers={"Cache-Control": "no-store"}
+        )
+
     @app.exception_handler(SessionError)
     async def session_error(_request: Request, exc: SessionError) -> JSONResponse:
-        return JSONResponse({"detail": str(exc)}, status_code=exc.status)
+        return JSONResponse(
+            {"detail": str(exc)}, status_code=exc.status, headers={"Cache-Control": "no-store"}
+        )
 
     @app.exception_handler(ProviderError)
     async def provider_error(_request: Request, exc: ProviderError) -> JSONResponse:
         status = 501 if isinstance(exc, UnsupportedCapability) else 502
-        return JSONResponse({"detail": str(exc)}, status_code=status)
+        return JSONResponse(
+            {"detail": str(exc)}, status_code=status, headers={"Cache-Control": "no-store"}
+        )
 
     @app.get("/healthz")
     async def health() -> dict[str, str]:
