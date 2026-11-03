@@ -127,11 +127,34 @@ test('both API sources display providers and explain unconfigured choices', asyn
   await expect(provider.locator('option[value="azure"]')).not.toHaveAttribute('disabled');
   await provider.selectOption('azure');
   await expect(page.getByLabel('Azure API key', { exact: true })).toBeVisible();
+  await expect(provider.locator('option[value="elevenlabs"]')).toContainText(
+    'unavailable on this server',
+  );
   await expect(provider.locator('option[value="elevenlabs"]')).toHaveAttribute('disabled', '');
   await expect(
-    page.getByText('ElevenLabs requires the backend webhook URL', { exact: false }),
+    page.getByText('ElevenLabs is unavailable until the server operator', { exact: false }),
   ).toBeVisible();
   await page.getByRole('radio', { name: 'Platform API', exact: true }).check();
   await expect(provider).toHaveValue('openai');
   await expect(provider.locator('option[value="azure"]')).toHaveAttribute('disabled', '');
+});
+
+test('a server with no configured provider explains it and blocks Start', async ({ page }) => {
+  await page.route('**/api/**', (route) =>
+    route.fulfill({
+      json: {
+        session_ui: true,
+        adapter: 'openai',
+        available_adapters: ['openai'],
+        voice_available: false,
+      },
+    }),
+  );
+  await page.goto('/');
+  await expect(page.getByRole('alert')).toContainText('No voice provider is configured');
+  await expect(page.locator('#status')).toContainText('Voice is unavailable');
+  await expect(
+    page.getByRole('button', { name: 'Start conversation', exact: true }),
+  ).toBeDisabled();
+  await page.getByRole('radio', { name: 'Your API keys', exact: true }).check();
 });

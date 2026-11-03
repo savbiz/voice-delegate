@@ -45,6 +45,11 @@ export function ApiAccess({
   recoveryAvailable: boolean;
   onRecovery: (enabled: boolean) => void;
 }) {
+  const placeholders: Partial<Record<keyof PersonalKeys, string>> = {
+    azure_endpoint: 'https://<resource>.openai.azure.com',
+    azure_deployment: 'gpt-live-1',
+    elevenlabs_agent_id: 'agent_…',
+  };
   const field = (name: keyof PersonalKeys, label: string, secret = true) => (
     <label key={name}>
       {label}
@@ -52,6 +57,7 @@ export function ApiAccess({
         type={secret ? 'password' : 'text'}
         autoComplete="off"
         spellCheck={false}
+        placeholder={placeholders[name]}
         maxLength={name === 'elevenlabs_agent_id' ? 200 : name === 'azure_endpoint' ? 512 : 4096}
         value={keys[name] ?? ''}
         disabled={disabled}

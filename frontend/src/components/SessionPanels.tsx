@@ -39,7 +39,11 @@ export function ProviderChoice({
             disabled={!options.available_adapters.includes(adapter)}
           >
             {adapterNames[adapter]}
-            {!options.available_adapters.includes(adapter) ? ' — not configured' : ''}
+            {!options.available_adapters.includes(adapter)
+              ? source === 'personal'
+                ? ' — unavailable on this server'
+                : ' — not configured'
+              : ''}
           </option>
         ))}
       </select>
@@ -47,11 +51,18 @@ export function ProviderChoice({
         {source === 'platform'
           ? 'Uses the selected provider’s credentials configured on this backend.'
           : 'Uses your credentials for the selected provider, for this session only.'}
-        {unavailable.length > 0 &&
+        {options.available_adapters.length > 0 &&
+          unavailable.length > 0 &&
           (source === 'personal'
-            ? ' ElevenLabs requires the backend webhook URL before you can use your agent.'
+            ? ' ElevenLabs is unavailable until the server operator sets its public webhook URL; it works on a deployed backend.'
             : ` Not configured: ${unavailable.map((adapter) => adapterNames[adapter]).join(', ')}.`)}
       </small>
+      {options.available_adapters.length === 0 && (
+        <small className="notice" role="alert">
+          No voice provider is configured on this server. Ask the operator to add a provider key, or
+          switch to Your API keys.
+        </small>
+      )}
     </label>
   );
 }

@@ -36,6 +36,7 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
   const [adapter, setAdapter] = useState<Adapter>();
   const selectedAdapter = adapter ?? options?.adapter;
   const sdkSelected = selectedAdapter === 'elevenlabs';
+  const noProvider = options !== undefined && options.available_adapters.length === 0;
   useEffect(() => {
     if (!canStartVoice()) return;
     const abort = new AbortController();
@@ -168,13 +169,17 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
         </p>
       )}
       <p className="notice">
-        Live voice requires a server API key and incurs provider usage charges. Your microphone is
-        requested only when you start.
+        {apiSource === 'personal'
+          ? 'Live voice uses your own provider accounts, which bill you directly.'
+          : 'Live voice uses the platform’s provider accounts and counts against your allowance.'}{' '}
+        Your microphone is requested only when you start.
       </p>
       {state.sessionUi && state.active && <SpeakingStatus activity={state.speaking} />}
       <div className="session-controls">
         <p id="status" role="status">
-          {state.status}
+          {noProvider && !state.active
+            ? 'Voice is unavailable: no provider is configured on this server.'
+            : state.status}
         </p>
         <p id="task-status" className="muted" aria-live="polite">
           {state.workerMessage}
@@ -236,7 +241,7 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
           <Button
             id="start"
             variant="primary"
-            disabled={state.active || state.ending || state.recovering}
+            disabled={state.active || state.ending || state.recovering || noProvider}
             onClick={() => controller.current?.start()}
           >
             Start conversation

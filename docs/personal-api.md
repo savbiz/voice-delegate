@@ -54,6 +54,12 @@ Server debug recording is available only with its separate per-session consent c
 
 ## ElevenLabs agent setup
 
+Personal ElevenLabs sessions are intended for a deployed backend: ElevenLabs servers call
+the webhook, so its URL must be public HTTPS. The URL is operator configuration and is
+never entered by users. Someone running a fork locally can expose their own backend with a
+tunnel and set `VOICE_ELEVENLABS_WEBHOOK_URL` themselves; this is not a supported
+turnkey setup. Without that URL the provider list shows ElevenLabs as unavailable on this server.
+
 The backend operator must set `VOICE_ELEVENLABS_WEBHOOK_URL` to the public HTTPS
 `/integrations/elevenlabs/delegate` URL and restart it before ElevenLabs appears in
 personal provider choices. No platform ElevenLabs key is needed for personal access.
