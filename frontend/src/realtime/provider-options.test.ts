@@ -91,3 +91,20 @@ test('personal discovery uses its own endpoint without keys or platform authoriz
   expect(fetch.mock.calls[0]?.[1].body).toBe('{}');
   expect(fetch.mock.calls[0]?.[1].headers.Authorization).toBeUndefined();
 });
+
+test('an unconfigured default remains visible but is not advertised as ready', async () => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      Response.json({
+        session_ui: true,
+        adapter: 'openai',
+        available_adapters: ['openai'],
+        voice_available: false,
+      }),
+    ),
+  );
+  const options = await voiceOptions(new AbortController().signal);
+  expect(options?.adapter).toBe('openai');
+  expect(options?.available_adapters).toEqual([]);
+});

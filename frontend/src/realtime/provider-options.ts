@@ -61,9 +61,13 @@ export async function voiceOptions(
       (adapter) => !native || adapter !== 'elevenlabs',
     );
     if (!adapters.length) return;
+    const configured =
+      data.voice_available === false
+        ? adapters.filter((adapter) => adapter !== data.adapter)
+        : adapters;
     return {
-      adapter: adapters.includes(data.adapter) ? data.adapter : adapters[0]!,
-      available_adapters: adapters,
+      adapter: configured.includes(data.adapter) ? data.adapter : (configured[0] ?? adapters[0]!),
+      available_adapters: configured,
       session_ui: true,
       azure_recovery_available: data.azure_recovery_available === true,
       elevenlabs_webhook_url:

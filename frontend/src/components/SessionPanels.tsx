@@ -1,3 +1,5 @@
+import { isNativeClient } from '../native';
+import type { ApiSource } from './ApiAccess';
 import type { CostSummary } from '../realtime/costs';
 import { costText } from '../realtime/costs';
 import { adapterNames, type Adapter, type VoiceOptions } from '../realtime/provider-options';
@@ -7,12 +9,18 @@ export function ProviderChoice({
   value,
   disabled,
   onChange,
+  source,
 }: {
   options: VoiceOptions;
+  source: ApiSource;
   value: Adapter;
   disabled: boolean;
   onChange: (adapter: Adapter) => void;
 }) {
+  const providers = (Object.keys(adapterNames) as Adapter[]).filter(
+    (adapter) => !isNativeClient() || adapter !== 'elevenlabs',
+  );
+  const unavailable = providers.filter((adapter) => !options.available_adapters.includes(adapter));
   return (
     <label className="provider-choice">
       Voice provider
@@ -24,15 +32,25 @@ export function ProviderChoice({
           if (options.available_adapters.includes(adapter)) onChange(adapter);
         }}
       >
-        {options.available_adapters.map((adapter) => (
-          <option key={adapter} value={adapter}>
+        {providers.map((adapter) => (
+          <option
+            key={adapter}
+            value={adapter}
+            disabled={!options.available_adapters.includes(adapter)}
+          >
             {adapterNames[adapter]}
+            {!options.available_adapters.includes(adapter) ? ' — not configured' : ''}
           </option>
         ))}
       </select>
       <small>
-        Chosen for the next session. Provider availability and model choices are controlled by this
-        service.
+        {source === 'platform'
+          ? 'Uses the selected provider’s credentials configured on this backend.'
+          : 'Uses your credentials for the selected provider, for this session only.'}
+        {unavailable.length > 0 &&
+          (source === 'personal'
+            ? ' ElevenLabs requires the backend webhook URL before you can use your agent.'
+            : ` Not configured: ${unavailable.map((adapter) => adapterNames[adapter]).join(', ')}.`)}
       </small>
     </label>
   );

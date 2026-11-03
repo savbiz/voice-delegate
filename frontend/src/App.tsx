@@ -134,6 +134,7 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
         {options && selectedAdapter && (
           <ProviderChoice
             options={options}
+            source={apiSource}
             value={selectedAdapter}
             disabled={state.active || state.ending}
             onChange={(value) => {
@@ -378,8 +379,7 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
       <details className="secondary-panel">
         <summary>Conversation recap</summary>
         <p className="muted">
-          Live transcript excerpts, refreshed with each heartbeat; not an AI summary. Interruption
-          does not mean completion.
+          Latest request and reply from the transcript. Interrupted work may still be incomplete.
         </p>
         <p id="recap" aria-live="off">
           {state.recap}
@@ -420,9 +420,8 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
       <details className="secondary-panel">
         <summary>Report a problem</summary>
         <p>
-          Send only a category, diagnostic ID, interface state, configured provider and app version.
-          No audio, transcripts or message text. Reports expire after seven days. A pseudonymous
-          identity is used to limit submissions.
+          Reports include a category and app diagnostics, without audio or conversation text. They
+          are kept for seven days.
         </p>
         <label>
           Problem category{' '}
@@ -449,7 +448,11 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
           Send report
         </Button>
         <p id="feedback-status" aria-live="polite">
-          {state.feedbackStatus}
+          {apiSource === 'personal'
+            ? 'Reporting is available in Platform API mode with an invitation code.'
+            : !code
+              ? 'Enter your invitation code to send a report.'
+              : state.feedbackStatus}
         </p>
       </details>
     </div>
@@ -633,7 +636,7 @@ export default function App() {
       <footer className="app-footer">
         React 19 · FastAPI · WebRTC
         <br />
-        Bounded delegation · Azure recovery · Optional telemetry.
+        Background tasks · Session costs · Opt-in Azure recovery.
         <br />
         <a href="/third-party-notices.txt" className="underline">
           Third-party notices

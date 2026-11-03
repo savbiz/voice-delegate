@@ -147,7 +147,9 @@ export function createLiveSession(
         401: 'Your invitation is missing, invalid or revoked.',
         429: 'Demo allowance reached or another conversation is active. Try again later.',
         503: 'New conversations are temporarily unavailable.',
-        502: 'Provider setup failed. Check the API key, account allowance and agent/webhook configuration.',
+        502: path.endsWith('/config')
+          ? 'The backend is unavailable. For local development, start the backend with make be and retry.'
+          : 'Voice connection failed. Check backend logs and the selected provider configuration.',
       };
       throw new Error(
         messages[response.status] ??
@@ -798,6 +800,7 @@ export function createLiveSession(
   };
 
   const onPageHide = () => {
+    const hadConversation = session !== undefined || store.getSnapshot().active;
     sounds.dispose();
     if (session) {
       void fetch(`${import.meta.env.VITE_API_BASE_URL ?? ''}/api/sessions/${session.id}/close`, {
@@ -807,6 +810,7 @@ export function createLiveSession(
     }
     attemptId += 1;
     release();
+    if (!hadConversation) return;
     showState('ended', 'Conversation ended.', 'Select Start conversation to begin a new session.');
     store.update(endedWorkerState(store.getSnapshot()));
   };

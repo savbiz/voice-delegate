@@ -103,3 +103,35 @@ test('leaving voice for a secondary tool closes the session and releases media',
     ),
   ).toBe('closed');
 });
+
+test('both API sources display providers and explain unconfigured choices', async ({ page }) => {
+  await page.route('**/api/**', (route) =>
+    route.fulfill({
+      json: {
+        session_ui: true,
+        adapter: 'openai',
+        available_adapters: route.request().url().includes('/personal/')
+          ? ['openai', 'azure']
+          : ['openai'],
+        voice_available: true,
+      },
+    }),
+  );
+  await page.goto('/');
+  const provider = page.getByRole('combobox', { name: 'Voice provider', exact: false });
+  await expect(provider.locator('option')).toHaveCount(3);
+  await expect(provider.locator('option[value="azure"]')).toHaveAttribute('disabled', '');
+  await expect(provider.locator('option[value="elevenlabs"]')).toContainText('not configured');
+  await page.getByRole('radio', { name: 'Your API keys', exact: true }).check();
+  await expect(provider.locator('option')).toHaveCount(3);
+  await expect(provider.locator('option[value="azure"]')).not.toHaveAttribute('disabled');
+  await provider.selectOption('azure');
+  await expect(page.getByLabel('Azure API key', { exact: true })).toBeVisible();
+  await expect(provider.locator('option[value="elevenlabs"]')).toHaveAttribute('disabled', '');
+  await expect(
+    page.getByText('ElevenLabs requires the backend webhook URL', { exact: false }),
+  ).toBeVisible();
+  await page.getByRole('radio', { name: 'Platform API', exact: true }).check();
+  await expect(provider).toHaveValue('openai');
+  await expect(provider.locator('option[value="azure"]')).toHaveAttribute('disabled', '');
+});
