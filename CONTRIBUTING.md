@@ -35,6 +35,14 @@ Never commit `.env`, provider keys, invitations, session keys, private recording
 For a durable architectural choice, add the next numbered Markdown file under [docs/decisions](docs/decisions/). Include title, `Status: accepted YYYY-MM-DD` (or proposed until accepted), context, decision, consequences and supporting sources. Describe implemented behavior in present tense and identify unverified assumptions. Keep historical acceptance evidence under [docs/milestones](docs/milestones/) and current status in [docs/roadmap.md](docs/roadmap.md).
 
 
+## Agent skills
+
+Reusable agent skills live in `.agents/skills/` (Codex and other agents) and are mirrored
+byte for byte in `.claude/skills/` (Claude Code). Edit `.agents/skills/`, then copy the
+changes with `rm -rf .claude/skills && cp -R .agents/skills .claude/skills`; a test fails if
+they drift. Skills encode the rules in `AGENTS.md`; keep them generic, free of secrets and
+within the independence rule.
+
 ## Independence check and optional local hook
 
 Both CI jobs run `scripts/check_independence.py`. It scans tracked files, excluding
