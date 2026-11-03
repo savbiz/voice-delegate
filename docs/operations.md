@@ -15,7 +15,7 @@ Edit `VOICE_INVITE_TOKENS`, a JSON map of stable pseudonymous names to unique ra
 - `VOICE_DAILY_SESSIONS_PER_USER` limits sessions reserved per principal per UTC day.
 - `VOICE_CONCURRENT_SESSIONS_PER_USER` limits active leases per principal.
 - `VOICE_MAX_SESSIONS` caps local API sessions and, with shared SQLite, global active leases.
-- `VOICE_DAILY_VOICE_SECONDS_PER_USER` and `VOICE_DAILY_VOICE_SECONDS_GLOBAL` cap reserved voice seconds per UTC day. Each admitted session reserves `ceil(session_ttl_seconds + 1)`, doubled only when the session opts into Azure recovery. Early close and failed connect do not refund the reservation.
+- `VOICE_DAILY_VOICE_SECONDS_PER_USER` and `VOICE_DAILY_VOICE_SECONDS_GLOBAL` cap reserved voice seconds per UTC day for platform-funded sessions in public-demo mode; personal-key sessions skip these daily reservations. Each admitted platform session reserves `ceil(session_ttl_seconds + 1)`, doubled only when the session opts into Azure recovery. Early close and failed connect do not refund the reservation.
 - `VOICE_SESSION_TTL_SECONDS` bounds a conversation's lifetime. Heartbeat expiry reclaims abandoned sessions; neither heartbeat nor fallback extends the absolute TTL.
 - `VOICE_MAX_DELEGATIONS_PER_SESSION` caps accepted distinct worker requests. An over-limit request does not cancel already-running work.
 - Worker step, duration, result-size and concurrency limits cap application-owned work; they are not a dollar-accurate billing meter.

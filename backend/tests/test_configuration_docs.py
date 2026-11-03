@@ -1,5 +1,8 @@
 """Keep the complete settings reference synchronized without reading configured secrets."""
 
+import os
+from pathlib import Path
+
 import pytest
 from voice_delegate.config import load_settings
 
@@ -79,6 +82,16 @@ def test_server_template_boots_with_optional_features_off(
     )
 
 
-def test_automatic_debug_and_tracing_are_available_without_environment_flags() -> None:
+def test_automatic_debug_and_tracing_are_available_without_environment_flags(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    for name in list(os.environ):
+        if name.startswith("VOICE_") or name in {
+            "OPENAI_API_KEY",
+            "TAVILY_API_KEY",
+            "ELEVENLABS_API_KEY",
+        }:
+            monkeypatch.delenv(name)
+    monkeypatch.chdir(tmp_path)  # No developer .env is read.
     settings = load_settings()
     assert settings.debug_recording and settings.otel_enabled

@@ -186,3 +186,17 @@ async def test_costs_are_enabled_without_an_environment_flag() -> None:
     ledger.report_provider_usage(ProviderUsage(credits=999))
     assert ledger.snapshot().provider_usage == receipt
     await manager.aclose()
+
+
+def test_custom_price_file_with_legacy_openai_voice_key_still_prices_voice() -> None:
+    default = Prices.load()
+    rates = dict(default.rates)
+    rates["voice.openai.second"] = rates.pop("voice.live.second")
+    legacy = default.model_copy(update={"rates": rates})
+    now = [0.0]
+    ledger = CostLedger(legacy, "openai", "gpt-6-luna", lambda: now[0], Metrics())
+    ledger.connect()
+    now[0] = 10.0
+    summary = ledger.snapshot()
+    assert "voice.live.second" not in summary.unpriced
+    assert summary.estimated_usd > 0

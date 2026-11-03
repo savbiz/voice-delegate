@@ -156,3 +156,45 @@ test('Azure recovery requires per-session choice and personal Azure fields', asy
   await expect(recovery).not.toBeChecked();
   await expect(page.getByLabel('Azure API key', { exact: true })).toHaveCount(0);
 });
+
+test('Azure values retained from an earlier provider choice are not sent for OpenAI', async ({
+  page,
+}) => {
+  await page.addInitScript(installFakePeers);
+  let submitted: Record<string, unknown> | undefined;
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/config'))
+      return route.fulfill({
+        json: {
+          session_ui: true,
+          adapter: 'openai',
+          available_adapters: ['openai', 'azure'],
+          voice_available: true,
+          azure_recovery_available: true,
+        },
+      });
+    if (path === '/api/personal/sessions') {
+      submitted = route.request().postDataJSON();
+      return route.fulfill({ json: { id: 'owned', key: 'key' } });
+    }
+    return route.fulfill({
+      json: path.endsWith('/close') ? { finalized: true } : { sdp: 'answer' },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('radio', { name: 'Your API keys', exact: true }).check();
+  const provider = page.getByRole('combobox', { name: 'Voice provider', exact: false });
+  await provider.selectOption('azure');
+  await page.getByLabel('Azure API key', { exact: true }).fill('stale-azure');
+  await page.getByLabel('Azure resource HTTPS origin').fill('not-a-valid-origin');
+  await provider.selectOption('openai');
+  await page.getByLabel('OpenAI API key (voice and worker)', { exact: true }).fill('own-openai');
+  await page.getByRole('button', { name: 'Start conversation', exact: true }).click();
+  await expect(page.locator('#status')).toContainText('Connected');
+  const keys = (submitted as { keys: Record<string, unknown> }).keys;
+  expect(keys).toMatchObject({ openai_key: 'own-openai' });
+  expect(keys).not.toHaveProperty('azure_key');
+  expect(keys).not.toHaveProperty('azure_endpoint');
+  expect(keys).not.toHaveProperty('azure_deployment');
+});

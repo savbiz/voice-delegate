@@ -379,3 +379,30 @@ async def test_credential_presence_enables_platform_providers_despite_old_off_fl
         config = (await client.post("/api/config")).json()
         assert "elevenlabs" in config["available_adapters"]
         assert "azure" in config["available_adapters"]
+
+
+async def test_personal_elevenlabs_rejects_short_webhook_token() -> None:
+    root = SessionManager(FakeProvider(), Settings())
+    body = PersonalSession(
+        adapter="elevenlabs",
+        keys=PersonalKeys(
+            elevenlabs_key=SecretStr("el-key"),
+            elevenlabs_agent_id="agent_abc123",
+            elevenlabs_webhook_token=SecretStr("too-short"),
+        ),
+    )
+    with pytest.raises(SessionError) as error:
+        await create_personal_session(root, body)
+    assert error.value.status == 422
+    assert "at least 32" in str(error.value)
+    assert not root.sessions
+
+
+def test_plaintext_worker_transport_allows_railway_private_hosts_only() -> None:
+    from voice_delegate.config import worker_transport_allowed
+
+    assert worker_transport_allowed("http://worker.railway.internal:8001")
+    assert not worker_transport_allowed("http://worker.railway.internal.example.com")
+    assert not worker_transport_allowed("http://railway.internal")
+    assert not worker_transport_allowed("http://example.com:8001")
+    assert worker_transport_allowed("https://example.com")

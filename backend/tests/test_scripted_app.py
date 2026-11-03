@@ -30,7 +30,7 @@ async def test_scripted_app_starts_with_explicit_opt_in(
 
 
 @pytest.mark.parametrize(
-    "mode", ["disabled", "paid_worker", "provider_key", "recording", "fallback"]
+    "mode", ["disabled", "paid_worker", "provider_key", "recording", "fallback", "elevenlabs"]
 )
 def test_demo_factory_refuses_paid_or_recorded_configuration(
     mode: str, monkeypatch: pytest.MonkeyPatch
@@ -50,6 +50,8 @@ def test_demo_factory_refuses_paid_or_recorded_configuration(
         settings.debug_recording = True
     if mode == "fallback":
         settings.fallback_enabled = True
+    if mode == "elevenlabs":
+        settings.elevenlabs_api_key = SecretStr("not-a-real-key")
     monkeypatch.setattr("voice_delegate.scaling.scripted_app.Settings", lambda: settings)
     with pytest.raises(ValueError, match="Offline demo requires"):
         create_demo_app()

@@ -89,7 +89,8 @@ The application loader always enables cost accounting, provider selection, inten
 cancellation and audio timing. Native origins still require an explicit origin allowlist;
 ElevenLabs is filtered out on native clients. ElevenLabs becomes available with complete
 agent credentials; Tavily search with a key on the worker. Configured Azure credentials
-make recovery available for OpenAI sessions, off until selected per session. Debug
+make recovery available for OpenAI sessions (not when Azure is the default adapter),
+off until selected per session. Debug
 recording needs checkbox consent; OTel is on, exporting only to configured endpoints
 or local console traces. No separate enable flags are required. With a key, the worker
 uses OpenAI;

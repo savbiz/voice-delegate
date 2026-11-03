@@ -51,6 +51,10 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
   const [voiceMode, setVoiceMode] = useState('conversation');
   const [debugRecording, setDebugRecording] = useState(false);
   const [azureRecovery, setAzureRecovery] = useState(false);
+  const adapterRef = useRef(selectedAdapter);
+  adapterRef.current = selectedAdapter;
+  const recoveryRef = useRef(azureRecovery);
+  recoveryRef.current = azureRecovery;
   const [audioRecording, setAudioRecording] = useState(false);
   const recordingRef = useRef(audioRecording);
   recordingRef.current = audioRecording;
@@ -80,7 +84,16 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
       () => preferences.current,
       () => recordingRef.current,
       () => soundsRef.current,
-      () => (apiSourceRef.current === 'personal' ? keysRef.current : undefined),
+      () => {
+        if (apiSourceRef.current !== 'personal') return undefined;
+        if (adapterRef.current === 'azure' || recoveryRef.current) return keysRef.current;
+        // Retained Azure values from an earlier provider choice are not part of this session.
+        const rest = { ...keysRef.current };
+        delete rest.azure_key;
+        delete rest.azure_endpoint;
+        delete rest.azure_deployment;
+        return rest;
+      },
       () => setKeys({}),
     );
     controller.current = session;

@@ -14,7 +14,7 @@ from voice_delegate.limits.defaults import WORKER_PORT
 
 
 def worker_transport_allowed(url: str) -> bool:
-    """Permit plaintext only on loopback, RFC1918/ULA IPs or our compose worker service."""
+    """Permit plaintext only on loopback, private IPs, the compose worker or Railway hosts."""
     target = urlsplit(url)
     if not target.hostname or target.username or target.password or target.query or target.fragment:
         return False
@@ -22,7 +22,7 @@ def worker_transport_allowed(url: str) -> bool:
         return True
     if target.scheme != "http" or not target.hostname:
         return False
-    if target.hostname in {"localhost", "worker"}:
+    if target.hostname in {"localhost", "worker"} or target.hostname.endswith(".railway.internal"):
         return True
     try:
         address = ip_address(target.hostname)

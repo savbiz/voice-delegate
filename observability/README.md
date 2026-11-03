@@ -42,7 +42,7 @@ Signaling duration, transcript arrival and audio playback are different measures
 TTFB, playback onset and end-to-end acoustic latency require a live measurement harness;
 this project does not export invented values for them. Fake runs measure orchestration only.
 
-OTel is disabled by default. Tests inject in-memory exporters and do not use network services.
+OTel is enabled automatically; without exporter endpoints it uses local console traces. Tests inject in-memory exporters and do not use network services.
 Metrics export additionally requires `VOICE_OTEL_METRICS_ENDPOINT`; there is no public
 application metrics endpoint. Collector buffers and container memory are bounded.
 

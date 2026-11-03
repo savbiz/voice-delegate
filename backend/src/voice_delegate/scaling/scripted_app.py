@@ -53,6 +53,8 @@ def create_demo_app() -> FastAPI:
         or settings.openai_api_key.get_secret_value()
         or settings.azure_api_key.get_secret_value()
         or settings.debug_recording
+        or settings.elevenlabs_enabled
+        or settings.elevenlabs_api_key.get_secret_value()
     ):
         message = "Offline demo requires offline worker, no provider keys, no fallback or recording"
         raise ValueError(message)

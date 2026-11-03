@@ -113,6 +113,9 @@ class CostLedger:
             if not amount:
                 return
             rate = self.prices.rates.get(key)
+            if rate is None and key == "voice.live.second":
+                # Custom price files written before the Live migration use this key.
+                rate = self.prices.rates.get("voice.openai.second")
             if rate is None or rate.usd is None:
                 unpriced.append(key)
             else:

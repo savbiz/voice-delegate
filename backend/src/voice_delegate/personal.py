@@ -36,6 +36,8 @@ async def create_personal_session(root: SessionManager, body: PersonalSession) -
     )
     if not key.get_secret_value():
         raise SessionError(422, "A personal key for the selected provider is required")
+    if adapter == "elevenlabs" and len(body.keys.elevenlabs_webhook_token.get_secret_value()) < 32:
+        raise SessionError(422, "The ElevenLabs webhook token must contain at least 32 characters")
     principal = "personal:" + hashlib.sha256(key.get_secret_value().encode()).hexdigest()
     if any(s.principal == principal for s in root.sessions.values()):
         raise SessionError(429, "A personal conversation is already active")
