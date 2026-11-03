@@ -37,8 +37,8 @@ export function RequestAccess() {
     <details className="key-details request-access">
       <summary>No invitation code? Request access</summary>
       <p className="muted">
-        Leave an email or other way to reach you. The owner is notified and may reply with a code.
-        Nothing else is stored.
+        Leave an email or other way to reach you. It is sent to the owner through ntfy.sh as a
+        notification, and the owner may reply with a code. This server stores nothing.
       </p>
       <label>
         How to reach you
