@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -12,7 +13,7 @@ from voice_delegate.api.app import create_app
 from voice_delegate.config import Settings
 from voice_delegate.providers.elevenlabs import MAX_RESPONSE_BYTES, ElevenLabsProvider
 from voice_delegate.providers.fake import FakeProvider
-from voice_delegate.providers.models import ProviderError, UnsupportedCapability
+from voice_delegate.providers.models import ProviderError, ProviderUsage, UnsupportedCapability
 
 
 async def test_typed_bootstrap_uses_fixed_endpoint_and_no_sdp() -> None:
@@ -102,9 +103,11 @@ def test_preview_requires_credentials_and_explicit_selection() -> None:
         Settings(voice_provider="elevenlabs")
 
 
+@pytest.mark.parametrize("connected", [False, True])
 async def test_bootstrap_route_is_owned_one_shot_and_blocks_sdp_setup(
     asgi_client: ASGIClientFactory,
     monkeypatch: pytest.MonkeyPatch,
+    connected: bool,
 ) -> None:
     settings = Settings(
         voice_provider="elevenlabs",
@@ -127,6 +130,17 @@ async def test_bootstrap_route_is_owned_one_shot_and_blocks_sdp_setup(
     async def validate(self: ElevenLabsProvider, ttl: float) -> None:
         pass
 
+    async def confirm(
+        self: ElevenLabsProvider,
+        conversation_id: str,
+        on_usage: Callable[[ProviderUsage], None] | None = None,
+    ) -> bool:
+        assert conversation_id == "conv_fixture"
+        assert on_usage is not None
+        on_usage(ProviderUsage(credits=123, voice_surcharge_credits=2, usd=0.01))
+        return True
+
+    monkeypatch.setattr(ElevenLabsProvider, "confirm_closed", confirm)
     monkeypatch.setattr(ElevenLabsProvider, "validate_agent", validate)
     monkeypatch.setattr(ElevenLabsProvider, "prepare_browser", prepare)
     app = create_app(settings)
@@ -146,8 +160,21 @@ async def test_bootstrap_route_is_owned_one_shot_and_blocks_sdp_setup(
             await client.post(f"/api/sessions/{session['id']}/offer", json={"sdp": "v=0\r\n"})
         ).status_code == 409
         assert calls == 1
-        closed = await client.post(f"/api/sessions/{session['id']}/close")
-        assert not closed.json()["finalized"]
+        if connected:
+            assert (
+                await client.post(
+                    f"/api/sessions/{session['id']}/elevenlabs/events",
+                    json={"kind": "connected", "sequence": 0, "conversation_id": "conv_fixture"},
+                )
+            ).status_code == 200
+        closed = (await client.post(f"/api/sessions/{session['id']}/close")).json()
+        assert closed["finalized"] is connected
+        receipt = closed["costs"]["provider_usage"]
+        if connected:
+            assert receipt["credits"] == 123
+            assert receipt["voice_surcharge_credits"] == 2
+        else:
+            assert receipt is None
 
 
 async def test_default_app_does_not_enable_elevenlabs(asgi_client: ASGIClientFactory) -> None:
@@ -452,3 +479,68 @@ async def test_sdk_speech_preserves_work_and_explicit_cancel_settles_native_call
         assert "cancelled" in (connection.calls["second"].result or "")
     finally:
         await manager.aclose()
+
+
+@pytest.mark.parametrize(
+    ("change", "confirmed", "receipt"),
+    [
+        ("none", True, True),
+        ("zero", True, True),
+        ("pending", False, False),
+        ("foreign_agent", False, False),
+        ("foreign_conversation", False, False),
+        ("missing", True, False),
+        ("negative", True, False),
+        ("boolean", True, False),
+        ("invalid_usd", True, False),
+        ("failure", False, False),
+    ],
+)
+async def test_close_reports_only_bounded_owned_provider_charges(
+    change: str, confirmed: bool, receipt: bool
+) -> None:
+    metadata: dict[str, Any] = {
+        "cost": 296,
+        "cost_fiat": 0.012,
+        "charging": {"voice_surcharge_charge": 4},
+    }
+    payload: dict[str, Any] = {
+        "agent_id": "agent_fixture",
+        "conversation_id": "conv_fixture",
+        "status": "done",
+        "metadata": metadata,
+        "transcript": [{"message": "must not be forwarded"}],
+    }
+    if change == "zero":
+        metadata.update(cost=0, cost_fiat=0, charging={"voice_surcharge_charge": 0})
+    if change == "pending":
+        payload["status"] = "processing"
+    if change == "foreign_agent":
+        payload["agent_id"] = "agent_other"
+    if change == "foreign_conversation":
+        payload["conversation_id"] = "conv_other"
+    if change == "missing":
+        payload.pop("metadata")
+    if change == "negative":
+        metadata["cost"] = -1
+    if change == "boolean":
+        metadata["cost"] = True
+    if change == "invalid_usd":
+        metadata["cost_fiat"] = "0.012"
+    seen: list[ProviderUsage] = []
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(503 if change == "failure" else 200, json=payload)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
+        provider = ElevenLabsProvider("fixture", "agent_fixture", http=http)
+        assert await provider.confirm_closed("conv_fixture", seen.append) is confirmed
+    assert len(requests) == 1
+    assert bool(seen) is receipt
+    if receipt:
+        value = seen[0].model_dump()
+        assert set(value) == {"provider", "credits", "voice_surcharge_credits", "usd"}
+        assert value["credits"] == (0 if change == "zero" else 296)
+        assert value["voice_surcharge_credits"] == (0 if change == "zero" else 4)

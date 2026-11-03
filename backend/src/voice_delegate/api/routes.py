@@ -255,7 +255,10 @@ def build_router(
                 bootstrap = await elevenlabs.prepare_browser()
 
             async def confirm_close() -> bool:
-                return await elevenlabs.confirm_closed(bootstrap.conversation_id)
+                return await elevenlabs.confirm_closed(
+                    bootstrap.conversation_id,
+                    session.costs.report_provider_usage if session.costs is not None else None,
+                )
 
             session.connection = ElevenLabsConnection(bootstrap.conversation_id, confirm_close)
             session.previous_finalized = True

@@ -91,7 +91,9 @@ async def test_usage_sinks_isolate_concurrent_tasks_and_record_failure() -> None
 
 async def test_cost_flag_and_session_freeze(tmp_path: object) -> None:
     now = [0.0]
-    disabled = SessionManager(FakeProvider(), Settings(price_file="/missing"), clock=lambda: now[0])
+    disabled = SessionManager(
+        FakeProvider(), Settings(cost_estimates=False, price_file="/missing"), clock=lambda: now[0]
+    )
     assert disabled.create().costs is None
     await disabled.aclose()
     manager = SessionManager(FakeProvider(), Settings(cost_estimates=True), clock=lambda: now[0])
@@ -165,3 +167,22 @@ def test_older_remote_response_without_usage_is_partial() -> None:
     from voice_delegate.scaling.worker_service import JobOutput
 
     assert JobOutput.model_validate({"status": "completed", "text": "done"}).usage.uncertain
+
+
+async def test_costs_are_enabled_without_an_environment_flag() -> None:
+    from voice_delegate.providers.models import ProviderUsage
+
+    manager = SessionManager(FakeProvider(), Settings())
+    assert Settings().cost_estimates is True
+    ledger = manager.create().costs
+    assert ledger is not None
+    receipt = ProviderUsage(credits=296, voice_surcharge_credits=4, usd=0.012)
+    ledger.report_provider_usage(receipt)
+    ledger.close(True)
+    summary = ledger.snapshot()
+    assert summary.provider_usage == receipt
+    # Credits are not dollars; reported values are separate from price estimates.
+    assert summary.estimated_usd == 0
+    ledger.report_provider_usage(ProviderUsage(credits=999))
+    assert ledger.snapshot().provider_usage == receipt
+    await manager.aclose()

@@ -40,7 +40,7 @@ commented [server template](../.env.example) for meanings and examples.
 | `trusted_proxy_hops` | `VOICE_TRUSTED_PROXY_HOPS` | `1` | `{"type": "integer", "minimum": 1, "maximum": 32}` |
 | `environment` | `VOICE_ENVIRONMENT` | `"development"` | `{"type": "string"}` |
 | `api_docs` | `VOICE_API_DOCS` | `false` | `{"type": "boolean"}` |
-| `cost_estimates` | `VOICE_COST_ESTIMATES` | `false` | `{"type": "boolean"}` |
+| `cost_estimates` | `VOICE_COST_ESTIMATES` | `true` | `{"type": "boolean"}` |
 | `price_file` | `VOICE_PRICE_FILE` | `""` | `{"type": "string"}` |
 | `audio_timing` | `VOICE_AUDIO_TIMING` | `false` | `{"type": "boolean"}` |
 | `intent_cancellation` | `VOICE_INTENT_CANCELLATION` | `false` | `{"type": "boolean"}` |

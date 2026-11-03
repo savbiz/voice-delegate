@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from voice_delegate_agent.usage import Usage
 
 from voice_delegate.observability.metrics import Metrics
+from voice_delegate.providers.models import ProviderUsage
 
 
 class Rate(BaseModel):
@@ -37,6 +38,7 @@ class Prices(BaseModel):
 
 
 class CostSummary(BaseModel):
+    provider_usage: ProviderUsage | None = None
     version: str
     price_date: str
     estimated_usd: float
@@ -63,10 +65,15 @@ class CostLedger:
         self.clock = clock
         self.metrics = metrics
         self.usage = Usage()
+        self.provider_usage: ProviderUsage | None = None
         self.seconds: dict[str, float] = {}
         self.started: float | None = None
         self.final = False
         self.emitted: dict[str, float] = {}
+
+    def report_provider_usage(self, usage: ProviderUsage) -> None:
+        if not self.final:
+            self.provider_usage = usage
 
     def record(self, usage: Usage) -> None:
         self.usage = self.usage.plus(usage)
@@ -126,6 +133,7 @@ class CostLedger:
                 self.metrics.session_cost.add(delta, {"component": component})
                 self.emitted[component] = amount
         return CostSummary(
+            provider_usage=self.provider_usage,
             version=self.prices.version,
             price_date=self.prices.date,
             estimated_usd=sum(components.values()),
