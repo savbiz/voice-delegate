@@ -33,6 +33,51 @@ def _overrides_disabled(value: object) -> bool:
     )
 
 
+def _headers(value: Any) -> dict[str, Any]:
+    """Normalize API maps and dashboard lists without hiding duplicate headers."""
+    if isinstance(value, list):
+        normalized = {}
+        for item in value:
+            _require(isinstance(item, dict))
+            kind = item.get("type")
+            field = {"secret": "secret_id", "dynamic_variable": "variable_name"}.get(kind)
+            _require(field is not None)
+            _require(set(item) == {"type", "name", field})
+            name = item["name"]
+            _require(isinstance(name, str) and name.lower() not in normalized)
+            normalized[name.lower()] = {field: item[field]}
+        return normalized
+    _require(isinstance(value, dict))
+    _require(all(isinstance(name, str) for name in value))
+    normalized = {name.lower(): item for name, item in value.items()}
+    _require(len(normalized) == len(value))
+    return normalized
+
+
+def _goal_parameter(parameters: Any) -> dict[str, Any]:
+    """Accept the dashboard property schema and the JSON Schema API representation."""
+    _require(isinstance(parameters, dict) and parameters.get("type") == "object")
+    _require(
+        not parameters.get("dynamic_variable")
+        and not parameters.get("constant_value")
+        and not parameters.get("is_omitted")
+        and parameters.get("value_type", "llm_prompt") == "llm_prompt"
+    )
+    properties = parameters["properties"]
+    if isinstance(properties, list):
+        _require(len(properties) == 1 and isinstance(properties[0], dict))
+        goal = properties[0]
+        _require(goal.get("id") == "goal" and goal.get("required") is True)
+        _require(isinstance(parameters.get("required", False), bool))
+    else:
+        _require(isinstance(properties, dict) and set(properties) == {"goal"})
+        _require(parameters["required"] == ["goal"])
+        goal = properties["goal"]
+    _require(isinstance(goal, dict))
+    _require(goal.get("value_type", "llm_prompt") == "llm_prompt")
+    return dict(goal)
+
+
 class TokenResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     token: str = Field(min_length=1, max_length=16000, pattern=r"^\S+$", repr=False)
@@ -139,9 +184,9 @@ class ElevenLabsProvider:
                 _require(not schema.get("path_params_schema"))
                 _require(not schema.get("query_params_schema"))
                 _require(not schema.get("auth_connection"))
+                _require(not schema.get("mtls_auth_connection"))
                 _require(not schema.get("response_filter"))
-                headers = {name.lower(): value for name, value in schema["request_headers"].items()}
-                _require(len(headers) == len(schema["request_headers"]))
+                headers = _headers(schema["request_headers"])
                 _require(set(headers) == {"x-voice-webhook-token", "x-voice-conversation-id"})
                 token = headers["x-voice-webhook-token"]
                 _require(
@@ -154,16 +199,7 @@ class ElevenLabsProvider:
                     headers["x-voice-conversation-id"]
                     == {"variable_name": "system__conversation_id"}
                 )
-                parameters = schema["request_body_schema"]
-                _require(parameters.get("type") == "object")
-                _require(
-                    not parameters.get("dynamic_variable")
-                    and not parameters.get("constant_value")
-                    and not parameters.get("is_omitted")
-                )
-                _require(parameters["required"] == ["goal"])
-                _require(set(parameters["properties"]) == {"goal"})
-                goal = parameters["properties"]["goal"]
+                goal = _goal_parameter(schema["request_body_schema"])
                 _require(goal["type"] == "string" and bool(goal.get("description")))
                 _require(
                     not any(

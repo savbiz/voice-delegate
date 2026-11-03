@@ -214,9 +214,15 @@ async def test_failed_bootstrap_consumes_attempt_and_redacts_upstream_failure(
         "method",
         "extra_param",
         "builtin",
+        "duplicate_header",
+        "optional_goal",
+        "static_goal",
+        "dynamic_goal",
+        "mtls",
     ],
 )
-async def test_agent_policy_is_validated_before_credentials(change: str) -> None:
+@pytest.mark.parametrize("dashboard", [False, True])
+async def test_agent_policy_is_validated_before_credentials(change: str, dashboard: bool) -> None:
     tool: dict[str, Any] = {
         "type": "webhook",
         "name": "delegate_task",
@@ -262,6 +268,52 @@ async def test_agent_policy_is_validated_before_credentials(change: str) -> None
         tool["api_schema"]["request_body_schema"]["properties"]["owner"] = {"type": "string"}
     if change == "builtin":
         agent["conversation_config"]["agent"]["prompt"]["built_in_tools"] = {"other": {}}
+
+    if dashboard:
+        schema = tool["api_schema"]
+        schema["request_headers"] = [
+            {
+                "type": "secret" if name == "X-Voice-Webhook-Token" else "dynamic_variable",
+                "name": name,
+                **(value if isinstance(value, dict) else {"value": value}),
+            }
+            for name, value in schema["request_headers"].items()
+        ]
+        body = schema["request_body_schema"]
+        body["properties"] = [
+            {
+                "id": name,
+                "required": name in body["required"],
+                "value_type": "llm_prompt",
+                "dynamic_variable": "",
+                "constant_value": "",
+                "is_system_provided": False,
+                **value,
+            }
+            for name, value in body["properties"].items()
+        ]
+        body["required"] = False
+        body["value_type"] = "llm_prompt"
+
+    schema = tool["api_schema"]
+    if change == "duplicate_header":
+        if dashboard:
+            header = dict(schema["request_headers"][0])
+            header["name"] = header["name"].lower()
+            schema["request_headers"].append(header)
+        else:
+            schema["request_headers"]["x-voice-webhook-token"] = {"secret_id": "other"}
+    if change == "optional_goal":
+        if dashboard:
+            schema["request_body_schema"]["properties"][0]["required"] = False
+        else:
+            schema["request_body_schema"]["required"] = []
+    if change in {"static_goal", "dynamic_goal"}:
+        properties = schema["request_body_schema"]["properties"]
+        goal = properties[0] if dashboard else properties["goal"]
+        goal["value_type"] = "constant" if change == "static_goal" else "dynamic_variable"
+    if change == "mtls":
+        schema["mtls_auth_connection"] = {"id": "unexpected"}
 
     async with httpx.AsyncClient(
         transport=httpx.MockTransport(lambda request: httpx.Response(200, json=agent))

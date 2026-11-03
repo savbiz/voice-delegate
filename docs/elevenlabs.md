@@ -66,6 +66,12 @@ configuration before minting a browser token, including referenced tool definiti
 }
 ```
 
+The validator accepts both the API object/map representation above and the dashboard JSON
+editor representation: header entries as a list with explicit types, and body properties as
+a list with `id=goal`, `required=true` and `value_type=llm_prompt`. The dashboard root body
+`required` boolean is distinct from the required goal property. Duplicate headers, additional
+properties and static or dynamic-variable goal sources remain rejected.
+
 The URL must exactly equal `VOICE_ELEVENLABS_WEBHOOK_URL`. The token header must reference
 provider secret storage; the conversation header must use the reserved system variable,
 not a model-generated owner ID. Header binding authenticates a service request; the backend
