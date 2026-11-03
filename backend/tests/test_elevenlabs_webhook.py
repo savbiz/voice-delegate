@@ -352,3 +352,23 @@ async def test_oversized_service_request_is_rejected_before_work(fixture: Fixtur
     assert result.status_code == 413
     assert result.headers["cache-control"] == "no-store"
     assert fixture.worker.calls == 0
+
+
+async def test_late_connected_event_cannot_reopen_a_closing_session(fixture: Fixture) -> None:
+    f = fixture
+    f.session.state = "closing"
+    f.client.headers.update(
+        {
+            "Origin": "http://localhost:5173",
+            "X-Session-Key": f.session.key,
+        }
+    )
+    response = await f.client.post(
+        f"/api/sessions/{f.session.id}/elevenlabs/events",
+        json={"kind": "connected", "sequence": 0, "conversation_id": "conv_fixture"},
+    )
+    assert response.status_code == 409
+    assert f.session.state == "closing"
+    assert not f.connection.started
+    assert f.session.watcher is None
+    assert f.session.portfolio.pump is None

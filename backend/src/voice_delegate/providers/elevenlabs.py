@@ -3,6 +3,7 @@
 import asyncio
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -14,6 +15,7 @@ from .models import (
     ClientCredential,
     ProviderCapabilities,
     ProviderError,
+    ProviderUsage,
     SessionConfig,
     UnsupportedCapability,
 )
@@ -31,6 +33,120 @@ def _overrides_disabled(value: object) -> bool:
     return value is False or (
         isinstance(value, dict) and all(_overrides_disabled(v) for v in value.values())
     )
+
+
+def _headers(value: Any) -> dict[str, Any]:
+    """Normalize API maps and dashboard lists without hiding duplicate headers."""
+    if isinstance(value, list):
+        normalized = {}
+        for item in value:
+            _require(isinstance(item, dict))
+            kind = item.get("type")
+            field = {"secret": "secret_id", "dynamic_variable": "variable_name"}.get(kind)
+            _require(field is not None)
+            _require(set(item) == {"type", "name", field})
+            name = item["name"]
+            _require(isinstance(name, str) and name.lower() not in normalized)
+            normalized[name.lower()] = {field: item[field]}
+        return normalized
+    _require(isinstance(value, dict))
+    _require(all(isinstance(name, str) for name in value))
+    normalized = {name.lower(): item for name, item in value.items()}
+    _require(len(normalized) == len(value))
+    return normalized
+
+
+def _goal_parameter(parameters: Any) -> dict[str, Any]:
+    """Accept the dashboard property schema and the JSON Schema API representation."""
+    _require(isinstance(parameters, dict) and parameters.get("type") == "object")
+    _require(
+        not parameters.get("dynamic_variable")
+        and not parameters.get("constant_value")
+        and not parameters.get("is_omitted")
+        and parameters.get("value_type", "llm_prompt") == "llm_prompt"
+    )
+    properties = parameters["properties"]
+    if isinstance(properties, list):
+        _require(len(properties) == 1 and isinstance(properties[0], dict))
+        goal = properties[0]
+        _require(goal.get("id") == "goal" and goal.get("required") is True)
+        _require(isinstance(parameters.get("required", False), bool))
+    else:
+        _require(isinstance(properties, dict) and set(properties) == {"goal"})
+        _require(parameters["required"] == ["goal"])
+        goal = properties["goal"]
+    _require(isinstance(goal, dict))
+    _require(goal.get("value_type", "llm_prompt") == "llm_prompt")
+    return dict(goal)
+
+
+def _workflow_inactive(value: Any) -> bool:
+    """Allow only absent workflows or the dashboard's isolated start placeholder."""
+    if value is None or value == {}:
+        return True
+    if not isinstance(value, dict):
+        return False
+    if set(value) - {"nodes", "edges", "subgraphs", "prevent_subagent_loops"}:
+        return False
+    if value.get("edges") or value.get("subgraphs"):
+        return False
+    if value.get("prevent_subagent_loops", False) is not False:
+        return False
+    nodes = value.get("nodes", {})
+    if not isinstance(nodes, dict) or len(nodes) > 1:
+        return False
+    if not nodes:
+        return True
+    node = next(iter(nodes.values()))
+    return (
+        isinstance(node, dict)
+        and not set(node) - {"type", "position", "edge_order", "parent_subgraph_id"}
+        and node.get("type") == "start"
+        and not node.get("edge_order")
+        and node.get("parent_subgraph_id") is None
+    )
+
+
+def _validate_webhook(tool: Any, webhook_url: str) -> dict[str, Any]:
+    """Validate each advertised tool representation against the same policy."""
+    _require(tool["type"] == "webhook" and tool["name"] == "delegate_task")
+    _require(tool["execution_mode"] == "async")
+    _require(tool.get("interruption_mode", "allow") == "allow")
+    _require(tool["response_timeout_secs"] == 120)
+    _require(tool.get("follow_redirects", False) is False)
+    schema = tool["api_schema"]
+    _require(bool(webhook_url) and schema["url"] == webhook_url)
+    _require(schema["method"] == "POST")
+    _require(schema.get("content_type") in (None, "application/json"))
+    _require(not schema.get("path_params_schema"))
+    _require(not schema.get("query_params_schema"))
+    _require(not schema.get("auth_connection"))
+    _require(not schema.get("mtls_auth_connection"))
+    _require(not schema.get("response_filter"))
+    headers = _headers(schema["request_headers"])
+    _require(set(headers) == {"x-voice-webhook-token", "x-voice-conversation-id"})
+    token = headers["x-voice-webhook-token"]
+    _require(
+        isinstance(token, dict)
+        and set(token) == {"secret_id"}
+        and isinstance(token["secret_id"], str)
+        and bool(token["secret_id"])
+    )
+    _require(headers["x-voice-conversation-id"] == {"variable_name": "system__conversation_id"})
+    goal = _goal_parameter(schema["request_body_schema"])
+    _require(goal["type"] == "string" and bool(goal.get("description")))
+    _require(
+        not any(
+            goal.get(k)
+            for k in (
+                "dynamic_variable",
+                "constant_value",
+                "is_system_provided",
+                "is_omitted",
+            )
+        )
+    )
+    return headers
 
 
 class TokenResponse(BaseModel):
@@ -109,73 +225,33 @@ class ElevenLabsProvider:
                 platform = agent["platform_settings"]
                 _require(isinstance(config, dict) and isinstance(platform, dict))
                 _require(platform["auth"]["enable_auth"] is True)
-                _require(not agent.get("workflow"))
+                _require(_workflow_inactive(agent.get("workflow")))
                 _require(_overrides_disabled(platform.get("overrides", {})))
                 conversation = config["conversation"]
                 _require(0 < conversation["max_duration_seconds"] <= ttl)
                 prompt = config["agent"]["prompt"]
-                _require(not prompt.get("built_in_tools"))
+                builtins = prompt.get("built_in_tools")
+                _require(
+                    builtins is None
+                    or (
+                        isinstance(builtins, dict)
+                        and all(value is None for value in builtins.values())
+                    )
+                )
                 tools = prompt.get("tools", [])
                 identities = prompt.get("tool_ids", [])
+                _require(isinstance(tools, list) and len(tools) <= 1)
+                _require(isinstance(identities, list) and len(identities) <= 1)
                 if identities:
-                    _require(not tools and len(identities) == 1)
                     identity = identities[0]
                     _require(
                         isinstance(identity, str)
                         and re.fullmatch("[a-zA-Z0-9_-]{1,200}", identity) is not None
                     )
-                    tools = [(await self._json("tools/" + identity))["tool_config"]]
-                _require(len(tools) == 1)
-                tool = tools[0]
-                _require(tool["type"] == "webhook" and tool["name"] == "delegate_task")
-                _require(tool["execution_mode"] == "async")
-                _require(tool.get("interruption_mode", "allow") == "allow")
-                _require(tool["response_timeout_secs"] == 120)
-                _require(tool.get("follow_redirects", False) is False)
-                schema = tool["api_schema"]
-                _require(bool(self.webhook_url) and schema["url"] == self.webhook_url)
-                _require(schema["method"] == "POST")
-                _require(schema.get("content_type") in (None, "application/json"))
-                _require(not schema.get("path_params_schema"))
-                _require(not schema.get("query_params_schema"))
-                _require(not schema.get("auth_connection"))
-                _require(not schema.get("response_filter"))
-                headers = {name.lower(): value for name, value in schema["request_headers"].items()}
-                _require(len(headers) == len(schema["request_headers"]))
-                _require(set(headers) == {"x-voice-webhook-token", "x-voice-conversation-id"})
-                token = headers["x-voice-webhook-token"]
-                _require(
-                    isinstance(token, dict)
-                    and set(token) == {"secret_id"}
-                    and isinstance(token["secret_id"], str)
-                    and bool(token["secret_id"])
-                )
-                _require(
-                    headers["x-voice-conversation-id"]
-                    == {"variable_name": "system__conversation_id"}
-                )
-                parameters = schema["request_body_schema"]
-                _require(parameters.get("type") == "object")
-                _require(
-                    not parameters.get("dynamic_variable")
-                    and not parameters.get("constant_value")
-                    and not parameters.get("is_omitted")
-                )
-                _require(parameters["required"] == ["goal"])
-                _require(set(parameters["properties"]) == {"goal"})
-                goal = parameters["properties"]["goal"]
-                _require(goal["type"] == "string" and bool(goal.get("description")))
-                _require(
-                    not any(
-                        goal.get(k)
-                        for k in (
-                            "dynamic_variable",
-                            "constant_value",
-                            "is_system_provided",
-                            "is_omitted",
-                        )
-                    )
-                )
+                    tools = [*tools, (await self._json("tools/" + identity))["tool_config"]]
+                _require(bool(tools))
+                headers = [_validate_webhook(tool, self.webhook_url) for tool in tools]
+                _require(all(value == headers[0] for value in headers))
         except (
             httpx.HTTPError,
             TimeoutError,
@@ -191,16 +267,43 @@ class ElevenLabsProvider:
             )
             raise ProviderError(message) from None
 
-    async def confirm_closed(self, conversation_id: str) -> bool:
+    async def confirm_closed(
+        self, conversation_id: str, on_usage: Callable[[ProviderUsage], None] | None = None
+    ) -> bool:
         """A browser disconnect alone cannot confirm that upstream usage ended."""
         try:
             payload = await self._json("conversations/" + conversation_id)
-            return payload.get("agent_id") == self.agent_id and payload.get("status") in {
-                "done",
-                "failed",
-            }
+            confirmed = (
+                payload.get("agent_id") == self.agent_id
+                and payload.get("conversation_id") == conversation_id
+                and payload.get("status") in {"done", "failed"}
+            )
+            if confirmed and on_usage is not None:
+                metadata = payload.get("metadata")
+                if isinstance(metadata, dict):
+                    charging = metadata.get("charging") or {}
+                    if isinstance(charging, dict):
+                        try:
+                            usage = ProviderUsage(
+                                credits=metadata.get("cost"),
+                                voice_surcharge_credits=charging.get("voice_surcharge_charge"),
+                                usd=metadata.get("cost_fiat"),
+                            )
+                        except ValueError:
+                            pass  # Malformed accounting must not obscure confirmed closure.
+                        else:
+                            if any(
+                                value is not None
+                                for value in (
+                                    usage.credits,
+                                    usage.voice_surcharge_credits,
+                                    usage.usd,
+                                )
+                            ):
+                                on_usage(usage)
         except (httpx.HTTPError, TimeoutError, ValueError, TypeError):
             return False
+        return confirmed
 
     async def _fetch_bootstrap(self) -> BrowserBootstrap:
         raw = bytearray()

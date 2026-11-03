@@ -189,7 +189,7 @@ calls or cloud/account changes were made.
 
 ## Session cost estimates
 
-Opt-in session accounting uses versioned prices, observed voice duration and numeric worker,
+Default-on session accounting uses versioned prices, observed voice duration and numeric worker,
 Decisions and search usage. Offline arithmetic, isolation and remote propagation are verified.
 Live billing reconciliation is pending; see [cost estimates](cost-estimates.md).
 

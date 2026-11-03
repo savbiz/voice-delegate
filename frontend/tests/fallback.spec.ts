@@ -2,62 +2,80 @@
 import { expect, test } from '@playwright/test';
 import { installFakePeers, failLatestPeer } from './fixtures';
 
-test('media failure replaces the peer once and closes the owned session', async ({ page }) => {
-  await page.addInitScript(installFakePeers);
-  await page.clock.install();
-  const calls: string[] = [];
-  const sessionAuth: (string | undefined)[] = [];
-  const reconnects: { body: unknown; key: string | undefined }[] = [];
-  await page.route('**/api/**', async (route) => {
-    const path = new URL(route.request().url()).pathname;
-    calls.push(path);
-    if (path.endsWith('/config')) return route.fulfill({ json: { voice_available: true } });
-    if (path.includes('/sessions')) {
-      const authorization = route.request().headers().authorization;
-      sessionAuth.push(authorization);
-      if (authorization !== 'Bearer original-invitation')
-        return route.fulfill({ status: 401, json: {} });
-    }
-    if (path.endsWith('/sessions')) return route.fulfill({ json: { id: 'owned', key: 'key' } });
-    if (path.endsWith('/heartbeat'))
+for (const defaultAdapter of ['live', 'elevenlabs']) {
+  test(`media failure preserves selection with ${defaultAdapter} default and closes the owned session`, async ({
+    page,
+  }) => {
+    await page.addInitScript(installFakePeers);
+    await page.clock.install();
+    const calls: string[] = [];
+    const sessionAuth: (string | undefined)[] = [];
+    const reconnects: { body: unknown; key: string | undefined }[] = [];
+    await page.route('**/api/**', async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      calls.push(path);
+      if (path.endsWith('/config')) {
+        const adapter = route.request().postDataJSON()?.adapter ?? defaultAdapter;
+        return route.fulfill({
+          json: {
+            voice_available: true,
+            adapter,
+            session_ui: true,
+            available_adapters: ['live', 'elevenlabs'],
+            transport: adapter === 'elevenlabs' ? 'elevenlabs_agents_webrtc' : 'webrtc',
+          },
+        });
+      }
+      if (path.includes('/sessions')) {
+        const authorization = route.request().headers().authorization;
+        sessionAuth.push(authorization);
+        if (authorization !== 'Bearer original-invitation')
+          return route.fulfill({ status: 401, json: {} });
+      }
+      if (path.endsWith('/sessions')) return route.fulfill({ json: { id: 'owned', key: 'key' } });
+      if (path.endsWith('/heartbeat'))
+        return route.fulfill({
+          json: { state: 'connected', delegation: 'idle', generation: 0, fallback_available: true },
+        });
+      if (path.endsWith('/reconnect')) {
+        reconnects.push({
+          body: route.request().postDataJSON(),
+          key: route.request().headers()['x-session-key'],
+        });
+      }
       return route.fulfill({
-        json: { state: 'connected', delegation: 'idle', generation: 0, fallback_available: true },
+        json: path.endsWith('/close') ? { finalized: true } : { sdp: 'v=0\r\n' },
       });
-    if (path.endsWith('/reconnect')) {
-      reconnects.push({
-        body: route.request().postDataJSON(),
-        key: route.request().headers()['x-session-key'],
-      });
-    }
-    return route.fulfill({
-      json: path.endsWith('/close') ? { finalized: true } : { sdp: 'v=0\r\n' },
     });
+    await page.goto('/');
+    await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+    await page.getByRole('combobox', { name: 'Voice provider', exact: false }).selectOption('live');
+    await page.getByLabel('Personal invitation code').fill('original-invitation');
+    await page.getByRole('button', { name: 'Start conversation' }).click();
+    await expect(page.getByRole('status')).toContainText('Connected.');
+    await page.getByLabel('Personal invitation code').fill('updated-invitation');
+    await expect(page.getByRole('status')).toContainText('Connected.');
+    for (let count = 1; count <= 3; count++) {
+      await page.clock.fastForward(10000);
+      await expect
+        .poll(() => calls.filter((path) => path.endsWith('/heartbeat')).length)
+        .toBe(count);
+    }
+    await expect(page.getByRole('status')).toContainText('Connected.');
+    expect(calls.filter((path) => path.endsWith('/close'))).toHaveLength(0);
+    const failPeer = () => page.evaluate(failLatestPeer);
+    await failPeer();
+    await expect.poll(() => calls.filter((p) => p.endsWith('/reconnect')).length).toBe(1);
+    await expect(page.getByRole('status')).toContainText('Connected.');
+    await failPeer();
+    await expect.poll(() => calls.filter((p) => p.endsWith('/close')).length).toBe(1);
+    expect(sessionAuth.every((value) => value === 'Bearer original-invitation')).toBe(true);
+    expect(reconnects).toEqual([{ body: { sdp: 'v=0\r\n', generation: 0 }, key: 'key' }]);
+    expect(calls.filter((p) => p.endsWith('/sessions')).length).toBe(1);
+    expect(calls.filter((p) => p.endsWith('/reconnect')).length).toBe(1);
+    await expect(page.getByRole('button', { name: 'Start conversation' })).toBeEnabled();
   });
-  await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
-  await page.getByLabel('Personal invitation code').fill('original-invitation');
-  await page.getByRole('button', { name: 'Start conversation' }).click();
-  await expect(page.getByRole('status')).toContainText('Connected.');
-  await page.getByLabel('Personal invitation code').fill('updated-invitation');
-  await expect(page.getByRole('status')).toContainText('Connected.');
-  for (let count = 1; count <= 3; count++) {
-    await page.clock.fastForward(10000);
-    await expect.poll(() => calls.filter((path) => path.endsWith('/heartbeat')).length).toBe(count);
-  }
-  await expect(page.getByRole('status')).toContainText('Connected.');
-  expect(calls.filter((path) => path.endsWith('/close'))).toHaveLength(0);
-  const failPeer = () => page.evaluate(failLatestPeer);
-  await failPeer();
-  await expect.poll(() => calls.filter((p) => p.endsWith('/reconnect')).length).toBe(1);
-  await expect(page.getByRole('status')).toContainText('Connected.');
-  await failPeer();
-  await expect.poll(() => calls.filter((p) => p.endsWith('/close')).length).toBe(1);
-  expect(sessionAuth.every((value) => value === 'Bearer original-invitation')).toBe(true);
-  expect(reconnects).toEqual([{ body: { sdp: 'v=0\r\n', generation: 0 }, key: 'key' }]);
-  expect(calls.filter((p) => p.endsWith('/sessions')).length).toBe(1);
-  expect(calls.filter((p) => p.endsWith('/reconnect')).length).toBe(1);
-  await expect(page.getByRole('button', { name: 'Start conversation' })).toBeEnabled();
-});
+}
 
 test('busy work and failed recovery explain manual actions without replay', async ({ page }) => {
   await page.addInitScript(installFakePeers);

@@ -88,12 +88,12 @@
     "digest": "76470592f1aa9ab91c820518ed2937783b860d98ac6672617edb6402dab1e41b"
   },
   {
-    "id": "61bbac6601826ee2",
+    "id": "14a8f9ace32a9d93",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status and verification",
-    "text": "The [hosted frontend](https://voice-delegate.vercel.app) can run the simulated demo\nwithout the backend. Railway is the canonical deployment target, but its trial\nexpired: this README does not claim the [configured API](https://voice-delegate-api-production.up.railway.app/healthz)\nis currently available or running the latest commit. Hosted documentation search\nand live voice require a healthy backend, invitations and applicable provider keys.",
-    "digest": "61bbac6601826ee26ea64a1817f3a26be45cf4c242843406d629f4997a7a2f22"
+    "text": "The [hosted frontend](https://voice-delegate.vercel.app) includes a simulated demo.\nLive voice and hosted documentation search use the\n[configured Railway API](https://voice-delegate-api-production.up.railway.app/healthz)\nand require a healthy deployment, invitation and applicable provider credentials.\nApplication daily allowances and provider account credits are independent;\nsee [operations](docs/operations.md) for diagnosis and targeted quota resets.\nDeployment availability and provider credit balance must be checked at use time.",
+    "digest": "14a8f9ace32a9d93edbf861b68668b0e195f3d88fd6c455b0d0976f6ad53fb6f"
   },
   {
     "id": "9c14fcb228778910",
@@ -120,12 +120,28 @@
     "digest": "4cc15322ee3bcc5c7796d5298f6939d9b4988c1aca40061bf628e28d4daa8749"
   },
   {
-    "id": "8977605ff6333edd",
+    "id": "0fb3a0058350f09f",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Providers and worker modes",
-    "text": "ElevenLabs Agents is an opt-in browser SDK transport with server-side webhook delegation (`VOICE_ADAPTER=elevenlabs`)\nbehind a disabled-by-default flag. Its [application contracts](docs/elevenlabs.md)\nare verified offline; live provider acceptance is pending. Cross-vendor fallback, SIP telephone entry\nand worker MCP connections are not implemented here.",
-    "digest": "8977605ff6333edd47bc9b370792cde0c617899b1acf60d319281eb6653731bc"
+    "text": "ElevenLabs requires its private backend API key, agent ID and shared webhook token;\nsee [agent setup and authentication](docs/elevenlabs.md). The browser receives a\nshort-lived conversation token, never the private provider key.",
+    "digest": "0fb3a0058350f09f6dd41b630b513d96058943d48cbbdfa4d6efa2f3d245cc10"
+  },
+  {
+    "id": "193bce726cd50c2a",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Providers and worker modes",
+    "text": "Enable `VOICE_SESSION_UI=true` for a server-allowlisted provider selector, observed audio\nactivity and responsive session panels. Provider choice is fixed for each conversation;\nthis selector uses operator-configured credentials, not user-supplied keys.\n[Session controls](docs/session-ui.md) describe availability and unsupported preferences.",
+    "digest": "193bce726cd50c2a3802c7aa67ebaab78800a50101d2a1c7809f34d64e55f91a"
+  },
+  {
+    "id": "68593206f222e874",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Providers and worker modes",
+    "text": "[Cost estimates](docs/cost-estimates.md) are enabled by default. The UI retains a final\nbreakdown by voice, worker, decisions and search, labeling missing prices as partial. When available, ElevenLabs\nreported credits/USD are shown separately; estimates are not a provider invoice.\nCross-vendor fallback, SIP telephone entry and worker MCP connections are not implemented.\nThe [roadmap](docs/roadmap.md) tracks these and moderation/cascade design work separately.",
+    "digest": "68593206f222e874e87ca372e5ed6c1c47db4cec2fceabaf8449c4d0bac466b9"
   },
   {
     "id": "b6416bd6d6454d69",
@@ -800,12 +816,12 @@
     "digest": "520b788ec0b06be16364bee93e8f9c8a46b3bb3e408346700cfb84976fe80d14"
   },
   {
-    "id": "5be328e09737fde4",
+    "id": "77f58aacbba40489",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Copyable local configuration",
-    "text": "After merging the dev/configuration PR and updating your main checkout, use the\ncommented [server template](../.env.example) as the complete list of server settings.\nIt contains core declared defaults, no keys and the canonical adapter name. Optional\nprovider settings are documented in their integration guides and generated reference.\nThe [generated reference](configuration.md) lists all enums, types and bounds and the\ncross-field validation rules; model IDs, voice names, paths and account credentials\nare free-form settings rather than finite application enums.",
-    "digest": "5be328e09737fde4252b40e63337fca37fc69575c305197c68e0a4cb64c4df97"
+    "text": "After merging the dev/configuration PR and updating your main checkout, use the\ncommented [server template](../.env.example) as a starting point for core server settings.\nIt contains core declared defaults, no keys and the canonical adapter name. Optional\nprovider settings are documented in their integration guides and generated reference.\nThe [generated reference](configuration.md) lists all enums, types and bounds and the\ncross-field validation rules; model IDs, voice names, paths and account credentials\nare free-form settings rather than finite application enums.",
+    "digest": "77f58aacbba40489da25773dbdf38eb499d4d222292e02918a1fd138bdc5f7f9"
   },
   {
     "id": "bf8c0ce8470406a7",

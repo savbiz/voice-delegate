@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -12,7 +13,7 @@ from voice_delegate.api.app import create_app
 from voice_delegate.config import Settings
 from voice_delegate.providers.elevenlabs import MAX_RESPONSE_BYTES, ElevenLabsProvider
 from voice_delegate.providers.fake import FakeProvider
-from voice_delegate.providers.models import ProviderError, UnsupportedCapability
+from voice_delegate.providers.models import ProviderError, ProviderUsage, UnsupportedCapability
 
 
 async def test_typed_bootstrap_uses_fixed_endpoint_and_no_sdp() -> None:
@@ -102,9 +103,11 @@ def test_preview_requires_credentials_and_explicit_selection() -> None:
         Settings(voice_provider="elevenlabs")
 
 
+@pytest.mark.parametrize("connected", [False, True])
 async def test_bootstrap_route_is_owned_one_shot_and_blocks_sdp_setup(
     asgi_client: ASGIClientFactory,
     monkeypatch: pytest.MonkeyPatch,
+    connected: bool,
 ) -> None:
     settings = Settings(
         voice_provider="elevenlabs",
@@ -127,6 +130,17 @@ async def test_bootstrap_route_is_owned_one_shot_and_blocks_sdp_setup(
     async def validate(self: ElevenLabsProvider, ttl: float) -> None:
         pass
 
+    async def confirm(
+        self: ElevenLabsProvider,
+        conversation_id: str,
+        on_usage: Callable[[ProviderUsage], None] | None = None,
+    ) -> bool:
+        assert conversation_id == "conv_fixture"
+        assert on_usage is not None
+        on_usage(ProviderUsage(credits=123, voice_surcharge_credits=2, usd=0.01))
+        return True
+
+    monkeypatch.setattr(ElevenLabsProvider, "confirm_closed", confirm)
     monkeypatch.setattr(ElevenLabsProvider, "validate_agent", validate)
     monkeypatch.setattr(ElevenLabsProvider, "prepare_browser", prepare)
     app = create_app(settings)
@@ -146,8 +160,21 @@ async def test_bootstrap_route_is_owned_one_shot_and_blocks_sdp_setup(
             await client.post(f"/api/sessions/{session['id']}/offer", json={"sdp": "v=0\r\n"})
         ).status_code == 409
         assert calls == 1
-        closed = await client.post(f"/api/sessions/{session['id']}/close")
-        assert not closed.json()["finalized"]
+        if connected:
+            assert (
+                await client.post(
+                    f"/api/sessions/{session['id']}/elevenlabs/events",
+                    json={"kind": "connected", "sequence": 0, "conversation_id": "conv_fixture"},
+                )
+            ).status_code == 200
+        closed = (await client.post(f"/api/sessions/{session['id']}/close")).json()
+        assert closed["finalized"] is connected
+        receipt = closed["costs"]["provider_usage"]
+        if connected:
+            assert receipt["credits"] == 123
+            assert receipt["voice_surcharge_credits"] == 2
+        else:
+            assert receipt is None
 
 
 async def test_default_app_does_not_enable_elevenlabs(asgi_client: ASGIClientFactory) -> None:
@@ -214,9 +241,22 @@ async def test_failed_bootstrap_consumes_attempt_and_redacts_upstream_failure(
         "method",
         "extra_param",
         "builtin",
+        "duplicate_header",
+        "optional_goal",
+        "static_goal",
+        "dynamic_goal",
+        "mtls",
+        "workflow_edge",
+        "workflow_prompt",
+        "workflow_subgraph",
+        "duplicate_tool_id",
     ],
 )
-async def test_agent_policy_is_validated_before_credentials(change: str) -> None:
+@pytest.mark.parametrize("dashboard", [False, True])
+@pytest.mark.parametrize("catalog", ["inline", "referenced", "expanded"])
+async def test_agent_policy_is_validated_before_credentials(
+    change: str, dashboard: bool, catalog: str
+) -> None:
     tool: dict[str, Any] = {
         "type": "webhook",
         "name": "delegate_task",
@@ -263,9 +303,98 @@ async def test_agent_policy_is_validated_before_credentials(change: str) -> None
     if change == "builtin":
         agent["conversation_config"]["agent"]["prompt"]["built_in_tools"] = {"other": {}}
 
-    async with httpx.AsyncClient(
-        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=agent))
-    ) as http:
+    if dashboard:
+        schema = tool["api_schema"]
+        schema["request_headers"] = [
+            {
+                "type": "secret" if name == "X-Voice-Webhook-Token" else "dynamic_variable",
+                "name": name,
+                **(value if isinstance(value, dict) else {"value": value}),
+            }
+            for name, value in schema["request_headers"].items()
+        ]
+        body = schema["request_body_schema"]
+        body["properties"] = [
+            {
+                "id": name,
+                "required": name in body["required"],
+                "value_type": "llm_prompt",
+                "dynamic_variable": "",
+                "constant_value": "",
+                "is_system_provided": False,
+                **value,
+            }
+            for name, value in body["properties"].items()
+        ]
+        body["required"] = False
+        body["value_type"] = "llm_prompt"
+
+    schema = tool["api_schema"]
+    if change == "duplicate_header":
+        if dashboard:
+            header = dict(schema["request_headers"][0])
+            header["name"] = header["name"].lower()
+            schema["request_headers"].append(header)
+        else:
+            schema["request_headers"]["x-voice-webhook-token"] = {"secret_id": "other"}
+    if change == "optional_goal":
+        if dashboard:
+            schema["request_body_schema"]["properties"][0]["required"] = False
+        else:
+            schema["request_body_schema"]["required"] = []
+    if change in {"static_goal", "dynamic_goal"}:
+        properties = schema["request_body_schema"]["properties"]
+        goal = properties[0] if dashboard else properties["goal"]
+        goal["value_type"] = "constant" if change == "static_goal" else "dynamic_variable"
+    if change == "mtls":
+        schema["mtls_auth_connection"] = {"id": "unexpected"}
+
+    prompt = agent["conversation_config"]["agent"]["prompt"]
+    if catalog != "inline":
+        agent["workflow"] = {
+            "nodes": {
+                "start_node": {
+                    "type": "start",
+                    "position": {"x": 0, "y": 0},
+                    "edge_order": [],
+                    "parent_subgraph_id": None,
+                }
+            },
+            "edges": {},
+            "subgraphs": {},
+            "prevent_subagent_loops": False,
+        }
+        prompt.setdefault("built_in_tools", {"end_call": None, "language_detection": None})
+        prompt["tool_ids"] = ["tool_fixture"]
+        if catalog == "referenced" and change != "extra_tool":
+            prompt["tools"] = []
+    if change.startswith("workflow_"):
+        workflow = agent.setdefault(
+            "workflow",
+            {"nodes": {"start_node": {"type": "start"}}, "edges": {}, "subgraphs": {}},
+        )
+        if change == "workflow_edge":
+            workflow["edges"] = {"edge": {"source": "start_node", "target": "other"}}
+        if change == "workflow_prompt":
+            workflow["nodes"]["start_node"]["additional_prompt"] = "Unexpected override"
+        if change == "workflow_subgraph":
+            workflow["subgraphs"] = {"extra": {}}
+    if change == "duplicate_tool_id":
+        prompt["tool_ids"] = ["tool_fixture", "tool_fixture"]
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        resolved = json.loads(json.dumps(tool))
+        if change == "conflicting_reference":
+            if dashboard:
+                resolved["api_schema"]["request_headers"][0]["secret_id"] = "other-stored-token"
+            else:
+                resolved["api_schema"]["request_headers"]["X-Voice-Webhook-Token"] = {
+                    "secret_id": "other-stored-token"
+                }
+        payload = {"tool_config": resolved} if "/tools/" in request.url.path else agent
+        return httpx.Response(200, json=payload)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
         provider = ElevenLabsProvider(
             "fixture",
             "agent_fixture",
@@ -277,6 +406,13 @@ async def test_agent_policy_is_validated_before_credentials(change: str) -> None
         else:
             with pytest.raises(ProviderError, match="private async"):
                 await provider.validate_agent(300)
+
+
+@pytest.mark.parametrize("dashboard", [False, True])
+async def test_expanded_and_referenced_tool_must_agree(dashboard: bool) -> None:
+    await test_agent_policy_is_validated_before_credentials(
+        "conflicting_reference", dashboard, "expanded"
+    )
 
 
 async def test_sdk_connection_deduplication_bounds_and_verified_close() -> None:
@@ -343,3 +479,68 @@ async def test_sdk_speech_preserves_work_and_explicit_cancel_settles_native_call
         assert "cancelled" in (connection.calls["second"].result or "")
     finally:
         await manager.aclose()
+
+
+@pytest.mark.parametrize(
+    ("change", "confirmed", "receipt"),
+    [
+        ("none", True, True),
+        ("zero", True, True),
+        ("pending", False, False),
+        ("foreign_agent", False, False),
+        ("foreign_conversation", False, False),
+        ("missing", True, False),
+        ("negative", True, False),
+        ("boolean", True, False),
+        ("invalid_usd", True, False),
+        ("failure", False, False),
+    ],
+)
+async def test_close_reports_only_bounded_owned_provider_charges(
+    change: str, confirmed: bool, receipt: bool
+) -> None:
+    metadata: dict[str, Any] = {
+        "cost": 296,
+        "cost_fiat": 0.012,
+        "charging": {"voice_surcharge_charge": 4},
+    }
+    payload: dict[str, Any] = {
+        "agent_id": "agent_fixture",
+        "conversation_id": "conv_fixture",
+        "status": "done",
+        "metadata": metadata,
+        "transcript": [{"message": "must not be forwarded"}],
+    }
+    if change == "zero":
+        metadata.update(cost=0, cost_fiat=0, charging={"voice_surcharge_charge": 0})
+    if change == "pending":
+        payload["status"] = "processing"
+    if change == "foreign_agent":
+        payload["agent_id"] = "agent_other"
+    if change == "foreign_conversation":
+        payload["conversation_id"] = "conv_other"
+    if change == "missing":
+        payload.pop("metadata")
+    if change == "negative":
+        metadata["cost"] = -1
+    if change == "boolean":
+        metadata["cost"] = True
+    if change == "invalid_usd":
+        metadata["cost_fiat"] = "0.012"
+    seen: list[ProviderUsage] = []
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(503 if change == "failure" else 200, json=payload)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as http:
+        provider = ElevenLabsProvider("fixture", "agent_fixture", http=http)
+        assert await provider.confirm_closed("conv_fixture", seen.append) is confirmed
+    assert len(requests) == 1
+    assert bool(seen) is receipt
+    if receipt:
+        value = seen[0].model_dump()
+        assert set(value) == {"provider", "credits", "voice_surcharge_credits", "usd"}
+        assert value["credits"] == (0 if change == "zero" else 296)
+        assert value["voice_surcharge_credits"] == (0 if change == "zero" else 4)

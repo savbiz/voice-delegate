@@ -40,6 +40,7 @@ it('uses SDK-owned media without browser tool execution or result polling', asyn
   await controller.start();
   expect(connected).toHaveBeenCalledOnce();
   expect(setup.options().clientTools).toBeUndefined();
+  expect(setup.options().workletPaths?.rawAudioProcessor).toContain('rawAudioProcessor');
   expect(
     vi
       .mocked(setup.request)

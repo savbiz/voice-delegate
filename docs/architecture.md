@@ -392,7 +392,7 @@ The [Agents integration](elevenlabs.md) uses direct browser WebRTC media and an 
 
 ## Session accounting
 
-[Cost estimates](cost-estimates.md) are opt-in, session-scoped numeric ledgers with frozen price assumptions, remote usage propagation and fixed aggregate component labels.
+[Cost estimates](cost-estimates.md) are default-on, session-scoped numeric ledgers with frozen price assumptions, remote usage propagation and fixed aggregate component labels.
 
 ## Session provider selection
 

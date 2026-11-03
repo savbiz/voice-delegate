@@ -389,7 +389,7 @@ export function createLiveSession(
         audio_timing_available?: boolean;
         intent_cancellation?: boolean;
         debug_recording_available?: boolean;
-      }>('/config', undefined, existing ? {} : { adapter: requestedPreferences.adapter });
+      }>('/config', undefined, { adapter: requestedPreferences.adapter });
       if (attempt !== attemptId) return;
       store.update({
         sessionUi: Boolean(config.session_ui),

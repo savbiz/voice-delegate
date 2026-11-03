@@ -22,7 +22,7 @@ It is not speech recognition, acoustic ground truth or the cancellation authorit
 speech events continue to control interruption. If analysis is unavailable it says so;
 stopping or leaving the session clears the observation.
 
-Enable `VOICE_COST_ESTIMATES=true` separately for the cost panel. It shows each component,
+Cost estimates are enabled by default (`VOICE_COST_ESTIMATES=true`). The panel shows each component,
 price version, missing rates and the final snapshot after stop. See
 [cost estimate limitations](cost-estimates.md). Existing task cards retain independent IDs,
 worker/delivery timing and targeted cancellation; transcripts remain a chronological chat.
@@ -35,3 +35,14 @@ allowlists, SDK route scoping, bounded discovery fallback, disabled unsupported 
 selection locking and final cost retention at a 390-pixel viewport. The same flow uses fake
 peers and no paid provider. Actual microphone, playback, device and ElevenLabs live acceptance
 remain pending.
+
+## Admission and provider limits
+
+Application daily reservations and provider account credits are independent. An application
+429 is not an ElevenLabs credit error. For a targeted administrative reset, see
+[reset one invitation’s daily allowance](operations.md#reset-one-invitations-daily-allowance).
+A successful bootstrap does not guarantee that the provider accepts the conversation.
+ElevenLabs can close immediately with `quota_exceeded`; inspect its conversation error
+and account/key limits before buying credits. A finalized cost snapshot is terminal,
+not proof of a successful call. Missing provider usage stays unavailable, and a partial
+zero-dollar estimate does not establish that the call was free.

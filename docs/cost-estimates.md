@@ -1,8 +1,10 @@
 # Session cost estimates
 
-Enable `VOICE_COST_ESTIMATES=true` on the backend. Default: off. No extra API calls,
-credentials or billing access are needed. The owned heartbeat returns `costs`; close returns
-a final snapshot. The frontend shows the estimate in Connection timings, including after stop.
+Cost accounting is enabled by default; no environment variable is needed.
+`VOICE_COST_ESTIMATES=false` is an optional operator opt-out. No extra API calls,
+credentials or account-wide billing access are needed. The owned heartbeat returns `costs`; close returns
+a final snapshot. The frontend shows the estimate in the standalone “Session estimate” panel above the
+transcript, including after stop.
 
 The bundled `backend/src/voice_delegate/prices/2026-11-02.json` records its date, version,
 source URLs and USD assumptions. `VOICE_PRICE_FILE` can select a local JSON file with the
@@ -38,8 +40,30 @@ heartbeats and close calls do not duplicate usage; aggregate OTel counter
 `voice.session.estimated_cost` has only a fixed `component` label. The Grafana cost panel
 sums this metric. It contains neither session/invitation IDs nor conversation content.
 
+## ElevenLabs reported usage
+
+During the existing conversation-close status request, the backend reads only numeric
+`metadata.cost` credits, `metadata.cost_fiat` USD and
+`metadata.charging.voice_surcharge_charge` when the provider returns them for the matching
+agent and conversation in a terminal state. The voice surcharge is separate: ElevenLabs
+states it is not included in `cost`. Credits are not converted to dollars. The UI displays
+these provider-reported values separately from the estimated total to avoid double counting
+an operator-configured voice tariff. No transcript is forwarded or stored by this accounting
+path; the existing response-size and timeout bounds still apply.
+
+No additional polling or billing endpoint is introduced. A processing response, delayed usage,
+malformed metadata, missing field, permission error or response exceeding the existing size
+limit leaves reported usage unavailable; it never becomes an invented zero. A reported zero
+is displayed as zero. This first version does not refresh usage after the session is removed,
+so credits that arrive later remain available only in ElevenLabs. These values are not an
+account invoice or a spending cap.
+
+Sources: [conversation details](https://elevenlabs.io/docs/api-reference/conversations/get),
+[metadata schema](https://github.com/elevenlabs/elevenlabs-python/blob/main/src/elevenlabs/types/conversation_history_metadata_common_model.py),
+[charging schema](https://github.com/elevenlabs/elevenlabs-python/blob/main/src/elevenlabs/types/conversation_charging_common_model.py).
+
 ## Verification
 
 Offline tests cover arithmetic, cached tokens, unknown tariffs, failed calls, concurrent
-sink isolation, immutable final voice duration, disabled mode, remote usage propagation and
+sink isolation, immutable final voice duration, default-on and disabled modes, bounded provider receipts, remote usage propagation and
 owned heartbeat/close payloads. Live reconciliation against provider invoices is pending.

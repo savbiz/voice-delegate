@@ -3,7 +3,19 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from pydantic import BaseModel, ConfigDict, Field
+
 COMMENTARY_MAX_BYTES = 500
+
+
+class ProviderUsage(BaseModel):
+    """Provider-reported numeric charges, separate from application price estimates."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, allow_inf_nan=False, strict=True)
+    provider: Literal["elevenlabs"] = "elevenlabs"
+    credits: int | None = Field(default=None, ge=0, le=1000000000)
+    voice_surcharge_credits: int | None = Field(default=None, ge=0, le=1000000000)
+    usd: float | None = Field(default=None, ge=0, le=1000000)
 
 
 class ProviderError(Exception):

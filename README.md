@@ -86,11 +86,13 @@ The maintainer reported successful local GPT-Live conversations and tool use; th
 full recorded live acceptance checklist is still pending. A small live Decisions
 API smoke is recorded separately; it does not establish cancellation quality.
 
-The [hosted frontend](https://voice-delegate.vercel.app) can run the simulated demo
-without the backend. Railway is the canonical deployment target, but its trial
-expired: this README does not claim the [configured API](https://voice-delegate-api-production.up.railway.app/healthz)
-is currently available or running the latest commit. Hosted documentation search
-and live voice require a healthy backend, invitations and applicable provider keys.
+The [hosted frontend](https://voice-delegate.vercel.app) includes a simulated demo.
+Live voice and hosted documentation search use the
+[configured Railway API](https://voice-delegate-api-production.up.railway.app/healthz)
+and require a healthy deployment, invitation and applicable provider credentials.
+Application daily allowances and provider account credits are independent;
+see [operations](docs/operations.md) for diagnosis and targeted quota resets.
+Deployment availability and provider credit balance must be checked at use time.
 
 Codespaces offline worker/metrics acceptance was reported on 2026-10-25; the
 startup/origin fixes are covered offline, while a new hosted rerun and cold-start
@@ -113,11 +115,22 @@ a deprecated alias. All adapters expose the same delegation boundary.
 | `live` | OpenAI GPT-Live; browser WebRTC audio and backend sideband | Default; partial local smoke reported |
 | `realtime` | OpenAI Realtime; browser WebRTC audio and backend sideband | Implemented; full live acceptance pending |
 | `azure` | Azure OpenAI Realtime; browser WebRTC and backend sideband | Primary or optional one-attempt recovery; live acceptance pending |
+| `elevenlabs` | ElevenLabs Agents; browser SDK WebRTC and authenticated backend webhook | Opt-in; offline contracts tested, full live acceptance pending |
 
-ElevenLabs Agents is an opt-in browser SDK transport with server-side webhook delegation (`VOICE_ADAPTER=elevenlabs`)
-behind a disabled-by-default flag. Its [application contracts](docs/elevenlabs.md)
-are verified offline; live provider acceptance is pending. Cross-vendor fallback, SIP telephone entry
-and worker MCP connections are not implemented here.
+ElevenLabs requires its private backend API key, agent ID and shared webhook token;
+see [agent setup and authentication](docs/elevenlabs.md). The browser receives a
+short-lived conversation token, never the private provider key.
+
+Enable `VOICE_SESSION_UI=true` for a server-allowlisted provider selector, observed audio
+activity and responsive session panels. Provider choice is fixed for each conversation;
+this selector uses operator-configured credentials, not user-supplied keys.
+[Session controls](docs/session-ui.md) describe availability and unsupported preferences.
+
+[Cost estimates](docs/cost-estimates.md) are enabled by default. The UI retains a final
+breakdown by voice, worker, decisions and search, labeling missing prices as partial. When available, ElevenLabs
+reported credits/USD are shown separately; estimates are not a provider invoice.
+Cross-vendor fallback, SIP telephone entry and worker MCP connections are not implemented.
+The [roadmap](docs/roadmap.md) tracks these and moderation/cascade design work separately.
 
 The worker uses **LangGraph for orchestration** and a selected planner for decisions:
 
@@ -162,7 +175,7 @@ wait are shown separately. See [ADR 009](docs/decisions/009-cancellation-is-inte
 flowchart LR
     B["Browser / opt-in Capacitor shell"] <-->|WebRTC audio| V["Voice service"]
     B -->|Origin + invitation + session key| A["FastAPI: owned sessions and quotas"]
-    A <-->|SDP and sideband events| V
+    A <-->|OpenAI SDP/sideband or ElevenLabs token/webhook| V
     V -->|delegate_task| A
     A --> W["LangGraph worker: local or private HTTP service"]
     W --> P["Offline / OpenAI / Decisions planner"]
@@ -225,6 +238,7 @@ not require provider credentials or paid requests.
 - [Configuration](docs/configuration.md), [local development](docs/local-development.md), [worker setup](docs/worker.md)
 - [Deployment](deployment/README.md), [operations](docs/operations.md), [production scope](docs/production.md)
 - [Benchmarks](docs/benchmarks.md), [worker evals](evals/README.md), [roadmap and acceptance](docs/roadmap.md)
+- [Session controls](docs/session-ui.md), [ElevenLabs setup](docs/elevenlabs.md), [cost estimates](docs/cost-estimates.md)
 - [Native packaging](docs/mobile.md), [third-party notices](THIRD_PARTY_NOTICES.md) and [contributing](CONTRIBUTING.md)
 
 Public protocol sources are cited in the design documents and ADRs. The project is

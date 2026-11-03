@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     api_docs: bool = False
     session_ui: bool = False
-    cost_estimates: bool = False
+    cost_estimates: bool = True
     price_file: str = ""
     audio_timing: bool = False
     intent_cancellation: bool = False

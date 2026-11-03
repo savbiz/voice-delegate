@@ -259,7 +259,10 @@ def build_router(
                 bootstrap = await elevenlabs.prepare_browser()
 
             async def confirm_close() -> bool:
-                return await elevenlabs.confirm_closed(bootstrap.conversation_id)
+                return await elevenlabs.confirm_closed(
+                    bootstrap.conversation_id,
+                    session.costs.report_provider_usage if session.costs is not None else None,
+                )
 
             session.connection = ElevenLabsConnection(bootstrap.conversation_id, confirm_close)
             session.previous_finalized = True
@@ -286,7 +289,11 @@ def build_router(
         if body.kind == "connected":
             if body.conversation_id != connection.conversation_id:
                 raise HTTPException(409, "SDK conversation identity mismatch")
+            if session.state not in {"connecting", "connected"}:
+                raise HTTPException(409, "SDK transport cannot attach in this session state")
             if not connection.started:
+                if session.state != "connecting":
+                    raise HTTPException(409, "SDK transport is not awaiting connection")
                 connection.start()
                 manager.attach_sdk(session, connection)
         elif not connection.started or session.state != "connected":
