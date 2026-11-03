@@ -661,6 +661,8 @@ export function createLiveSession(
       let timingCount = 0;
       const activityReporter = new ActivityReporter();
       let activityBusy = false;
+      // The server accepts activity only for a connected transport, i.e. after the offer.
+      let activityEnabled = false;
       store.update({
         audioTimingStatus: config.audio_timing_available
           ? 'Waiting for audio playback.'
@@ -693,7 +695,7 @@ export function createLiveSession(
                   )
                     store.update({ speaking: next });
                 }
-                if (config.intent_cancellation && !activityBusy) {
+                if (config.intent_cancellation && activityEnabled && !activityBusy) {
                   const activity = activityReporter.sample(now, local, remoteEnergy);
                   if (activity) {
                     activityBusy = true;
@@ -811,6 +813,7 @@ export function createLiveSession(
       );
       if (attempt !== attemptId) return;
       await connection.setRemoteDescription({ type: 'answer', sdp: result.sdp });
+      activityEnabled = true;
     } catch (error) {
       if (attempt === attemptId) {
         await finish(error instanceof Error ? error.message : 'Could not start conversation.');
