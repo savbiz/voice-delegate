@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from voice_delegate_agent.limits import SOURCE_PREVIEW_CHARS
 from voice_delegate_agent.reference import Source
 
+from voice_delegate.costs import CostSummary
 from voice_delegate.session.summary import Recap
 
 
@@ -78,6 +79,7 @@ class Status(BaseModel):
     state: Literal["created", "connecting", "connected", "reconnecting", "closing", "closed"]
     delegation: str = "idle"
     tasks: list[TaskStatus] = Field(default_factory=list)
+    costs: CostSummary | None = None
     decision_cost_usd: float = 0
     generation: int = 0
     fallback_available: bool = False
@@ -94,6 +96,7 @@ class Closed(BaseModel):
     """Whether provider finalization was confirmed before cleanup."""
 
     finalized: bool
+    costs: CostSummary | None = None
 
 
 class AudioTiming(BaseModel):

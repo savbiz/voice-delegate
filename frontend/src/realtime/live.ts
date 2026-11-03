@@ -1,3 +1,4 @@
+import type { CostSummary } from './costs';
 import { elevenSession } from './elevenlabs-live';
 import { canStartVoice, isNativeClient } from '../native';
 import { ConnectionSounds } from './connection-sounds';
@@ -186,13 +187,19 @@ export function createLiveSession(
     store.update(endedWorkerState(store.getSnapshot()));
     if (owner) {
       const close = () =>
-        request<{ finalized: boolean }>(`/sessions/${owner.id}/close`, owner, undefined, 5000);
+        request<{ finalized: boolean; costs?: CostSummary }>(
+          `/sessions/${owner.id}/close`,
+          owner,
+          undefined,
+          5000,
+        );
       const closing =
         owner.debugRecording && userStopped
           ? recordDebug(owner, { event: 'client_stop' }).then(close)
           : close();
       void closing
         .then((result) => {
+          if (closedAttempt === attemptId) store.update({ costs: result.costs });
           if (closedAttempt === attemptId && !result.finalized)
             store.update({ status: message + ' Provider finalization unconfirmed.' });
         })
@@ -341,6 +348,7 @@ export function createLiveSession(
         timings: [],
         audioTimings: [],
         tasks: [],
+        costs: undefined,
         decisionCostUsd: 0,
         sources: [],
         recap: 'No conversation yet.',
@@ -667,6 +675,7 @@ export function createLiveSession(
         void request<{
           delegation: string;
           tasks?: TaskStatus[];
+          costs?: CostSummary;
           decision_cost_usd?: number;
           state: string;
           sources?: Source[];
@@ -677,6 +686,7 @@ export function createLiveSession(
               heartbeatFailures = 0;
               store.update({
                 tasks: state.tasks ?? [],
+                costs: state.costs,
                 decisionCostUsd: state.decision_cost_usd ?? 0,
               });
               renderSources(state.sources ?? []);

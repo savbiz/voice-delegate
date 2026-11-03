@@ -43,6 +43,7 @@ class Metrics:
         self.task_cancellations = meter.create_counter("voice.task.cancellations", unit="1")
         self.deliveries = meter.create_counter("voice.task.deliveries", unit="1")
         self.decision_cost = meter.create_counter("voice.decision.estimated_cost", unit="USD")
+        self.session_cost = meter.create_counter("voice.session.estimated_cost", unit="USD")
         self.interruptions = meter.create_counter("voice.interruptions", unit="1")
 
     @contextmanager

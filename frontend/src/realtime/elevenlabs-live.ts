@@ -1,5 +1,7 @@
+import type { CostSummary } from './costs';
 /** SDK media and UI events; tools execute over authenticated server webhooks. */
 import type { PartialOptions, VoiceConversation } from '@elevenlabs/client';
+import rawAudioProcessor from '@elevenlabs/client/worklets/rawAudioProcessor.js?url&no-inline';
 import type { LiveStore, TaskStatus } from './store';
 import { processEvent, recapText, workerState } from './store';
 import { AudioTimingMeter } from './audio-timing';
@@ -85,6 +87,7 @@ export function elevenSession(
     const opening = factory({
       conversationToken: bootstrap.token,
       connectionType: 'webrtc',
+      workletPaths: { rawAudioProcessor },
       onConnect: ({ conversationId }) => {
         if (stopped || conversationId !== bootstrap.conversation_id) {
           ended('Voice conversation identity mismatch.');
@@ -167,6 +170,7 @@ export function elevenSession(
         delegation: string;
         tasks: TaskStatus[];
         sources: Source[];
+        costs?: CostSummary;
         decision_cost_usd: number;
         recap: { latest_request: string; latest_reply: string; interrupted: boolean };
       }>('/heartbeat')
@@ -176,6 +180,7 @@ export function elevenSession(
           store.update({
             tasks: state.tasks,
             sources: state.sources,
+            costs: state.costs,
             decisionCostUsd: state.decision_cost_usd,
             recap: recapText(state.recap),
           });

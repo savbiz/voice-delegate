@@ -247,6 +247,31 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Estimated cost by component (USD)",
+      "description": "Opt-in VOICE_COST_ESTIMATES. Configured price assumptions, not billing. Missing rates/usage are partial in the owned session API; no identity or conversation labels.",
+      "gridPos": {
+        "x": 0,
+        "y": 60,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum by (component) (voice_session_estimated_cost_USD_total)",
+          "legendFormat": "{{component}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      }
     }
   ]
 }

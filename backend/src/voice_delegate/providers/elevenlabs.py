@@ -3,6 +3,7 @@
 import asyncio
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -14,6 +15,7 @@ from .models import (
     ClientCredential,
     ProviderCapabilities,
     ProviderError,
+    ProviderUsage,
     SessionConfig,
     UnsupportedCapability,
 )
@@ -265,16 +267,43 @@ class ElevenLabsProvider:
             )
             raise ProviderError(message) from None
 
-    async def confirm_closed(self, conversation_id: str) -> bool:
+    async def confirm_closed(
+        self, conversation_id: str, on_usage: Callable[[ProviderUsage], None] | None = None
+    ) -> bool:
         """A browser disconnect alone cannot confirm that upstream usage ended."""
         try:
             payload = await self._json("conversations/" + conversation_id)
-            return payload.get("agent_id") == self.agent_id and payload.get("status") in {
-                "done",
-                "failed",
-            }
+            confirmed = (
+                payload.get("agent_id") == self.agent_id
+                and payload.get("conversation_id") == conversation_id
+                and payload.get("status") in {"done", "failed"}
+            )
+            if confirmed and on_usage is not None:
+                metadata = payload.get("metadata")
+                if isinstance(metadata, dict):
+                    charging = metadata.get("charging") or {}
+                    if isinstance(charging, dict):
+                        try:
+                            usage = ProviderUsage(
+                                credits=metadata.get("cost"),
+                                voice_surcharge_credits=charging.get("voice_surcharge_charge"),
+                                usd=metadata.get("cost_fiat"),
+                            )
+                        except ValueError:
+                            pass  # Malformed accounting must not obscure confirmed closure.
+                        else:
+                            if any(
+                                value is not None
+                                for value in (
+                                    usage.credits,
+                                    usage.voice_surcharge_credits,
+                                    usage.usd,
+                                )
+                            ):
+                                on_usage(usage)
         except (httpx.HTTPError, TimeoutError, ValueError, TypeError):
             return False
+        return confirmed
 
     async def _fetch_bootstrap(self) -> BrowserBootstrap:
         raw = bytearray()

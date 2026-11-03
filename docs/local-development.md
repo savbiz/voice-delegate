@@ -229,7 +229,7 @@ non-sensitive selectors/model values when migrating a local configuration.
 ## Copyable local configuration
 
 After merging the dev/configuration PR and updating your main checkout, use the
-commented [server template](../.env.example) as the complete list of server settings.
+commented [server template](../.env.example) as a starting point for core server settings.
 It contains core declared defaults, no keys and the canonical adapter name. Optional
 provider settings are documented in their integration guides and generated reference.
 The [generated reference](configuration.md) lists all enums, types and bounds and the
