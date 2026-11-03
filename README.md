@@ -32,8 +32,9 @@ cd ..
 make fe
 ```
 
-Open **http://localhost:5173**, select **Free demo**, then start. It is scripted,
-silent and free: no microphone, backend or provider key is required.
+Open **http://localhost:5173** for the voice workspace. For a scripted example, open
+**Tools & examples → Offline example** or **http://localhost:5173/#demo**. The example
+is silent and free: no microphone, backend or provider key is required.
 
 For local live voice, put your real `OPENAI_API_KEY` in the private root `.env`.
 Start the backend in another terminal, then get the local invitation in a third:
@@ -86,7 +87,9 @@ The maintainer reported successful local GPT-Live conversations and tool use; th
 full recorded live acceptance checklist is still pending. A small live Decisions
 API smoke is recorded separately; it does not establish cancellation quality.
 
-The [hosted frontend](https://voice-delegate.vercel.app) includes a simulated demo.
+The [hosted frontend](https://voice-delegate.vercel.app) opens the voice workspace.
+Tools & examples contains the offline example and a search of bundled project documentation;
+these are secondary utilities rather than conversation modes.
 Live voice and hosted documentation search use the
 [configured Railway API](https://voice-delegate-api-production.up.railway.app/healthz)
 and require a healthy deployment, invitation and applicable provider credentials.

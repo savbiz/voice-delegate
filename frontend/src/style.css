@@ -124,27 +124,46 @@ a:focus-visible {
   font-size: 0.88rem;
   line-height: 1.6;
 }
-.mode-tabs {
+.workspace-navigation {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-panel);
-  background: var(--surface-soft);
+  align-items: start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
-.mode-tabs .button {
+.workspace-navigation > a,
+.workspace-navigation summary,
+.workspace-navigation details a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  text-decoration: none;
+  cursor: pointer;
+}
+.workspace-navigation summary::after {
+  content: '▾';
+  margin-left: auto;
+}
+.workspace-navigation details[open] summary::after {
+  content: '▴';
+}
+.workspace-navigation details {
   flex: 1;
-  border-color: transparent;
-  background: transparent;
-  color: var(--muted);
+  min-width: 180px;
+}
+.workspace-navigation details a {
+  margin-top: var(--space-2);
+}
+.workspace-navigation [aria-current='page'] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
   font-weight: 650;
 }
-.mode-tabs .button[aria-selected='true'] {
-  border-color: var(--accent-line);
-  background: var(--surface);
-  color: var(--accent-deep);
-}
+
 section {
   margin-top: var(--space-4);
   padding: var(--space-5);

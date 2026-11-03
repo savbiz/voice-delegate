@@ -44,7 +44,7 @@ test('mobile session chooses a server-enabled provider and retains final costs',
     return route.fulfill({ json: { sdp: 'v=0\r\n' } });
   });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   const provider = page.getByRole('combobox', { name: 'Voice provider', exact: false });
   await expect(provider).toBeVisible();
   await provider.selectOption('elevenlabs');
@@ -68,4 +68,38 @@ test('mobile session chooses a server-enabled provider and retains final costs',
   await expect(panel).toContainText('Finished');
   await expect(provider).toBeEnabled();
   await expect(page.getByLabel('Observed audio activity')).toHaveCount(0);
+});
+
+test('leaving voice for a secondary tool closes the session and releases media', async ({
+  page,
+}) => {
+  await page.addInitScript(installFakePeers);
+  const closed: string[] = [];
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/close')) closed.push(path);
+    return route.fulfill({
+      json: path.endsWith('/config')
+        ? { voice_available: true }
+        : path.endsWith('/sessions')
+          ? { id: 'owned', key: 'fixture' }
+          : path.endsWith('/close')
+            ? { finalized: true }
+            : { sdp: 'v=0\r\n' },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start conversation', exact: true }).click();
+  await expect(page.locator('#status')).toContainText('Connected');
+  await page.getByText('Tools & examples', { exact: true }).click();
+  await page.getByRole('link', { name: 'Offline example', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Start demo', exact: true })).toBeVisible();
+  await expect.poll(() => closed).toEqual(['/api/sessions/owned/close']);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { __peers: { connectionState: string }[] }).__peers.at(-1)
+          ?.connectionState,
+    ),
+  ).toBe('closed');
 });

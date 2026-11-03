@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-test('narrow mode tabs remain visible and keyboard focus has sufficient contrast', async ({
+test('narrow navigation remains visible and keyboard focus has sufficient contrast', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('/');
-  const tabs = page.getByRole('tab');
+  await page.getByText('Tools & examples', { exact: true }).click();
+  const tabs = page.getByRole('navigation', { name: 'Workspace' }).getByRole('link');
   for (const tab of await tabs.all()) {
     const bounds = await tab.boundingBox();
     expect(bounds).not.toBeNull();
@@ -14,10 +15,11 @@ test('narrow mode tabs remain visible and keyboard focus has sufficient contrast
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
   }
   await tabs.first().focus();
-  await page.keyboard.press('ArrowRight');
-  const active = page.getByRole('tab', { name: 'Live voice', exact: true });
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  const active = page.getByRole('link', { name: 'Live voice', exact: true });
   await expect(active).toBeFocused();
-  await expect(active).toHaveAttribute('aria-selected', 'true');
+  await expect(active).toHaveAttribute('aria-current', 'page');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 
   const contrasts = await page.evaluate(() => {

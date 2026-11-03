@@ -21,8 +21,7 @@ test('documentation search shows source evidence without starting voice', async 
       },
     });
   });
-  await page.goto('/');
-  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  await page.goto('/#reference');
   await page.getByLabel('Project question').fill('fallback history');
   await page.getByRole('button', { name: 'Search documentation' }).click();
   await expect(page.getByRole('status')).toContainText('1 source excerpts found');
@@ -35,16 +34,14 @@ test('documentation search shows source evidence without starting voice', async 
 
 test('missing evidence is explicit', async ({ page }) => {
   await page.route('**/api/reference/search', (route) => route.fulfill({ json: { sources: [] } }));
-  await page.goto('/');
-  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  await page.goto('/#reference');
   await page.getByRole('button', { name: 'Search documentation' }).click();
   await expect(page.getByRole('status')).toContainText('No supporting documentation found');
 });
 
 test('invalid search results produce a friendly error', async ({ page }) => {
   await page.route('**/api/reference/search', (route) => route.fulfill({ json: { sources: {} } }));
-  await page.goto('/');
-  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  await page.goto('/#reference');
   await page.getByRole('button', { name: 'Search documentation' }).click();
   await expect(page.getByRole('status')).toContainText('returned invalid results');
 });
@@ -65,8 +62,7 @@ test('timeout is friendly and changing the invitation resets an aborted search',
       );
     };
   });
-  await page.goto('/');
-  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  await page.goto('/#reference');
   await page.getByRole('button', { name: 'Search documentation' }).click();
   await expect(page.getByRole('status')).toContainText('took too long. Please try again');
   await page.getByRole('button', { name: 'Search documentation' }).click();
@@ -80,8 +76,7 @@ test('editing the invitation leaves idle and completed search status unchanged',
   page,
 }) => {
   await page.route('**/api/reference/search', (route) => route.fulfill({ json: { sources: [] } }));
-  await page.goto('/');
-  await page.getByRole('tab', { name: 'Documentation', exact: true }).click();
+  await page.goto('/#reference');
   const status = page.getByRole('status');
   await expect(status).toHaveText('Search the bundled public project documentation.');
   await page.getByLabel('Personal invitation code').fill('first-code');

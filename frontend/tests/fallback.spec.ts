@@ -48,7 +48,7 @@ for (const defaultAdapter of ['live', 'elevenlabs']) {
       });
     });
     await page.goto('/');
-    await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+    await page.getByRole('link', { name: 'Live voice', exact: true }).click();
     await page.getByRole('combobox', { name: 'Voice provider', exact: false }).selectOption('live');
     await page.getByLabel('Personal invitation code').fill('original-invitation');
     await page.getByRole('button', { name: 'Start conversation' }).click();
@@ -98,7 +98,7 @@ test('busy work and failed recovery explain manual actions without replay', asyn
     });
   });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.getByRole('status')).toContainText('Connected.');
   await page.clock.fastForward(10000);

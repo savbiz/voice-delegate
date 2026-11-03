@@ -46,3 +46,13 @@ ElevenLabs can close immediately with `quota_exceeded`; inspect its conversation
 and account/key limits before buying credits. A finalized cost snapshot is terminal,
 not proof of a successful call. Missing provider usage stays unavailable, and a partial
 zero-dollar estimate does not establish that the call was free.
+
+## Primary voice workspace
+
+Live voice opens by default. Tools & examples holds the Offline example (a simulated,
+silent walkthrough) and Project documentation (search of bundled project sources).
+Neither is presented as a voice-provider mode or a general web search. Native links
+support keyboard access, direct `#live`, `#demo`, `#reference` URLs and browser history.
+Direct offline examples do not mount the voice workspace or request backend configuration.
+The offline stack and native previews with voice disabled keep their offline starting page.
+Switching workspaces uses the existing cleanup for voice sessions and demonstration timers.

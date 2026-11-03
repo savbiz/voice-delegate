@@ -4,8 +4,8 @@ import { voiceOptions, type Adapter, type VoiceOptions } from './realtime/provid
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { canStartVoice } from './native';
 import { Button } from './components/Button';
-import { ModeTabs } from './components/ModeTabs';
-import type { Mode } from './components/ModeTabs';
+import { WorkspaceNavigation } from './components/WorkspaceNavigation';
+import type { Mode } from './components/WorkspaceNavigation';
 import { createLiveSession } from './realtime/live';
 import type { LiveController } from './realtime/live';
 import { createLiveStore, taskLabel } from './realtime/store';
@@ -81,8 +81,9 @@ function Live({ code }: { code: string }) {
     <div className={largeCaptions ? 'large-captions' : undefined}>
       {!canStartVoice() && (
         <p className="notice">
-          Native preview: Free demo works offline. Live voice is disabled until explicitly enabled
-          in a test build; native microphone and playback acceptance are pending.
+          Native preview: The offline example works without a connection. Live voice is disabled
+          until explicitly enabled in a test build; native microphone and playback acceptance are
+          pending.
         </p>
       )}
       <p className="notice">
@@ -498,7 +499,7 @@ function StaticDemo() {
           ? 'Playing recorded scenario…'
           : step
             ? 'Demo stopped'
-            : 'Ready — try the free demo'}
+            : 'Ready — play the offline example'}
       </p>
       <div aria-live="polite" className="space-y-3">
         {visibleScenario(step).map((turn, i) => (
@@ -512,8 +513,19 @@ function StaticDemo() {
     </>
   );
 }
+function readMode(): Mode {
+  const hash = window.location.hash.slice(1);
+  if (hash === 'live' || hash === 'demo' || hash === 'reference') return hash;
+  return import.meta.env.VITE_OFFLINE_STACK === 'true' || !canStartVoice() ? 'demo' : 'live';
+}
+
 export default function App() {
-  const [mode, setMode] = useState<Mode>('demo');
+  const [mode, setMode] = useState<Mode>(readMode);
+  useEffect(() => {
+    const navigate = () => setMode(readMode());
+    window.addEventListener('hashchange', navigate);
+    return () => window.removeEventListener('hashchange', navigate);
+  }, []);
   const [code, setCode] = useState(readInvitation);
   useEffect(() => {
     saveInvitation(code);
@@ -529,8 +541,18 @@ export default function App() {
           A fast voice conversation. A separate worker for the heavy lifting.
         </p>
       </header>
-      <ModeTabs mode={mode} onChange={setMode} />
-      <div id="mode-panel" role="tabpanel" aria-labelledby={`tab-${mode}`}>
+      <WorkspaceNavigation mode={mode} />
+      <div
+        id="mode-panel"
+        role="region"
+        aria-label={
+          mode === 'live'
+            ? 'Voice conversation'
+            : mode === 'demo'
+              ? 'Offline example'
+              : 'Project documentation'
+        }
+      >
         {mode !== 'demo' && (
           <label className="block my-5">
             Personal invitation code{' '}

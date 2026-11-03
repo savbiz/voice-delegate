@@ -38,10 +38,12 @@ and existing Tailwind utilities where useful. No complete CSS migration is requi
 
 `src/components/Button.tsx` provides primary, secondary and danger actions while retaining
 native button attributes. Its default type is `button`; form actions explicitly use
-`type="submit"`. `ModeTabs.tsx` owns the accessible mode selector and keyboard navigation.
+`type="submit"`. `WorkspaceNavigation.tsx` keeps Live voice primary and places Offline example and Project
+documentation under Tools & examples. Native links support keyboard navigation and browser
+history; `#live`, `#demo` and `#reference` can be opened directly.
 Keep those components at module scope so rerenders preserve component identity.
 
-Playwright checks keyboard navigation, contrast, 44-pixel tab targets and conversation
+Playwright checks keyboard navigation, contrast, 44-pixel navigation targets and conversation
 layouts at 320, 390, 768 and 1100 pixels. These are offline browser checks with fake media;
 real microphone, Bluetooth, mobile browser and background behaviour still require device tests.
 
@@ -67,3 +69,9 @@ restricted policy and do not support this transport yet.
 Optional [session controls](../docs/session-ui.md) expose a server-controlled provider selector,
 observed audio activity and a separate cost panel. Flags default off; live/device acceptance
 is tracked separately from browser tests.
+
+The browser opens Live voice by default without requesting microphone access or creating
+a provider session. The offline stack and disabled native previews still open the offline
+example. Opening `#demo` directly makes no backend requests; `#reference` opens project
+search without mounting the voice workspace. Changing workspaces releases an active voice
+session or stops the simulated example through the existing lifecycle cleanup.

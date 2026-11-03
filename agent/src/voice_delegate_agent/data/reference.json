@@ -24,12 +24,12 @@
     "digest": "e0ef269eeba444f2a73fe4e67b6e170d04b68ce93d13a3ab3aaa5e89c5fb80b1"
   },
   {
-    "id": "52d2d2b79c03e9af",
+    "id": "556618e4d24b3fde",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Try it locally",
-    "text": "Open **http://localhost:5173**, select **Free demo**, then start. It is scripted,\nsilent and free: no microphone, backend or provider key is required.",
-    "digest": "52d2d2b79c03e9afc62d84bdfe2e7a424a1b0a1d097030902c4810aee2ccfe56"
+    "text": "Open **http://localhost:5173** for the voice workspace. For a scripted example, open\n**Tools & examples → Offline example** or **http://localhost:5173/#demo**. The example\nis silent and free: no microphone, backend or provider key is required.",
+    "digest": "556618e4d24b3fde41ae4e4a4ee5bde3f26064f64e619dc7e77ef0cb8bc27db7"
   },
   {
     "id": "3ab0b038fe11393e",
@@ -88,12 +88,12 @@
     "digest": "76470592f1aa9ab91c820518ed2937783b860d98ac6672617edb6402dab1e41b"
   },
   {
-    "id": "14a8f9ace32a9d93",
+    "id": "214bad071ed685ff",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status and verification",
-    "text": "The [hosted frontend](https://voice-delegate.vercel.app) includes a simulated demo.\nLive voice and hosted documentation search use the\n[configured Railway API](https://voice-delegate-api-production.up.railway.app/healthz)\nand require a healthy deployment, invitation and applicable provider credentials.\nApplication daily allowances and provider account credits are independent;\nsee [operations](docs/operations.md) for diagnosis and targeted quota resets.\nDeployment availability and provider credit balance must be checked at use time.",
-    "digest": "14a8f9ace32a9d93edbf861b68668b0e195f3d88fd6c455b0d0976f6ad53fb6f"
+    "text": "The [hosted frontend](https://voice-delegate.vercel.app) opens the voice workspace.\nTools & examples contains the offline example and a search of bundled project documentation;\nthese are secondary utilities rather than conversation modes.\nLive voice and hosted documentation search use the\n[configured Railway API](https://voice-delegate-api-production.up.railway.app/healthz)\nand require a healthy deployment, invitation and applicable provider credentials.\nApplication daily allowances and provider account credits are independent;\nsee [operations](docs/operations.md) for diagnosis and targeted quota resets.\nDeployment availability and provider credit balance must be checked at use time.",
+    "digest": "214bad071ed685ffa8ef943333fbbd8e6332a89cd03f5670ed8e7efbb6d8f56a"
   },
   {
     "id": "9c14fcb228778910",

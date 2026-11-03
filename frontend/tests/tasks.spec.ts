@@ -40,7 +40,7 @@ test('two tasks display independently and cancellation targets the selected id',
     return route.fulfill({ json: { sdp: 'v=0\r\n', finalized: true } });
   });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.getByRole('status')).toContainText('Connected');
   await page.clock.runFor(2100);
@@ -95,7 +95,7 @@ test('web evidence is shown as an external HTTPS link in the live source panel',
     return route.fulfill({ json: { sdp: 'v=0\r\n', finalized: true } });
   });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
   await page.getByRole('button', { name: 'Start conversation' }).click();
   await expect(page.getByRole('status')).toContainText('Connected');
   await page.clock.runFor(2100);

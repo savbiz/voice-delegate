@@ -16,7 +16,7 @@ for (const width of [320, 390, 768, 1100]) {
       });
     });
     await page.goto('/');
-    await page.getByRole('tab', { name: 'Live voice', exact: true }).click();
+    await page.getByRole('link', { name: 'Live voice', exact: true }).click();
     await expect(page.locator('.settings-panel')).not.toHaveAttribute('open');
     await expect(page.getByRole('region', { name: 'Worker sources' })).toHaveCount(0);
     await expect(page.locator('#audio')).toBeHidden();

@@ -402,7 +402,7 @@ export function createLiveSession(
         );
       if (!config.voice_available)
         throw new Error(
-          'Set OPENAI_API_KEY on the backend to use live voice. Free demo works without a key.',
+          'Set OPENAI_API_KEY on the backend to use live voice. The offline example works without a key.',
         );
       if (config.transport === 'elevenlabs_agents_webrtc') {
         if (existing || isNativeClient())
@@ -796,7 +796,7 @@ export function createLiveSession(
         showState(
           'ready',
           'Native live voice is disabled.',
-          'Use Free demo. Native voice requires an explicit test build and device verification.',
+          'Use the offline example. Native voice requires an explicit test build and device verification.',
         );
         return;
       }
