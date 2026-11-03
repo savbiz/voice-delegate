@@ -230,3 +230,47 @@ test('personal Start waits for the selected provider credentials and keys can be
   await page.getByText('How your keys are handled').click();
   await expect(page.getByText('not saved in your browser or a database')).toBeVisible();
 });
+
+test('Azure origin mistakes are explained before sending and keep the typed fields', async ({
+  page,
+}) => {
+  await page.addInitScript(installFakePeers);
+  const created: Record<string, unknown>[] = [];
+  await page.route('**/api/**', (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith('/config'))
+      return route.fulfill({
+        json: {
+          session_ui: true,
+          adapter: 'openai',
+          available_adapters: ['openai', 'azure'],
+          voice_available: true,
+        },
+      });
+    if (path === '/api/personal/sessions') {
+      created.push(route.request().postDataJSON());
+      return route.fulfill({ json: { id: 'owned', key: 'key' } });
+    }
+    return route.fulfill({
+      json: path.endsWith('/close') ? { finalized: true } : { sdp: 'answer' },
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('radio', { name: 'Your API keys', exact: true }).check();
+  await page.getByRole('combobox', { name: 'Voice provider', exact: false }).selectOption('azure');
+  const azureKey = page.getByLabel('Azure API key', { exact: true });
+  const origin = page.getByLabel('Azure resource HTTPS origin');
+  const start = page.getByRole('button', { name: 'Start conversation', exact: true });
+  await azureKey.fill('  own-azure ');
+  await origin.fill('https://own.cognitiveservices.azure.com');
+  await start.click();
+  await expect(page.locator('#status')).toContainText('https://<resource>.openai.azure.com');
+  expect(created).toHaveLength(0);
+  await expect(azureKey).toHaveValue('  own-azure ');
+  await origin.fill('https://own.openai.azure.com/openai/v1');
+  await start.click();
+  await expect(page.locator('#status')).toContainText('Connected');
+  expect(created[0]).toMatchObject({
+    keys: { azure_key: 'own-azure', azure_endpoint: 'https://own.openai.azure.com' },
+  });
+});

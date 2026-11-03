@@ -13,6 +13,26 @@ from voice_delegate_agent.web_search import domain_name
 from voice_delegate.limits.defaults import WORKER_PORT
 
 
+def azure_origin_allowed(url: str) -> bool:
+    """Accept only an HTTPS Azure OpenAI resource origin, never a path, port or credentials."""
+    try:
+        target = urlsplit(url)
+        port = target.port
+    except ValueError:
+        return False
+    return not (
+        target.scheme != "https"
+        or not target.hostname
+        or not target.hostname.endswith(".openai.azure.com")
+        or target.path not in {"", "/"}
+        or target.query
+        or target.fragment
+        or target.username
+        or target.password
+        or port not in {None, 443}
+    )
+
+
 def worker_transport_allowed(url: str) -> bool:
     """Permit plaintext only on loopback, private IPs, the compose worker or Railway hosts."""
     target = urlsplit(url)
@@ -272,20 +292,7 @@ class Settings(BaseSettings):
             or self.voice_provider == "azure"
             or (self.session_ui and self.azure_endpoint and self.azure_api_key.get_secret_value())
         ):
-            from urllib.parse import urlparse
-
-            endpoint = urlparse(self.azure_endpoint)
-            if (
-                endpoint.scheme != "https"
-                or not endpoint.hostname
-                or not endpoint.hostname.endswith(".openai.azure.com")
-                or endpoint.path not in {"", "/"}
-                or endpoint.query
-                or endpoint.fragment
-                or endpoint.username
-                or endpoint.password
-                or endpoint.port not in {None, 443}
-            ):
+            if not azure_origin_allowed(self.azure_endpoint):
                 message = "Azure endpoint must be an HTTPS Azure OpenAI resource origin"
                 raise ValueError(message)
             if not self.azure_api_key.get_secret_value():

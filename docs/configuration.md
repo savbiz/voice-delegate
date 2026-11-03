@@ -246,20 +246,7 @@ def validate_production(self) -> "Settings":
         or self.voice_provider == "azure"
         or (self.session_ui and self.azure_endpoint and self.azure_api_key.get_secret_value())
     ):
-        from urllib.parse import urlparse
-
-        endpoint = urlparse(self.azure_endpoint)
-        if (
-            endpoint.scheme != "https"
-            or not endpoint.hostname
-            or not endpoint.hostname.endswith(".openai.azure.com")
-            or endpoint.path not in {"", "/"}
-            or endpoint.query
-            or endpoint.fragment
-            or endpoint.username
-            or endpoint.password
-            or endpoint.port not in {None, 443}
-        ):
+        if not azure_origin_allowed(self.azure_endpoint):
             message = "Azure endpoint must be an HTTPS Azure OpenAI resource origin"
             raise ValueError(message)
         if not self.azure_api_key.get_secret_value():

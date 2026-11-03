@@ -4,7 +4,7 @@ import hashlib
 
 from pydantic import Field, SecretStr
 
-from voice_delegate.config import Settings
+from voice_delegate.config import Settings, azure_origin_allowed
 from voice_delegate.delegation.contracts import Worker
 from voice_delegate.delegation.planner import PlannerRuntime, build_planner
 from voice_delegate.providers.azure import AzureLiveProvider
@@ -41,6 +41,14 @@ async def create_personal_session(root: SessionManager, body: PersonalSession) -
     principal = "personal:" + hashlib.sha256(key.get_secret_value().encode()).hexdigest()
     if any(s.principal == principal for s in root.sessions.values()):
         raise SessionError(429, "A personal conversation is already active")
+    if (adapter == "azure" or body.azure_recovery) and not azure_origin_allowed(
+        body.keys.azure_endpoint
+    ):
+        raise SessionError(
+            422,
+            "The Azure resource origin must look like https://<resource>.openai.azure.com "
+            "with no path or port",
+        )
     supplied = body.keys.worker_settings(root.settings)
     data = supplied.model_dump()
     data.update(

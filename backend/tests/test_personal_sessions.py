@@ -406,3 +406,36 @@ def test_plaintext_worker_transport_allows_railway_private_hosts_only() -> None:
     assert not worker_transport_allowed("http://railway.internal")
     assert not worker_transport_allowed("http://example.com:8001")
     assert worker_transport_allowed("https://example.com")
+
+
+@pytest.mark.parametrize(
+    "endpoint",
+    [
+        "",
+        "foo.openai.azure.com",
+        "http://foo.openai.azure.com",
+        "https://foo.openai.azure.com/openai/v1",
+        "https://foo.cognitiveservices.azure.com",
+        "https://foo.openai.azure.com:8443",
+    ],
+)
+async def test_personal_azure_explains_a_rejected_resource_origin(endpoint: str) -> None:
+    root = SessionManager(FakeProvider(), Settings())
+    body = PersonalSession(
+        adapter="azure",
+        keys=PersonalKeys(azure_key=SecretStr("azure-key"), azure_endpoint=endpoint),
+    )
+    with pytest.raises(SessionError) as error:
+        await create_personal_session(root, body)
+    assert error.value.status == 422
+    assert "https://<resource>.openai.azure.com" in str(error.value)
+    assert "azure-key" not in str(error.value)
+    assert not root.sessions
+
+
+def test_azure_origin_accepts_resource_origin_with_optional_slash() -> None:
+    from voice_delegate.config import azure_origin_allowed
+
+    assert azure_origin_allowed("https://foo.openai.azure.com")
+    assert azure_origin_allowed("https://foo.openai.azure.com/")
+    assert azure_origin_allowed("https://foo.openai.azure.com:443")
