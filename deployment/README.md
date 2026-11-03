@@ -12,9 +12,25 @@ Set the **public** build variable `VITE_API_BASE_URL=https://voice-delegate-api-
 
 ## Existing Railway deployment and Render alternative
 
-Both platforms build `deployment/Dockerfile.backend` with the repository root as Docker context and one replica. The container reads `PORT`. Root `railway.json` records Dockerfile build, `/healthz`, and restart on failure. Keep the existing Railway volume mounted at `/app/.local`; do not create another service or volume.
+Both platforms build `deployment/Dockerfile.backend` with the repository root as Docker context and one replica. The container reads `PORT`. Railway is described by [`.railway/railway.ts`](../.railway/railway.ts) ([Infrastructure as Code](https://docs.railway.com/infrastructure-as-code)): Dockerfile build, `/healthz`, restart on failure, app sleeping, one replica in `europe-west4` and the existing volume mounted at `/app/.local`. Variables stay unmanaged, so secrets never enter the repository. The file exports the partial `voice-delegate-api`, so it manages only the resources it declares. Do not create another service or volume. The legacy root `railway.json` is still read until the cutover below; Railway stops reading Config as Code on 2026-12-01.
 
-Railway's legacy [Config as Code](https://docs.railway.com/config-as-code/reference) supports build/deploy settings, not volume provisioning or environment variables. Those existing dashboard resources are recorded in [railway-requirements.json](railway-requirements.json) and checked against Render by tests. Railway documents a 2026-12-01 cutoff for legacy config files; migration to its current IaC requires a separate reviewed import of the existing service. Do not apply an empty/new project definition. The dashboard Dockerfile variable remains configured on the deployed service.
+### Railway IaC cutover (once)
+
+The SDK the CLI needs is installed only in `.railway/`:
+
+```sh
+cd .railway && npm ci --ignore-scripts && cd ..
+railway config plan
+```
+
+The plan must show no destroy lines and no volume detachment; it only copies the `railway.json` settings into the service. Then switch the service off Config as Code and apply:
+
+```sh
+railway config migrate cutover
+railway config apply
+```
+
+`railway config migrate undo` restores the previous Config as Code path. After a healthy deployment, delete `railway.json` in a follow-up commit and drop its test assertions. Existing dashboard resources are recorded in [railway-requirements.json](railway-requirements.json) and checked against Render by tests.
 
 Root `render.yaml` describes the supported alternative: one Docker service, protected public-demo mode and a 1 GB disk at `/app/.local`. No Render service is currently configured.
 
