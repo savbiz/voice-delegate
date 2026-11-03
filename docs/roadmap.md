@@ -1,6 +1,6 @@
 # Roadmap
 
-Version 0.1.0 is a reference implementation; implementation and release acceptance are separate. Passing offline tests is not proof of
+Version 0.2.0 is a reference implementation; implementation and release acceptance are separate. Passing offline tests is not proof of
 live voice quality, provider access, acoustic latency or production readiness.
 
 On 2026-10-23, the maintainer reported successful local GPT-Live conversations,

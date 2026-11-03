@@ -81,7 +81,7 @@ and shutdown commands. Codespaces uses the same stack; keep forwarded ports priv
 
 ## Status and verification
 
-**v0.1.0 is an implementation release.** Offline tests cover session ownership,
+**v0.2.0 is an implementation release.** Offline tests cover session ownership,
 limits, worker tools, cancellation, recovery, metrics and browser behavior.
 The maintainer reported successful local GPT-Live conversations and tool use; the
 full recorded live acceptance checklist is still pending. A small live Decisions
