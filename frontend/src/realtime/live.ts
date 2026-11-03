@@ -1,3 +1,4 @@
+import { elevenSession } from './elevenlabs-live';
 import { canStartVoice, isNativeClient } from '../native';
 import { ConnectionSounds } from './connection-sounds';
 import { AudioTimingMeter } from './audio-timing';
@@ -34,6 +35,7 @@ export function createLiveSession(
     store.update(workerState(store.getSnapshot(), worker));
   }
   type Session = { id: string; key: string; accessCode: string; debugRecording?: boolean };
+  let eleven: ReturnType<typeof elevenSession> | undefined;
   let recording: AudioRecording | undefined;
   let disposed = false;
   let audioUrl: string | undefined;
@@ -68,6 +70,8 @@ export function createLiveSession(
       recording?.stop();
       recording = undefined;
     }
+    void eleven?.end();
+    eleven = undefined;
     stopVad?.();
     stopVad = undefined;
     clearInterval(heartbeat);
@@ -168,6 +172,9 @@ export function createLiveSession(
     store.update({ ending: true });
     const closedAttempt = ++attemptId;
     const owner = session;
+    const sdk = eleven;
+    eleven = undefined;
+    if (sdk) await sdk.end();
     release();
     showState(
       'ended',
@@ -363,12 +370,16 @@ export function createLiveSession(
     try {
       const config = await request<{
         voice_available: boolean;
+        transport?: string;
         audio_timing_available?: boolean;
         intent_cancellation?: boolean;
         debug_recording_available?: boolean;
       }>('/config');
       if (attempt !== attemptId) return;
-      store.update({ intentCancellation: Boolean(config.intent_cancellation) });
+      store.update({
+        intentCancellation: Boolean(config.intent_cancellation),
+        transport: config.transport === 'elevenlabs_agents_webrtc' ? 'elevenlabs' : 'webrtc',
+      });
       if (requestedPreferences.debug_recording && !config.debug_recording_available)
         throw new Error(
           'Server debugging is disabled. Uncheck recording to continue, or ask the operator to enable it.',
@@ -377,6 +388,59 @@ export function createLiveSession(
         throw new Error(
           'Set OPENAI_API_KEY on the backend to use live voice. Free demo works without a key.',
         );
+      if (config.transport === 'elevenlabs_agents_webrtc') {
+        if (existing || isNativeClient())
+          throw new Error('This SDK transport is supported in browsers only. Start a new session.');
+        if (audioConsent)
+          throw new Error(
+            'Mixed audio recording is not available with this SDK transport. Uncheck audio recording to continue.',
+          );
+        if (
+          requestedPreferences.mode !== 'conversation' ||
+          requestedPreferences.language !== 'auto'
+        )
+          throw new Error(
+            'This agent uses its server-configured language and conversation style. Select Follow the speaker and Assistant conversation.',
+          );
+        const created = {
+          ...(await request<{ id: string; key: string }>(
+            '/sessions',
+            undefined,
+            requestedPreferences,
+            35000,
+            accessCode,
+          )),
+          accessCode,
+          debugRecording: requestedPreferences.debug_recording,
+        };
+        if (attempt !== attemptId) {
+          await request(`/sessions/${created.id}/close`, created);
+          return;
+        }
+        session = created;
+        if (created.debugRecording)
+          store.update({ debugStatus: `Debug session file: ${created.id}.jsonl` });
+        eleven = elevenSession(
+          store,
+          (path, body) =>
+            request(
+              `/sessions/${created.id}${path}`,
+              created,
+              body,
+              path.endsWith('/bootstrap') ? 10000 : 5000,
+            ),
+          (message) => {
+            if (attempt === attemptId) void finish(message);
+          },
+          () => {
+            if (attempt === attemptId) sounds.established();
+          },
+          () => audio.muted,
+          Boolean(config.audio_timing_available),
+        );
+        await eleven.start();
+        return;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true },
       });

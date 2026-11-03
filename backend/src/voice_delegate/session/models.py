@@ -33,6 +33,7 @@ class Session:
     connection: RealtimeConnection | None = None
     watcher: asyncio.Task[None] | None = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    sdk_bootstrap_issued: bool = False
     finalized: bool = False
     turn: Turn | None = None
     generation: int = 0

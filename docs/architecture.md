@@ -309,17 +309,6 @@ and citations do not establish that the external text is true or safe to repeat.
 System prompts ship as Markdown resources inside the backend and agent packages,
 with server-selected variants matching enabled tools and cancellation behavior.
 
-## Sources
-
-Reviewed public documentation on 2026-09-20:
-
-- [GPT-Live WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live)
-- [GPT-Live sideband](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live)
-- [Session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations)
-- [Delegation](https://developers.openai.com/api/docs/guides/live-delegation)
-- [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
-
-Application limits and ownership rules are first-principles design choices, not upstream service guarantees.
 
 ## Browser audio observations
 
@@ -396,3 +385,19 @@ requires explicit environment and CLI opt-ins plus a session budget. Its recordi
 local inputs, not bundled user data. A bounded exporter can retrieve timing-only trace
 projections from an existing Grafana Tempo data source; the checked-in Grafana stack
 still provisions only Prometheus. No queryable trace storage or live result is implied.
+
+## Optional ElevenLabs Agents transport
+
+The [Agents integration](elevenlabs.md) uses direct browser WebRTC media and an authenticated async server webhook for delegate_task. The existing local/remote worker and silence-gated portfolio stay on the backend; the browser supplies owned activity/transcript observations but never submits tools or polls results. Exact goals coalesce per conversation, and HTTP responses carry bounded results. Provider finalization requires status evidence; live acceptance remains pending. See the [transport evaluation](elevenlabs-transport.md).
+
+## Sources
+
+Reviewed public documentation on 2026-09-20:
+
+- [GPT-Live WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live)
+- [GPT-Live sideband](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live)
+- [Session lifecycle](https://developers.openai.com/api/docs/guides/live-conversations)
+- [Delegation](https://developers.openai.com/api/docs/guides/live-delegation)
+- [FastAPI lifespan](https://fastapi.tiangolo.com/advanced/events/)
+
+Application limits and ownership rules are first-principles design choices, not upstream service guarantees.

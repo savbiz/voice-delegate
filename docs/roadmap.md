@@ -172,3 +172,17 @@ current settings with all optional features off; the generated configuration ref
 includes enum choices, collection/string constraints and frontend build options.
 Copyable local model-backed setup is documented without changing private credentials
 or cloud deployments. No new live acceptance or measured model comparison is claimed.
+
+## ElevenLabs transport evaluation and implementation
+
+The [transport evaluation](elevenlabs-transport.md) selects private Agents WebRTC with one
+async server webhook for delegate_task. The browser owns SDK media and activity/transcript
+observations; the backend owns tool admission, the existing worker and bounded HTTP result
+delivery. The earlier client-tool forwarding and browser result polling have been removed.
+
+Offline fixtures verify auth/conversation binding, constrained agent configuration, coalesced
+replay, independent tasks, cancellation, response deadlines and SDK lifecycle. Identical goals
+reuse a task/result for the entire conversation. This is application replay policy, not native
+provider exactly-once evidence. Live audio, webhook reachability, async narration, device and
+closure acceptance remain pending. See [the implementation guide](elevenlabs.md). No paid
+calls or cloud/account changes were made.

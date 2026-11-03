@@ -20,10 +20,16 @@ def check(root: Path) -> None:
         raise ValueError(message)
     directives = [part.split() for part in policies[0].split(";") if part.strip()]
     connections = [part[1:] for part in directives if part[0] == "connect-src"]
-    if len(connections) != 1 or len(connections[0]) != 2 or connections[0][0] != "'self'":
+    media_origins = {"https://livekit.rtc.elevenlabs.io", "wss://livekit.rtc.elevenlabs.io"}
+    application_connections = (
+        [item for item in connections[0] if item not in media_origins]
+        if len(connections) == 1
+        else []
+    )
+    if len(application_connections) != 2 or application_connections[0] != "'self'":
         message = "connect-src must permit self and exactly one HTTPS API origin"
         raise ValueError(message)
-    origin = urlsplit(connections[0][1])
+    origin = urlsplit(application_connections[1])
     if origin.scheme != "https" or not origin.hostname or origin.path or origin.query:
         message = "Expected an HTTPS API origin"
         raise ValueError(message)

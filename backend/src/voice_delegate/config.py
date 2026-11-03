@@ -23,11 +23,21 @@ class Settings(BaseSettings):
     azure_deployment: str = "gpt-realtime"
     azure_voice: str = "marin"
     fallback_enabled: bool = False
-    voice_provider: Literal["live", "realtime", "azure"] = Field(
+    voice_provider: Literal["live", "realtime", "azure", "elevenlabs"] = Field(
         default="live",
         validation_alias=AliasChoices("VOICE_ADAPTER", "VOICE_VOICE_PROVIDER"),
         description="Voice adapter. VOICE_VOICE_PROVIDER is a deprecated alias.",
     )
+    elevenlabs_enabled: bool = False
+    elevenlabs_api_key: SecretStr = Field(
+        default=SecretStr(""), validation_alias="ELEVENLABS_API_KEY"
+    )
+    elevenlabs_agent_id: str = Field(
+        default="", max_length=200, pattern=r"^(agent_[a-zA-Z0-9_-]+)?$"
+    )
+    elevenlabs_timeout_seconds: float = Field(default=3, gt=0, le=5)
+    elevenlabs_webhook_token: SecretStr = SecretStr("")
+    elevenlabs_webhook_url: str = ""
     realtime_model: str = "gpt-realtime"
     model: str = "gpt-live-1"
     voice: str = "marin"
@@ -90,6 +100,47 @@ class Settings(BaseSettings):
     connect_timeout_seconds: float = Field(default=20, gt=0)
     close_timeout_seconds: float = Field(default=5, gt=0)
     max_body_bytes: int = Field(default=65536, ge=1024, le=1048576)
+
+    @model_validator(mode="after")
+    def validate_elevenlabs(self) -> "Settings":
+        if self.voice_provider == "elevenlabs" and not self.elevenlabs_enabled:
+            message = "ElevenLabs adapter requires VOICE_ELEVENLABS_ENABLED"
+            raise ValueError(message)
+        if self.elevenlabs_enabled and (
+            not self.elevenlabs_api_key.get_secret_value() or not self.elevenlabs_agent_id
+        ):
+            message = "ElevenLabs requires ELEVENLABS_API_KEY and VOICE_ELEVENLABS_AGENT_ID"
+            raise ValueError(message)
+        if self.elevenlabs_enabled:
+            url = urlsplit(self.elevenlabs_webhook_url)
+            if (
+                len(self.elevenlabs_webhook_token.get_secret_value()) < 32
+                or url.scheme != "https"
+                or not url.hostname
+                or url.username
+                or url.password
+                or url.query
+                or url.fragment
+                or url.path != "/integrations/elevenlabs/delegate"
+            ):
+                message = (
+                    "ElevenLabs requires a webhook token of at least 32 characters "
+                    "and an HTTPS webhook URL"
+                )
+                raise ValueError(message)
+        if self.voice_provider == "elevenlabs" and not self.intent_cancellation:
+            message = "ElevenLabs async delegation requires VOICE_INTENT_CANCELLATION"
+            raise ValueError(message)
+        if self.voice_provider == "elevenlabs" and (self.fallback_enabled or self.native_clients):
+            message = "ElevenLabs does not support cross-vendor fallback or native clients"
+            raise ValueError(message)
+        if (
+            self.voice_provider == "elevenlabs"
+            and self.delegation_timeout_seconds + self.delivery_timeout_seconds > 110
+        ):
+            message = "ElevenLabs work and delivery must fit the webhook deadline"
+            raise ValueError(message)
+        return self
 
     @model_validator(mode="after")
     def validate_web_search(self) -> "Settings":

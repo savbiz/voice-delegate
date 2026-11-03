@@ -24,7 +24,7 @@ from voice_delegate.delegation.runner import DelegationRunner
 from voice_delegate.observability.metrics import Metrics
 from voice_delegate.observability.turns import observe
 from voice_delegate.prompts import voice_prompt
-from voice_delegate.providers.base import RealtimeProvider
+from voice_delegate.providers.base import RealtimeConnection, RealtimeProvider
 from voice_delegate.providers.models import (
     Commentary,
     DelegationRequested,
@@ -182,6 +182,17 @@ class SessionManager:
             session.watcher = asyncio.create_task(self._watch(session), name="session-events")
             session.watcher.add_done_callback(self._watch_finished)
             return session.connection.answer
+
+    def attach_sdk(self, session: Session, connection: RealtimeConnection) -> None:
+        """Attach owned SDK events to the same work, cancellation and delivery lifecycle."""
+        session.connection = connection
+        session.state = "connected"
+        if self.settings.intent_cancellation:
+            session.portfolio.pump = asyncio.create_task(
+                self._deliver(session), name="pending-delivery"
+            )
+        session.watcher = asyncio.create_task(self._watch(session), name="sdk-session-events")
+        session.watcher.add_done_callback(self._watch_finished)
 
     async def _deliver(self, session: Session) -> None:
         while session.state not in {"closing", "closed"}:

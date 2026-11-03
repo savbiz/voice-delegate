@@ -22,6 +22,7 @@ from voice_delegate.observability.metrics import Metrics, configure_metrics
 from voice_delegate.observability.tracing import configure_tracing, get_tracer
 from voice_delegate.providers.azure import AzureRealtimeProvider
 from voice_delegate.providers.base import RealtimeProvider
+from voice_delegate.providers.elevenlabs import ElevenLabsProvider
 from voice_delegate.providers.models import ProviderError, UnsupportedCapability
 from voice_delegate.providers.openai import OpenAILiveProvider
 from voice_delegate.providers.realtime import OpenAIRealtimeProvider
@@ -29,6 +30,7 @@ from voice_delegate.scaling.remote import RemoteWorker
 from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
 
+from .elevenlabs_webhook import build_webhook_router
 from .routes import build_router
 
 
@@ -37,8 +39,21 @@ def create_app(
 ) -> FastAPI:
     """Build a single-process app; inject an offline provider in tests."""
     settings = settings or load_settings()
+    elevenlabs = (
+        ElevenLabsProvider(
+            settings.elevenlabs_api_key.get_secret_value(),
+            settings.elevenlabs_agent_id,
+            timeout=settings.elevenlabs_timeout_seconds,
+            webhook_url=settings.elevenlabs_webhook_url,
+        )
+        if settings.elevenlabs_enabled
+        else None
+    )
     if provider is None:
-        if settings.voice_provider == "azure":
+        if settings.voice_provider == "elevenlabs":
+            assert elevenlabs is not None
+            provider = elevenlabs
+        elif settings.voice_provider == "azure":
             azure = AzureRealtimeProvider(
                 settings.azure_endpoint, settings.azure_api_key.get_secret_value()
             )
@@ -114,6 +129,8 @@ def create_app(
             with suppress(asyncio.CancelledError):
                 await janitor
             await manager.aclose()
+            if elevenlabs is not None and elevenlabs is not provider:
+                await elevenlabs.aclose()
             if remote is not None:
                 await remote.aclose()
             if runtime is not None:
@@ -161,5 +178,6 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    app.include_router(build_router(manager, feedback))
+    app.include_router(build_router(manager, feedback, elevenlabs))
+    app.include_router(build_webhook_router(manager))
     return app

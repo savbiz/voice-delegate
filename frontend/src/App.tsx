@@ -95,15 +95,18 @@ function Live({ code }: { code: string }) {
         {state.intentCancellation && state.tasks.length > 0 && (
           <div>
             <p className="muted">
-              Result sent means accepted by the voice provider, not fully played. Audio interrupted
-              by speech is not automatically repeated.
+              {state.transport === 'elevenlabs'
+                ? 'Result sent means prepared for the webhook response; provider narration and playback are not confirmed.'
+                : 'Result sent means accepted by the voice provider, not fully played.'}{' '}
+              Audio interrupted by speech is not automatically repeated.
             </p>
             <ul aria-label="Delegated tasks">
               {state.tasks.map((task) => (
                 <li key={task.id}>
                   <strong>{task.goal.slice(0, 100)}</strong>{' '}
                   <small>
-                    {task.id} · {taskLabel(task.status)} · {task.elapsed_seconds.toFixed(1)} s total
+                    {task.id} · {taskLabel(task.status, state.transport)} ·{' '}
+                    {task.elapsed_seconds.toFixed(1)} s total
                     {task.work_seconds !== undefined &&
                       task.delivery_wait_seconds !== undefined && (
                         <>

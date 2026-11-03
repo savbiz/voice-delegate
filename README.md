@@ -50,7 +50,8 @@ Paste that invitation in the browser and select **Live voice**. Stop each server
 with Ctrl+C. `make` shows help. Existing `.env` values override code defaults; the
 launcher changes local admission only, never your file or provider key.
 
-The server template defaults to the **offline worker planner**. To let the worker
+The server template covers the core defaults; optional provider settings are documented separately.
+It defaults to the **offline worker planner**. To let the worker
 interpret natural-language requests using Luna, choose the paid planner explicitly:
 
 ```sh
@@ -113,8 +114,9 @@ a deprecated alias. All adapters expose the same delegation boundary.
 | `realtime` | OpenAI Realtime; browser WebRTC audio and backend sideband | Implemented; full live acceptance pending |
 | `azure` | Azure OpenAI Realtime; browser WebRTC and backend sideband | Primary or optional one-attempt recovery; live acceptance pending |
 
-ElevenLabs Agents integration is an incomplete [separate draft](https://github.com/savbiz/voice-delegate/pull/21),
-not an available adapter in this branch. Cross-vendor fallback, SIP telephone entry
+ElevenLabs Agents is an opt-in browser SDK transport with server-side webhook delegation (`VOICE_ADAPTER=elevenlabs`)
+behind a disabled-by-default flag. Its [application contracts](docs/elevenlabs.md)
+are verified offline; live provider acceptance is pending. Cross-vendor fallback, SIP telephone entry
 and worker MCP connections are not implemented here.
 
 The worker uses **LangGraph for orchestration** and a selected planner for decisions:

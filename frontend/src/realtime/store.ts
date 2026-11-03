@@ -38,6 +38,7 @@ export type TaskStatus = {
   delivery_wait_seconds?: number;
 };
 export type LiveState = {
+  transport: 'webrtc' | 'elevenlabs';
   intentCancellation: boolean;
   tasks: TaskStatus[];
   decisionCostUsd: number;
@@ -86,6 +87,7 @@ export const workerMessages: Record<string, string> = {
 };
 export function initialLiveState(): LiveState {
   return {
+    transport: 'webrtc',
     intentCancellation: false,
     tasks: [],
     decisionCostUsd: 0,
@@ -366,7 +368,9 @@ export function chatBubbles(messages: ChatMessage[]): ChatMessage[] {
   return bubbles;
 }
 
-export function taskLabel(status: string): string {
+export function taskLabel(status: string, transport: LiveState['transport'] = 'webrtc'): string {
+  if (status === 'completed' && transport === 'elevenlabs')
+    return 'Result prepared for ElevenLabs webhook';
   return (
     {
       running: 'Working',

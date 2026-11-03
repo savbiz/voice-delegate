@@ -299,3 +299,9 @@ process that executes tools. The key is never a Vercel frontend variable. In pri
 worker mode also enable the flag on the API so its advertised capabilities match.
 See [worker search setup and data flow](../docs/worker.md#optional-public-web-search).
 Default deployments and the offline demo continue without external search.
+
+The opt-in ElevenLabs Agents SDK uses the media signaling host
+`https://livekit.rtc.elevenlabs.io` / `wss://livekit.rtc.elevenlabs.io` in addition
+to the single application API host. Backend configuration still controls availability;
+this CSP allowance does not start a session. Native builds keep their existing
+restricted policy and do not support this transport yet.

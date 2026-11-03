@@ -41,7 +41,15 @@ def test_server_template_boots_with_optional_features_off(
             if isinstance(alias, AliasChoices)
             else alias or "VOICE_" + name.upper()
         )
-    canonical_names.remove("VOICE_ALLOWED_ORIGIN")
+    canonical_names -= {
+        "VOICE_ALLOWED_ORIGIN",
+        "VOICE_ELEVENLABS_ENABLED",
+        "ELEVENLABS_API_KEY",
+        "VOICE_ELEVENLABS_AGENT_ID",
+        "VOICE_ELEVENLABS_TIMEOUT_SECONDS",
+        "VOICE_ELEVENLABS_WEBHOOK_TOKEN",
+        "VOICE_ELEVENLABS_WEBHOOK_URL",
+    }
     assert set(values) == canonical_names | {"BRAINTRUST_API_KEY"}
     settings = Settings()
     assert settings.environment == "development"
