@@ -1,40 +1,35 @@
 # Roadmap
 
-Version 0.2.0 is a reference implementation; implementation and release acceptance are separate. Passing offline tests is not proof of
-live voice quality, provider access, acoustic latency or production readiness.
+What exists today and what each area needs before a v1.0 tag. v0.x tags are
+implementation releases (amended 2026-10-05); v1.0 is the first acceptance-gated tag.
+Offline tests and CI prove behavior against fakes, not live voice quality or latency.
 
-On 2026-10-23, the maintainer reported successful local GPT-Live conversations,
-English/Italian transcripts and spoken arithmetic responses after the worker fixes.
-This is a partial local smoke test, not completion of the live acceptance checklist.
-Azure recovery, measured latency and hosted end-to-end acceptance remain pending.
-No recordings or conversation content are published as release evidence.
+The maintainer has used GPT-Live (2026-10-23, English and Italian, spoken arithmetic),
+Azure as primary provider and ElevenLabs on the deployed backend (2026-11-03). No
+recordings or conversation content are published as evidence.
 
-| Feature | Scope | Acceptance | Current status |
-|---|---|---|---|
-| Voice and sessions | FastAPI, GPT-Live, WebRTC, React, session cleanup | Real microphone conversation and resource cleanup | Implemented; live verification pending |
-| Delegated worker | LangGraph, read-only tools, timeout, bounded results, interruption cancellation | Delegated result is spoken; interrupted work cannot return late | Candidate; offline checks pass; live verification pending |
-| Providers and recovery | Azure fallback, new peer, bounded history, duplicate protection | Injected failure recovers within configured budget | Implemented; offline/browser checks pass; Azure live validation pending |
-| Measurement, evals and v0.1 | OTel, metrics, Prometheus, Grafana, reproducible evals, docs, recorded demo | CI green, measured latency, live checks and demonstration | Implemented candidate; release evidence incomplete |
-| Controlled public demo | Verified deployment, authentication, per-user quotas, application spending limits, private logs, rollback | External users can try it with bounded consumption and protected credentials | Implemented candidate: personal invites, durable quotas, local container checks; hosted acceptance pending |
-| Complete use case | Read-only questions over public project documentation with source citations | Useful end-to-end workflow beyond calculator | Implemented: cited documentation search and worker tool; hosted/live narration acceptance pending |
-| Advanced voice experience | Multilingual behavior, translation, interruption-aware summaries, accessibility, additional providers | Multilingual and user-correction scenarios pass | Implemented candidate: language/translate controls, interruption recap, accessibility and Realtime adapter; live language evaluation pending |
-| Scaling | Multiple instances, session ownership, separate workers, backpressure, load tests | Recovery and isolation work across processes under load | Implemented same-host reference: two APIs, separate bounded worker, shared leases, ownership routing and crash/load tests; hosted real-voice acceptance pending |
-| Measured quality and feedback | Versioned task evaluations, clear recovery states, minimal diagnostic feedback | Regression reports, verified recovery UX and bounded feedback from a private pilot | Recovery UX, feedback and 40-case worker eval runner implemented; Braintrust upload verification, accessibility audit and pilot pending; see [quality and feedback record](milestones/m9.md) |
+| Area | What exists | Next gate |
+|---|---|---|
+| Voice and sessions | FastAPI, GPT-Live, WebRTC, React, session cleanup | Recorded microphone session with cleanup checks |
+| Delegated worker | LangGraph, read-only tools, timeouts, bounded results | A spoken delegated result in the live checklist |
+| Providers and recovery | Azure adapter, opt-in recovery with a new peer and bounded history | A live injected failure that recovers within budget |
+| Measurement and evals | OTel, Prometheus, Grafana, reproducible worker evals | Measured latency and a recorded demonstration |
+| Public demo | Named invitations, durable quotas, Railway and Vercel deployment | Hosted end-to-end run by an external user |
+| Documentation use case | Cited search over public project documentation | Live narration of a cited answer |
+| Voice experience | Language and translate controls, interruption recap, accessibility | Live multilingual evaluation |
+| Scaling | Two APIs, separate bounded worker, shared leases, crash and load tests | Hosted real-voice run (same-host by design) |
+| Quality and feedback | Recovery UX, diagnostic feedback, 40-case eval runner | Accessibility audit and a private pilot ([record](milestones/m9.md)) |
 
-All nine milestones have implementation and offline verification. Release acceptance
-still requires the listed live/hosted evidence. Same-host scaling deliberately targets multiple processes on
-one host; cross-host high availability is a further architectural change.
+Cross-host high availability is a further architectural change, not part of v1.0.
+Supporting records: [Azure setup](azure-setup.md), [provider recovery](milestones/m3.md),
+[measurement](milestones/m4.md), [voice and scaling verification](milestones/m7-m8-verification.md)
+and [observability](../observability/README.md).
 
-See [Azure setup](azure-setup.md), [provider recovery](milestones/m3.md), [measurement](milestones/m4.md), and
-[observability](../observability/README.md). Acceptance-gated tags beginning at v1.0 require the listed evidence;
-implementation commits alone do not close a milestone.
+## Evidence log
 
-The [voice experience and scaling verification record](milestones/m7-m8-verification.md) records passing local checks and
-the successful Docker rerun, separately from the live and hosted acceptance still required.
+The sections below record how each feature was verified, in the order it landed.
 
-Amended 2026-10-05: v0.x tags are implementation releases; acceptance-gated tags begin at v1.0.
-
-## Live demonstration preparation
+### Live demonstration preparation
 
 Audio playback instrumentation is opt-in (`VOICE_AUDIO_TIMING`), with deterministic
 energy/state tests and bounded numeric telemetry. The expanded
@@ -44,7 +39,7 @@ results were collected for this change. Formal live/hosted acceptance remains pe
 The [two-minute storyboard](demo-video.md) marks continued speech during delegated work
 and silence-gated delivery as dependent on enabling and live-validating the optional intent-cancellation path.
 
-## One-command offline demonstration
+### One-command offline demonstration
 
 The demo stack combines the frontend, fake-provider session API, separate OfflinePlanner
 worker and observability in one Compose command. The container smoke verifies a delegated
@@ -60,7 +55,7 @@ remains pending. Tested commit, codespace creation minutes and cold Compose minu
 were not recorded. No cold-start duration or new live-voice result is claimed.
 Live voice, Azure recovery and hosted invitation acceptance retain their existing status.
 
-## Intent cancellation and pending delivery
+### Intent cancellation and pending delivery
 
 The optional task portfolio supports two jobs, explicit per-task cancellation, silence-gated
 bounded delivery and preservation through reconnect. Decisions cancellation is independently
@@ -94,7 +89,7 @@ semantic cancellation remains unverified; the feature stays off by default.
 Browser connection sounds are enabled by default with a preference to disable them;
 offline tests cover connection, closure, repeated events and unavailable audio.
 
-## Optional Decisions worker planner
+### Optional Decisions worker planner
 
 The experimental `VOICE_WORKER_MODE=decisions` adds dynamic tool selection through
 choice questions while retaining the existing voice tool and worker limits. Default
@@ -109,7 +104,7 @@ has been performed for this feature. Live comparison, billing validation and
 natural-language argument coverage remain pending. See [worker guide](worker.md#decisions-worker-planner)
 and [comparison procedure](../evals/README.md#planner-comparison).
 
-## Capacitor mobile preview
+### Capacitor mobile preview
 
 The optional [mobile scaffold](mobile.md) packages local React assets for iOS/iPadOS
 and Android. Packaging and live voice require explicit opt-in; native voice is off by
@@ -120,7 +115,7 @@ test APK compilation were also verified; instrumented tests were not run. Simula
 physical-device audio, Bluetooth, native recording export and store distribution
 remain pending. No live provider call or deployed configuration change is claimed.
 
-## Reproducible voice benchmark preparation
+### Reproducible voice benchmark preparation
 
 The [benchmark page](benchmarks.md) defines 30 fixed delegation cases, with separate
 required, direct and ambiguous labels. Offline tests exercise deliberately imperfect
@@ -135,7 +130,7 @@ new deployment, measured provider latency or new live acceptance are claimed. Th
 Grafana stack has no retained trace data source; the optional trace exporter is verified
 with offline mocks and requires an existing Tempo-backed Grafana for a real export.
 
-## Public web search in the worker
+### Public web search in the worker
 
 Optional Tavily search is implemented behind `VOICE_WEB_SEARCH=false` by default.
 Offline HTTP fakes verify bounded results, domain filtering, fallback, cancellation,
@@ -151,12 +146,12 @@ match the configured planner, and citation loss during local, private-worker and
 delayed-result clipping. Uncited clipped web results fail rather than being reported
 as successfully delivered evidence. These remain offline checks, not live acceptance.
 
-## Local development commands
+### Local development commands
 
 Repository-local `make be`, `make fe` and `make invite` commands provide a reusable
 local invitation without rewriting existing configuration or credentials.
 
-## Configuration naming and worker model migration
+### Configuration naming and worker model migration
 
 `VOICE_ADAPTER` replaces the ambiguous voice-provider selector name, with the old
 name accepted as a deprecated alias. New worker/eval defaults use GPT-6 Luna with
@@ -164,7 +159,7 @@ Chat Completions reasoning disabled for tool calling. Offline request-format and
 alias-precedence checks are separate from live model acceptance, which is pending.
 Existing explicit environment overrides are not silently changed.
 
-## Current entry-point documentation
+### Current entry-point documentation
 
 The README now distinguishes scripted browser playback, real offline worker execution,
 reported local live smoke tests and remaining acceptance. The server template lists
@@ -173,7 +168,7 @@ includes enum choices, collection/string constraints and frontend build options.
 Copyable local model-backed setup is documented without changing private credentials
 or cloud deployments. No new live acceptance or measured model comparison is claimed.
 
-## ElevenLabs transport evaluation and implementation
+### ElevenLabs transport evaluation and implementation
 
 The [transport evaluation](elevenlabs-transport.md) selects private Agents WebRTC with one
 async server webhook for delegate_task. The browser owns SDK media and activity/transcript
@@ -187,19 +182,19 @@ provider exactly-once evidence. Live audio, webhook reachability, async narratio
 closure acceptance remain pending. See [the implementation guide](elevenlabs.md). No paid
 calls or cloud/account changes were made.
 
-## Session cost estimates
+### Session cost estimates
 
 Session accounting is enabled by default and uses versioned prices, observed voice duration,
 and numeric usage for the worker, Decisions, and search. Offline arithmetic, isolation and remote propagation are verified.
 Live billing reconciliation is pending; see [cost estimates](cost-estimates.md).
 
-## Session controls
+### Session controls
 
 The automatically enabled [session UI](session-ui.md) provides server-controlled provider selection,
 observed audio activity and cost breakdowns. Offline and narrow-viewport checks are verified;
 actual device/provider voice acceptance remains pending.
 
-## Personal API sessions and simpler runtime defaults
+### Personal API sessions and simpler runtime defaults
 
 The voice workspace offers invited Platform API access and invitation-free personal keys.
 Provider and worker clients are isolated per personal session, keys are not persisted,
