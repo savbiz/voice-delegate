@@ -1,7 +1,8 @@
 import { ApiAccess, type ApiSource, type PersonalKeys } from './components/ApiAccess';
 import { isNativeClient } from './native';
 import { CostPanel, ProviderChoice, SpeakingStatus } from './components/SessionPanels';
-import { voiceOptions, type Adapter, type VoiceOptions } from './realtime/provider-options';
+import { type Adapter, type VoiceOptions } from './realtime/provider-options';
+import { wakeVoiceOptions, type WakeState } from './realtime/wake';
 /** React shell separating a free scripted demo from the live WebRTC lifecycle. */
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { canStartVoice } from './native';
@@ -33,6 +34,7 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
   const codeRef = useRef(code);
   codeRef.current = code;
   const [options, setOptions] = useState<VoiceOptions>();
+  const [wake, setWake] = useState<WakeState>('ready');
   const [adapter, setAdapter] = useState<Adapter>();
   const selectedAdapter = adapter ?? options?.adapter;
   const sdkSelected = selectedAdapter === 'elevenlabs';
@@ -52,7 +54,9 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
   useEffect(() => {
     if (!canStartVoice()) return;
     const abort = new AbortController();
-    void voiceOptions(abort.signal, apiSource, isNativeClient()).then((value) => {
+    void wakeVoiceOptions(abort.signal, apiSource, isNativeClient(), (value) => {
+      if (!abort.signal.aborted) setWake(value);
+    }).then((value) => {
       if (!abort.signal.aborted) setOptions(value);
     });
     return () => abort.abort();
@@ -189,9 +193,13 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
       {state.sessionUi && state.active && <SpeakingStatus activity={state.speaking} />}
       <div className="session-controls">
         <p id="status" role="status">
-          {noProvider && !state.active
-            ? 'Voice is unavailable: no provider is configured on this server.'
-            : state.status}
+          {wake === 'waking' && !state.active
+            ? 'Starting the server… this can take up to 30 seconds after a quiet period.'
+            : wake === 'unavailable' && !state.active
+              ? 'The server did not respond. Reload the page to try again.'
+              : noProvider && !state.active
+                ? 'Voice is unavailable: no provider is configured on this server.'
+                : state.status}
         </p>
         <p id="task-status" className="muted" aria-live="polite">
           {state.workerMessage}
@@ -262,7 +270,14 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
           <Button
             id="start"
             variant="primary"
-            disabled={state.active || state.ending || state.recovering || noProvider || missingKeys}
+            disabled={
+              state.active ||
+              state.ending ||
+              state.recovering ||
+              noProvider ||
+              missingKeys ||
+              wake === 'waking'
+            }
             aria-describedby={missingKeys ? 'start-hint' : undefined}
             onClick={() => controller.current?.start()}
           >
