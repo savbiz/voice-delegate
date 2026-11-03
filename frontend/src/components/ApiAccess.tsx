@@ -32,6 +32,7 @@ export function ApiAccess({
   recoveryAvailable,
   onRecovery,
   requestAccess = false,
+  requestAccessEmail = false,
 }: {
   source: ApiSource;
   onSource: (source: ApiSource) => void;
@@ -47,6 +48,7 @@ export function ApiAccess({
   recoveryAvailable: boolean;
   onRecovery: (enabled: boolean) => void;
   requestAccess?: boolean;
+  requestAccessEmail?: boolean;
 }) {
   const [showKeys, setShowKeys] = useState(false);
   const placeholders: Partial<Record<keyof PersonalKeys, string>> = {
@@ -118,7 +120,7 @@ export function ApiAccess({
               onChange={(event) => onCode(event.target.value)}
             />
           </label>
-          {requestAccess && !disabled && <RequestAccess />}
+          {requestAccess && !disabled && <RequestAccess email={requestAccessEmail} />}
         </>
       ) : (
         <>

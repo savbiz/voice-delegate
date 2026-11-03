@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 
-from voice_delegate.access_request import AccessRequests
+from voice_delegate.access_request import AccessRequests, Approval, InviteStore
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.delegation.planner import build_planner
 from voice_delegate.feedback import FeedbackStore
@@ -32,7 +32,7 @@ from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
 
 from .elevenlabs_webhook import build_webhook_router
-from .routes import build_router
+from .routes import build_access_router, build_router
 
 
 def create_app(
@@ -43,7 +43,19 @@ def create_app(
     """Build a single-process app; inject an offline provider in tests."""
     settings = settings or load_settings()
     if access_requests is None and settings.access_request_url:
-        access_requests = AccessRequests(settings.access_request_url)
+        remote_approval = bool(settings.resend_api_key.get_secret_value())
+        access_requests = AccessRequests(
+            settings.access_request_url,
+            store=InviteStore(settings.access_database) if remote_approval else None,
+            approval=Approval(
+                resend_api_key=settings.resend_api_key.get_secret_value(),
+                sender=settings.access_email_from,
+                public_api_url=settings.public_api_url.rstrip("/"),
+                frontend_url=settings.allowed_origins[0],
+            )
+            if remote_approval
+            else None,
+        )
     elevenlabs = (
         ElevenLabsProvider(
             settings.elevenlabs_api_key.get_secret_value(),
@@ -146,6 +158,9 @@ def create_app(
         providers=providers,
     )
 
+    if access_requests is not None and access_requests.store is not None:
+        manager.admission.invite_lookup = access_requests.store.principal
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         janitor = asyncio.create_task(manager.sweep(), name="session-janitor")
@@ -225,4 +240,6 @@ def create_app(
 
     app.include_router(build_router(manager, feedback, elevenlabs, access_requests))
     app.include_router(build_webhook_router(manager))
+    if access_requests is not None and access_requests.store is not None:
+        app.include_router(build_access_router(access_requests))
     return app

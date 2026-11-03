@@ -212,3 +212,31 @@ test('a sleeping server shows a starting message, then the providers', async ({ 
   await expect(page.getByRole('combobox', { name: 'Voice provider', exact: false })).toBeVisible();
   await expect(page.locator('#status')).not.toContainText('Starting the server');
 });
+
+test('remote approval asks for an email and explains where it goes', async ({ page }) => {
+  let body: unknown;
+  await page.route('**/api/**', (route) => {
+    if (route.request().url().endsWith('/api/access-request')) {
+      body = route.request().postDataJSON();
+      return route.fulfill({ status: 202, json: { status: 'sent' } });
+    }
+    return route.fulfill({
+      json: {
+        session_ui: true,
+        adapter: 'openai',
+        available_adapters: ['openai'],
+        access_request_available: true,
+        access_request_email: true,
+      },
+    });
+  });
+  await page.goto('/');
+  await page.getByText('No invitation code? Request access').click();
+  await expect(page.getByText('emailed to you through Resend', { exact: false })).toBeVisible();
+  const field = page.getByLabel('Your email');
+  await expect(field).toHaveAttribute('type', 'email');
+  await field.fill('visitor@example.com');
+  await page.getByRole('button', { name: 'Request access', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'arrives by email' })).toBeVisible();
+  expect(body).toEqual({ contact: 'visitor@example.com', note: '' });
+});

@@ -19,6 +19,8 @@ class Admission:
 
     def __init__(self, settings: Settings, clock: Callable[[], float] = time.time) -> None:
         self.settings = settings
+        # Optional lookup of remotely approved invitations (token -> principal).
+        self.invite_lookup: Callable[[str], str | None] | None = None
         self.clock = clock
         self.database: sqlite3.Connection | None = None
         if settings.public_demo:
@@ -49,6 +51,9 @@ class Admission:
         actual = (
             authorization.removeprefix("Bearer ") if authorization.startswith("Bearer ") else ""
         )
+        approved = self.invite_lookup(actual) if self.invite_lookup and actual else None
+        if approved is not None:
+            return approved
         if self.settings.invite_tokens:
             identity = None
             for user, token in self.settings.invite_tokens.items():

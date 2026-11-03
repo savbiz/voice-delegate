@@ -127,6 +127,10 @@ class Settings(BaseSettings):
     quota_database: str = ".local/quotas.sqlite3"
     feedback_database: str = ".local/feedback.sqlite3"
     access_request_url: str = ""
+    access_email_from: str = ""
+    access_database: str = ".local/access.sqlite3"
+    public_api_url: str = ""
+    resend_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="RESEND_API_KEY")
     daily_sessions_per_user: int = Field(default=4, ge=1, le=100)
     concurrent_sessions_per_user: int = Field(default=1, ge=1, le=10)
     daily_voice_seconds_per_user: int = Field(default=1500, ge=1)
@@ -197,6 +201,24 @@ class Settings(BaseSettings):
                 or len(ntfy.path.strip("/")) < 8
             ):
                 message = "VOICE_ACCESS_REQUEST_URL must be an HTTPS topic URL with a long topic"
+                raise ValueError(message)
+        if self.resend_api_key.get_secret_value():
+            api = urlsplit(self.public_api_url)
+            if (
+                not self.access_request_url
+                or not self.access_email_from
+                or api.scheme != "https"
+                or not api.hostname
+                or api.path not in {"", "/"}
+                or api.query
+                or api.fragment
+                or api.username
+                or api.password
+            ):
+                message = (
+                    "Remote access approval needs VOICE_ACCESS_REQUEST_URL, "
+                    "VOICE_ACCESS_EMAIL_FROM and an HTTPS VOICE_PUBLIC_API_URL origin"
+                )
                 raise ValueError(message)
         if self.voice_provider == "elevenlabs" and not self.intent_cancellation:
             message = "ElevenLabs async delegation requires VOICE_INTENT_CANCELLATION"
