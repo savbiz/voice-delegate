@@ -77,7 +77,10 @@ provider secret storage; the conversation header must use the reserved system va
 not a model-generated owner ID. Header binding authenticates a service request; the backend
 also requires an existing, unexpired conversation it minted. Do not share the service token
 or this private agent with unrelated applications. The agent must require authentication,
-have no workflow or extra built-in tools, and disable client overrides.
+have no active workflow or extra built-in tools, and disable client overrides. A workflow
+containing only an isolated start node and built-in tool entries set to `null` are inactive
+export placeholders. The API may return both the single tool ID and its expanded definition;
+both definitions are validated, including matching service-header bindings.
 
 The provider's maximum conversation duration must not exceed `VOICE_SESSION_TTL_SECONDS`.
 Execution plus delivery budgets must fit within 110 seconds. The backend response wait is
