@@ -196,3 +196,19 @@ test('request access is hidden unless the server enables it', async ({ page }) =
   await page.goto('/');
   await expect(page.getByText('No invitation code? Request access')).toHaveCount(0);
 });
+
+test('a sleeping server shows a starting message, then the providers', async ({ page }) => {
+  let calls = 0;
+  await page.route('**/api/**', (route) => {
+    calls += 1;
+    if (calls === 1) return route.fulfill({ status: 503, body: '' });
+    return route.fulfill({
+      json: { session_ui: true, adapter: 'openai', available_adapters: ['openai'] },
+    });
+  });
+  await page.goto('/');
+  await expect(page.locator('#status')).toContainText('Starting the server');
+  await expect(page.locator('#start')).toBeDisabled();
+  await expect(page.getByRole('combobox', { name: 'Voice provider', exact: false })).toBeVisible();
+  await expect(page.locator('#status')).not.toContainText('Starting the server');
+});

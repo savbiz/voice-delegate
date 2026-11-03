@@ -4,6 +4,8 @@
 
 Added: an optional **Request access** button that notifies the owner through an ntfy topic (`VOICE_ACCESS_REQUEST_URL`); requests are rate limited and never stored.
 
+Added: the page waits up to 30 seconds for a sleeping backend to start, showing a starting message, before discovering providers; the Railway service is described with Infrastructure as Code in `.railway/railway.ts`.
+
 Changed: the provider menu names OpenAI as "OpenAI · GPT-Live" and Azure simply as "Azure". Documentation: the maintainer reported ElevenLabs Agents working live on the deployed backend on 2026-11-03 (formal acceptance and cost reconciliation remain pending); future-extension proposals added under `docs/`.
 
 ## 0.2.0 - 2026-11-03

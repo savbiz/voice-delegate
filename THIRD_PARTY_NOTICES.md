@@ -29300,6 +29300,7 @@ licence material when redistributing images; this table is not an OS package inv
 | OpenTelemetry Collector Contrib 0.123.0 | Apache-2.0 | [Collector licence](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/v0.123.0/LICENSE) |
 | Prometheus 3.2.1 | Apache-2.0 | [Prometheus licence](https://github.com/prometheus/prometheus/blob/v3.2.1/LICENSE), [NOTICE](https://github.com/prometheus/prometheus/blob/v3.2.1/NOTICE) |
 | Grafana 11.6.0 | AGPL-3.0-only | [Grafana licence](https://github.com/grafana/grafana/blob/v11.6.0/LICENSE) |
+| Railway TypeScript SDK `railway` 3.16.0, with `graphql` 16.14.2 and `@graphql-typed-document-node/core` 3.2.0 (`.railway/` only, for `railway config plan`) | MIT | [railway-ts-sdk](https://github.com/railwayapp/railway-ts-sdk), [graphql-js licence](https://github.com/graphql/graphql-js/blob/v16.14.2/LICENSE), [typed-document-node licence](https://github.com/dotansimha/graphql-typed-document-node/blob/master/LICENSE) |
 
 uv 0.12.15 and pnpm 11.19.0 are existing build tools; their installed dependency
 attributions are included above where present. This optional stack does not grant
