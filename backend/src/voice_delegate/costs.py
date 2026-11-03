@@ -29,7 +29,7 @@ class Prices(BaseModel):
         raw = (
             Path(path).read_bytes()
             if path
-            else files("voice_delegate").joinpath("prices/2026-11-02.json").read_bytes()
+            else files("voice_delegate").joinpath("prices/2026-11-03.json").read_bytes()
         )
         if len(raw) > 65536:
             message = "Price file exceeds limit"
