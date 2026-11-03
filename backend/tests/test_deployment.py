@@ -43,6 +43,12 @@ def test_platforms_share_storage_health_and_required_variables() -> None:
     }
     assert railway["deploy"]["restartPolicyType"] == "ON_FAILURE"
     assert railway["deploy"]["healthcheckPath"] == "/healthz"
+    iac = (ROOT / ".railway/railway.ts").read_text()
+    assert 'builder: "DOCKERFILE", dockerfilePath: "deployment/Dockerfile.backend"' in iac
+    assert 'healthcheck: "/healthz"' in iac
+    assert 'restartPolicyType: "ON_FAILURE"' in iac
+    assert f'volumeMounts: {{ "{resources["volumeMountPath"]}": data }}' in iac
+    assert "variables: { managed: false }" in iac
     health = re.search(r"healthCheckPath: (/\S+)", render)
     assert health is not None and health[1] == "/healthz"
     mount = re.search(r"mountPath: (/\S+)", render)

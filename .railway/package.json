@@ -1,0 +1,8 @@
+{
+  "name": "voice-delegate-railway-iac",
+  "private": true,
+  "description": "Railway Infrastructure as Code tooling; not part of the application.",
+  "devDependencies": {
+    "railway": "3.16.0"
+  }
+}
