@@ -74,11 +74,15 @@ def build_planner(settings: Settings, metrics: Metrics | None = None) -> Planner
     runtime.mcp = _build_mcp(settings)
     if not settings.moderation:
         return runtime
-    decider = runtime.decider
+    # A dedicated decider, so the moderation deadline is not capped by the decider's own
+    # (shorter) request timeout or by the Decisions planner's.
     classifier = DecisionsClassifier(
-        decider or OpenAIDecider(settings.openai_api_key.get_secret_value()),
+        OpenAIDecider(
+            settings.openai_api_key.get_secret_value(),
+            timeout=settings.moderation_timeout_seconds,
+        ),
         timeout=settings.moderation_timeout_seconds,
-        owns=decider is None,
+        owns=True,
     )
 
     def record(origin: Origin, verdict: Verdict) -> None:
