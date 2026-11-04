@@ -9,3 +9,5 @@ Decision: use typed fake events, injected clocks, and in-process HTTP to test li
 Consequences: offline CI can verify deterministic timeout policy and cleanup. It cannot certify spoken quality, barge-in behavior, real p50/p95 latency, or Azure failover. Acceptance-gated releases beginning at v1.0 require a recorded live smoke test; v0.x tags describe the implementation and its explicitly unverified acceptance areas. Application-defined backend turn spans are parents for provider and delegation spans. Signaling TTFB, first observed audio, playback onset, transcript gap and end-to-end task latency remain distinct measurements. Recorded fake scenarios test scheduling and limits; model behavior requires real-model evaluations.
 
 Amended 2026-10-05: v0.x tags are implementation releases; acceptance-gated tags begin at v1.0.
+
+Amended 2026-11-04: the gate for v1.0 is a recorded demonstration of the main path. The full live checklist and the paid benchmark stay documented as optional procedures; until they are run, the project claims no formal live acceptance or latency figures.

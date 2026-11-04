@@ -2,7 +2,7 @@
 
 What works today, and what is left before v1.0. Every feature below has offline tests
 and runs in CI. "Used live" means the maintainer has run it against real providers;
-v1.0 adds recorded, repeatable evidence for those runs. How each feature was verified
+v1.0 adds a recorded demonstration of the main path. How each feature was verified
 is in the [evidence log](milestones/evidence-log.md).
 
 ## What works today
@@ -23,14 +23,15 @@ is in the [evidence log](milestones/evidence-log.md).
 ## Next, for v1.0
 
 1. A 60–90 second demo video in the README.
-2. A paid [voice benchmark](benchmarks.md) run: first-audio and turn latency per provider.
-3. One recorded session per provider with the [live checklist](milestones/live-verification.md):
-   a spoken delegated result, an interruption and clean closure.
-4. A hosted session completed by an external user.
 
 ## Later
 
+- Formal live acceptance per provider ([checklist](milestones/live-verification.md)) and a paid
+  [voice benchmark](benchmarks.md). Both are optional and stay documented; until they are run,
+  no formal acceptance or latency figures are claimed.
 - Telephone entry over SIP and a cascaded STT, text model and TTS pipeline, both optional
   ([future extensions](future-extensions.md)).
 - Live MCP server compatibility and moderation quality evaluations.
+- The OpenSSF Best Practices (bestpractices.dev) self-certification questionnaire, for an
+  optional README badge.
 - Cross-host high availability (today's scaling is same-host by design).

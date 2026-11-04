@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 - 2026-11-04
+
+This release is about evidence and upkeep rather than new voice features. The project now builds and tests on Python 3.14 and Node.js 26, every dependency is refreshed, and the repository gains load testing, contract fuzzing, property and mutation tests, container and supply-chain checks, signed SBOM provenance, a nightly results page and an OpenSSF Scorecard badge.
+
+Changed: the v1.0 gate is narrowed to a recorded demo video. The per-provider live acceptance runs and the paid voice benchmark are now optional and listed under "Later" in the roadmap; their procedures stay documented and no results are claimed. README and ADR 003 are updated to match. The OpenSSF Best Practices questionnaire is noted as a possible later addition.
 
 Changed: the frontend image unpacks the checksum-verified pnpm tarball itself instead of running `npm install` on it, because OpenSSF Scorecard counts any `npm install` without a hash as an unpinned dependency.
 

@@ -128,12 +128,12 @@
     "digest": "11bcf96c837b4b4793c41847882c17346f2ce3633d665ac637afb065938a9d33"
   },
   {
-    "id": "cdbf8004aea2a549",
+    "id": "8afbc3523b463f0d",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status",
-    "text": "Every feature is covered by offline tests and CI, and the maintainer has used each voice\nprovider live on the hosted demo. Recorded live acceptance is the gate for v1.0.",
-    "digest": "cdbf8004aea2a549db71ae51852d4495fa373ae936c395e5fc49e257e66c77f5"
+    "text": "Every feature is covered by offline tests and CI, and the maintainer has used each voice\nprovider live on the hosted demo. A recorded demo video is the gate for v1.0.",
+    "digest": "8afbc3523b463f0d0037ba7a83522d36cf96267a7dd8e1fae91edbd191519db3"
   },
   {
     "id": "820f0c70df0f342a",
