@@ -248,3 +248,19 @@ test('remote approval asks for an email and explains where it goes', async ({ pa
   ).toBeVisible();
   expect(body).toEqual({ contact: 'visitor@example.com', note: '' });
 });
+
+test('visitors without a code are pointed to the offline example and their own keys', async ({
+  page,
+}) => {
+  await page.route('**/api/config', (route) =>
+    route.fulfill({ json: { voice_available: true, requires_access_code: true } }),
+  );
+  await page.goto('/');
+  const hint = page.locator('#no-code-hint');
+  await expect(hint).toContainText('Your API keys');
+  await hint.getByRole('link', { name: 'Offline example' }).click();
+  await expect(page).toHaveURL(/#demo$/);
+  await page.goto('/#live');
+  await page.getByLabel('Personal invitation code').fill('code');
+  await expect(hint).toBeHidden();
+});

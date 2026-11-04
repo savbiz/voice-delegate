@@ -64,6 +64,7 @@ test('voice is primary and secondary tools support keyboard navigation and direc
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route('**/api/config', (route) => route.fulfill({ json: { voice_available: true } }));
   await page.goto('/');
+  const nav = page.getByRole('navigation', { name: 'Workspace' });
   await expect(page.getByRole('button', { name: 'Start conversation' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Live voice', exact: true })).toHaveAttribute(
     'aria-current',
@@ -74,7 +75,7 @@ test('voice is primary and secondary tools support keyboard navigation and direc
   ).toBeVisible();
   await page.getByRole('link', { name: 'Live voice', exact: true }).focus();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('link', { name: 'Offline example', exact: true })).toBeFocused();
+  await expect(nav.getByRole('link', { name: 'Offline example', exact: true })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/#demo$/);
   await expect(page.getByRole('region', { name: 'Offline example', exact: true })).toBeVisible();

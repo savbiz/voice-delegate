@@ -120,6 +120,12 @@ export function ApiAccess({
               onChange={(event) => onCode(event.target.value)}
             />
           </label>
+          {!code && !disabled && (
+            <p className="muted" id="no-code-hint">
+              No code? Try the <a href="#demo">Offline example</a>, or choose{' '}
+              <strong>Your API keys</strong> above to use your own provider account.
+            </p>
+          )}
           {requestAccess && !disabled && <RequestAccess email={requestAccessEmail} />}
         </>
       ) : (
