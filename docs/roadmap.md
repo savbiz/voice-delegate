@@ -1,9 +1,9 @@
 # Roadmap
 
-What works today, and what is left before v1.0. Every feature below has offline tests
-and runs in CI. "Used live" means the maintainer has run it against real providers;
-v1.0 adds a recorded demonstration of the main path. How each feature was verified
-is in the [evidence log](milestones/evidence-log.md).
+What works today, and what comes later. Every feature below has offline tests and runs
+in CI. "Used live" means the maintainer has run it against real providers. The README
+links a recorded demonstration of the main path. How each feature was verified is in the
+[evidence log](milestones/evidence-log.md).
 
 ## What works today
 
@@ -19,10 +19,6 @@ is in the [evidence log](milestones/evidence-log.md).
 | Scaling | Two API instances, a separate private worker, shared leases; crash and load tests | Not on hosted voice |
 | Deployment | Railway backend (infrastructure as code), Vercel frontend, daily health check | Yes |
 | Mobile | Opt-in Capacitor shell for iOS and Android | Simulator build only |
-
-## Next, for v1.0
-
-1. A 60–90 second demo video in the README.
 
 ## Later
 

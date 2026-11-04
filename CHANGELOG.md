@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Added: a 90-second demonstration video of the hosted app (a spoken question, a calculation and a cited documentation lookup running in the background) at the top of the README. The roadmap no longer lists it as pending, and `docs/demo-video.md` records what the video covers.
+
 ## 0.5.0 - 2026-11-04
 
 This release is about evidence and upkeep rather than new voice features. The project now builds and tests on Python 3.14 and Node.js 26, every dependency is refreshed, and the repository gains load testing, contract fuzzing, property and mutation tests, container and supply-chain checks, signed SBOM provenance, a nightly results page and an OpenSSF Scorecard badge.

@@ -1,8 +1,10 @@
 # Two-minute demonstration script
 
-Status: storyboard only, not a recorded or verified demonstration. Record against a
-specific commit after [live acceptance](milestones/live-verification.md). Use a test
-invitation without revealing it. Hide credentials and private browser tabs.
+Status: the demonstration linked from the README was recorded on 2026-11-04 against the hosted
+deployment of v0.5.0 with GPT-Live. It follows scenes 1 to 4 below, then scrolls through the
+cited sources, the conversation recap and the connection timings. The Cancel task scene is not
+in that recording. Use a test invitation without revealing it. Hide credentials and private
+browser tabs.
 
 | Time | Action / narration | Visible evidence |
 |---|---|---|
