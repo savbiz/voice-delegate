@@ -43,6 +43,7 @@ from voice_delegate.providers.models import (
 
 from .models import Session, SessionError
 from .preferences import VoicePreferences
+from .recovery import Recovery
 
 logger = logging.getLogger(__name__)
 VOICE_INSTRUCTIONS = voice_prompt()
@@ -103,6 +104,7 @@ class SessionManager:
         self.settings = settings
         self.clock = clock
         self.sessions: dict[str, Session] = {}
+        self.recovery = Recovery(self)
         self._shutting_down = False
 
     def create(
@@ -192,17 +194,17 @@ class SessionManager:
 
     def config(self, session: Session | None = None) -> SessionConfig:
         """Build trusted provider configuration."""
-        preferences = session.preferences if session else VoicePreferences()
-        return self.provider_for(session).default_config(
-            self._instructions() + " " + preferences.instructions()
-        )
+        return self.provider_for(session).default_config(self.instructions_for(session))
 
-    def _instructions(self) -> str:
-        return voice_prompt(
+    def instructions_for(self, session: Session | None = None) -> str:
+        """Server prompt blocks followed by the session's language and style preferences."""
+        preferences = session.preferences if session else VoicePreferences()
+        prompt = voice_prompt(
             web_search=self.settings.web_search and self.settings.worker_mode != "offline",
             intent_cancellation=self.settings.intent_cancellation,
             decisions_cancel=self.settings.decisions_cancel,
         )
+        return prompt + " " + preferences.instructions()
 
     async def connect(self, session: Session, offer_sdp: str) -> WebRTCAnswer:
         """Prevent duplicate offers from creating multiple billable calls."""
@@ -220,11 +222,7 @@ class SessionManager:
                             config=self.config(session), offer_sdp=offer_sdp
                         )
             except (ProviderError, TimeoutError, asyncio.CancelledError) as exc:
-                if session.debug:
-                    session.debug.close(session.finalized and session.previous_finalized)
-                session.state = "closed"
-                self.sessions.pop(session.id, None)
-                self.admission.release(session.id)
+                self.discard(session)
                 if isinstance(exc, TimeoutError):
                     raise SessionError(504, "Provider connection timed out") from exc
                 raise
@@ -235,8 +233,7 @@ class SessionManager:
                 session.portfolio.pump = asyncio.create_task(
                     self._deliver(session), name="pending-delivery"
                 )
-            session.watcher = asyncio.create_task(self._watch(session), name="session-events")
-            session.watcher.add_done_callback(self._watch_finished)
+            self.start_watcher(session, "session-events")
             return session.connection.answer
 
     def attach_sdk(self, session: Session, connection: RealtimeConnection) -> None:
@@ -249,8 +246,20 @@ class SessionManager:
             session.portfolio.pump = asyncio.create_task(
                 self._deliver(session), name="pending-delivery"
             )
-        session.watcher = asyncio.create_task(self._watch(session), name="sdk-session-events")
+        self.start_watcher(session, "sdk-session-events")
+
+    def start_watcher(self, session: Session, name: str) -> None:
+        """Consume the current connection's events until it closes, fails or is replaced."""
+        session.watcher = asyncio.create_task(self._watch(session), name=name)
         session.watcher.add_done_callback(self._watch_finished)
+
+    def discard(self, session: Session) -> None:
+        """Drop a session whose connection never became usable and free its lease."""
+        if session.debug:
+            session.debug.close(session.finalized and session.previous_finalized)
+        session.state = "closed"
+        self.sessions.pop(session.id, None)
+        self.admission.release(session.id)
 
     async def _deliver(self, session: Session) -> None:
         while session.state not in {"closing", "closed"}:
@@ -307,7 +316,7 @@ class SessionManager:
                 if isinstance(event, Transcript):
                     session.turn = observe(session.turn, event, self.tracer, self.metrics)
                     session.history.append(event)
-                    self._seal_history(session, include_latest=event.committed)
+                    self.seal_history(session, include_latest=event.committed)
                     session.recap.observe(
                         event, session.history.latest_request(), session.history.latest_reply()
                     )
@@ -386,29 +395,13 @@ class SessionManager:
             logger.warning("Session provider stream failed; inspect preceding sideband diagnostics")
         finally:
             if session.state not in {"closing", "closed", "reconnecting"}:
-                if (
-                    self.fallback is not None
-                    and session.adapter == "openai"
-                    and session.preferences.azure_recovery
-                    and not session.fallback_used
-                    and not session.finalized
-                ):
-                    if not self.settings.intent_cancellation:
-                        self.delegator.cancel(session.delegation)
-                    self.intent.pause(session.portfolio)
-                    session.state = "reconnecting"
-                    try:
-                        session.previous_finalized = await connection.aclose()
-                    except Exception:
-                        session.previous_finalized = False
-                        logger.exception("Failed connection cleanup unconfirmed")
-                    finally:
-                        session.connection = None
+                if self.recovery.eligible(session):
+                    await self.recovery.suspend(session, connection)
                 else:
                     await self.close(session)
 
     @staticmethod
-    def _seal_history(session: Session, *, include_latest: bool = False) -> None:
+    def seal_history(session: Session, *, include_latest: bool = False) -> None:
         history = session.history
         end = history.first_index + len(history.entries) - (0 if include_latest else 1)
         for index in range(max(session.sealed_index, history.first_index), end):
@@ -440,82 +433,8 @@ class SessionManager:
         self.delegator.cancel(session.delegation)
 
     async def reconnect(self, session: Session, offer_sdp: str, generation: int) -> WebRTCAnswer:
-        return await self._reconnect(session, offer_sdp, generation)
-
-    async def _reconnect(self, session: Session, offer_sdp: str, generation: int) -> WebRTCAnswer:
-        """Consume one fallback attempt; never retry an ambiguous billable POST."""
-        async with session.lock:
-            if (
-                session.adapter != "openai"
-                or not session.preferences.azure_recovery
-                or self.fallback is None
-                or not self.fallback.capabilities.text_replay
-            ):
-                raise SessionError(501, "Fallback is not configured or cannot replay text")
-            if session.fallback_used or generation != session.generation:
-                raise SessionError(409, "Stale or duplicate fallback attempt")
-            if session.state not in {"connected", "reconnecting"}:
-                raise SessionError(409, "Session cannot reconnect")
-            with (
-                self.metrics.operation("provider.failover"),
-                self.tracer.start_as_current_span(
-                    "provider.failover",
-                    record_exception=False,
-                    context=session.turn.context if session.turn else None,
-                ),
-            ):
-                already_reconnecting = session.state == "reconnecting"
-                session.state = "reconnecting"
-                session.fallback_used = True
-                session.generation += 1
-                if not self.settings.intent_cancellation:
-                    self.delegator.cancel(session.delegation)
-                self.intent.pause(session.portfolio)
-                session.portfolio.sequence = -1
-                session.portfolio.awaiting_playback = False
-                # Set "reconnecting" first: the watcher's finally must not re-enter close()
-                # while this task holds session.lock, which would deadlock.
-                if session.watcher is not None:
-                    # A failed watcher is already closing its connection; let it finish.
-                    if not already_reconnecting:
-                        session.watcher.cancel()
-                    await asyncio.gather(session.watcher, return_exceptions=True)
-                # Transcript timestamps restart with the new transport; end the old turn first.
-                if session.turn is not None:
-                    session.turn.span.end()
-                    session.turn = None
-                try:
-                    async with asyncio.timeout(self.settings.connect_timeout_seconds):
-                        if session.connection is not None:
-                            session.previous_finalized = await session.connection.aclose()
-                        session.connection = None
-                        self._seal_history(session, include_latest=True)
-                        config = self.fallback.default_config(
-                            self._instructions() + " " + session.preferences.instructions(),
-                            tuple((e.speaker, e.text) for e in session.committed_history.entries),
-                        )
-                        session.connection = await self.fallback.connect(
-                            config=config, offer_sdp=offer_sdp
-                        )
-                    session.state = "connected"
-                    if session.costs is not None:
-                        session.costs.connect("azure")
-                    session.watcher = asyncio.create_task(
-                        self._watch(session), name="fallback-events"
-                    )
-                    session.watcher.add_done_callback(self._watch_finished)
-                except BaseException as exc:
-                    await self.intent.close(session.portfolio)
-                    if session.debug:
-                        session.debug.close(session.finalized and session.previous_finalized)
-                    session.state = "closed"
-                    self.sessions.pop(session.id, None)
-                    self.admission.release(session.id)
-                    if isinstance(exc, TimeoutError):
-                        raise SessionError(504, "Provider connection timed out") from exc
-                    raise
-                else:
-                    return session.connection.answer
+        """Replace a failed primary call with the consented fallback; see `Recovery`."""
+        return await self.recovery.reconnect(session, offer_sdp, generation)
 
     async def close(self, session: Session, *, summarize: bool = False) -> bool:
         """Idempotently close upstream before canceling the event consumer.

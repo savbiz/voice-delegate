@@ -14,6 +14,8 @@ import { recordAudio } from './recording';
 import type { AudioRecording } from './recording';
 import type { DebugSample } from './debug';
 import { shouldRecover } from './recovery';
+import { createApi, type OwnedSession as Session } from './api';
+import { canStart, initialLifecycle, transition, type LifecycleEvent } from './lifecycle';
 import { endedWorkerState, processEvent, recapText, workerState } from './store';
 import type { LiveStore, Phase } from './store';
 
@@ -40,13 +42,16 @@ export function createLiveSession(
   function showWorker(worker: string): void {
     store.update(workerState(store.getSnapshot(), worker));
   }
-  type Session = {
-    id: string;
-    key: string;
-    accessCode: string;
-    debugRecording?: boolean;
-    azureRecovery?: boolean;
-  };
+  const { request, requestOptions } = createApi(getAccessCode);
+  let life = initialLifecycle;
+  function send(event: LifecycleEvent): void {
+    const previous = life.mode;
+    life = transition(life, event);
+    if (life.mode !== previous)
+      store.update({ ending: life.mode === 'ending', recovering: life.mode === 'recovering' });
+  }
+  /** Read through a call so checks after an await are not narrowed by earlier guards. */
+  const isEnding = () => life.mode === 'ending';
   let eleven: ReturnType<typeof elevenSession> | undefined;
   let recording: AudioRecording | undefined;
   let disposed = false;
@@ -60,10 +65,6 @@ export function createLiveSession(
   let debugTimer: ReturnType<typeof setInterval> | undefined;
   let debugBusy = false;
   let startup: ReturnType<typeof setTimeout> | undefined;
-  let attemptId = 0;
-  let ending = false;
-  let recovering = false;
-  let fallbackAttempted = false;
   let heartbeatFailures = 0;
 
   function renderSources(items: Source[]): void {
@@ -100,70 +101,6 @@ export function createLiveSession(
     store.update({ active: false, audioBlocked: false, speaking: undefined });
   }
 
-  function requestOptions(
-    owner?: Session,
-    body?: unknown,
-    timeout = 35000,
-    accessCode = owner?.accessCode ?? getAccessCode(),
-  ): RequestInit {
-    return {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessCode ? { Authorization: `Bearer ${accessCode}` } : {}),
-        ...(owner ? { 'X-Session-Key': owner.key } : {}),
-      },
-      body: JSON.stringify(body ?? {}),
-      signal: AbortSignal.timeout(timeout),
-    };
-  }
-  async function request<T>(
-    path: string,
-    owner?: Session,
-    body?: unknown,
-    timeout = 35000,
-    accessCode?: string,
-  ): Promise<T> {
-    let response: Response;
-    try {
-      response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL ?? ''}/api${path}`,
-        requestOptions(owner, body, timeout, accessCode),
-      );
-    } catch (error) {
-      throw new Error(
-        error instanceof Error && error.name === 'TimeoutError'
-          ? 'The server took too long to respond. Please try again.'
-          : 'Could not reach the server. Check your connection and try again.',
-        { cause: error },
-      );
-    }
-    if (!response.ok) {
-      const messages: Record<number, string> = {
-        401: 'Your invitation is missing, invalid or revoked.',
-        429: 'Demo allowance reached or another conversation is active. Try again later.',
-        503: 'New conversations are temporarily unavailable.',
-        502: path.endsWith('/config')
-          ? 'The backend is unavailable. For local development, start the backend with make be and retry.'
-          : 'Voice connection failed. Check backend logs and the selected provider configuration.',
-      };
-      throw new Error(
-        messages[response.status] ??
-          `Request failed (${response.status}). Check server configuration and access.`,
-      );
-    }
-    try {
-      return await response.json();
-    } catch (error) {
-      throw new Error(
-        error instanceof Error && error.name === 'TimeoutError'
-          ? 'The server took too long to respond. Please try again.'
-          : 'The server returned an unreadable response. Please try again.',
-        { cause: error },
-      );
-    }
-  }
-
   async function recordDebug(owner: Session, sample: DebugSample): Promise<void> {
     if (!owner.debugRecording) return;
     try {
@@ -181,11 +118,10 @@ export function createLiveSession(
   }
 
   async function finish(message: string, userStopped = false): Promise<void> {
-    if (ending) return;
-    ending = true;
+    if (life.mode === 'ending') return;
+    send({ type: 'finish' });
     sounds.ended();
-    store.update({ ending: true });
-    const closedAttempt = ++attemptId;
+    const closedAttempt = life.attempt;
     const owner = session;
     const sdk = eleven;
     eleven = undefined;
@@ -214,28 +150,24 @@ export function createLiveSession(
           : close();
       void closing
         .then((result) => {
-          if (closedAttempt === attemptId)
+          if (closedAttempt === life.attempt)
             store.update({
               costs: result.costs,
               summary: typeof result.summary === 'string' ? result.summary.slice(0, 600) : '',
             });
-          if (closedAttempt === attemptId && !result.finalized)
+          if (closedAttempt === life.attempt && !result.finalized)
             store.update({ status: message + ' Provider finalization unconfirmed.' });
         })
         .catch(() => {
-          if (closedAttempt === attemptId)
+          if (closedAttempt === life.attempt)
             store.update({
               status:
                 message + ' Close was not confirmed; the server also enforces session expiry.',
             });
         })
-        .finally(() => {
-          ending = false;
-          store.update({ ending: false });
-        });
+        .finally(() => send({ type: 'finished' }));
     } else {
-      ending = false;
-      store.update({ ending: false });
+      send({ type: 'finished' });
     }
   }
 
@@ -246,9 +178,9 @@ export function createLiveSession(
       clearTimeout(startup);
       sounds.established();
     }
-    if (result.effect === 'closed' && !ending) {
+    if (result.effect === 'closed' && !isEnding()) {
       sounds.ended();
-      attemptId += 1;
+      send({ type: 'retire' });
       release();
       showState(
         'ended',
@@ -295,13 +227,13 @@ export function createLiveSession(
         taskId ? { task_id: taskId } : undefined,
       )
         .then(() => {
-          if (session === owner && !ending)
+          if (session === owner && !isEnding())
             store.update({
               workerMessage: 'Worker cancellation requested. You can give a new request.',
             });
         })
         .catch(() => {
-          if (session === owner && !ending) {
+          if (session === owner && !isEnding()) {
             store.update({
               workerMessage:
                 'Cancellation not confirmed. Try Cancel task again or stop the conversation.',
@@ -312,14 +244,13 @@ export function createLiveSession(
   };
 
   async function recover(message: string): Promise<void> {
-    if (ending || recovering) return;
+    if (life.mode !== 'idle') return;
     const owner = session;
-    if (!owner || !owner.azureRecovery || fallbackAttempted) {
+    if (!owner || !owner.azureRecovery || life.fallbackAttempted) {
       await finish(message);
       return;
     }
-    recovering = true;
-    store.update({ recovering: true });
+    send({ type: 'recover' });
     try {
       const state = await request<{ generation: number; fallback_available: boolean }>(
         `/sessions/${owner.id}/heartbeat`,
@@ -327,13 +258,12 @@ export function createLiveSession(
         undefined,
         8000,
       );
-      if (ending || session !== owner) return;
+      if (isEnding() || session !== owner) return;
       if (!state.fallback_available) {
         await finish(message);
         return;
       }
-      fallbackAttempted = true;
-      attemptId += 1;
+      send({ type: 'fallback' });
       release(true);
       session = owner;
       store.update({ active: true });
@@ -342,13 +272,11 @@ export function createLiveSession(
         'Reconnecting with Azure…',
         'Wait for connection confirmation, then repeat the unfinished phrase if needed.',
       );
-      recovering = false;
       await begin(owner, state.generation);
     } catch {
       await finish('Fallback failed.');
     } finally {
-      recovering = false;
-      store.update({ recovering: false });
+      send({ type: 'recovered' });
     }
   }
 
@@ -389,7 +317,6 @@ export function createLiveSession(
     const audioConsent = !existing && getAudioConsent();
     if (!existing) {
       store.update({ debugStatus: '' });
-      fallbackAttempted = false;
       store.update({
         speaking: undefined,
         captions: { user: '', assistant: '' },
@@ -418,7 +345,8 @@ export function createLiveSession(
       }
     }
     const accessCode = existing?.accessCode ?? getAccessCode();
-    const attempt = ++attemptId;
+    send({ type: 'begin', fresh: !existing });
+    const attempt = life.attempt;
     store.update({ timingTransportId: attempt });
     store.update({ active: true });
     showState(
@@ -443,7 +371,7 @@ export function createLiveSession(
         35000,
         personal ? '' : accessCode,
       );
-      if (attempt !== attemptId) return;
+      if (attempt !== life.attempt) return;
       store.update({
         sessionUi: Boolean(config.session_ui),
         intentCancellation: Boolean(config.intent_cancellation),
@@ -472,7 +400,7 @@ export function createLiveSession(
             'This agent uses its server-configured language and conversation style. Select Follow the speaker and Assistant conversation.',
           );
         const created = await createOwned(requestedPreferences, accessCode);
-        if (attempt !== attemptId) {
+        if (attempt !== life.attempt) {
           await request(`/sessions/${created.id}/close`, created);
           return;
         }
@@ -489,10 +417,10 @@ export function createLiveSession(
               path.endsWith('/bootstrap') ? 10000 : 5000,
             ),
           (message) => {
-            if (attempt === attemptId) void finish(message);
+            if (attempt === life.attempt) void finish(message);
           },
           () => {
-            if (attempt === attemptId) sounds.established();
+            if (attempt === life.attempt) sounds.established();
           },
           () => audio.muted,
           Boolean(config.audio_timing_available),
@@ -503,7 +431,7 @@ export function createLiveSession(
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true },
       });
-      if (attempt !== attemptId) {
+      if (attempt !== life.attempt) {
         stream.getTracks().forEach((track) => track.stop());
         return;
       }
@@ -539,7 +467,7 @@ export function createLiveSession(
       peer = connection;
       stream.getTracks().forEach((track) => connection.addTrack(track, stream));
       connection.addEventListener('track', (event) => {
-        if (attempt !== attemptId) return;
+        if (attempt !== life.attempt) return;
         const remote = new MediaStream([event.track]);
         audio.srcObject = remote;
         recording?.assistant(remote);
@@ -551,13 +479,13 @@ export function createLiveSession(
         });
       });
       connection.addEventListener('connectionstatechange', () => {
-        if (session && attempt === attemptId)
+        if (session && attempt === life.attempt)
           void recordDebug(session, {
             event: 'peer_state',
             peer_state: connection.connectionState,
           });
         if (
-          attempt === attemptId &&
+          attempt === life.attempt &&
           shouldRecover('connectionstatechange', connection.connectionState)
         ) {
           void recover('Media connection failed.');
@@ -566,7 +494,7 @@ export function createLiveSession(
       channel = connection.createDataChannel('oai-events');
       channel.addEventListener('message', (message: MessageEvent<unknown>) => {
         if (
-          attempt !== attemptId ||
+          attempt !== life.attempt ||
           typeof message.data !== 'string' ||
           message.data.length > 65536
         )
@@ -578,21 +506,21 @@ export function createLiveSession(
         }
       });
       channel.addEventListener('close', () => {
-        if (session && attempt === attemptId)
+        if (session && attempt === life.attempt)
           void recordDebug(session, { event: 'channel_closed' });
-        if (attempt === attemptId && shouldRecover('data-channel-close'))
+        if (attempt === life.attempt && shouldRecover('data-channel-close'))
           void recover('Event connection closed.');
       });
       await connection.setLocalDescription(await connection.createOffer());
       await gather(connection);
-      if (attempt !== attemptId) return;
+      if (attempt !== life.attempt) return;
       showState(
         existing ? 'recovering' : 'connecting',
         existing ? 'Reconnecting with Azure…' : 'Connecting…',
         'Please wait. Select Stop to cancel.',
       );
       const created = existing ?? (await createOwned(requestedPreferences, accessCode));
-      if (attempt !== attemptId) {
+      if (attempt !== life.attempt) {
         await request(`/sessions/${created.id}/close`, created);
         return;
       }
@@ -600,7 +528,7 @@ export function createLiveSession(
       if (created.debugRecording) {
         store.update({ debugStatus: `Debug session file: ${created.id}.jsonl` });
         debugTimer = setInterval(() => {
-          if (debugBusy || attempt !== attemptId) return;
+          if (debugBusy || attempt !== life.attempt) return;
           debugBusy = true;
           void connection
             .getStats()
@@ -635,7 +563,7 @@ export function createLiveSession(
           stream,
           () => {
             if (
-              attempt !== attemptId ||
+              attempt !== life.attempt ||
               config.intent_cancellation ||
               store.getSnapshot().worker !== 'running'
             )
@@ -646,7 +574,7 @@ export function createLiveSession(
           audio,
           config.audio_timing_available || config.intent_cancellation || config.session_ui
             ? (now, local, remote, playing, remoteEnergy) => {
-                if (attempt !== attemptId) return;
+                if (attempt !== life.attempt) return;
                 if (config.session_ui) {
                   const next = { user: local > 0.035, assistant: remoteEnergy > 0.02 };
                   const previous = store.getSnapshot().speaking;
@@ -705,7 +633,7 @@ export function createLiveSession(
                   ),
                 )
                   .catch(() => {
-                    if (attempt === attemptId)
+                    if (attempt === life.attempt)
                       store.update({
                         audioTimingStatus: 'Audio measured locally; metric upload failed.',
                       });
@@ -723,7 +651,7 @@ export function createLiveSession(
       const heartbeatMs = config.intent_cancellation ? 2000 : 10000;
       let heartbeatPending = false;
       heartbeat = setInterval(() => {
-        if (attempt !== attemptId || heartbeatPending) return;
+        if (attempt !== life.attempt || heartbeatPending) return;
         heartbeatPending = true;
         void request<{
           delegation: string;
@@ -735,7 +663,7 @@ export function createLiveSession(
           recap?: { latest_request: string; latest_reply: string; interrupted: boolean };
         }>(`/sessions/${created.id}/heartbeat`, created, undefined, 8000)
           .then((state) => {
-            if (attempt === attemptId) {
+            if (attempt === life.attempt) {
               heartbeatFailures = 0;
               store.update({
                 tasks: state.tasks ?? [],
@@ -754,7 +682,7 @@ export function createLiveSession(
             }
           })
           .catch(() => {
-            if (attempt === attemptId && ++heartbeatFailures >= Math.ceil(30000 / heartbeatMs))
+            if (attempt === life.attempt && ++heartbeatFailures >= Math.ceil(30000 / heartbeatMs))
               void finish('Server connection lost or session expired.');
           })
           .finally(() => {
@@ -773,11 +701,11 @@ export function createLiveSession(
           ...(existing ? { generation: serverGeneration } : {}),
         },
       );
-      if (attempt !== attemptId) return;
+      if (attempt !== life.attempt) return;
       await connection.setRemoteDescription({ type: 'answer', sdp: result.sdp });
       activityEnabled = true;
     } catch (error) {
-      if (attempt === attemptId) {
+      if (attempt === life.attempt) {
         await finish(error instanceof Error ? error.message : 'Could not start conversation.');
       }
     }
@@ -822,7 +750,7 @@ export function createLiveSession(
         keepalive: true,
       }).catch(() => undefined);
     }
-    attemptId += 1;
+    send({ type: 'retire' });
     release();
     if (!hadConversation) return;
     showState('ended', 'Conversation ended.', 'Select Start conversation to begin a new session.');
@@ -845,7 +773,7 @@ export function createLiveSession(
         );
         return;
       }
-      if (!store.getSnapshot().active && !ending && !recovering) {
+      if (!store.getSnapshot().active && canStart(life)) {
         sounds.arm(getConnectionSounds());
         void begin();
       }
