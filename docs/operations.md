@@ -152,7 +152,26 @@ example the access-request topic). Without that secret, the only alert is GitHub
 email, which goes to the schedule actor and depends on their notification settings. Run it on
 demand from the Actions tab. It is deliberately infrequent: polling every few minutes would keep the sleeping service awake. An external monitor such as UptimeRobot has the same trade-off.
 
-Check backend health, worker busy/timeouts, provider error/cancelled outcomes, lease counts and provider billed usage. Use [observability](../observability/README.md) for optional local dashboards; hosted alerting and trace retention are operator responsibilities. For a security issue use the [private reporting channel](../SECURITY.md), not a public transcript or log dump.
+Check backend health, worker busy/timeouts, provider error/cancelled outcomes, lease counts and provider billed usage. Use [observability](../observability/README.md) for optional local dashboards; hosted alerting and trace retention are operator responsibilities.
+
+### Hosted telemetry (Grafana Cloud)
+
+The backend can export traces and metrics straight to an OTLP service such as the free
+Grafana Cloud tier, with no collector:
+
+1. In the Grafana Cloud portal, open your stack, then **OpenTelemetry → Configure**.
+   Generate an API token; the page shows the three variables below, filled in.
+2. Set them on the Railway API service (the header contains the token, so it is a secret):
+   `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`,
+   `OTEL_EXPORTER_OTLP_ENDPOINT=https://otlp-gateway-prod-<region>.grafana.net/otlp` and
+   `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic <value from the page>`.
+3. After the redeploy, run one session. Traces appear under **Explore → Tempo** and metrics
+   (`voice_operation_duration_seconds` and the others listed in
+   [observability](../observability/README.md)) under **Explore → Prometheus**.
+
+Explicit `VOICE_OTEL_ENDPOINT` and `VOICE_OTEL_METRICS_ENDPOINT` take precedence over the
+standard variables. Without any endpoint, traces go to the service log and metrics are not
+exported. Exported data contains no transcripts, session IDs, credentials or tool results. For a security issue use the [private reporting channel](../SECURITY.md), not a public transcript or log dump.
 
 ## Temporary API documentation
 

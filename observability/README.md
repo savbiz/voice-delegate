@@ -9,6 +9,9 @@ VOICE_OTEL_ENDPOINT=http://localhost:4318/v1/traces
 VOICE_OTEL_METRICS_ENDPOINT=http://localhost:4318/v1/metrics
 ```
 
+For a hosted service such as Grafana Cloud, set the standard `OTEL_EXPORTER_OTLP_*`
+variables instead; see [hosted telemetry](../docs/operations.md#hosted-telemetry-grafana-cloud).
+
 Grafana: http://localhost:3000 (anonymous viewer); Prometheus: http://localhost:9090.
 Provisioning loads the dashboard automatically. Traces go to collector logs; inspect with
 `docker compose -f observability/compose.yaml logs collector`. No trace-storage backend is

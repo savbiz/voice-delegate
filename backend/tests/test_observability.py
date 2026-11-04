@@ -377,3 +377,63 @@ async def test_only_explicit_interruption_increments_counter(
     finally:
         await manager.aclose()
         meters.shutdown()
+
+
+@pytest.mark.parametrize(
+    ("explicit", "standard", "expected"),
+    [
+        ("http://collector:4318/v1/traces", "https://otlp.example/otlp", "explicit"),
+        ("", "https://otlp.example/otlp", "standard"),
+        ("", "", "console"),
+    ],
+)
+def test_trace_exporter_prefers_explicit_then_standard_endpoint(
+    monkeypatch: pytest.MonkeyPatch, explicit: str, standard: str, expected: str
+) -> None:
+    from opentelemetry.sdk.trace.export import ConsoleSpanExporter
+    from voice_delegate.observability import tracing
+
+    created: list[dict[str, object]] = []
+
+    class Recorder(ConsoleSpanExporter):
+        def __init__(self, **kwargs: object) -> None:
+            created.append(kwargs)
+            super().__init__()
+
+    monkeypatch.setattr(tracing, "OTLPSpanExporter", Recorder)
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", standard)
+    provider = tracing.configure_tracing(Settings(otel_enabled=True, otel_endpoint=explicit))
+    assert provider is not None
+    provider.shutdown()
+    if expected == "explicit":
+        assert created == [{"endpoint": explicit, "timeout": 3}]
+    elif expected == "standard":
+        # No endpoint argument: the SDK reads the base URL and headers from the environment.
+        assert created == [{"timeout": 3}]
+    else:
+        assert created == []
+
+
+@pytest.mark.parametrize("standard", ["https://otlp.example/otlp", ""])
+def test_metrics_export_to_the_standard_endpoint_only_when_it_is_set(
+    monkeypatch: pytest.MonkeyPatch, standard: str
+) -> None:
+    from opentelemetry.sdk.metrics.export import InMemoryMetricReader as Exporter
+    from voice_delegate.observability import metrics as metrics_module
+
+    created: list[dict[str, object]] = []
+
+    def exporter(**kwargs: object) -> Exporter:
+        created.append(kwargs)
+        return Exporter()
+
+    def reader(exporter: Exporter, **_: object) -> Exporter:
+        return exporter
+
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", standard)
+    monkeypatch.setattr(metrics_module, "OTLPMetricExporter", exporter)
+    monkeypatch.setattr(metrics_module, "PeriodicExportingMetricReader", reader)
+    provider = configure_metrics(Settings(otel_enabled=True))
+    assert provider is not None
+    provider.shutdown()
+    assert created == ([{"timeout": 3}] if standard else [])
