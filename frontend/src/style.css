@@ -468,6 +468,17 @@ fieldset label {
   font-size: 0.85rem;
   color: var(--muted, inherit);
 }
+.request-access .button {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+.request-access-sent {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-control);
+  background: var(--accent-soft);
+}
 .api-access .show-keys {
   display: flex;
   align-items: center;
