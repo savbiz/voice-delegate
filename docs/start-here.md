@@ -18,8 +18,10 @@ For someone reviewing the repository. Each step says what to read and what it sh
      and suppression of stale results.
    - [`graph.py`](../agent/src/voice_delegate_agent/graph.py): the LangGraph worker.
    - [`lifecycle.ts`](../frontend/src/realtime/lifecycle.ts): the browser session state machine.
-5. **Evidence, not claims.** [Evaluations](../evals/README.md); the live dashboard and the
-   table of what is not yet verified are in the README's [status](../README.md#status) section.
+5. **Evidence, not claims.** [Evaluations](../evals/README.md); the
+   [testing notes](testing.md) (what mutation testing found) and [nightly results](results.md);
+   the live dashboard and the table of what is not yet verified are in the README's
+   [status](../README.md#status) section.
 6. **Run it without keys.** `bash .devcontainer/start-demo.sh`, or the Offline example tab on
    the hosted page.
 

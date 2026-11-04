@@ -19,6 +19,8 @@ and the answer is spoken when you pause. Interrupting the voice never throws tha
 
 Reviewing this repository? [Start here](docs/start-here.md) for a five-minute reading path.
 
+How it is tested beyond examples: [fuzzing, property tests and mutation testing](docs/testing.md), a [load test](docs/load-testing.md) and [nightly results](docs/results.md).
+
 ## What's implemented
 
 A complete, deployed system, not a prototype:
