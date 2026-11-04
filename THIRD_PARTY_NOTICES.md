@@ -64,11 +64,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `anyio` 4.15.1
+### `anyio` 4.16.0
 
 Licence: MIT.
 
-Source: anyio-4.15.1.dist-info/licenses/LICENSE
+Source: anyio-4.16.0.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -93,11 +93,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `ast_serialize` 0.11.2
+### `ast_serialize` 0.13.1
 
 Licence: MIT.
 
-Source: ast_serialize-0.11.2.dist-info/licenses/LICENSE
+Source: ast_serialize-0.13.1.dist-info/licenses/LICENSE
 
 ````text
 ast_serialize is licensed under the terms of the MIT license, reproduced below.
@@ -129,7 +129,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ````
 
-Source: ast_serialize-0.11.2.dist-info/licenses/crates/LICENSE
+Source: ast_serialize-0.13.1.dist-info/licenses/crates/LICENSE
 
 ````text
 MIT License
@@ -1008,7 +1008,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `braintrust` 0.41.0
+### `braintrust` 0.49.2
 
 Licence: MIT.
 
@@ -1275,11 +1275,11 @@ one at http://mozilla.org/MPL/2.0/.
 @(#) $RCSfile: certdata.txt,v $ $Revision: 1.80 $ $Date: 2011/11/03 15:11:58 $
 ````
 
-### `charset-normalizer` 3.5.1
+### `charset-normalizer` 3.5.2
 
 Licence: MIT.
 
-Source: charset_normalizer-3.5.1.dist-info/licenses/LICENSE
+Source: charset_normalizer-3.5.2.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -1402,11 +1402,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `coverage` 7.16.1
+### `coverage` 7.17.2
 
 Licence: Apache-2.0.
 
-Source: coverage-7.16.1.dist-info/licenses/LICENSE.txt
+Source: coverage-7.17.2.dist-info/licenses/LICENSE.txt
 
 ````text
 
@@ -1588,7 +1588,7 @@ Source: coverage-7.16.1.dist-info/licenses/LICENSE.txt
    END OF TERMS AND CONDITIONS
 ````
 
-Source: coverage-7.16.1.dist-info/licenses/NOTICE.txt
+Source: coverage-7.17.2.dist-info/licenses/NOTICE.txt
 
 ````text
 Copyright 2001 Gareth Rees.  All rights reserved.
@@ -1899,11 +1899,11 @@ agrees to be bound by the terms and conditions of this License
 Agreement.
 ````
 
-### `fastapi` 0.141.1
+### `fastapi` 0.162.0
 
 Licence: MIT.
 
-Source: fastapi-0.141.1.dist-info/licenses/LICENSE
+Source: fastapi-0.162.0.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -2105,11 +2105,11 @@ OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `googleapis-common-protos` 1.75.3
+### `googleapis-common-protos` 1.76.0
 
 Licence: Apache-2.0.
 
-Source: googleapis_common_protos-1.75.3.dist-info/licenses/LICENSE
+Source: googleapis_common_protos-1.76.0.dist-info/licenses/LICENSE
 
 ````text
 
@@ -2536,11 +2536,11 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `httpcore2` 2.13.0
+### `httpcore2` 2.16.0
 
 Licence: BSD-3-Clause.
 
-Source: httpcore2-2.13.0.dist-info/licenses/LICENSE.md
+Source: httpcore2-2.16.0.dist-info/licenses/LICENSE.md
 
 ````text
 Copyright © 2026 to present Pydantic Services Inc. and individual contributors.
@@ -2573,11 +2573,11 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `httptools` 0.8.0
+### `httptools` 0.9.0
 
 Licence: MIT.
 
-Source: httptools-0.8.0.dist-info/licenses/LICENSE
+Source: httptools-0.9.0.dist-info/licenses/LICENSE
 
 ````text
 The MIT License
@@ -2603,7 +2603,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-Source: httptools-0.8.0.dist-info/licenses/vendor/http-parser/LICENSE-MIT
+Source: httptools-0.9.0.dist-info/licenses/vendor/http-parser/LICENSE-MIT
 
 ````text
 Copyright Joyent, Inc. and other Node contributors.
@@ -2627,7 +2627,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 ````
 
-Source: httptools-0.8.0.dist-info/licenses/vendor/llhttp/LICENSE
+Source: httptools-0.9.0.dist-info/licenses/vendor/llhttp/LICENSE
 
 ````text
 MIT License
@@ -2675,11 +2675,11 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `httpx2` 2.13.0
+### `httpx2` 2.16.0
 
 Licence: BSD-3-Clause.
 
-Source: httpx2-2.13.0.dist-info/licenses/LICENSE.md
+Source: httpx2-2.16.0.dist-info/licenses/LICENSE.md
 
 ````text
 Copyright © 2026 to present Pydantic Services Inc. and individual contributors.
@@ -3158,11 +3158,11 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `iniconfig` 2.3.0
+### `iniconfig` 2.3.1
 
 Licence: MIT.
 
-Source: iniconfig-2.3.0.dist-info/licenses/LICENSE
+Source: iniconfig-2.3.1.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -3262,11 +3262,11 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `jiter` 0.17.0
+### `jiter` 0.18.0
 
 Licence: MIT.
 
-Source: jiter-0.17.0.dist-info/licenses/LICENSE
+Source: jiter-0.18.0.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -3292,11 +3292,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `jsonpatch` 1.33
+### `jsonpatch` 1.42
 
-Licence: BSD License.
+Licence: BSD-3-Clause.
 
-Source: jsonpatch-1.33.dist-info/LICENSE
+Source: jsonpatch-1.42.dist-info/licenses/LICENSE
 
 ````text
 Copyright (c) 2011 Stefan Kögl <stefan@skoegl.net>
@@ -3312,11 +3312,11 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `jsonpointer` 3.1.1
+### `jsonpointer` 3.8
 
 Licence: BSD License.
 
-Source: jsonpointer-3.1.1.dist-info/licenses/LICENSE.txt
+Source: jsonpointer-3.8.dist-info/licenses/LICENSE.txt
 
 ````text
 Copyright (c) 2011 Stefan Kögl <stefan@skoegl.net>
@@ -3432,11 +3432,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `langchain-core` 1.6.3
+### `langchain-core` 1.7.5
 
 Licence: MIT License.
 
-Source: langchain_core-1.6.3.dist-info/licenses/LICENSE
+Source: langchain_core-1.7.5.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -3462,11 +3462,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `langchain-openai` 1.6.2
+### `langchain-openai` 1.7.4
 
 Licence: MIT License.
 
-Source: langchain_openai-1.6.2.dist-info/licenses/LICENSE
+Source: langchain_openai-1.7.4.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -3492,11 +3492,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `langchain-protocol` 0.0.19
+### `langchain-protocol` 0.0.20
 
 Licence: MIT License.
 
-Source: langchain_protocol-0.0.19.dist-info/licenses/LICENSE
+Source: langchain_protocol-0.0.20.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -3522,11 +3522,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `langgraph` 1.2.14
+### `langgraph` 1.2.19
 
 Licence: MIT.
 
-Source: langgraph-1.2.14.dist-info/licenses/LICENSE
+Source: langgraph-1.2.19.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -3552,11 +3552,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `langgraph-checkpoint` 4.2.0
+### `langgraph-checkpoint` 4.3.1
 
 Licence: MIT.
 
-Source: langgraph_checkpoint-4.2.0.dist-info/licenses/LICENSE
+Source: langgraph_checkpoint-4.3.1.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -3582,11 +3582,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `langgraph-prebuilt` 1.1.0
+### `langgraph-prebuilt` 1.1.1
 
 Licence: MIT.
 
-Source: langgraph_prebuilt-1.1.0.dist-info/licenses/LICENSE
+Source: langgraph_prebuilt-1.1.1.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -3612,11 +3612,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `langgraph-sdk` 0.4.6
+### `langgraph-sdk` 0.4.12
 
 Licence: MIT.
 
-Source: langgraph_sdk-0.4.6.dist-info/licenses/LICENSE
+Source: langgraph_sdk-0.4.12.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -3642,34 +3642,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `langsmith` 0.13.0
+### `langsmith` 0.14.17
 
-Licence: MIT.
+Licence: MIT License.
 
-Source: https://raw.githubusercontent.com/langchain-ai/langsmith-sdk/v0.13.0/LICENSE
+Source: langsmith-0.14.17.dist-info/licenses/LICENSE
 
 ````text
-MIT License
+Copyright 2026 langChain
 
-Copyright (c) 2023 LangChain
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
 ### `libcst` 1.9.0
@@ -3783,11 +3769,11 @@ APACHE LICENSE, VERSION 2.0
 http://www.apache.org/licenses/LICENSE-2.0
 ````
 
-### `librt` 0.15.0
+### `librt` 0.16.0
 
 Licence: MIT.
 
-Source: librt-0.15.0.dist-info/licenses/LICENSE
+Source: librt-0.16.0.dist-info/licenses/LICENSE
 
 ````text
 Mypyc runtime library is licensed under the terms of the MIT license, reproduced below.
@@ -4527,7 +4513,7 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `mypy` 2.3.1
+### `mypy` 2.4.1
 
 Licence: MIT.
 
@@ -4773,7 +4759,7 @@ DEALINGS IN THE SOFTWARE.
 = = = = =
 ````
 
-Source: mypy-2.3.1.dist-info/licenses/LICENSE
+Source: mypy-2.4.1.dist-info/licenses/LICENSE
 
 ````text
 Mypy (and mypyc) are licensed under the terms of the MIT license, reproduced below.
@@ -5042,7 +5028,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-Source: mypy-2.3.1.dist-info/licenses/mypy/typeshed/LICENSE
+Source: mypy-2.4.1.dist-info/licenses/mypy/typeshed/LICENSE
 
 ````text
 The "typeshed" project is licensed under the terms of the Apache license, as
@@ -5284,11 +5270,11 @@ DEALINGS IN THE SOFTWARE.
 = = = = =
 ````
 
-### `mypy_extensions` 1.1.0
+### `mypy_extensions` 1.2.0
 
 Licence: MIT.
 
-Source: mypy_extensions-1.1.0.dist-info/licenses/LICENSE
+Source: mypy_extensions-1.2.0.dist-info/licenses/LICENSE
 
 ````text
 Mypy extensions are licensed under the terms of the MIT license, reproduced below.
@@ -5320,7 +5306,7 @@ DEALINGS IN THE SOFTWARE.
 = = = = =
 ````
 
-### `openai` 3.16.2
+### `openai` 3.45.0
 
 Licence: Apache-2.0.
 
@@ -5356,7 +5342,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-Source: openai-3.16.2.dist-info/licenses/LICENSE
+Source: openai-3.45.0.dist-info/licenses/LICENSE
 
 ````text
                                  Apache License
@@ -5562,11 +5548,11 @@ Source: openai-3.16.2.dist-info/licenses/LICENSE
    limitations under the License.
 ````
 
-### `opentelemetry-api` 1.45.1
+### `opentelemetry-api` 1.45.2
 
 Licence: Apache-2.0.
 
-Source: opentelemetry_api-1.45.1.dist-info/licenses/LICENSE
+Source: opentelemetry_api-1.45.2.dist-info/licenses/LICENSE
 
 ````text
                                  Apache License
@@ -5772,11 +5758,11 @@ Source: opentelemetry_api-1.45.1.dist-info/licenses/LICENSE
    limitations under the License.
 ````
 
-### `opentelemetry-exporter-http-transport` 0.66b1
+### `opentelemetry-exporter-http-transport` 0.66b2
 
 Licence: Apache-2.0.
 
-Source: opentelemetry_exporter_http_transport-0.66b1.dist-info/licenses/LICENSE
+Source: opentelemetry_exporter_http_transport-0.66b2.dist-info/licenses/LICENSE
 
 ````text
                                  Apache License
@@ -5982,11 +5968,11 @@ Source: opentelemetry_exporter_http_transport-0.66b1.dist-info/licenses/LICENSE
    limitations under the License.
 ````
 
-### `opentelemetry-exporter-otlp-common` 0.66b1
+### `opentelemetry-exporter-otlp-common` 0.66b2
 
 Licence: Apache-2.0.
 
-Source: opentelemetry_exporter_otlp_common-0.66b1.dist-info/licenses/LICENSE
+Source: opentelemetry_exporter_otlp_common-0.66b2.dist-info/licenses/LICENSE
 
 ````text
                                  Apache License
@@ -6192,11 +6178,11 @@ Source: opentelemetry_exporter_otlp_common-0.66b1.dist-info/licenses/LICENSE
    limitations under the License.
 ````
 
-### `opentelemetry-exporter-otlp-proto-common` 1.45.1
+### `opentelemetry-exporter-otlp-proto-common` 1.45.2
 
 Licence: Apache-2.0.
 
-Source: opentelemetry_exporter_otlp_proto_common-1.45.1.dist-info/licenses/LICENSE
+Source: opentelemetry_exporter_otlp_proto_common-1.45.2.dist-info/licenses/LICENSE
 
 ````text
                                  Apache License
@@ -6402,11 +6388,11 @@ Source: opentelemetry_exporter_otlp_proto_common-1.45.1.dist-info/licenses/LICEN
    limitations under the License.
 ````
 
-### `opentelemetry-exporter-otlp-proto-http` 1.45.1
+### `opentelemetry-exporter-otlp-proto-http` 1.45.2
 
 Licence: Apache-2.0.
 
-Source: opentelemetry_exporter_otlp_proto_http-1.45.1.dist-info/licenses/LICENSE
+Source: opentelemetry_exporter_otlp_proto_http-1.45.2.dist-info/licenses/LICENSE
 
 ````text
                                  Apache License
@@ -6612,11 +6598,11 @@ Source: opentelemetry_exporter_otlp_proto_http-1.45.1.dist-info/licenses/LICENSE
    limitations under the License.
 ````
 
-### `opentelemetry-proto` 1.45.1
+### `opentelemetry-proto` 1.45.2
 
 Licence: Apache-2.0.
 
-Source: opentelemetry_proto-1.45.1.dist-info/licenses/LICENSE
+Source: opentelemetry_proto-1.45.2.dist-info/licenses/LICENSE
 
 ````text
                                  Apache License
@@ -6822,11 +6808,11 @@ Source: opentelemetry_proto-1.45.1.dist-info/licenses/LICENSE
    limitations under the License.
 ````
 
-### `opentelemetry-sdk` 1.45.1
+### `opentelemetry-sdk` 1.45.2
 
 Licence: Apache-2.0.
 
-Source: opentelemetry_sdk-1.45.1.dist-info/licenses/LICENSE
+Source: opentelemetry_sdk-1.45.2.dist-info/licenses/LICENSE
 
 ````text
                                  Apache License
@@ -7032,11 +7018,11 @@ Source: opentelemetry_sdk-1.45.1.dist-info/licenses/LICENSE
    limitations under the License.
 ````
 
-### `opentelemetry-semantic-conventions` 0.66b1
+### `opentelemetry-semantic-conventions` 0.66b2
 
 Licence: Apache-2.0.
 
-Source: opentelemetry_semantic_conventions-0.66b1.dist-info/licenses/LICENSE
+Source: opentelemetry_semantic_conventions-0.66b2.dist-info/licenses/LICENSE
 
 ````text
                                  Apache License
@@ -7242,11 +7228,11 @@ Source: opentelemetry_semantic_conventions-0.66b1.dist-info/licenses/LICENSE
    limitations under the License.
 ````
 
-### `orjson` 3.12.0
+### `orjson` 3.13.0
 
 Licence: MPL-2.0 AND (Apache-2.0 OR MIT).
 
-Source: orjson-3.12.0.dist-info/licenses/LICENSE-APACHE
+Source: orjson-3.13.0.dist-info/licenses/LICENSE-APACHE
 
 ````text
                               Apache License
@@ -7452,7 +7438,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ````
 
-Source: orjson-3.12.0.dist-info/licenses/LICENSE-MIT
+Source: orjson-3.13.0.dist-info/licenses/LICENSE-MIT
 
 ````text
 Permission is hereby granted, free of charge, to any
@@ -7480,7 +7466,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ````
 
-Source: orjson-3.12.0.dist-info/licenses/LICENSE-MPL-2.0
+Source: orjson-3.13.0.dist-info/licenses/LICENSE-MPL-2.0
 
 ````text
 Mozilla Public License Version 2.0
@@ -7858,11 +7844,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 ````
 
-### `ormsgpack` 1.12.2
+### `ormsgpack` 1.13.0
 
 Licence: Apache-2.0 OR MIT.
 
-Source: ormsgpack-1.12.2.dist-info/licenses/LICENSE-APACHE
+Source: ormsgpack-1.13.0.dist-info/licenses/LICENSE-APACHE
 
 ````text
                               Apache License
@@ -8068,7 +8054,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ````
 
-Source: ormsgpack-1.12.2.dist-info/licenses/LICENSE-MIT
+Source: ormsgpack-1.13.0.dist-info/licenses/LICENSE-MIT
 
 ````text
 Permission is hereby granted, free of charge, to any
@@ -8700,11 +8686,11 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 ````
 
-### `platformdirs` 4.14.4
+### `platformdirs` 4.14.5
 
 Licence: MIT.
 
-Source: platformdirs-4.14.4.dist-info/licenses/LICENSE
+Source: platformdirs-4.14.5.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -8730,11 +8716,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `pluggy` 1.6.0
+### `pluggy` 1.7.0
 
 Licence: MIT License.
 
-Source: pluggy-1.6.0.dist-info/licenses/LICENSE
+Source: pluggy-1.7.0.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -8839,11 +8825,11 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `pydantic` 2.13.5
+### `pydantic` 2.14.2
 
 Licence: MIT.
 
-Source: pydantic-2.13.5.dist-info/licenses/LICENSE
+Source: pydantic-2.14.2.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -8869,11 +8855,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `pydantic-settings` 2.15.0
+### `pydantic-settings` 2.16.2
 
 Licence: MIT.
 
-Source: pydantic_settings-2.15.0.dist-info/licenses/LICENSE
+Source: pydantic_settings-2.16.2.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -8899,11 +8885,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `pydantic_core` 2.46.5
+### `pydantic_core` 2.50.2
 
 Licence: MIT.
 
-Source: pydantic_core-2.46.5.dist-info/licenses/LICENSE
+Source: pydantic_core-2.50.2.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -8993,11 +8979,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `pytest` 9.1.1
+### `pytest` 9.2.0
 
 Licence: MIT.
 
-Source: pytest-9.1.1.dist-info/licenses/LICENSE
+Source: pytest-9.2.0.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -9023,11 +9009,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `pytest-asyncio` 1.4.0
+### `pytest-asyncio` 1.4.1.post1
 
 Licence: Apache-2.0.
 
-Source: pytest_asyncio-1.4.0.dist-info/licenses/LICENSE
+Source: pytest_asyncio-1.4.1.post1.dist-info/licenses/LICENSE
 
 ````text
 Apache License
@@ -9325,11 +9311,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `python-dotenv` 1.2.3
+### `python-dotenv` 1.2.4
 
 Licence: BSD-3-Clause.
 
-Source: python_dotenv-1.2.3.dist-info/licenses/LICENSE
+Source: python_dotenv-1.2.4.dist-info/licenses/LICENSE
 
 ````text
 Copyright (c) 2014, Saurabh Kumar (python-dotenv), 2013, Ted Tieken (django-dotenv-rw), 2013, Jacob Kaplan-Moss (django-dotenv)
@@ -9390,11 +9376,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `python-slugify` 9.1.0
+### `python-slugify` 9.1.3
 
 Licence: MIT.
 
-Source: python_slugify-9.1.0.dist-info/licenses/LICENSE
+Source: python_slugify-9.1.3.dist-info/licenses/LICENSE
 
 ````text
 The MIT License
@@ -10153,11 +10139,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `regex` 2026.9.10
+### `regex` 2026.9.29
 
 Licence: Apache-2.0 AND CNRI-Python.
 
-Source: regex-2026.9.10.dist-info/licenses/LICENSE.txt
+Source: regex-2026.9.29.dist-info/licenses/LICENSE.txt
 
 ````text
 This work was derived from the 're' module of CPython 2.6 and CPython 3.1,
@@ -10611,11 +10597,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `rpds-py` 2026.6.3
+### `rpds-py` 2026.9.1
 
 Licence: MIT.
 
-Source: rpds_py-2026.6.3.dist-info/licenses/LICENSE
+Source: rpds_py-2026.9.1.dist-info/licenses/LICENSE
 
 ````text
 Copyright (c) 2023 Julian Berman
@@ -10639,11 +10625,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `ruff` 0.16.8
+### `ruff` 0.17.3
 
 Licence: MIT.
 
-Source: ruff-0.16.8.dist-info/licenses/LICENSE
+Source: ruff-0.17.3.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -11078,11 +11064,11 @@ are:
   """
 ````
 
-### `schemathesis` 4.33.0
+### `schemathesis` 4.33.1
 
 Licence: MIT.
 
-Source: schemathesis-4.33.0.dist-info/licenses/LICENSE
+Source: schemathesis-4.33.1.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -11652,11 +11638,11 @@ Source: sseclient_py-1.9.0.dist-info/licenses/LICENSE
    limitations under the License.
 ````
 
-### `starlette` 1.6.0
+### `starlette` 1.10.0
 
 Licence: BSD-3-Clause.
 
-Source: starlette-1.6.0.dist-info/licenses/LICENSE.md
+Source: starlette-1.10.0.dist-info/licenses/LICENSE.md
 
 ````text
 Copyright © 2018, [Encode OSS Ltd](https://www.encode.io/).
@@ -11688,11 +11674,11 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `tenacity` 9.1.4
+### `tenacity` 9.2.1
 
-Licence: Apache Software License.
+Licence: Apache-2.0.
 
-Source: tenacity-9.1.4.dist-info/licenses/LICENSE
+Source: tenacity-9.2.1.dist-info/licenses/LICENSE
 
 ````text
 
@@ -12181,11 +12167,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `truststore` 0.10.4
+### `truststore` 0.10.5
 
 Licence: MIT.
 
-Source: truststore-0.10.4.dist-info/licenses/LICENSE
+Source: truststore-0.10.5.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -12211,11 +12197,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `typing-inspection` 0.4.4
+### `typing-inspection` 0.4.5
 
 Licence: MIT.
 
-Source: typing_inspection-0.4.4.dist-info/licenses/LICENSE
+Source: typing_inspection-0.4.5.dist-info/licenses/LICENSE
 
 ````text
 MIT License
@@ -12559,11 +12545,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `uuid_utils` 0.17.1
+### `uuid_utils` 0.19.0
 
 Licence: BSD-3-Clause.
 
-Source: uuid_utils-0.17.1.dist-info/licenses/LICENSE.md
+Source: uuid_utils-0.19.0.dist-info/licenses/LICENSE.md
 
 ````text
 Copyright © 2023, Amin Alaee.
@@ -12595,7 +12581,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `uv-build` 0.12.17
+### `uv-build` 0.13.7
 
 Licence: MIT OR Apache-2.0.
 
@@ -12831,11 +12817,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `uvicorn` 0.53.0
+### `uvicorn` 0.54.0
 
 Licence: BSD-3-Clause.
 
-Source: uvicorn-0.53.0.dist-info/licenses/LICENSE.md
+Source: uvicorn-0.54.0.dist-info/licenses/LICENSE.md
 
 ````text
 Copyright © 2017-present, [Encode OSS Ltd](https://www.encode.io/).
@@ -12867,11 +12853,11 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `uvloop` 0.22.1
+### `uvloop` 0.23.0
 
 Licence: Apache Software License; MIT License.
 
-Source: uvloop-0.22.1.dist-info/licenses/LICENSE-APACHE
+Source: uvloop-0.23.0.dist-info/licenses/LICENSE-APACHE
 
 ````text
 Copyright (C) 2016-present the uvloop authors and contributors.
@@ -13079,7 +13065,7 @@ Copyright (C) 2016-present the uvloop authors and contributors.
    limitations under the License.
 ````
 
-Source: uvloop-0.22.1.dist-info/licenses/LICENSE-MIT
+Source: uvloop-0.23.0.dist-info/licenses/LICENSE-MIT
 
 ````text
 The MIT License
@@ -13547,11 +13533,11 @@ Licensed under the Apache License, Version 2.0.
 Third-party components, bundled data and their licences are listed in THIRD_PARTY_NOTICES.md.
 ````
 
-### `watchfiles` 1.2.0
+### `watchfiles` 1.3.0
 
 Licence: MIT License.
 
-Source: watchfiles-1.2.0.dist-info/licenses/LICENSE
+Source: watchfiles-1.3.0.dist-info/licenses/LICENSE
 
 ````text
 The MIT License (MIT)
@@ -13788,11 +13774,11 @@ Source: websocket_client-1.9.2.dist-info/licenses/LICENSE
    limitations under the License.
 ````
 
-### `websockets` 16.1.1
+### `websockets` 17.4
 
 Licence: BSD-3-Clause.
 
-Source: websockets-16.1.1.dist-info/licenses/LICENSE
+Source: websockets-17.4.dist-info/licenses/LICENSE
 
 ````text
 Copyright (c) Aymeric Augustin and contributors
@@ -13858,11 +13844,11 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ````
 
-### `wrapt` 2.4.1
+### `wrapt` 2.5.2
 
 Licence: BSD-2-Clause.
 
-Source: wrapt-2.4.1.dist-info/licenses/LICENSE
+Source: wrapt-2.5.2.dist-info/licenses/LICENSE
 
 ````text
 Copyright (c) 2013-2026, Graham Dumpleton
@@ -13921,11 +13907,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `xxhash` 4.0.1
+### `xxhash` 4.0.2
 
 Licence: BSD-2-Clause.
 
-Source: xxhash-4.0.1.dist-info/licenses/LICENSE
+Source: xxhash-4.0.2.dist-info/licenses/LICENSE
 
 ````text
 Copyright (c) 2014-2026, Yue Du
@@ -14189,7 +14175,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `@babel/generator` 7.29.8
+### `@babel/generator` 7.29.12
 
 Licence: MIT.
 
@@ -14344,7 +14330,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `@babel/helper-string-parser` 7.29.7
+### `@babel/helper-string-parser` 7.29.11
 
 Licence: MIT.
 
@@ -14437,7 +14423,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `@babel/helpers` 7.29.7
+### `@babel/helpers` 7.29.10
 
 Licence: MIT.
 
@@ -14469,7 +14455,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `@babel/parser` 7.29.9
+### `@babel/parser` 7.29.12
 
 Licence: MIT.
 
@@ -14528,7 +14514,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `@babel/traverse` 7.29.8
+### `@babel/traverse` 7.29.12
 
 Licence: MIT.
 
@@ -14559,7 +14545,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `@babel/types` 7.29.8
+### `@babel/types` 7.29.11
 
 Licence: MIT.
 
@@ -15022,7 +15008,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@elevenlabs/client` 1.32.1
+### `@elevenlabs/client` 1.33.0
 
 Licence: MIT.
 
@@ -15052,7 +15038,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@elevenlabs/types` 0.26.0
+### `@elevenlabs/types` 0.27.0
 
 Licence: MIT.
 
@@ -18194,7 +18180,7 @@ Source: LICENSE
    limitations under the License.
 ````
 
-### `@oxc-project/types` 0.155.0
+### `@oxc-project/types` 0.156.0
 
 Licence: MIT.
 
@@ -18446,7 +18432,7 @@ This software contains code derived from the Puppeteer project (https://github.c
 available under the Apache 2.0 license (https://github.com/puppeteer/puppeteer/blob/master/LICENSE).
 ````
 
-### `@rolldown/binding-darwin-arm64` 1.2.15
+### `@rolldown/binding-darwin-arm64` 1.2.16
 
 Licence: MIT.
 
@@ -18510,7 +18496,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/node` 4.3.3
+### `@tailwindcss/node` 4.3.4
 
 Licence: MIT.
 
@@ -18540,7 +18526,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/oxide` 4.3.3
+### `@tailwindcss/oxide` 4.3.4
 
 Licence: MIT.
 
@@ -18570,7 +18556,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/oxide-darwin-arm64` 4.3.3
+### `@tailwindcss/oxide-darwin-arm64` 4.3.4
 
 Licence: MIT.
 
@@ -18600,7 +18586,230 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/vite` 4.3.3
+### `@tailwindcss/oxide-wasm32-wasi` 4.3.4
+
+Licence: MIT.
+
+Source: Tailwind LICENSE of @tailwindcss/oxide (same project and version) and the licences of the packages bundled inside this package
+
+````text
+@tailwindcss/oxide-wasm32-wasi 4.3.4 (Tailwind Labs; licence text of @tailwindcss/oxide, the same project and version)
+
+MIT License
+
+Copyright (c) Tailwind Labs, Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+========
+
+@napi-rs/wasm-runtime 1.2.2 (bundled inside the package; MIT; the package bundles no licence file; text from https://github.com/napi-rs/napi-rs/blob/main/LICENSE (its repository), 2026-11-04)
+
+MIT License
+
+Copyright (c) 2020-present LongYinan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+MIT License
+
+Copyright (c) 2018 GitHub
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+========
+
+@emnapi/core 1.11.3 (bundled inside the package; MIT; licence file bundled in the package)
+
+MIT License
+
+Copyright (c) 2021-present Toyobayashi
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+========
+
+@emnapi/runtime 1.11.3 (bundled inside the package; MIT; licence file bundled in the package)
+
+MIT License
+
+Copyright (c) 2021-present Toyobayashi
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+========
+
+@emnapi/wasi-threads 1.2.3 (bundled inside the package; MIT; licence file bundled in the package)
+
+MIT License
+
+Copyright (c) 2021-present Toyobayashi
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+========
+
+@tybys/wasm-util 0.10.3 (bundled inside the package; MIT; the package bundles no licence file; text from https://github.com/napi-rs/napi-rs/blob/main/LICENSE (its repository), 2026-11-04)
+
+MIT License
+
+Copyright (c) 2020-present LongYinan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+MIT License
+
+Copyright (c) 2018 GitHub
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+========
+
+tslib 2.8.1 (bundled inside the package; 0BSD; licence file bundled in the package)
+
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+````
+
+### `@tailwindcss/vite` 4.3.4
 
 Licence: MIT.
 
@@ -18750,7 +18959,7 @@ Source: LICENSE
     SOFTWARE
 ````
 
-### `@types/estree` 1.0.9
+### `@types/estree` 1.0.10
 
 Licence: MIT.
 
@@ -18840,7 +19049,7 @@ Source: LICENSE
     SOFTWARE
 ````
 
-### `@types/node` 24.19.2
+### `@types/node` 26.6.6
 
 Licence: MIT.
 
@@ -19260,7 +19469,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@vitejs/plugin-react` 6.1.2
+### `@vitejs/plugin-react` 6.2.1
 
 Licence: MIT.
 
@@ -19290,7 +19499,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@vitest/mocker` 5.0.5
+### `@vitest/mocker` 5.1.0
 
 Licence: MIT.
 
@@ -19320,7 +19529,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@vitest/spy` 5.0.5
+### `@vitest/spy` 5.1.0
 
 Licence: MIT.
 
@@ -19616,7 +19825,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `baseline-browser-mapping` 2.11.25
+### `baseline-browser-mapping` 2.11.35
 
 Licence: Apache-2.0.
 
@@ -19984,7 +20193,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `browserslist` 4.29.0
+### `browserslist` 4.29.5
 
 Licence: MIT.
 
@@ -20069,7 +20278,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ````
 
-### `caniuse-lite` 1.0.30001810
+### `caniuse-lite` 1.0.30001820
 
 Licence: CC-BY-4.0.
 
@@ -21029,7 +21238,7 @@ Source: LICENSE
    limitations under the License.
 ````
 
-### `electron-to-chromium` 1.5.438
+### `electron-to-chromium` 1.5.474
 
 Licence: ISC.
 
@@ -21292,7 +21501,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `enhanced-resolve` 5.25.1
+### `enhanced-resolve` 5.26.1
 
 Licence: MIT.
 
@@ -22699,7 +22908,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `glob` 14.0.2
+### `glob` 14.0.3
 
 Licence: BlueOak-1.0.0.
 
@@ -23013,7 +23222,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `ignore` 7.0.13
+### `ignore` 7.0.14
 
 Licence: MIT.
 
@@ -23288,7 +23497,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `jose` 6.2.14
+### `jose` 6.2.15
 
 Licence: MIT.
 
@@ -23612,771 +23821,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `lightningcss` 1.32.0
-
-Licence: MPL-2.0.
-
-Source: LICENSE
-
-````text
- Mozilla Public License Version 2.0
-==================================
-
-1. Definitions
---------------
-
-1.1. "Contributor"
-means each individual or legal entity that creates, contributes to
-the creation of, or owns Covered Software.
-
-1.2. "Contributor Version"
-means the combination of the Contributions of others (if any) used
-by a Contributor and that particular Contributor's Contribution.
-
-1.3. "Contribution"
-means Covered Software of a particular Contributor.
-
-1.4. "Covered Software"
-means Source Code Form to which the initial Contributor has attached
-the notice in Exhibit A, the Executable Form of such Source Code
-Form, and Modifications of such Source Code Form, in each case
-including portions thereof.
-
-1.5. "Incompatible With Secondary Licenses"
-means
-
-(a) that the initial Contributor has attached the notice described
-in Exhibit B to the Covered Software; or
-
-(b) that the Covered Software was made available under the terms of
-version 1.1 or earlier of the License, but not also under the
-terms of a Secondary License.
-
-1.6. "Executable Form"
-means any form of the work other than Source Code Form.
-
-1.7. "Larger Work"
-means a work that combines Covered Software with other material, in
-a separate file or files, that is not Covered Software.
-
-1.8. "License"
-means this document.
-
-1.9. "Licensable"
-means having the right to grant, to the maximum extent possible,
-whether at the time of the initial grant or subsequently, any and
-all of the rights conveyed by this License.
-
-1.10. "Modifications"
-means any of the following:
-
-(a) any file in Source Code Form that results from an addition to,
-deletion from, or modification of the contents of Covered
-Software; or
-
-(b) any new file in Source Code Form that contains any Covered
-Software.
-
-1.11. "Patent Claims" of a Contributor
-means any patent claim(s), including without limitation, method,
-process, and apparatus claims, in any patent Licensable by such
-Contributor that would be infringed, but for the grant of the
-License, by the making, using, selling, offering for sale, having
-made, import, or transfer of either its Contributions or its
-Contributor Version.
-
-1.12. "Secondary License"
-means either the GNU General Public License, Version 2.0, the GNU
-Lesser General Public License, Version 2.1, the GNU Affero General
-Public License, Version 3.0, or any later versions of those
-licenses.
-
-1.13. "Source Code Form"
-means the form of the work preferred for making modifications.
-
-1.14. "You" (or "Your")
-means an individual or a legal entity exercising rights under this
-License. For legal entities, "You" includes any entity that
-controls, is controlled by, or is under common control with You. For
-purposes of this definition, "control" means (a) the power, direct
-or indirect, to cause the direction or management of such entity,
-whether by contract or otherwise, or (b) ownership of more than
-fifty percent (50%) of the outstanding shares or beneficial
-ownership of such entity.
-
-2. License Grants and Conditions
---------------------------------
-
-2.1. Grants
-
-Each Contributor hereby grants You a world-wide, royalty-free,
-non-exclusive license:
-
-(a) under intellectual property rights (other than patent or trademark)
-Licensable by such Contributor to use, reproduce, make available,
-modify, display, perform, distribute, and otherwise exploit its
-Contributions, either on an unmodified basis, with Modifications, or
-as part of a Larger Work; and
-
-(b) under Patent Claims of such Contributor to make, use, sell, offer
-for sale, have made, import, and otherwise transfer either its
-Contributions or its Contributor Version.
-
-2.2. Effective Date
-
-The licenses granted in Section 2.1 with respect to any Contribution
-become effective for each Contribution on the date the Contributor first
-distributes such Contribution.
-
-2.3. Limitations on Grant Scope
-
-The licenses granted in this Section 2 are the only rights granted under
-this License. No additional rights or licenses will be implied from the
-distribution or licensing of Covered Software under this License.
-Notwithstanding Section 2.1(b) above, no patent license is granted by a
-Contributor:
-
-(a) for any code that a Contributor has removed from Covered Software;
-or
-
-(b) for infringements caused by: (i) Your and any other third party's
-modifications of Covered Software, or (ii) the combination of its
-Contributions with other software (except as part of its Contributor
-Version); or
-
-(c) under Patent Claims infringed by Covered Software in the absence of
-its Contributions.
-
-This License does not grant any rights in the trademarks, service marks,
-or logos of any Contributor (except as may be necessary to comply with
-the notice requirements in Section 3.4).
-
-2.4. Subsequent Licenses
-
-No Contributor makes additional grants as a result of Your choice to
-distribute the Covered Software under a subsequent version of this
-License (see Section 10.2) or under the terms of a Secondary License (if
-permitted under the terms of Section 3.3).
-
-2.5. Representation
-
-Each Contributor represents that the Contributor believes its
-Contributions are its original creation(s) or it has sufficient rights
-to grant the rights to its Contributions conveyed by this License.
-
-2.6. Fair Use
-
-This License is not intended to limit any rights You have under
-applicable copyright doctrines of fair use, fair dealing, or other
-equivalents.
-
-2.7. Conditions
-
-Sections 3.1, 3.2, 3.3, and 3.4 are conditions of the licenses granted
-in Section 2.1.
-
-3. Responsibilities
--------------------
-
-3.1. Distribution of Source Form
-
-All distribution of Covered Software in Source Code Form, including any
-Modifications that You create or to which You contribute, must be under
-the terms of this License. You must inform recipients that the Source
-Code Form of the Covered Software is governed by the terms of this
-License, and how they can obtain a copy of this License. You may not
-attempt to alter or restrict the recipients' rights in the Source Code
-Form.
-
-3.2. Distribution of Executable Form
-
-If You distribute Covered Software in Executable Form then:
-
-(a) such Covered Software must also be made available in Source Code
-Form, as described in Section 3.1, and You must inform recipients of
-the Executable Form how they can obtain a copy of such Source Code
-Form by reasonable means in a timely manner, at a charge no more
-than the cost of distribution to the recipient; and
-
-(b) You may distribute such Executable Form under the terms of this
-License, or sublicense it under different terms, provided that the
-license for the Executable Form does not attempt to limit or alter
-the recipients' rights in the Source Code Form under this License.
-
-3.3. Distribution of a Larger Work
-
-You may create and distribute a Larger Work under terms of Your choice,
-provided that You also comply with the requirements of this License for
-the Covered Software. If the Larger Work is a combination of Covered
-Software with a work governed by one or more Secondary Licenses, and the
-Covered Software is not Incompatible With Secondary Licenses, this
-License permits You to additionally distribute such Covered Software
-under the terms of such Secondary License(s), so that the recipient of
-the Larger Work may, at their option, further distribute the Covered
-Software under the terms of either this License or such Secondary
-License(s).
-
-3.4. Notices
-
-You may not remove or alter the substance of any license notices
-(including copyright notices, patent notices, disclaimers of warranty,
-or limitations of liability) contained within the Source Code Form of
-the Covered Software, except that You may alter any license notices to
-the extent required to remedy known factual inaccuracies.
-
-3.5. Application of Additional Terms
-
-You may choose to offer, and to charge a fee for, warranty, support,
-indemnity or liability obligations to one or more recipients of Covered
-Software. However, You may do so only on Your own behalf, and not on
-behalf of any Contributor. You must make it absolutely clear that any
-such warranty, support, indemnity, or liability obligation is offered by
-You alone, and You hereby agree to indemnify every Contributor for any
-liability incurred by such Contributor as a result of warranty, support,
-indemnity or liability terms You offer. You may include additional
-disclaimers of warranty and limitations of liability specific to any
-jurisdiction.
-
-4. Inability to Comply Due to Statute or Regulation
----------------------------------------------------
-
-If it is impossible for You to comply with any of the terms of this
-License with respect to some or all of the Covered Software due to
-statute, judicial order, or regulation then You must: (a) comply with
-the terms of this License to the maximum extent possible; and (b)
-describe the limitations and the code they affect. Such description must
-be placed in a text file included with all distributions of the Covered
-Software under this License. Except to the extent prohibited by statute
-or regulation, such description must be sufficiently detailed for a
-recipient of ordinary skill to be able to understand it.
-
-5. Termination
---------------
-
-5.1. The rights granted under this License will terminate automatically
-if You fail to comply with any of its terms. However, if You become
-compliant, then the rights granted under this License from a particular
-Contributor are reinstated (a) provisionally, unless and until such
-Contributor explicitly and finally terminates Your grants, and (b) on an
-ongoing basis, if such Contributor fails to notify You of the
-non-compliance by some reasonable means prior to 60 days after You have
-come back into compliance. Moreover, Your grants from a particular
-Contributor are reinstated on an ongoing basis if such Contributor
-notifies You of the non-compliance by some reasonable means, this is the
-first time You have received notice of non-compliance with this License
-from such Contributor, and You become compliant prior to 30 days after
-Your receipt of the notice.
-
-5.2. If You initiate litigation against any entity by asserting a patent
-infringement claim (excluding declaratory judgment actions,
-counter-claims, and cross-claims) alleging that a Contributor Version
-directly or indirectly infringes any patent, then the rights granted to
-You by any and all Contributors for the Covered Software under Section
-2.1 of this License shall terminate.
-
-5.3. In the event of termination under Sections 5.1 or 5.2 above, all
-end user license agreements (excluding distributors and resellers) which
-have been validly granted by You or Your distributors under this License
-prior to termination shall survive termination.
-
-************************************************************************
-* *
-* 6. Disclaimer of Warranty *
-* ------------------------- *
-* *
-* Covered Software is provided under this License on an "as is" *
-* basis, without warranty of any kind, either expressed, implied, or *
-* statutory, including, without limitation, warranties that the *
-* Covered Software is free of defects, merchantable, fit for a *
-* particular purpose or non-infringing. The entire risk as to the *
-* quality and performance of the Covered Software is with You. *
-* Should any Covered Software prove defective in any respect, You *
-* (not any Contributor) assume the cost of any necessary servicing, *
-* repair, or correction. This disclaimer of warranty constitutes an *
-* essential part of this License. No use of any Covered Software is *
-* authorized under this License except under this disclaimer. *
-* *
-************************************************************************
-
-************************************************************************
-* *
-* 7. Limitation of Liability *
-* -------------------------- *
-* *
-* Under no circumstances and under no legal theory, whether tort *
-* (including negligence), contract, or otherwise, shall any *
-* Contributor, or anyone who distributes Covered Software as *
-* permitted above, be liable to You for any direct, indirect, *
-* special, incidental, or consequential damages of any character *
-* including, without limitation, damages for lost profits, loss of *
-* goodwill, work stoppage, computer failure or malfunction, or any *
-* and all other commercial damages or losses, even if such party *
-* shall have been informed of the possibility of such damages. This *
-* limitation of liability shall not apply to liability for death or *
-* personal injury resulting from such party's negligence to the *
-* extent applicable law prohibits such limitation. Some *
-* jurisdictions do not allow the exclusion or limitation of *
-* incidental or consequential damages, so this exclusion and *
-* limitation may not apply to You. *
-* *
-************************************************************************
-
-8. Litigation
--------------
-
-Any litigation relating to this License may be brought only in the
-courts of a jurisdiction where the defendant maintains its principal
-place of business and such litigation shall be governed by laws of that
-jurisdiction, without reference to its conflict-of-law provisions.
-Nothing in this Section shall prevent a party's ability to bring
-cross-claims or counter-claims.
-
-9. Miscellaneous
-----------------
-
-This License represents the complete agreement concerning the subject
-matter hereof. If any provision of this License is held to be
-unenforceable, such provision shall be reformed only to the extent
-necessary to make it enforceable. Any law or regulation which provides
-that the language of a contract shall be construed against the drafter
-shall not be used to construe this License against a Contributor.
-
-10. Versions of the License
----------------------------
-
-10.1. New Versions
-
-Mozilla Foundation is the license steward. Except as provided in Section
-10.3, no one other than the license steward has the right to modify or
-publish new versions of this License. Each version will be given a
-distinguishing version number.
-
-10.2. Effect of New Versions
-
-You may distribute the Covered Software under the terms of the version
-of the License under which You originally received the Covered Software,
-or under the terms of any subsequent version published by the license
-steward.
-
-10.3. Modified Versions
-
-If you create software not governed by this License, and you want to
-create a new license for such software, you may create and use a
-modified version of this License if you rename the license and remove
-any references to the name of the license steward (except to note that
-such modified license differs from this License).
-
-10.4. Distributing Source Code Form that is Incompatible With Secondary
-Licenses
-
-If You choose to distribute Source Code Form that is Incompatible With
-Secondary Licenses under the terms of this version of the License, the
-notice described in Exhibit B of this License must be attached.
-
-Exhibit A - Source Code Form License Notice
--------------------------------------------
-
-This Source Code Form is subject to the terms of the Mozilla Public
-License, v. 2.0. If a copy of the MPL was not distributed with this
-file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
-If it is not possible or desirable to put the notice in a particular
-file, then You may include the notice in a location (such as a LICENSE
-file in a relevant directory) where a recipient would be likely to look
-for such a notice.
-
-You may add additional accurate notices of copyright ownership.
-
-Exhibit B - "Incompatible With Secondary Licenses" Notice
----------------------------------------------------------
-
-This Source Code Form is "Incompatible With Secondary Licenses", as
-defined by the Mozilla Public License, v. 2.0.
-````
-
 ### `lightningcss` 1.33.0
-
-Licence: MPL-2.0.
-
-Source: LICENSE
-
-````text
- Mozilla Public License Version 2.0
-==================================
-
-1. Definitions
---------------
-
-1.1. "Contributor"
-means each individual or legal entity that creates, contributes to
-the creation of, or owns Covered Software.
-
-1.2. "Contributor Version"
-means the combination of the Contributions of others (if any) used
-by a Contributor and that particular Contributor's Contribution.
-
-1.3. "Contribution"
-means Covered Software of a particular Contributor.
-
-1.4. "Covered Software"
-means Source Code Form to which the initial Contributor has attached
-the notice in Exhibit A, the Executable Form of such Source Code
-Form, and Modifications of such Source Code Form, in each case
-including portions thereof.
-
-1.5. "Incompatible With Secondary Licenses"
-means
-
-(a) that the initial Contributor has attached the notice described
-in Exhibit B to the Covered Software; or
-
-(b) that the Covered Software was made available under the terms of
-version 1.1 or earlier of the License, but not also under the
-terms of a Secondary License.
-
-1.6. "Executable Form"
-means any form of the work other than Source Code Form.
-
-1.7. "Larger Work"
-means a work that combines Covered Software with other material, in
-a separate file or files, that is not Covered Software.
-
-1.8. "License"
-means this document.
-
-1.9. "Licensable"
-means having the right to grant, to the maximum extent possible,
-whether at the time of the initial grant or subsequently, any and
-all of the rights conveyed by this License.
-
-1.10. "Modifications"
-means any of the following:
-
-(a) any file in Source Code Form that results from an addition to,
-deletion from, or modification of the contents of Covered
-Software; or
-
-(b) any new file in Source Code Form that contains any Covered
-Software.
-
-1.11. "Patent Claims" of a Contributor
-means any patent claim(s), including without limitation, method,
-process, and apparatus claims, in any patent Licensable by such
-Contributor that would be infringed, but for the grant of the
-License, by the making, using, selling, offering for sale, having
-made, import, or transfer of either its Contributions or its
-Contributor Version.
-
-1.12. "Secondary License"
-means either the GNU General Public License, Version 2.0, the GNU
-Lesser General Public License, Version 2.1, the GNU Affero General
-Public License, Version 3.0, or any later versions of those
-licenses.
-
-1.13. "Source Code Form"
-means the form of the work preferred for making modifications.
-
-1.14. "You" (or "Your")
-means an individual or a legal entity exercising rights under this
-License. For legal entities, "You" includes any entity that
-controls, is controlled by, or is under common control with You. For
-purposes of this definition, "control" means (a) the power, direct
-or indirect, to cause the direction or management of such entity,
-whether by contract or otherwise, or (b) ownership of more than
-fifty percent (50%) of the outstanding shares or beneficial
-ownership of such entity.
-
-2. License Grants and Conditions
---------------------------------
-
-2.1. Grants
-
-Each Contributor hereby grants You a world-wide, royalty-free,
-non-exclusive license:
-
-(a) under intellectual property rights (other than patent or trademark)
-Licensable by such Contributor to use, reproduce, make available,
-modify, display, perform, distribute, and otherwise exploit its
-Contributions, either on an unmodified basis, with Modifications, or
-as part of a Larger Work; and
-
-(b) under Patent Claims of such Contributor to make, use, sell, offer
-for sale, have made, import, and otherwise transfer either its
-Contributions or its Contributor Version.
-
-2.2. Effective Date
-
-The licenses granted in Section 2.1 with respect to any Contribution
-become effective for each Contribution on the date the Contributor first
-distributes such Contribution.
-
-2.3. Limitations on Grant Scope
-
-The licenses granted in this Section 2 are the only rights granted under
-this License. No additional rights or licenses will be implied from the
-distribution or licensing of Covered Software under this License.
-Notwithstanding Section 2.1(b) above, no patent license is granted by a
-Contributor:
-
-(a) for any code that a Contributor has removed from Covered Software;
-or
-
-(b) for infringements caused by: (i) Your and any other third party's
-modifications of Covered Software, or (ii) the combination of its
-Contributions with other software (except as part of its Contributor
-Version); or
-
-(c) under Patent Claims infringed by Covered Software in the absence of
-its Contributions.
-
-This License does not grant any rights in the trademarks, service marks,
-or logos of any Contributor (except as may be necessary to comply with
-the notice requirements in Section 3.4).
-
-2.4. Subsequent Licenses
-
-No Contributor makes additional grants as a result of Your choice to
-distribute the Covered Software under a subsequent version of this
-License (see Section 10.2) or under the terms of a Secondary License (if
-permitted under the terms of Section 3.3).
-
-2.5. Representation
-
-Each Contributor represents that the Contributor believes its
-Contributions are its original creation(s) or it has sufficient rights
-to grant the rights to its Contributions conveyed by this License.
-
-2.6. Fair Use
-
-This License is not intended to limit any rights You have under
-applicable copyright doctrines of fair use, fair dealing, or other
-equivalents.
-
-2.7. Conditions
-
-Sections 3.1, 3.2, 3.3, and 3.4 are conditions of the licenses granted
-in Section 2.1.
-
-3. Responsibilities
--------------------
-
-3.1. Distribution of Source Form
-
-All distribution of Covered Software in Source Code Form, including any
-Modifications that You create or to which You contribute, must be under
-the terms of this License. You must inform recipients that the Source
-Code Form of the Covered Software is governed by the terms of this
-License, and how they can obtain a copy of this License. You may not
-attempt to alter or restrict the recipients' rights in the Source Code
-Form.
-
-3.2. Distribution of Executable Form
-
-If You distribute Covered Software in Executable Form then:
-
-(a) such Covered Software must also be made available in Source Code
-Form, as described in Section 3.1, and You must inform recipients of
-the Executable Form how they can obtain a copy of such Source Code
-Form by reasonable means in a timely manner, at a charge no more
-than the cost of distribution to the recipient; and
-
-(b) You may distribute such Executable Form under the terms of this
-License, or sublicense it under different terms, provided that the
-license for the Executable Form does not attempt to limit or alter
-the recipients' rights in the Source Code Form under this License.
-
-3.3. Distribution of a Larger Work
-
-You may create and distribute a Larger Work under terms of Your choice,
-provided that You also comply with the requirements of this License for
-the Covered Software. If the Larger Work is a combination of Covered
-Software with a work governed by one or more Secondary Licenses, and the
-Covered Software is not Incompatible With Secondary Licenses, this
-License permits You to additionally distribute such Covered Software
-under the terms of such Secondary License(s), so that the recipient of
-the Larger Work may, at their option, further distribute the Covered
-Software under the terms of either this License or such Secondary
-License(s).
-
-3.4. Notices
-
-You may not remove or alter the substance of any license notices
-(including copyright notices, patent notices, disclaimers of warranty,
-or limitations of liability) contained within the Source Code Form of
-the Covered Software, except that You may alter any license notices to
-the extent required to remedy known factual inaccuracies.
-
-3.5. Application of Additional Terms
-
-You may choose to offer, and to charge a fee for, warranty, support,
-indemnity or liability obligations to one or more recipients of Covered
-Software. However, You may do so only on Your own behalf, and not on
-behalf of any Contributor. You must make it absolutely clear that any
-such warranty, support, indemnity, or liability obligation is offered by
-You alone, and You hereby agree to indemnify every Contributor for any
-liability incurred by such Contributor as a result of warranty, support,
-indemnity or liability terms You offer. You may include additional
-disclaimers of warranty and limitations of liability specific to any
-jurisdiction.
-
-4. Inability to Comply Due to Statute or Regulation
----------------------------------------------------
-
-If it is impossible for You to comply with any of the terms of this
-License with respect to some or all of the Covered Software due to
-statute, judicial order, or regulation then You must: (a) comply with
-the terms of this License to the maximum extent possible; and (b)
-describe the limitations and the code they affect. Such description must
-be placed in a text file included with all distributions of the Covered
-Software under this License. Except to the extent prohibited by statute
-or regulation, such description must be sufficiently detailed for a
-recipient of ordinary skill to be able to understand it.
-
-5. Termination
---------------
-
-5.1. The rights granted under this License will terminate automatically
-if You fail to comply with any of its terms. However, if You become
-compliant, then the rights granted under this License from a particular
-Contributor are reinstated (a) provisionally, unless and until such
-Contributor explicitly and finally terminates Your grants, and (b) on an
-ongoing basis, if such Contributor fails to notify You of the
-non-compliance by some reasonable means prior to 60 days after You have
-come back into compliance. Moreover, Your grants from a particular
-Contributor are reinstated on an ongoing basis if such Contributor
-notifies You of the non-compliance by some reasonable means, this is the
-first time You have received notice of non-compliance with this License
-from such Contributor, and You become compliant prior to 30 days after
-Your receipt of the notice.
-
-5.2. If You initiate litigation against any entity by asserting a patent
-infringement claim (excluding declaratory judgment actions,
-counter-claims, and cross-claims) alleging that a Contributor Version
-directly or indirectly infringes any patent, then the rights granted to
-You by any and all Contributors for the Covered Software under Section
-2.1 of this License shall terminate.
-
-5.3. In the event of termination under Sections 5.1 or 5.2 above, all
-end user license agreements (excluding distributors and resellers) which
-have been validly granted by You or Your distributors under this License
-prior to termination shall survive termination.
-
-************************************************************************
-* *
-* 6. Disclaimer of Warranty *
-* ------------------------- *
-* *
-* Covered Software is provided under this License on an "as is" *
-* basis, without warranty of any kind, either expressed, implied, or *
-* statutory, including, without limitation, warranties that the *
-* Covered Software is free of defects, merchantable, fit for a *
-* particular purpose or non-infringing. The entire risk as to the *
-* quality and performance of the Covered Software is with You. *
-* Should any Covered Software prove defective in any respect, You *
-* (not any Contributor) assume the cost of any necessary servicing, *
-* repair, or correction. This disclaimer of warranty constitutes an *
-* essential part of this License. No use of any Covered Software is *
-* authorized under this License except under this disclaimer. *
-* *
-************************************************************************
-
-************************************************************************
-* *
-* 7. Limitation of Liability *
-* -------------------------- *
-* *
-* Under no circumstances and under no legal theory, whether tort *
-* (including negligence), contract, or otherwise, shall any *
-* Contributor, or anyone who distributes Covered Software as *
-* permitted above, be liable to You for any direct, indirect, *
-* special, incidental, or consequential damages of any character *
-* including, without limitation, damages for lost profits, loss of *
-* goodwill, work stoppage, computer failure or malfunction, or any *
-* and all other commercial damages or losses, even if such party *
-* shall have been informed of the possibility of such damages. This *
-* limitation of liability shall not apply to liability for death or *
-* personal injury resulting from such party's negligence to the *
-* extent applicable law prohibits such limitation. Some *
-* jurisdictions do not allow the exclusion or limitation of *
-* incidental or consequential damages, so this exclusion and *
-* limitation may not apply to You. *
-* *
-************************************************************************
-
-8. Litigation
--------------
-
-Any litigation relating to this License may be brought only in the
-courts of a jurisdiction where the defendant maintains its principal
-place of business and such litigation shall be governed by laws of that
-jurisdiction, without reference to its conflict-of-law provisions.
-Nothing in this Section shall prevent a party's ability to bring
-cross-claims or counter-claims.
-
-9. Miscellaneous
-----------------
-
-This License represents the complete agreement concerning the subject
-matter hereof. If any provision of this License is held to be
-unenforceable, such provision shall be reformed only to the extent
-necessary to make it enforceable. Any law or regulation which provides
-that the language of a contract shall be construed against the drafter
-shall not be used to construe this License against a Contributor.
-
-10. Versions of the License
----------------------------
-
-10.1. New Versions
-
-Mozilla Foundation is the license steward. Except as provided in Section
-10.3, no one other than the license steward has the right to modify or
-publish new versions of this License. Each version will be given a
-distinguishing version number.
-
-10.2. Effect of New Versions
-
-You may distribute the Covered Software under the terms of the version
-of the License under which You originally received the Covered Software,
-or under the terms of any subsequent version published by the license
-steward.
-
-10.3. Modified Versions
-
-If you create software not governed by this License, and you want to
-create a new license for such software, you may create and use a
-modified version of this License if you rename the license and remove
-any references to the name of the license steward (except to note that
-such modified license differs from this License).
-
-10.4. Distributing Source Code Form that is Incompatible With Secondary
-Licenses
-
-If You choose to distribute Source Code Form that is Incompatible With
-Secondary Licenses under the terms of this version of the License, the
-notice described in Exhibit B of this License must be attached.
-
-Exhibit A - Source Code Form License Notice
--------------------------------------------
-
-This Source Code Form is subject to the terms of the Mozilla Public
-License, v. 2.0. If a copy of the MPL was not distributed with this
-file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
-If it is not possible or desirable to put the notice in a particular
-file, then You may include the notice in a location (such as a LICENSE
-file in a relevant directory) where a recipient would be likely to look
-for such a notice.
-
-You may add additional accurate notices of copyright ownership.
-
-Exhibit B - "Incompatible With Secondary Licenses" Notice
----------------------------------------------------------
-
-This Source Code Form is "Incompatible With Secondary Licenses", as
-defined by the Mozilla Public License, v. 2.0.
-````
-
-### `lightningcss-darwin-arm64` 1.32.0
 
 Licence: MPL-2.0.
 
@@ -25539,23 +24984,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `magic-string` 0.30.21
-
-Licence: MIT.
-
-Source: LICENSE
-
-````text
-Copyright 2018 Rich Harris
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-````
-
-### `magic-string` 1.4.3
+### `magic-string` 1.4.5
 
 Licence: MIT.
 
@@ -25572,6 +25001,70 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ````
 
 ### `minimatch` 11.0.1
+
+Licence: BlueOak-1.0.0.
+
+Source: LICENSE.md
+
+````text
+# Blue Oak Model License
+
+Version 1.0.0
+
+## Purpose
+
+This license gives everyone as much permission to work with
+this software as possible, while protecting contributors
+from liability.
+
+## Acceptance
+
+In order to receive this license, you must agree to its
+rules. The rules of this license are both obligations
+under that agreement and conditions to your license.
+You must not do anything with this software that triggers
+a rule that you cannot or will not follow.
+
+## Copyright
+
+Each contributor licenses you to do everything with this
+software that would otherwise infringe that contributor's
+copyright in it.
+
+## Notices
+
+You must ensure that everyone who gets a copy of
+any part of this software from you, with or without
+changes, also gets the text of this license or a link to
+<https://blueoakcouncil.org/license/1.0.0>.
+
+## Excuse
+
+If anyone notifies you in writing that you have not
+complied with [Notices](#notices), you can keep your
+license by taking all practical steps to comply within 30
+days after the notice. If you do not do so, your license
+ends immediately.
+
+## Patent
+
+Each contributor licenses you to do everything with this
+software that would otherwise infringe any patent claims
+they can license or become able to license.
+
+## Reliability
+
+No contributor can revoke this license.
+
+## No Liability
+
+**_As far as the law allows, this software comes as is,
+without any warranty or condition, and no contributor
+will be liable to anyone for any damages related to this
+software or this license, under any kind of legal claim._**
+````
+
+### `minimatch` 11.0.4
 
 Licence: BlueOak-1.0.0.
 
@@ -25793,7 +25286,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `native-run` 2.0.3
+### `native-run` 2.1.0
 
 Licence: MIT.
 
@@ -25868,7 +25361,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `node-releases` 2.0.57
+### `node-releases` 2.0.63
 
 Licence: MIT.
 
@@ -26748,7 +26241,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `postcss` 8.5.31
+### `postcss` 8.5.32
 
 Licence: MIT.
 
@@ -27057,7 +26550,7 @@ IN THE SOFTWARE.
 """
 ````
 
-### `rimraf` 6.1.3
+### `rimraf` 6.1.4
 
 Licence: BlueOak-1.0.0.
 
@@ -27121,7 +26614,7 @@ will be liable to anyone for any damages related to this
 software or this license, under any kind of legal claim.***
 ````
 
-### `rolldown` 1.2.15
+### `rolldown` 1.2.16
 
 Licence: MIT.
 
@@ -27791,7 +27284,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `semver` 6.3.1
+### `semver` 6.3.2
 
 Licence: ISC.
 
@@ -27815,7 +27308,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ````
 
-### `semver` 7.8.5
+### `semver` 7.8.6
 
 Licence: ISC.
 
@@ -28192,7 +27685,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `tailwindcss` 4.3.3
+### `tailwindcss` 4.3.4
 
 Licence: MIT.
 
@@ -28334,7 +27827,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `tinybench` 6.2.2
+### `tinybench` 6.2.3
 
 Licence: MIT.
 
@@ -28680,7 +28173,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `undici-types` 7.24.6
+### `undici-types` 8.9.0
 
 Licence: MIT.
 
@@ -28757,7 +28250,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `update-browserslist-db` 1.3.3
+### `update-browserslist-db` 1.3.4
 
 Licence: MIT.
 
@@ -30932,7 +30425,7 @@ Repository: https://github.com/sveltejs/zimmerframe
 > SOFTWARE.
 ````
 
-### `vitest` 5.0.5
+### `vitest` 5.1.0
 
 Licence: MIT.
 
@@ -31429,7 +30922,7 @@ Repository: git+https://github.com/antfu-collective/local-pkg.git
 ## mime
 License: MIT
 By: Robert Kieffer
-Repository: https://github.com/broofa/mime
+Repository: git+https://github.com/broofa/mime.git
 
 > MIT License
 >

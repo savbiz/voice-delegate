@@ -11,7 +11,7 @@ From the repository root, install the locked Python environment and collect its 
 ```sh
 uv sync --locked --all-groups
 uv tool run pip-licenses --python .venv/bin/python --format=json --with-authors --with-urls --with-license-file --with-notice-file --output-file /tmp/voice-python-licenses.json
-uv tool run --with 'uv_build==0.12.17' pip-licenses --format=json --packages uv_build --with-license-file --with-notice-file --with-authors --output-file /tmp/voice-build-licenses.json
+uv tool run --with 'uv_build==0.13.7' pip-licenses --format=json --packages uv_build --with-license-file --with-notice-file --with-authors --output-file /tmp/voice-build-licenses.json
 ```
 
 Run the frontend inventory from `frontend/` only:

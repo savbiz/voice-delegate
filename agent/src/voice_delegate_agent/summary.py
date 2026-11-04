@@ -38,6 +38,7 @@ class OpenAISummarizer:
             timeout=SUMMARY_TIMEOUT_SECONDS,
             max_completion_tokens=SUMMARY_MAX_OUTPUT_TOKENS,
             reasoning_effort=chat_reasoning_effort(model),
+            use_responses_api=False,
         )
 
     async def summarize(self, transcript: str) -> str:

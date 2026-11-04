@@ -115,6 +115,9 @@ class OpenAIPlanner:
             timeout=20,
             max_completion_tokens=1000,
             reasoning_effort=chat_reasoning_effort(model),
+            # The worker, its tests and its cost accounting use Chat Completions; newer
+            # langchain-openai releases would otherwise switch some models to Responses.
+            use_responses_api=False,
         )
         self.tools = tuple(tools)
         self.model = self.client.bind_tools(tools, parallel_tool_calls=False)

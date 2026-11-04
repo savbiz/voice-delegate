@@ -197,6 +197,7 @@ async def run_cases(
             timeout=20,
             max_completion_tokens=500,
             reasoning_effort=chat_reasoning_effort(judge_model),
+            use_responses_api=False,
         )
         if judge_model
         else None
