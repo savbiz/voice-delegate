@@ -29,13 +29,13 @@ JSON or a single event-stream reply; no redirects, retries or SDK; protocol vers
   5 s discovery cap. A refresh builds a new immutable snapshot; each delegation keeps the
   snapshot it started with. Discovery never happens per planner step.
 - A tool is kept only if the operator listed it, its name is unique in the response, it does
-  not declare `readOnlyHint: false`, and its input schema is a flat object of at most eight
+  not declare `readOnlyHint: false`, and its parameter schema is a flat object of at most eight
   string, integer, number or boolean properties. Anything else (nested objects, arrays,
   references, unions) is dropped rather than approximated. Arguments are validated against
   the derived model before a request leaves the process.
 - Names are prefixed `server__tool`. The total across servers is at most eight, so the
   Decisions choice list keeps room for built-ins, direct answers and refusals. The Decisions
-  planner can call only a tool whose single required input is text, passing the goal
+  planner can call only a tool whose single required parameter is text, passing the goal
   verbatim; a model planner may supply validated arguments for others.
 - A call has a bounded deadline, at most 8 KiB of text, and only `text` content; other
   content types are unavailable. Tool-reported errors (`isError`) are kept separate from
