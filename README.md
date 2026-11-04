@@ -14,6 +14,10 @@ background. The voice model knows exactly one tool, `delegate_task`. A bounded L
 worker does the calculation, cited project-documentation lookup or optional web search,
 and the answer is spoken when you pause. Interrupting the voice never throws that work away.
 
+A 90-second demonstration: a spoken question, a calculation, and a cited documentation lookup running in the background while the conversation continues.
+
+https://github.com/user-attachments/assets/6aa298a5-4809-426e-a2ea-c4dcb1fe3eda
+
 <p align="center">
   <img src="docs/images/workspace.png" alt="The voice workspace: provider choice, API access and invitation code" width="720">
 </p>
