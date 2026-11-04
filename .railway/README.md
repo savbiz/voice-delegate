@@ -18,5 +18,5 @@ railway config apply   # previews again and asks for confirmation
 ```
 
 Never apply a plan that detaches the `/app/.local` volume or deletes a resource: that
-volume holds the quota, feedback and debug stores. One-time migration steps from the
-legacy `railway.json` are in [deployment/README.md](../deployment/README.md#railway-iac-cutover-once).
+volume holds the quota, feedback and debug stores. A plan after a successful apply
+should show no changes.
