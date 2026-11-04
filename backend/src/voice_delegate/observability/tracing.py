@@ -8,17 +8,21 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 
 from voice_delegate.config import Settings
 
+from .otlp import standard_endpoint
+
 
 def configure_tracing(settings: Settings) -> TracerProvider | None:
     """Create an app-owned exporter, or remain completely offline when disabled."""
     if not settings.otel_enabled:
         return None
     provider = TracerProvider(resource=Resource.create({"service.name": "voice-delegate"}))
-    exporter = (
-        OTLPSpanExporter(endpoint=settings.otel_endpoint, timeout=3)
-        if settings.otel_endpoint
-        else ConsoleSpanExporter()
-    )
+    exporter: OTLPSpanExporter | ConsoleSpanExporter
+    if settings.otel_endpoint:
+        exporter = OTLPSpanExporter(endpoint=settings.otel_endpoint, timeout=3)
+    elif standard_endpoint():
+        exporter = OTLPSpanExporter(timeout=3)
+    else:
+        exporter = ConsoleSpanExporter()
     provider.add_span_processor(
         BatchSpanProcessor(exporter, max_queue_size=256, max_export_batch_size=256)
     )

@@ -14,6 +14,8 @@ from opentelemetry.sdk.resources import Resource
 
 from voice_delegate.config import Settings
 
+from .otlp import standard_endpoint
+
 SECOND_BUCKETS = (0.05, 0.1, 0.25, 0.5, 1, 2, 3, 5, 10, 20, 30, 60, 120)
 
 
@@ -66,10 +68,14 @@ class Metrics:
 def configure_metrics(settings: Settings) -> MeterProvider | None:
     if not settings.otel_enabled:
         return None
-    if not settings.otel_metrics_endpoint:
+    if settings.otel_metrics_endpoint:
+        exporter = OTLPMetricExporter(endpoint=settings.otel_metrics_endpoint, timeout=3)
+    elif standard_endpoint():
+        exporter = OTLPMetricExporter(timeout=3)
+    else:
         return MeterProvider()
     reader = PeriodicExportingMetricReader(
-        OTLPMetricExporter(endpoint=settings.otel_metrics_endpoint, timeout=3),
+        exporter,
         export_interval_millis=10000,
         export_timeout_millis=4000,
     )

@@ -32,6 +32,9 @@ Use this shared backend configuration. Secrets stay in platform dashboards; the 
 | `VOICE_TRUSTED_PROXY_HOPS` | `1`, after verifying the chain below |
 | `VOICE_QUOTA_DATABASE` | `/app/.local/quotas.sqlite3` |
 | `VOICE_FEEDBACK_DATABASE` | `/app/.local/feedback.sqlite3` |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | Optional hosted telemetry: `http/protobuf` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Optional: OTLP base URL, for example `https://otlp-gateway-prod-<region>.grafana.net/otlp` |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Optional, secret: `Authorization=Basic <base64 of instance ID:token>` |
 
 Railway's healthcheck hostname is required by [Railway healthchecks](https://docs.railway.com/deployments/healthchecks). Railway-specific `RAILWAY_DOCKERFILE_PATH` and `RAILWAY_RUN_UID` are described below; they are not shared application settings.
 
