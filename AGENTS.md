@@ -30,4 +30,5 @@
   pnpm test:e2e
   ```
 
-- Do not push. The author pushes manually.
+- Push feature branches and open pull requests (`gh pr create`) once all checks pass. Never
+  push to `main`, force-push or rewrite pushed commits; the author merges.

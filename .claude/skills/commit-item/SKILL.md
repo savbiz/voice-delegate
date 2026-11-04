@@ -1,12 +1,12 @@
 ---
 name: commit-item
-description: Create the commit for one numbered work item following this repository's rules - staged-file review, forbidden file patterns, checks, attribution and no push. Use whenever asked to commit or when finishing a numbered item.
+description: Create the commit for one numbered work item following this repository's rules - staged-file review, forbidden file patterns, checks, attribution and branch-only pushes. Use whenever asked to commit or when finishing a numbered item.
 ---
 
 # Commit one item
 
-One commit per numbered item. Never push; the author pushes manually. Never create or
-switch a repository to public.
+One commit per numbered item. Push feature branches once all checks pass; never push to
+`main` or force-push. Never create or switch a repository to public.
 
 ## Steps
 
@@ -26,7 +26,8 @@ switch a repository to public.
 
 ## Never
 
-- `git push`, `gh repo create` without `--private`, or any visibility change.
+- `git push` to `main`, `git push --force`, `gh repo create` without `--private`, or any
+  visibility change.
 - `--no-verify` or amending/rewriting commits the author already pushed.
 - Mentioning the author's employer, its products, people, events or documents anywhere in
   the message or diff.
