@@ -15,6 +15,8 @@ and the answer is spoken when you pause. Interrupting the voice never throws tha
   <img src="docs/images/workspace.png" alt="The voice workspace: provider choice, API access and invitation code" width="720">
 </p>
 
+Reviewing this repository? [Start here](docs/start-here.md) for a five-minute reading path.
+
 ## What's implemented
 
 A complete, deployed system, not a prototype:
