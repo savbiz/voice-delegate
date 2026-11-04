@@ -21,7 +21,9 @@ def toml(path: str) -> dict[str, object]:
 def test_packages_require_the_supported_python(path: str) -> None:
     project = toml(path)["project"]
     assert isinstance(project, dict)
-    assert project["requires-python"] == f">={VERSION}"
+    upper = f"3.{int(VERSION.split('.')[1]) + 1}"
+    # Capped, because the next minor release is not supported until its dependencies are.
+    assert project["requires-python"] == f">={VERSION},<{upper}"
 
 
 def test_tools_target_the_supported_python() -> None:
