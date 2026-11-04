@@ -32,4 +32,6 @@ is in the [evidence log](milestones/evidence-log.md).
 - Telephone entry over SIP and a cascaded STT, text model and TTS pipeline, both optional
   ([future extensions](future-extensions.md)).
 - Live MCP server compatibility and moderation quality evaluations.
+- The OpenSSF Best Practices (bestpractices.dev) self-certification questionnaire, for an
+  optional README badge.
 - Cross-host high availability (today's scaling is same-host by design).
