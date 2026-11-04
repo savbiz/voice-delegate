@@ -1,8 +1,9 @@
 name: health
 
 # Daily check that the hosted API answers, including a cold start from app sleeping.
-# A failed scheduled run emails the repository owner. Checking more often would keep
-# the sleeping service awake and remove its cost saving.
+# On failure it posts to the ntfy topic in the HEALTH_NTFY_URL repository secret, if set.
+# GitHub's own failed-run email depends on the schedule actor's notification settings.
+# Checking more often would keep the sleeping service awake and remove its cost saving.
 on:
   schedule:
     - cron: "17 7 * * *"
@@ -28,3 +29,16 @@ jobs:
           done
           echo "::error::$URL did not answer after three attempts"
           exit 1
+      - name: Alert through ntfy
+        if: failure()
+        env:
+          NTFY_URL: ${{ secrets.HEALTH_NTFY_URL }}
+          RUN: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$NTFY_URL" ]; then
+            echo "HEALTH_NTFY_URL is not set; relying on GitHub notifications."
+            exit 0
+          fi
+          curl --fail --silent --show-error --max-time 10 \
+            -H "Title: voice-delegate API is down" -H "Tags: warning" -H "Click: $RUN" \
+            -d "The hosted /healthz did not answer after three attempts." "$NTFY_URL"

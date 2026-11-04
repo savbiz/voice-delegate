@@ -59,11 +59,16 @@ for (const defaultAdapter of ['openai', 'elevenlabs']) {
     await expect(page.getByRole('status')).toContainText('Connected.');
     await page.getByLabel('Personal invitation code').fill('updated-invitation');
     await expect(page.getByRole('status')).toContainText('Connected.');
+    const heartbeats = () => calls.filter((path) => path.endsWith('/heartbeat')).length;
     for (let count = 1; count <= 3; count++) {
-      await page.clock.fastForward(10000);
+      // A tick is skipped while the previous heartbeat is still pending, so keep advancing
+      // the fake clock until the next one is sent instead of assuming one per interval.
       await expect
-        .poll(() => calls.filter((path) => path.endsWith('/heartbeat')).length)
-        .toBe(count);
+        .poll(async () => {
+          if (heartbeats() < count) await page.clock.fastForward(10000);
+          return heartbeats();
+        })
+        .toBeGreaterThanOrEqual(count);
     }
     await expect(page.getByRole('status')).toContainText('Connected.');
     expect(calls.filter((path) => path.endsWith('/close'))).toHaveLength(0);

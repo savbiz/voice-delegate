@@ -380,7 +380,10 @@ def load_settings() -> Settings:
     """Load keys and deployment settings; obsolete feature environment flags are ignored."""
     from dotenv import dotenv_values
 
-    configured = {**dotenv_values(".env"), **os.environ}
+    # Environment names are case-insensitive for pydantic-settings, so match them the same way.
+    configured = {
+        key.upper(): value for key, value in {**dotenv_values(".env"), **os.environ}.items()
+    }
     for name, replacement in REMOVED_SETTINGS.items():
         if configured.get(name):
             message = f"{name} was removed in 0.3.0; use {replacement}"

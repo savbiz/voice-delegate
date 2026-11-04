@@ -147,8 +147,8 @@ The provider/model arguments are labels, not client overrides. They **must match
 backend configuration: use `VOICE_ADAPTER=openai` and `VOICE_MODEL` for OpenAI
 GPT-Live, or `VOICE_ADAPTER=azure`, `VOICE_AZURE_ENDPOINT`,
 `VOICE_AZURE_DEPLOYMENT` and `VOICE_AZURE_API_KEY` for Azure. Restart the dedicated backend
-between providers. Azure requires valid existing endpoint credentials; ElevenLabs is
-rejected until its adapter exists. Never enable fallback during a provider comparison.
+between providers. Azure requires valid existing endpoint credentials. The benchmark
+runner does not support ElevenLabs yet, although the backend adapter exists. Never enable fallback during a provider comparison.
 
 Run the Python summarizer on each complete capture as shown above. The exact session
 budget is mandatory: 30 for one trial, 60 with `--trials 2`. There are no retries. Each

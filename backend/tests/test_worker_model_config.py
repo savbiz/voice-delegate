@@ -138,3 +138,6 @@ def test_removed_adapter_alias_fails_with_its_replacement(
     (tmp_path / ".env").write_text("VOICE_VOICE_PROVIDER=azure\n")
     with pytest.raises(ValueError, match="use VOICE_ADAPTER"):
         load_settings()
+    (tmp_path / ".env").write_text("voice_allowed_origin=https://frontend.example\n")
+    with pytest.raises(ValueError, match="use VOICE_ALLOWED_ORIGINS"):
+        load_settings()

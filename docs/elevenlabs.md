@@ -26,8 +26,15 @@ No environment file or provider account is created or changed automatically.
 The agent already exists in ElevenLabs and owns its voice, language and prompt. The browser
 uses default language/style; unsupported overrides and mixed-audio recording are rejected.
 Use the same instructions as the other providers so behavior does not drift: print them with
-`uv run python -m voice_delegate.prompts --mode intent` (add `--web-search` when the worker
-has a Tavily key) and paste the output into the agent's system prompt. Re-paste after
+`uv run python -m voice_delegate.prompts` and paste the output into the agent's system
+prompt. Match the server settings: `--mode semantic` when `VOICE_DECISIONS_CANCEL=true`,
+otherwise the default `--mode intent`; add `--web-search` only when web search is enabled and
+the worker is not in `offline` mode, as the server does.
+
+The tool's `goal` is natural language, so ElevenLabs needs a model-backed worker
+(`VOICE_WORKER_MODE=openai` or `decisions`, the default when `OPENAI_API_KEY` is set). The
+`offline` planner only recognises fixed demonstration phrasings and answers anything else
+with "No action was taken". Re-paste after
 changing a block in `backend/src/voice_delegate/prompts/blocks/`. The worker owns all
 individual tools and limits.
 
