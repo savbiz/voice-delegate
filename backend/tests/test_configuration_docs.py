@@ -60,7 +60,7 @@ def test_server_template_boots_with_optional_features_off(
         "VOICE_ACCESS_DATABASE",
         "VOICE_PUBLIC_API_URL",
     }
-    assert set(values) == canonical_names | {"BRAINTRUST_API_KEY", "VOICE_REALTIME_MODEL"}
+    assert set(values) == canonical_names | {"BRAINTRUST_API_KEY"}
     settings = Settings()
     assert settings.environment == "development"
     assert settings.worker_mode == "offline"
