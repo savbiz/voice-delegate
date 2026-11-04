@@ -58,6 +58,23 @@ def test_the_forbidden_check_reports_each_offender_and_passes_clean_input(
     assert "app.py" not in errors
 
 
+def test_git_paths_are_read_literally_even_when_unusual(tmp_path: Path) -> None:
+    import subprocess
+
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    (tmp_path / "caf\u00e9 secret.txt").write_text("x")
+    subprocess.run(["git", "add", "-A"], cwd=tmp_path, check=True)
+    import os
+
+    previous = Path.cwd()
+    os.chdir(tmp_path)
+    try:
+        assert forbidden.git_files("ls-files") == ["caf\u00e9 secret.txt"]
+        assert forbidden.main(["--tracked"]) == 1
+    finally:
+        os.chdir(previous)
+
+
 def test_no_tracked_file_is_forbidden() -> None:
     assert forbidden.main(["--tracked"]) == 0
 
@@ -71,6 +88,8 @@ def test_no_tracked_file_is_forbidden() -> None:
         ("a.py", b"x = 1\r\n", ["CR line endings"]),
         ("a.py", b"x = 1 \n", ["line 1 has trailing whitespace"]),
         ("a.py", b"if x:\n\ty = 1\n", ["line 2 is indented with a tab"]),
+        ("a.py", b"if x:\n  \ty = 1\n", ["line 2 is indented with a tab"]),
+        ("a.py", b'x = "a\tb"\n', []),  # a tab inside a line is not indentation
         ("Makefile", b"all:\n\tcc x.c\n", []),
         ("a.bin", b"\0\x01\x02", []),
         ("a.txt", b"\xff\xfe not utf-8", []),

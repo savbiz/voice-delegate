@@ -77,7 +77,7 @@ The survivors were not noise:
   answers, and idle rate-limit buckets were never shown to be evicted.
 
 Each of these was fixed with a test (`test_admission_rules.py`, `test_limits_boundaries.py`, a
-sharper `test_admission_properties.py`). The score is now about **89.5%**.
+sharper `test_admission_properties.py`). The score is now roughly **88-90%**; it varies by about a point between runs because mutmut sometimes mislabels a survivor as a crash.
 
 ### What the remaining survivors are
 

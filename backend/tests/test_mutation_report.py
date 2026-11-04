@@ -35,6 +35,20 @@ def test_crashed_test_processes_are_reported_and_never_counted_as_detected() -> 
     assert "crashed: 5" in mutation.report(stats, mutation.Counter())
 
 
+def test_an_incomplete_run_is_detected_from_unjudged_mutants() -> None:
+    complete = mutation.parse_stats(
+        json.dumps({"killed": 90, "survived": 5, "timeout": 1, "segfault": 2, "skipped": 1,
+                    "suspicious": 0, "no_tests": 1, "total": 100})
+    )  # fmt: skip
+    assert complete.unchecked == 0
+    partial = mutation.parse_stats(json.dumps({"killed": 60, "survived": 5, "total": 100}))
+    assert partial.unchecked == 35
+    interrupted = mutation.parse_stats(
+        json.dumps({"killed": 100, "survived": 0, "total": 100, "check_was_interrupted_by_user": 1})
+    )
+    assert interrupted.interrupted == 1 and interrupted.unchecked == 0
+
+
 def test_a_run_without_mutants_scores_zero_instead_of_dividing_by_zero() -> None:
     stats = mutation.parse_stats(json.dumps({"killed": 0, "survived": 0, "total": 0}))
     assert stats.score == 0.0

@@ -9,7 +9,7 @@ GitHub Actions; none of it needs a secret or a paid service.
 | CodeQL | `codeql.yml` | on `main` and weekly | Does the code contain known vulnerability patterns |
 | Dependency audit | `supply-chain.yml` | weekly, on demand, and on a lockfile change | Does a locked package have a published advisory |
 | SBOM | `sbom.yml` | on each published release, or on demand | What exactly is in the release |
-| Container audit | `scripts/check_containers.py`, in every CI run | Do the Dockerfiles and compose files meet the baseline: pinned bases, non-root, health check, hardening |
+| Container audit | `scripts/check_containers.py` | in every CI run | Do the Dockerfiles and compose files meet the baseline: pinned bases, non-root, health check, hardening |
 | Container scan | `container-scan.yml` | weekly, on demand, and when a container definition or lockfile changes | Do the built images contain a fixable HIGH or CRITICAL vulnerability or misconfiguration |
 | OpenSSF Scorecard | `scorecard.yml` | weekly, on `main` and on branch-protection changes | How do the repository's practices compare with a public baseline |
 

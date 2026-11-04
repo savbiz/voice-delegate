@@ -90,13 +90,18 @@ def test_scorecard_publishes_results_with_the_permissions_it_requires() -> None:
     assert scorecard["with"]["publish_results"] is True
 
 
-def document(components: list[dict[str, str]], fmt: str = "CycloneDX") -> str:
-    return json.dumps({"bomFormat": fmt, "specVersion": "1.5", "components": components})
+def document(
+    components: list[dict[str, str]], fmt: str = "CycloneDX", spec: str | None = "1.5"
+) -> str:
+    data: dict[str, Any] = {"bomFormat": fmt, "components": components}
+    if spec is not None:
+        data["specVersion"] = spec
+    return json.dumps(data)
 
 
 def test_sbom_checker_accepts_a_real_document(tmp_path: Path) -> None:
     path = tmp_path / "ok.json"
-    path.write_text(document([{"name": "fastapi", "version": "0.141.1"}]))
+    path.write_text(document([{"type": "library", "name": "fastapi", "version": "0.141.1"}]))
     assert "1 components" in check(path)
     assert main([str(path)]) == 0
 
@@ -104,9 +109,14 @@ def test_sbom_checker_accepts_a_real_document(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("content", "message"),
     [
-        (document([{"name": "x", "version": "1"}], fmt="SPDX"), "not a CycloneDX"),
+        (
+            document([{"type": "library", "name": "x", "version": "1"}], fmt="SPDX"),
+            "not a CycloneDX",
+        ),
+        (document([{"type": "library", "name": "x", "version": "1"}], spec=None), "no specVersion"),
+        (document([{"name": "x", "version": "1"}]), "without a type"),
         (document([]), "no components"),
-        (document([{"name": "x"}]), "without a name or version"),
+        (document([{"type": "library", "name": "x"}]), "without a name or version"),
     ],
 )
 def test_sbom_checker_rejects_bad_documents(tmp_path: Path, content: str, message: str) -> None:

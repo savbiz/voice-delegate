@@ -83,6 +83,12 @@ def pinned_image(reference: str) -> bool:
     return ":" in name and not name.endswith(":latest")
 
 
+def runs_as_root(user: object) -> bool:
+    """True when a compose `user` value resolves to UID 0, whatever the group is."""
+    name = str(user).split(":", 1)[0].strip().lower()
+    return name == "root" or (name.isdigit() and int(name) == 0)
+
+
 def audit_compose(data: dict[str, Any]) -> list[str]:
     problems: list[str] = []
     for name, service in (data.get("services") or {}).items():
@@ -94,6 +100,8 @@ def audit_compose(data: dict[str, Any]) -> list[str]:
                 problems.append(f"{label} does not drop all capabilities")
             if "no-new-privileges:true" not in (service.get("security_opt") or []):
                 problems.append(f"{label} does not set no-new-privileges")
+        if "user" in service and runs_as_root(service["user"]):
+            problems.append(f"{label} runs as root (user: {service['user']})")
         if "image" in service and not pinned_image(str(service["image"])):
             problems.append(f"{label} uses an unpinned image {service['image']}")
         if service.get("privileged"):

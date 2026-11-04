@@ -8,6 +8,7 @@ sessions on that server, so the runner refuses any host except the one it starte
 import os
 import random
 import time
+from typing import Any
 
 from locust import HttpUser, between, task
 
@@ -16,6 +17,18 @@ ORIGIN = os.environ.get("LOADTEST_ORIGIN", "http://localhost:5173")
 DELEGATION_TIMEOUT_SECONDS = 20.0
 POLL_SECONDS = 0.2
 HEARTBEATS_AFTER_RESULT = 3
+
+
+CAPACITY_DETAIL = "Session capacity reached"
+
+
+def capacity_detail(response: Any) -> object:
+    """The `detail` of an error body, or None when the body is not the expected JSON."""
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    return body.get("detail") if isinstance(body, dict) else None
 
 
 def client_address() -> str:
@@ -35,7 +48,11 @@ class VoiceSessionUser(HttpUser):
     def conversation(self) -> None:
         with self.client.post("/api/sessions", name="create session", catch_response=True) as made:
             if made.status_code == 429:
-                # Capacity shedding is the designed response to overload, not an error.
+                # Only the session-capacity answer is the designed response to overload. A 429
+                # from the per-IP rate limiter means the load generator itself is misconfigured.
+                if capacity_detail(made) != CAPACITY_DETAIL:
+                    made.failure("unexpected 429: " + str(capacity_detail(made)))
+                    return
                 made.success()
                 self.environment.events.request.fire(
                     request_type="FLOW",

@@ -13,7 +13,8 @@ make loadtest                                   # 40 users for 30 seconds
 uv run --group loadtest python scripts/loadtest.py --users 150 --spawn-rate 50 --run-time 30s
 ```
 
-`scripts/loadtest.py` starts the backend itself, runs the scenario headless and prints a table.
+`scripts/loadtest.py` starts the backend itself (it refuses a port that is already in use, and a run
+longer than ten minutes or too short to reach the requested users), runs the scenario headless and prints a table.
 It exits non-zero when a budget is broken, so it can gate a pipeline. The GitHub workflow
 `loadtest` runs the same command on demand (Actions, Run workflow); it is not part of every
 pull request, to save Actions minutes.
@@ -44,6 +45,7 @@ limiter instead of the application. The limiter itself is covered by unit tests.
 | p95 of each endpoint | 500 ms | `--p95-ms` |
 | p95 of `delegation result` | 3000 ms | `--result-p95-ms` |
 | Requests completed | at least 100 | fixed |
+| Delegated results completed | at least 10 | fixed |
 
 A `429` when creating a session is counted as `shed at capacity`, not as a failure: it is the
 designed answer once `VOICE_MAX_SESSIONS` (at most 100) sessions are open.
@@ -69,7 +71,7 @@ completed normally.
 - Real voice quality or latency: audio never flows. See [benchmarks](benchmarks.md) for how
   provider timing is measured.
 - Model-backed worker behaviour: the offline worker is deterministic and fast.
-- Multi-instance behaviour or a production network path. Run the scenario against
-  `deployment/scaling/compose.yaml` yourself if you want that; the runner deliberately
-  starts only its own loopback backend, because a run against a hosted API would create real
-  sessions there.
+- Multi-instance behaviour or a production network path. The runner deliberately starts only its
+  own loopback backend and refuses a port that is already in use: a run against a hosted API would
+  create real sessions there, and the scenario does not present the invitations, allowed origins or
+  conversation rules of the Compose stacks.

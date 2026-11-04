@@ -26,7 +26,10 @@ ERROR_STATUSES = {
     413: "Request body too large",
     422: "Invalid request",
     429: "Rate limit or capacity reached",
+    501: "Not supported by this server's configuration",
+    502: "The invitation code could not be delivered",
     503: "Temporarily unavailable",
+    504: "The provider connection timed out",
 }
 # The custom handlers in app.py return {"detail": "<message>"} for every error, so the generated
 # schema must not claim FastAPI's default list-shaped validation error.

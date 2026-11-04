@@ -11,6 +11,9 @@ def check(path: Path) -> str:
     if document.get("bomFormat") != "CycloneDX":
         message = f"{path}: not a CycloneDX document"
         raise ValueError(message)
+    if not document.get("specVersion"):
+        message = f"{path}: no specVersion"
+        raise ValueError(message)
     components = document.get("components", [])
     if not components:
         message = f"{path}: no components"
@@ -18,6 +21,10 @@ def check(path: Path) -> str:
     unnamed = [item for item in components if not item.get("name") or not item.get("version")]
     if unnamed:
         message = f"{path}: {len(unnamed)} components without a name or version"
+        raise ValueError(message)
+    untyped = [item for item in components if not item.get("type")]
+    if untyped:
+        message = f"{path}: {len(untyped)} components without a type"
         raise ValueError(message)
     return f"{path}: CycloneDX {document.get('specVersion')}, {len(components)} components"
 

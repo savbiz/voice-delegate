@@ -10,7 +10,7 @@ Added: container checks. A static audit of the Dockerfiles and compose files (pi
 
 Fixed: the frontend image now defines a `HEALTHCHECK`; the audit found it was the only image without one.
 
-Added: mutation testing of the limits and admission code (`make mutation`, weekly workflow). It raised the score from 72.7% to about 89.5% by exposing untested authentication, boundary and error-shape behaviour; new tests pin those down. `mutmut` is in the optional `mutation` dependency group.
+Added: mutation testing of the limits and admission code (`make mutation`, weekly workflow). It raised the score from 72.7% to roughly 88-90% by exposing untested authentication, boundary and error-shape behaviour; new tests pin those down. `mutmut` is in the optional `mutation` dependency group.
 
 Added: supply-chain checks (`docs/supply-chain.md`): a weekly and lockfile-triggered `pip-audit` and `pnpm audit`, CycloneDX SBOMs for the Python and frontend runtime dependencies attached to each release, and an OpenSSF Scorecard workflow. A test enforces that every workflow action is pinned to a commit and every workflow declares its permissions.
 

@@ -34,6 +34,24 @@ class Stats:
     timeout: int
     total: int
     crashed: int = 0
+    suspicious: int = 0
+    skipped: int = 0
+    no_tests: int = 0
+    interrupted: int = 0
+
+    @property
+    def unchecked(self) -> int:
+        """Mutants that were generated but never reached a verdict (an incomplete run)."""
+        judged = (
+            self.killed
+            + self.survived
+            + self.timeout
+            + self.crashed
+            + self.suspicious
+            + self.skipped
+            + self.no_tests
+        )
+        return max(self.total - judged, 0)
 
     @property
     def detected(self) -> int:
@@ -54,6 +72,10 @@ def parse_stats(text: str) -> Stats:
         timeout=int(data.get("timeout", 0)),
         total=int(data["total"]),
         crashed=int(data.get("segfault", 0)),
+        suspicious=int(data.get("suspicious", 0)),
+        skipped=int(data.get("skipped", 0)),
+        no_tests=int(data.get("no_tests", 0)),
+        interrupted=int(data.get("check_was_interrupted_by_user", 0)),
     )
 
 
@@ -104,7 +126,9 @@ def main(argv: list[str] | None = None) -> int:
     if not options.keep:
         shutil.rmtree(BACKEND / "mutants", ignore_errors=True)
     result = subprocess.run([MUTMUT, "run"], cwd=BACKEND, env=environment, check=False)
-    if result.returncode not in (0, 1):  # mutmut exits 1 when mutants survive
+    # mutmut exits 0 even when mutants survive. A non-zero exit means the clean test run or the
+    # mutation run itself failed, and any statistics left over from an earlier run are stale.
+    if result.returncode != 0:
         print(f"mutmut failed with exit code {result.returncode}", file=sys.stderr)
         return 2
     run(["export-cicd-stats"], environment)
@@ -113,6 +137,13 @@ def main(argv: list[str] | None = None) -> int:
         print("mutmut wrote no statistics", file=sys.stderr)
         return 2
     stats = parse_stats(stats_file.read_text())
+    if stats.unchecked or stats.interrupted:
+        print(
+            f"FAIL: incomplete run: {stats.unchecked} of {stats.total} mutants were never "
+            "checked" + (" (interrupted)" if stats.interrupted else ""),
+            file=sys.stderr,
+        )
+        return 2
     print(report(stats, survivors_by_function(run(["results"], environment).stdout)))
     if stats.score < options.min_score:
         print(f"FAIL: score {stats.score:.1f}% is below {options.min_score:.1f}%", file=sys.stderr)

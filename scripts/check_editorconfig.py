@@ -48,16 +48,18 @@ def check_text(path: str, data: bytes) -> list[str]:
         stripped = line.rstrip("\r")
         if stripped != stripped.rstrip():
             problems.append(f"line {number} has trailing whitespace")
-        if not tabs_allowed and stripped.startswith("\t"):
+        leading = stripped[: len(stripped) - len(stripped.lstrip(" \t"))]
+        if not tabs_allowed and "\t" in leading:
             problems.append(f"line {number} is indented with a tab")
     return problems
 
 
 def tracked() -> list[str]:
+    """Tracked paths, NUL-delimited so git never quotes or escapes an unusual name."""
     output = subprocess.run(
-        ["git", "ls-files"], capture_output=True, text=True, check=True, cwd=ROOT
-    ).stdout
-    return [line for line in output.splitlines() if line]
+        ["git", "ls-files", "-z"], capture_output=True, check=True, cwd=ROOT
+    ).stdout.decode()
+    return [name for name in output.split("\0") if name]
 
 
 def main(argv: list[str] | None = None) -> int:

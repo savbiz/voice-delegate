@@ -80,6 +80,12 @@ def hardened(**overrides: Any) -> dict[str, Any]:
 
 def test_a_hardened_compose_service_passes() -> None:
     assert audit.audit_compose(hardened()) == []
+    assert audit.audit_compose(hardened(user="101:101")) == []
+
+
+def test_the_user_is_checked_on_services_that_are_not_built_here_too() -> None:
+    data = {"services": {"proxy": {"image": "nginx:1.27", "user": "0"}}}
+    assert audit.audit_compose(data) == ["service proxy runs as root (user: 0)"]
 
 
 @pytest.mark.parametrize(
@@ -89,6 +95,11 @@ def test_a_hardened_compose_service_passes() -> None:
         ({"cap_drop": []}, "drop all capabilities"),
         ({"security_opt": []}, "no-new-privileges"),
         ({"privileged": True}, "privileged"),
+        ({"user": "root"}, "runs as root"),
+        ({"user": "0"}, "runs as root"),
+        ({"user": 0}, "runs as root"),
+        ({"user": "0:101"}, "runs as root"),
+        ({"user": "root:nginx"}, "runs as root"),
         ({"network_mode": "host"}, "host network"),
         ({"volumes": ["/var/run/docker.sock:/var/run/docker.sock"]}, "Docker socket"),
         ({"ports": ["8080:8080"]}, "every interface"),

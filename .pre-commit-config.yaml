@@ -20,6 +20,7 @@ repos:
         name: no environment files, keys or credentials
         entry: uv run --no-project python scripts/check_forbidden_files.py
         language: system
+        types: []  # the default (regular files only) would let a symlink named .env through
       - id: editorconfig
         name: line endings and whitespace
         entry: uv run --no-project python scripts/check_editorconfig.py

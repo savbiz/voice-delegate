@@ -27,8 +27,11 @@ def forbidden(path: str) -> str | None:
 
 
 def git_files(*arguments: str) -> list[str]:
-    output = subprocess.run(["git", *arguments], capture_output=True, text=True, check=True).stdout
-    return [line for line in output.splitlines() if line]
+    """Paths from a git command, NUL-delimited so a quoted or non-ASCII name is read literally."""
+    output = subprocess.run(
+        ["git", *arguments, "-z"], capture_output=True, check=True
+    ).stdout.decode()
+    return [name for name in output.split("\0") if name]
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -46,6 +46,8 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           vuln-type: os,library
+          # Without this, SARIF output ignores `severity` and the exit code counts every finding.
+          limit-severities-for-sarif: true
           format: sarif
           output: trivy-${{ matrix.image }}.sarif
           exit-code: "1"
