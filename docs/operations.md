@@ -129,9 +129,10 @@ Usage → Cost separately from agent conversations and simulations. These setup 
 are outside the application session ledger; reading an agent configuration through MCP
 is not an Architect chat. See [Architect pricing and usage](https://elevenlabs.io/docs/eleven-agents/operate/architect/pricing).
 
-`finalized=true` means provider closure was confirmed, including a failed call. A partial
-zero-dollar estimate with `unpriced: ["voice.elevenlabs.second"]` means the voice rate is
-unknown. `provider_usage: null` means no provider receipt was available; it is not a
+`finalized=true` means provider closure was confirmed, including a failed call. The bundled
+ElevenLabs voice rate is an assumption ($0.08/minute); `unpriced: ["voice.elevenlabs.second"]`
+appears only with a custom price file that leaves it out. `adapters` lists the voice providers
+the session used. `provider_usage: null` means no provider receipt was available; it is not a
 confirmed zero bill. Never log private keys or conversation contents to investigate this.
 
 ## Rollback while retaining data

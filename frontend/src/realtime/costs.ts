@@ -6,6 +6,7 @@ export type CostSummary = {
     voice_surcharge_credits: number | null;
     usd: number | null;
   } | null;
+  adapters?: string[];
   version: string;
   price_date: string;
   estimated_usd: number;
@@ -30,7 +31,7 @@ export function costText(cost: CostSummary): string {
     : [];
   const receipt = details.length
     ? ` ElevenLabs reports: ${details.join('; ')}. Shown separately, not added to the estimate.`
-    : cost.unpriced.includes('voice.elevenlabs.second')
+    : cost.adapters?.includes('elevenlabs') || cost.unpriced.includes('voice.elevenlabs.second')
       ? ' ElevenLabs usage has not been reported yet.'
       : '';
   return `${cost.final ? 'Final' : 'Current'} estimate: $${cost.estimated_usd.toFixed(6)}${cost.partial ? ' (partial)' : ''}. Price snapshot ${cost.price_date}. Excludes billing adjustments, discounts and unobserved usage.${receipt}`;

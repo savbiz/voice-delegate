@@ -6,7 +6,7 @@ credentials or account-wide billing access are needed. The owned heartbeat retur
 a final snapshot. The frontend shows the estimate in the standalone “Session estimate” panel above the
 transcript, including after stop.
 
-The bundled `backend/src/voice_delegate/prices/2026-11-03.json` records its date, version,
+The bundled `backend/src/voice_delegate/prices/2026-11-04.json` records its date, version,
 source URLs and USD assumptions. `VOICE_PRICE_FILE` can select a local JSON file with the
 same schema; it is validated at startup and copied into each session ledger. Restart the
 backend to change rates. No prices are fetched at runtime. Keep account-specific files
@@ -19,7 +19,7 @@ outside Git and avoid secrets: the file needs only numeric tariffs and public so
 | Decisions | Reported input tokens; cancellation and planner decisions | $0.10 per million; input-only assumption |
 | Tavily | Basic search attempts, including failed requests | $0.008/search PAYG; free credits/discounts excluded |
 | Azure GPT-Live | Observed connected seconds | Assumed equal to the OpenAI GPT-Live rate; Azure publishes no `gpt-live-1` meter, so check your invoice |
-| ElevenLabs | Observed connected seconds | Unpriced by default; provider-reported credits/USD are shown when available |
+| ElevenLabs Agents | Observed connected seconds | Assumed $0.08/minute, the published additional-minute rate; excludes included plan minutes, LLM usage and burst pricing, so check your invoice. Provider-reported credits/USD are shown separately when available |
 
 Audio token billing is not a published per-second tariff. A missing voice/model
 rate or missing/ambiguous token usage makes the result **partial**, not zero-cost. Failed or

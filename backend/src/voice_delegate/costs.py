@@ -29,7 +29,7 @@ class Prices(BaseModel):
         raw = (
             Path(path).read_bytes()
             if path
-            else files("voice_delegate").joinpath("prices/2026-11-03.json").read_bytes()
+            else files("voice_delegate").joinpath("prices/2026-11-04.json").read_bytes()
         )
         if len(raw) > 65536:
             message = "Price file exceeds limit"
@@ -39,6 +39,8 @@ class Prices(BaseModel):
 
 class CostSummary(BaseModel):
     provider_usage: ProviderUsage | None = None
+    # Voice adapters that carried audio, so the UI can explain a missing provider receipt.
+    adapters: list[str] = []
     version: str
     price_date: str
     estimated_usd: float
@@ -141,6 +143,7 @@ class CostLedger:
                 self.emitted[component] = amount
         return CostSummary(
             provider_usage=self.provider_usage,
+            adapters=sorted({self.adapter, *self.seconds}),
             version=self.prices.version,
             price_date=self.prices.date,
             estimated_usd=sum(components.values()),
