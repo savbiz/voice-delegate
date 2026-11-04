@@ -139,9 +139,15 @@ def test_container_scan_builds_and_scans_both_images_and_the_configuration() -> 
     for entry in include:
         assert (ROOT / entry["dockerfile"]).is_file()
     scans = [s for s in steps(workflow) if "trivy-action" in s.get("uses", "")]
-    assert len(scans) == 2  # the image scan (once per matrix entry) and the configuration scan
+    # A readable listing and the failing SARIF scan per image (one matrix job), plus the
+    # configuration scan.
+    assert len(scans) == 3
+    listing, gate = scans[0]["with"], scans[1]["with"]
+    assert listing["format"] == "table" and listing["exit-code"] == "0"
     # An unfixed vulnerability is not actionable, so it must not fail the build.
-    image_scan = scans[0]["with"]
-    assert image_scan["ignore-unfixed"] is True
-    assert image_scan["exit-code"] == "1"
+    assert gate["ignore-unfixed"] is True and gate["exit-code"] == "1"
+    assert gate["limit-severities-for-sarif"] is True
+    assert gate["severity"] == listing["severity"] == "HIGH,CRITICAL"
+    # One Trivy version everywhere, so the listing and the gate can never disagree.
+    assert len({s["with"]["version"] for s in scans}) == 1
     assert workflow["permissions"] == {"contents": "read"}
