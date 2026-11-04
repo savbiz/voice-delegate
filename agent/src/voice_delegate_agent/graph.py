@@ -19,6 +19,7 @@ from pydantic import BaseModel, SecretStr, ValidationError
 from .decisions import Choice, Decider, Decision, DecisionError, Option
 from .limits import SOURCE_PREVIEW_CHARS
 from .model_config import chat_reasoning_effort
+from .moderation import Action, Moderator, Origin, Reason, Verdict, failure_verdict
 from .prompts import worker_prompt
 from .reference import Source, WorkerResult, source_by_id
 from .tools import TOOLS
@@ -330,6 +331,20 @@ class State(TypedDict):
     evidence: dict[str, Source]
     web_seen: bool
     web_unavailable: bool
+    reviews: int
+
+
+EVIDENCE_ORIGINS = {
+    "search_documentation": Origin.DOCUMENTATION,
+    "web_search": Origin.WEB,
+}
+# Arithmetic output is a bounded number produced by the evaluator, not external text.
+UNMODERATED_TOOLS = {"calculate"}
+REFUSALS = {
+    Reason.UNAVAILABLE: "Moderation unavailable; task was not started.",
+    Reason.BUDGET: "Moderation budget exhausted; task was not started.",
+    Reason.OVERSIZE: "Request too long to review; task was not started.",
+}
 
 
 class LangGraphWorker:
@@ -342,9 +357,13 @@ class LangGraphWorker:
         *,
         tools: Sequence[BaseTool] | None = None,
         instructions: str = INSTRUCTIONS,
+        moderator: Moderator | None = None,
+        max_reviews: int = 6,
     ) -> None:
         self.planner = planner
         self.max_steps = max_steps
+        self.moderator = moderator
+        self.max_reviews = max_reviews
         registry = {tool.name: tool for tool in (TOOLS if tools is None else tools)}
         self.instructions = instructions
 
@@ -372,6 +391,13 @@ class LangGraphWorker:
                 "failed": state["failed"] or answer.response_metadata.get("worker_failed") is True,
             }
 
+        async def review(origin: Origin, text: str, used: int) -> Verdict:
+            if self.moderator is None:
+                return Verdict(Action.ALLOW, Reason.OK)
+            if used >= self.max_reviews:
+                return failure_verdict(origin, Reason.BUDGET)
+            return await self.moderator.review(origin, text)
+
         async def execute(state: State) -> dict[str, object]:
             answer = state["messages"][-1]
             if not isinstance(answer, AIMessage):
@@ -398,6 +424,23 @@ class LangGraphWorker:
             except Exception:
                 failed = True
                 result = "Tool failed; no action taken."
+            reviews = state["reviews"]
+            if self.moderator is not None and call["name"] not in UNMODERATED_TOOLS:
+                origin = EVIDENCE_ORIGINS.get(call["name"], Origin.MCP)
+                verdict = await review(origin, str(result), reviews)
+                reviews += 1
+                if not verdict.allowed:
+                    # Withheld text never reaches the planner, citations or narration.
+                    return {
+                        "messages": [
+                            AIMessage(
+                                content="Tool evidence was withheld by moderation; task incomplete."
+                            )
+                        ],
+                        "failed": True,
+                        "reviews": reviews,
+                        "web_seen": state["web_seen"] or web_call,
+                    }
             source_ids = list(state["source_ids"])
             evidence = dict(state["evidence"])
             web_unavailable = state["web_unavailable"]
@@ -437,6 +480,7 @@ class LangGraphWorker:
                 "evidence": evidence,
                 "web_seen": state["web_seen"] or web_call,
                 "web_unavailable": web_unavailable,
+                "reviews": reviews,
             }
 
         def route(state: State) -> Literal["tools", "__end__"]:
@@ -456,6 +500,17 @@ class LangGraphWorker:
 
     async def delegate_task(self, goal: str, context: str) -> WorkerResult:
         """Process a bounded request without retaining transcript state."""
+        reviews = 0
+        if self.moderator is not None:
+            verdict = await self.moderator.review(Origin.USER, goal)
+            reviews = 1
+            if not verdict.allowed:
+                return WorkerResult(
+                    REFUSALS.get(
+                        verdict.reason, "I cannot help with that request; no action taken."
+                    ),
+                    status="failed" if verdict.reason in REFUSALS else "completed",
+                )
         result = await self.graph.ainvoke(
             {
                 "messages": [
@@ -471,6 +526,7 @@ class LangGraphWorker:
                 "evidence": {},
                 "web_seen": False,
                 "web_unavailable": False,
+                "reviews": reviews,
             },
             config={"recursion_limit": self.max_steps * 2 + 3, "callbacks": []},
         )

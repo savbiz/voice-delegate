@@ -174,6 +174,8 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
     if worker is None:
         if not settings.tavily_api_key.get_secret_value():
             settings = settings.model_copy(update={"web_search": False})
+        if not settings.openai_api_key.get_secret_value():
+            settings = settings.model_copy(update={"moderation": False})
         runtime = build_planner(settings)
         worker = runtime.worker(settings.worker_max_steps)
     jobs = Jobs(worker, settings)

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Added: an opt-in moderation boundary in the worker (`VOICE_MODERATION`, ADR 013). Goals and tool evidence are reviewed by origin before planning; injected instructions in documentation or web excerpts are quarantined, and classifier failure withholds evidence instead of allowing it.
+
 ## 0.3.0 - 2026-11-04
 
 Access to the hosted demo can now be requested and approved from a phone, and the codebase is trimmed for v1: one prompt source, fewer adapters, documentation by task.

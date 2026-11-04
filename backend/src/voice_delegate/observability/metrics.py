@@ -45,6 +45,7 @@ class Metrics:
         self.decision_cost = meter.create_counter("voice.decision.estimated_cost", unit="USD")
         self.session_cost = meter.create_counter("voice.session.estimated_cost", unit="USD")
         self.interruptions = meter.create_counter("voice.interruptions", unit="1")
+        self.moderation_reviews = meter.create_counter("voice.moderation.reviews", unit="1")
 
     @contextmanager
     def operation(self, name: str) -> Iterator[None]:

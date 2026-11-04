@@ -311,6 +311,14 @@ System prompts ship as Markdown resources inside the backend and agent packages,
 with server-selected variants matching enabled tools and cancellation behavior.
 
 
+## Optional moderation boundary
+
+With `VOICE_MODERATION` and an OpenAI key on the worker host, the worker reviews the
+delegated goal and each documentation, web or tool result before the planner sees it.
+Verdicts are allow, quarantine or refuse, decided by deterministic policy over advisory
+classifier signals. Withheld evidence ends the job as incomplete and is never narrated or
+cited. See [ADR 013](decisions/013-moderation-boundary.md).
+
 ## Browser audio observations
 
 The WebRTC stream analyser automatically

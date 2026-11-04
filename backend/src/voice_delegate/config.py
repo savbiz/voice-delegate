@@ -149,6 +149,11 @@ class Settings(BaseSettings):
     tavily_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="TAVILY_API_KEY")
     web_search_domains: list[str] = Field(default_factory=list, max_length=20)
     web_search_timeout_seconds: float = Field(default=3, gt=0, le=5)
+    # Opt-in: reviews goals and tool evidence with Decisions; needs an OpenAI key (worker host).
+    moderation: bool = False
+    moderation_threshold: float = Field(default=0.8, ge=0.5, le=1)
+    moderation_timeout_seconds: float = Field(default=1, gt=0, le=5)
+    moderation_max_reviews: int = Field(default=6, ge=1, le=24)
     worker_model: str = DEFAULT_WORKER_MODEL
     delegation_timeout_seconds: float = Field(default=15, gt=0, le=120)
     delegation_result_tokens: int = Field(default=120, ge=8, le=480)
@@ -334,6 +339,13 @@ class Settings(BaseSettings):
             raise ValueError(message)
         if self.worker_mode != "offline" and not self.openai_api_key.get_secret_value():
             message = "Paid worker modes require OPENAI_API_KEY"
+            raise ValueError(message)
+        if (
+            self.moderation
+            and self.worker_execution == "local"
+            and not self.openai_api_key.get_secret_value()
+        ):
+            message = "Moderation requires OPENAI_API_KEY on the worker host"
             raise ValueError(message)
         if self.environment == "production":
             if "testserver" in self.allowed_hosts:

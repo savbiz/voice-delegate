@@ -111,7 +111,8 @@ def create_app(
             providers["elevenlabs"] = elevenlabs
     telemetry = configure_tracing(settings)
     meter_provider = configure_metrics(settings)
-    runtime = build_planner(settings) if settings.worker_execution == "local" else None
+    metrics = Metrics(meter_provider)
+    runtime = build_planner(settings, metrics) if settings.worker_execution == "local" else None
     planner = runtime.planner if runtime is not None else None
     remote = RemoteWorker(settings) if settings.worker_execution == "remote" else None
     # SQLite calls are synchronous by design for the single-process demo.
@@ -143,7 +144,7 @@ def create_app(
         provider,
         settings,
         tracer=get_tracer(telemetry),
-        metrics=Metrics(meter_provider),
+        metrics=metrics,
         worker=remote
         or (
             runtime.worker(settings.worker_max_steps)

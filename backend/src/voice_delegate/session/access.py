@@ -44,6 +44,7 @@ class PersonalKeys(BaseModel):
                 "elevenlabs_webhook_token": self.elevenlabs_webhook_token,
                 "worker_mode": "openai" if self.openai_key.get_secret_value() else "offline",
                 "web_search": bool(self.tavily_key.get_secret_value()),
+                "moderation": settings.moderation and bool(self.openai_key.get_secret_value()),
                 "decisions_cancel": False,
             }
         )

@@ -11,7 +11,7 @@ paid acceptance requires separate explicit authorization.
 
 | Extension | Proposed switch, default off | Main prerequisite | Acceptance evidence |
 | --- | --- | --- | --- |
-| Moderation hook | `VOICE_MODERATION=false` | Origin-aware policy and shared typed contract | Adversarial fakes, then authorized quality evals |
+| Moderation hook (implemented as an opt-in in ADR 013) | `VOICE_MODERATION=false` | Origin-aware policy and shared typed contract | Adversarial fakes (done), then authorized quality evals |
 | Worker MCP client | `VOICE_MCP_ENABLED=false` | Audited read-only registry and moderation boundary | Fake servers, schema/timeout/cancellation tests |
 | Telephone SIP | `VOICE_SIP_ENABLED=false` | Admission ADR, carrier and signed webhooks | Duplicate/race fakes, then an authorized call |
 | Cascaded voice | `VOICE_CASCADE_ENABLED=false` | Audio-relay ADR and transport capabilities | Synthetic audio tests, then measured voice benchmarks |

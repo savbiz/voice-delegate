@@ -17,3 +17,4 @@ place with a dated note rather than rewritten.
 | 010 | Reserved for the MCP trust model in [future extensions](../future-extensions.md#worker-as-an-mcp-client) | Not written |
 | [011](011-read-only-web-search.md) | Read-only web search in the delegated worker | Accepted |
 | [012](012-elevenlabs-agents-webhook.md) | ElevenLabs Agents with an asynchronous server webhook | Accepted 2026-11-02 |
+| [013](013-moderation-boundary.md) | Origin-aware moderation boundary in the worker | Accepted 2026-11-04 |
