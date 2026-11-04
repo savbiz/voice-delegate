@@ -2,6 +2,7 @@
 
 import contextlib
 import json
+import logging
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import asdict
@@ -23,6 +24,8 @@ from .prompts import worker_prompt
 from .reference import Source, WorkerResult, source_by_id
 from .tools import TOOLS
 from .web_search import verified_web_source
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "INSTRUCTIONS",
@@ -149,7 +152,9 @@ class LangGraphWorker:
             except ValidationError:
                 failed = True
                 result = "Tool input invalid; no action taken."
-            except Exception:
+            except Exception as error:
+                # Only the type is logged: the message can carry tool arguments or user text.
+                logger.warning("Worker tool %s failed (%s)", call["name"], type(error).__name__)
                 failed = True
                 result = "Tool failed; no action taken."
             reviews = state["reviews"]

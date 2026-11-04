@@ -318,7 +318,7 @@ async def test_offline_planner_keeps_english_commands(goal: str) -> None:
 
 @pytest.mark.parametrize("failure", ["validation", "runtime", "value"])
 async def test_graph_distinguishes_invalid_input_from_tool_failure(
-    monkeypatch: pytest.MonkeyPatch, failure: str
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, failure: str
 ) -> None:
     from langchain_core.messages import ToolMessage
     from langchain_core.tools import tool
@@ -348,13 +348,19 @@ async def test_graph_distinguishes_invalid_input_from_tool_failure(
                 ],
             )
 
-    result = await LangGraphWorker(Planner()).delegate_task("test", "")
+    with caplog.at_level("WARNING"):
+        result = await LangGraphWorker(Planner()).delegate_task("test", "")
     assert result.status == "failed"
     assert result.text == (
         "Tool input invalid; no action taken."
         if failure == "validation"
         else "Tool failed; no action taken."
     )
+    if failure != "validation":
+        # The failure is visible in the logs, but never the exception's private message.
+        error = "ValueError" if failure == "value" else "RuntimeError"
+        assert f"Worker tool broken failed ({error})" in caplog.text
+    assert "private execution detail" not in caplog.text
 
 
 async def test_graph_rejects_non_ai_message_at_tool_execution() -> None:

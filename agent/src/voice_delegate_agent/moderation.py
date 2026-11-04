@@ -5,10 +5,13 @@ outcomes. Classification cannot prove content safe, so an unavailable or over-bu
 never silently allows external evidence.
 """
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol
+
+logger = logging.getLogger(__name__)
 
 
 class Origin(StrEnum):
@@ -109,7 +112,10 @@ class PolicyModerator:
             return failure_verdict(origin, Reason.OVERSIZE)
         try:
             signals = await self.classifier.classify(origin, text)
-        except Exception:  # classifier faults of any kind fail closed
+        except Exception as error:  # classifier faults of any kind fail closed
+            logger.warning(
+                "Moderation classifier unavailable (%s); failing closed", type(error).__name__
+            )
             return failure_verdict(origin, Reason.UNAVAILABLE)
         if signals.unsuitable >= self.threshold:
             return Verdict(

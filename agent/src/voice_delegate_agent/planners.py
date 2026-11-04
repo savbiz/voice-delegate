@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import re
 from collections.abc import Awaitable, Callable, Sequence
 from html import unescape
@@ -18,6 +19,8 @@ from .model_config import chat_reasoning_effort
 from .prompts import worker_prompt
 from .tools import TOOLS
 from .usage import external_call, model_usage
+
+logger = logging.getLogger(__name__)
 
 INSTRUCTIONS = worker_prompt()
 
@@ -295,7 +298,10 @@ class DecisionsPlanner:
             text = self._decision_input(messages)
             calls = 1
             decision = await self._decide(text, question)
-        except Exception:
+        except Exception as error:
+            logger.warning(
+                "Decisions planning failed (%s); using the fallback planner", type(error).__name__
+            )
             return self._annotate(await self.fallback.respond(messages), None, True, calls=calls)
         if question.name in decision.refused:
             return self._annotate(

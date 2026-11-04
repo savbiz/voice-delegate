@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Literal
@@ -19,6 +20,8 @@ from voice_delegate.providers.models import Commentary
 
 from .contracts import DelegationInput, WorkerBusy
 from .runner import DelegationRunner
+
+logger = logging.getLogger(__name__)
 
 ACTIVE = {"running", "pending", "delivering"}
 type CancelReason = Literal["explicit", "semantic", "session_end"]
@@ -177,7 +180,8 @@ class IntentRunner:
         except WorkerBusy:
             outcome = "error"
             self._pending(job, WorkerResult("Worker busy; task was not started.", status="failed"))
-        except Exception:
+        except Exception as error:
+            logger.warning("Delegated task failed (%s)", type(error).__name__)
             outcome = "error"
             self._pending(job, WorkerResult("Worker failed; task incomplete.", status="failed"))
         finally:
@@ -256,8 +260,9 @@ class IntentRunner:
                                 settle_only=True,
                             )
                         )
-                except Exception:
-                    pass
+                except Exception as error:
+                    # Best effort: the task is already settled whether or not the notice arrives.
+                    logger.info("Task settlement notice not sent (%s)", type(error).__name__)
             if job.status != "pending":
                 continue
             if now - job.ready >= self.settings.delivery_timeout_seconds:
@@ -370,8 +375,11 @@ class IntentRunner:
             for i, job in enumerate(jobs):
                 if result.probabilities.get(f"cancel_{i}", 0) >= self.settings.decisions_threshold:
                     self.cancel(state, "semantic", job.id)
-        except Exception:
+        except Exception as error:
             # Classification is advisory; a failed decision must preserve wanted work.
+            logger.warning(
+                "Cancellation classifier failed (%s); work preserved", type(error).__name__
+            )
             return
 
     async def close(self, state: Portfolio) -> None:

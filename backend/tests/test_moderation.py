@@ -57,9 +57,12 @@ async def test_policy_is_origin_aware() -> None:
     assert (await unsuitable.review(Origin.WEB, "x")).action is Action.QUARANTINE
 
 
-async def test_failures_and_oversize_never_allow() -> None:
+async def test_failures_and_oversize_never_allow(caplog: pytest.LogCaptureFixture) -> None:
     policy = PolicyModerator(FakeClassifier(fail=True), max_bytes=10)
-    assert await policy.review(Origin.WEB, "ok") == Verdict(Action.QUARANTINE, Reason.UNAVAILABLE)
+    with caplog.at_level("WARNING"):
+        verdict = await policy.review(Origin.WEB, "ok")
+    assert verdict == Verdict(Action.QUARANTINE, Reason.UNAVAILABLE)
+    assert "Moderation classifier unavailable" in caplog.text
     assert await policy.review(Origin.USER, "ok") == Verdict(Action.REFUSE, Reason.UNAVAILABLE)
     classifier = FakeClassifier()
     sized = PolicyModerator(classifier, max_bytes=10)
