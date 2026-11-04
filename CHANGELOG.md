@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Changed: Dependabot groups only minor and patch updates, one pull request per ecosystem each week. Major updates are no longer grouped, so each arrives as its own pull request that can be reviewed and reverted alone. A test keeps this in the configuration.
+
 Changed: the project now builds and tests on Python 3.14 only (it was 3.12 and 3.13): packages, tools, the backend image and CI. CI has one backend job, `backend (3.14)`, replacing `backend (3.12)` and `backend (3.13)`, so the required checks in the repository ruleset must be updated. A test keeps every place that names the version in agreement. Python 3.14 reports an unclosed HTTP error response, so the container health check now closes it. The backend image no longer ships pip, whose bundled copies of other packages a scan reported.
 
 Added: releases now carry a signed build-provenance attestation for the SBOM documents (GitHub artifact attestations), attached as `voice-delegate.intoto.jsonl` and verifiable with `gh attestation verify`. It applies from the next published release. An overview diagram of the system components is added to `docs/architecture.md`, and Sentry is recorded as a possible later addition in `docs/future-extensions.md`.

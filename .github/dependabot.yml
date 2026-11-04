@@ -1,3 +1,6 @@
+# Minor and patch updates (where most security fixes arrive) are grouped into one weekly pull
+# request per ecosystem. Major updates are left out of the groups, so each one is its own pull
+# request that can be reviewed, tested and reverted alone.
 version: 2
 updates:
   - package-ecosystem: uv
@@ -7,6 +10,7 @@ updates:
     groups:
       python-dependencies:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: npm
     directory: /frontend
@@ -15,6 +19,7 @@ updates:
     groups:
       frontend-dependencies:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
     ignore:
       - dependency-name: "@types/node"
         update-types:
@@ -30,6 +35,7 @@ updates:
     groups:
       workflow-actions:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   # Container base images are pinned by digest, so nothing updates them unless Dependabot does.
   - package-ecosystem: docker
@@ -41,6 +47,7 @@ updates:
     groups:
       container-base-images:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: docker-compose
     directories:
@@ -51,3 +58,4 @@ updates:
     groups:
       compose-images:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
