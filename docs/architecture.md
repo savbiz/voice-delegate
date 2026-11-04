@@ -24,7 +24,8 @@ flowchart LR
         Adapter["Provider adapter<br/>typed events"]
         Store[("Admission store<br/>quotas and leases")]
     end
-    Provider["Voice provider<br/>OpenAI, Azure or ElevenLabs"]
+    Provider["GPT-Live provider<br/>OpenAI or Azure"]
+    Agents["ElevenLabs Agents"]
     subgraph Worker["Delegation worker"]
         Graph["LangGraph worker<br/>delegate_task"]
         Tools["Calculator, project docs,<br/>optional web search and MCP"]
@@ -36,8 +37,10 @@ flowchart LR
     Routes --> Store
     Routes --> Manager
     Media <-->|"audio, direct WebRTC"| Provider
+    Media <-->|"audio, SDK-managed WebRTC"| Agents
     Manager <-->|"sideband events"| Adapter
     Adapter <--> Provider
+    Agents -->|"delegate_task webhook"| Routes
     Manager -->|"delegate_task(goal, context)"| Graph
     Graph --> Tools
     Graph --> Guard
@@ -46,7 +49,9 @@ flowchart LR
 ```
 
 The worker runs inside the API process or, in the scaled and offline stacks, as a separate private
-service. Audio never passes through the backend; only text events and delegation results do.
+service. Audio media bypasses the backend; session control, lifecycle events, transcripts and
+delegation requests and results are all handled by it. OpenAI and Azure sessions use a sideband
+event channel; ElevenLabs Agents use browser-managed WebRTC and call the backend through a webhook.
 
 ```mermaid
 sequenceDiagram

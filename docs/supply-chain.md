@@ -8,7 +8,7 @@ GitHub Actions; none of it needs a secret or a paid service.
 | Dependabot | `.github/dependabot.yml` | weekly | Which updates exist (Python, npm, GitHub Actions) |
 | CodeQL | `codeql.yml` | pull requests, `main` and weekly | Does the code contain known vulnerability patterns |
 | Dependency audit | `supply-chain.yml` | weekly, on demand, and on a lockfile change | Does a locked package have a published advisory |
-| SBOM and provenance | `sbom.yml` | on each published release, or on demand | What exactly is in the release, and who built it |
+| SBOM and provenance | `sbom.yml` | SBOMs on each published release or on demand; provenance attestation only on a published release | What exactly is in the release, and who built it |
 | Container audit | `scripts/check_containers.py` | in every CI run | Do the Dockerfiles and compose files meet the baseline: pinned bases, non-root, health check, hardening |
 | Container scan | `container-scan.yml` | weekly, on demand, and when a container definition or lockfile changes | Do the built images contain a fixable HIGH or CRITICAL vulnerability or misconfiguration |
 | OpenSSF Scorecard | `scorecard.yml` | weekly, on `main` and on branch-protection changes | How do the repository's practices compare with a public baseline |

@@ -200,12 +200,12 @@
     "digest": "a290f1daf6c232833b8ff9cbbe69ffb87f890adfc8e1448e3f1cc91d214ba95f"
   },
   {
-    "id": "76574b0271aa7de5",
+    "id": "c168b1a4893d4d59",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Boundaries",
-    "text": "The worker runs inside the API process or, in the scaled and offline stacks, as a separate private\nservice. Audio never passes through the backend; only text events and delegation results do.",
-    "digest": "76574b0271aa7de54782e37e85f9d34de4b3a124109e07b435adb3705640a9b6"
+    "text": "The worker runs inside the API process or, in the scaled and offline stacks, as a separate private\nservice. Audio media bypasses the backend; session control, lifecycle events, transcripts and\ndelegation requests and results are all handled by it. OpenAI and Azure sessions use a sideband\nevent channel; ElevenLabs Agents use browser-managed WebRTC and call the backend through a webhook.",
+    "digest": "c168b1a4893d4d59c6571e808e7a4f6f11f6dacfc8b7bc92860b3527164b59a3"
   },
   {
     "id": "cf18a51ef3853579",
