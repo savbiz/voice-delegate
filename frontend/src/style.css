@@ -195,6 +195,11 @@ h2 {
   color: var(--muted);
   font-size: 0.86rem;
 }
+.muted a {
+  color: var(--accent-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 .badge {
   display: inline-flex;
   align-items: center;
