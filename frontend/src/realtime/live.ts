@@ -1,10 +1,11 @@
+/** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
 import type { PersonalKeys } from '../components/ApiAccess';
+import { cleanPersonalKeys, type Preferences } from './personal-keys';
 import type { CostSummary } from './costs';
 import { elevenSession } from './elevenlabs-live';
 import { canStartVoice, isNativeClient } from '../native';
 import { ConnectionSounds } from './connection-sounds';
 import { AudioTimingMeter } from './audio-timing';
-/** Own microphone, peer connection, captions, and explicitly approximate turn timing. */
 import type { Source } from '../reference';
 import { ActivityReporter, watchSpeech } from './vad';
 import type { TaskStatus } from './store';
@@ -13,55 +14,8 @@ import { recordAudio } from './recording';
 import type { AudioRecording } from './recording';
 import type { DebugSample } from './debug';
 import { shouldRecover } from './recovery';
-
 import { endedWorkerState, processEvent, recapText, workerState } from './store';
 import type { LiveStore, Phase } from './store';
-export type Preferences = {
-  language: string;
-  mode: string;
-  azure_recovery?: boolean;
-  debug_recording?: boolean;
-  adapter?: string;
-};
-const SECRET_FIELDS = [
-  'openai_key',
-  'tavily_key',
-  'elevenlabs_key',
-  'azure_key',
-  'elevenlabs_webhook_token',
-] as const;
-
-/** Trim pasted values and explain mistakes before anything is sent or cleared. */
-export function cleanPersonalKeys(keys: PersonalKeys, preferences: Preferences): PersonalKeys {
-  const cleaned: PersonalKeys = {};
-  for (const [name, value] of Object.entries(keys) as [keyof PersonalKeys, string | undefined][]) {
-    const trimmed = value?.trim();
-    if (trimmed) cleaned[name] = trimmed;
-  }
-  for (const name of SECRET_FIELDS)
-    if (cleaned[name] && !/^[\x21-\x7e]+$/.test(cleaned[name]))
-      throw new Error(
-        'Keys and tokens cannot contain spaces, line breaks or non-ASCII characters.',
-      );
-  if (preferences.adapter === 'azure' || preferences.azure_recovery) {
-    let origin: URL | undefined;
-    try {
-      origin = cleaned.azure_endpoint ? new URL(cleaned.azure_endpoint) : undefined;
-    } catch {
-      origin = undefined;
-    }
-    if (!origin || origin.protocol !== 'https:' || !origin.hostname.endsWith('.openai.azure.com'))
-      throw new Error(
-        'The Azure resource origin must look like https://<resource>.openai.azure.com (no path).',
-      );
-    cleaned.azure_endpoint = origin.origin;
-    if (cleaned.azure_deployment && !/^[A-Za-z0-9._-]+$/.test(cleaned.azure_deployment))
-      throw new Error(
-        'The Azure deployment name may contain only letters, digits, dots, hyphens and underscores.',
-      );
-  }
-  return cleaned;
-}
 
 export function createLiveSession(
   store: LiveStore,
