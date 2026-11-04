@@ -8,7 +8,7 @@ From that root, run:
 
 ```bash
 uv sync --locked
-if [ ! -e .env ]; then cp .env.example .env; fi
+if [ ! -e .env ]; then cp config/local.env.template .env; fi
 cd frontend
 pnpm install --frozen-lockfile
 cd ..
@@ -224,7 +224,7 @@ non-sensitive selectors/model values when migrating a local configuration.
 Use the [minimal template](../config/local.env.template) for new files. It contains
 platform keys and deployment choices; costs, controls, audio timing and intent-based
 cancellation are automatic. Existing `.env` files still load, but obsolete feature flags
-do not disable these behaviours. The older `.env.example` is a legacy exhaustive template.
+do not disable these behaviours. `.env.example` is the complete reference: it lists every setting with a safe default, and a test keeps it in sync with the code.
 
 For platform-funded local voice and model-backed delegation:
 

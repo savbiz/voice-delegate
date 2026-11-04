@@ -37,7 +37,7 @@ Start with the [project README](../README.md). Pick the path that matches what y
 
 ## Internals and history
 
-[Roadmap and evidence log](roadmap.md), [glossary](glossary.md), the
+[Roadmap](roadmap.md), [evidence log](milestones/evidence-log.md), [glossary](glossary.md), the
 [live verification checklist](milestones/live-verification.md) and the per-milestone records
 in [milestones/](milestones/). These record how features were verified; they are not needed
 to use or deploy the project.

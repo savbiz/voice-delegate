@@ -92,5 +92,5 @@ application loader ignores these obsolete feature flags:
 
 Model/deployment choices, origins/hosts, proxy trust, invitations, resource budgets, private
 worker URL/token, recording directory and optional telemetry exporter endpoints remain available. No key, Railway
-variable or existing `.env` is changed automatically. The exhaustive `.env.example` remains
-a legacy compatibility fixture; its old off switches no longer describe runtime behaviour.
+variable or existing `.env` is changed automatically. The complete `.env.example` reference
+still lists some obsolete off switches; the loader ignores them.

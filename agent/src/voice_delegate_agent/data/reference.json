@@ -16,44 +16,68 @@
     "digest": "d01460560e11d775a446f5609d3e70ad148a0fab0cde0a7db89550aa72ef3312"
   },
   {
-    "id": "16fec8519f260045",
+    "id": "782df4ea43056baa",
     "title": "voice-delegate",
     "path": "README.md",
-    "section": "voice-delegate",
-    "text": "- **Three voice providers, chosen per session:** OpenAI GPT-Live, Azure (a GPT-Live\n  deployment) and ElevenLabs Agents.",
-    "digest": "16fec8519f26004538b3f5e32ac5828a65444edddbaef65dd844ae2dc75a9eec"
+    "section": "What's implemented",
+    "text": "- **Real-time voice** with three providers chosen per session: OpenAI GPT-Live, Azure\n  (a GPT-Live deployment) and ElevenLabs Agents. Audio goes over WebRTC straight from the\n  browser to the provider.",
+    "digest": "782df4ea43056baac3dae4fee348f4290111db51ebcddbf7b019d3bfd862cbe7"
   },
   {
-    "id": "fda16017ad892697",
+    "id": "38655c60fd9ec757",
     "title": "voice-delegate",
     "path": "README.md",
-    "section": "voice-delegate",
-    "text": "- **Background delegation:** up to two tasks run at once; results wait for silence and\n  carry the original request.",
-    "digest": "fda16017ad892697cce99aa4b5cd5e11dd57efd4b7968135d7ce4d0991c15f86"
+    "section": "What's implemented",
+    "text": "- **Background delegation:** the voice model has a single tool, `delegate_task`. A bounded\n  LangGraph worker runs up to two tasks at once (calculator, cited documentation search,\n  optional web search, optional read-only MCP tools) and the answer is spoken when you pause.",
+    "digest": "38655c60fd9ec757d1a7304b1e4dcebd6f44b3bf696cfeb4ab76dddc52b8fd74"
   },
   {
-    "id": "4c7a749866bc8861",
+    "id": "bacf46ddb5dedcff",
     "title": "voice-delegate",
     "path": "README.md",
-    "section": "voice-delegate",
-    "text": "- **Your keys or the platform's:** bring your own provider keys (memory only) or use an\n  invitation code with daily quotas.",
-    "digest": "4c7a749866bc886178adbbdfe483a2f583246edfe6e8965245e7cd1fe40947c7"
+    "section": "What's implemented",
+    "text": "- **Safety:** read-only tools only; optional moderation that reviews goals and tool\n  results and quarantines instructions injected into retrieved text; MCP limited to an\n  operator allowlist and gated by moderation.",
+    "digest": "bacf46ddb5dedcffa6a2d68cb2e1b6aff9539a02b053691e1b256fb96bcbbff8"
   },
   {
-    "id": "ab146332e3bb5a52",
+    "id": "66330019492fff52",
     "title": "voice-delegate",
     "path": "README.md",
-    "section": "voice-delegate",
-    "text": "- **Cost estimates** per session, optional Azure recovery, OpenTelemetry metrics and an\n  opt-in iOS/Android shell.",
-    "digest": "ab146332e3bb5a52f63eb7320297c832b9e9a19c8c2eaf6a9b2494633a63d247"
+    "section": "What's implemented",
+    "text": "- **Access and cost control:** bring your own keys (held in memory only) or use invitation\n  codes with durable daily quotas; Request access with approval from a phone notification;\n  per-session cost estimates.",
+    "digest": "66330019492fff52b559eec7a7af92ae43f98f21e2138a017d2122a06f0ec61d"
   },
   {
-    "id": "0ceb12ce100f5ed1",
+    "id": "b3821e79fe7f31f2",
     "title": "voice-delegate",
     "path": "README.md",
-    "section": "How it works",
-    "text": "Audio flows directly between the browser and the voice provider. The backend owns the\nsession, admission, quotas and delegated work; the voice model never sees the worker's\nindividual tools.",
-    "digest": "0ceb12ce100f5ed1d9f8ebfe646f3bb7c573437d012f9bd0e09948c64ad785e0"
+    "section": "What's implemented",
+    "text": "- **Reliability:** bounded session lifetimes, heartbeats, one consented Azure recovery,\n  explicit client state machine, separate worker service for scaling.",
+    "digest": "b3821e79fe7f31f215d51b9b540fc6bc631d9999c7b091a006d0673979d20d29"
+  },
+  {
+    "id": "4d7c3f094c8981c5",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "What's implemented",
+    "text": "- **Engineering:** FastAPI + React 19 + TypeScript, uv and pnpm workspaces, about 1,000\n  automated tests (pytest, Vitest, Playwright end-to-end), strict typing and linting,\n  CodeQL, OpenTelemetry metrics with Prometheus and Grafana, 13 decision records.",
+    "digest": "4d7c3f094c8981c5ae717b0574b623debf9709b43c0b2be32feaa15356544d79"
+  },
+  {
+    "id": "d736237aa2f89ce5",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "What's implemented",
+    "text": "- **Delivery:** Railway (infrastructure as code) and Vercel, tagged releases with a\n  changelog, a daily health check and a one-command offline demo for Codespaces.",
+    "digest": "d736237aa2f89ce546e9c3a80379055982669df61a10858676417f739926f38c"
+  },
+  {
+    "id": "611968cbef148db1",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "System design",
+    "text": "Audio flows directly between the browser and the voice provider. The backend owns the\nsession, admission, quotas and delegated work; the voice model never sees the worker's\nindividual tools. Details: the [documentation index](docs/README.md) and\n[session flow](docs/session-flow.md).",
+    "digest": "611968cbef148db182023b169b0ca23cfe28062fccbe547873e064ed669e4298"
   },
   {
     "id": "fc41087a781bb8c5",
@@ -968,12 +992,12 @@
     "digest": "078500d0860ecab04b7612dd0fc26a1bd3db5ab817c9bcfda84a1534ecfd7a9f"
   },
   {
-    "id": "0d420d00b9426672",
+    "id": "93f711635aea59df",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Copyable local configuration",
-    "text": "Use the [minimal template](../config/local.env.template) for new files. It contains\nplatform keys and deployment choices; costs, controls, audio timing and intent-based\ncancellation are automatic. Existing `.env` files still load, but obsolete feature flags\ndo not disable these behaviours. The older `.env.example` is a legacy exhaustive template.",
-    "digest": "0d420d00b9426672aed177e4dd9cf7073f3d3141862985c5b4c99d6cfad87319"
+    "text": "Use the [minimal template](../config/local.env.template) for new files. It contains\nplatform keys and deployment choices; costs, controls, audio timing and intent-based\ncancellation are automatic. Existing `.env` files still load, but obsolete feature flags\ndo not disable these behaviours. `.env.example` is the complete reference: it lists every setting with a safe default, and a test keeps it in sync with the code.",
+    "digest": "93f711635aea59df8649c20e5aa714a4159a48b0229a8c38cb9eebcc60bb38d1"
   },
   {
     "id": "82c6d5e88a853fec",

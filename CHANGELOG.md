@@ -4,6 +4,8 @@
 
 Added: an opt-in moderation boundary in the worker (`VOICE_MODERATION`, ADR 013). Goals and tool evidence are reviewed by origin before planning; injected instructions in documentation or web excerpts are quarantined, and classifier failure withholds evidence instead of allowing it. An opt-in read-only MCP client for the worker (`VOICE_MCP_SERVERS`, ADR 010): operator-allowlisted servers and tools, reviewed flat schemas, cached immutable catalogs, bounded calls and moderated, cited output. It requires moderation and adds no dependency.
 
+Changed: the README opens with what is implemented and a full architecture diagram; the roadmap is a status table, with the verification history moved to `docs/milestones/evidence-log.md`. The transport notes moved from `realtime/` to `frontend/src/realtime/README.md`.
+
 ## 0.3.0 - 2026-11-04
 
 Access to the hosted demo can now be requested and approved from a phone, and the codebase is trimmed for v1: one prompt source, fewer adapters, documentation by task.

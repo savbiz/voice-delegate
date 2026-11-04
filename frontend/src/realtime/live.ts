@@ -311,39 +311,374 @@ export function createLiveSession(
     }
   }
 
+  type VoiceConfig = {
+    voice_available: boolean;
+    transport?: string;
+    session_ui?: boolean;
+    audio_timing_available?: boolean;
+    intent_cancellation?: boolean;
+    debug_recording_available?: boolean;
+  };
+
+  /** Clear the previous conversation's panels before a user-started session. */
+  function resetConversation(): void {
+    store.update({ debugStatus: '' });
+    store.update({
+      speaking: undefined,
+      captions: { user: '', assistant: '' },
+      messages: [],
+      audioBlocked: false,
+      captionTails: {},
+      lastSpeaker: undefined,
+      timings: [],
+      audioTimings: [],
+      tasks: [],
+      costs: undefined,
+      decisionCostUsd: 0,
+      sources: [],
+      recap: 'No conversation yet.',
+      summary: '',
+    });
+    if (!reportPending) {
+      diagnosticId = crypto.randomUUID();
+      reportBody = undefined;
+      reportSent = false;
+      store.update({
+        reportSent: false,
+        reportLocked: false,
+        feedbackStatus: 'Ready to send a report if something goes wrong.',
+      });
+    }
+  }
+
+  /** ElevenLabs Agents: the SDK owns media; the backend owns the session and webhook. */
+  async function startSdk(
+    attempt: number,
+    config: VoiceConfig,
+    preferences: Preferences,
+    accessCode: string,
+    recovering: boolean,
+    audioConsent: boolean,
+  ): Promise<void> {
+    if (recovering || isNativeClient())
+      throw new Error('This SDK transport is supported in browsers only. Start a new session.');
+    if (audioConsent)
+      throw new Error(
+        'Mixed audio recording is not available with this SDK transport. Uncheck audio recording to continue.',
+      );
+    if (preferences.mode !== 'conversation' || preferences.language !== 'auto')
+      throw new Error(
+        'This agent uses its server-configured language and conversation style. Select Follow the speaker and Assistant conversation.',
+      );
+    const created = await createOwned(preferences, accessCode);
+    if (attempt !== life.attempt) {
+      await request(`/sessions/${created.id}/close`, created);
+      return;
+    }
+    session = created;
+    if (created.debugRecording)
+      store.update({ debugStatus: `Debug session file: ${created.id}.jsonl` });
+    eleven = elevenSession(
+      store,
+      (path, body) =>
+        request(
+          `/sessions/${created.id}${path}`,
+          created,
+          body,
+          path.endsWith('/bootstrap') ? 10000 : 5000,
+        ),
+      (message) => {
+        if (attempt === life.attempt) void finish(message);
+      },
+      () => {
+        if (attempt === life.attempt) sounds.established();
+      },
+      () => audio.muted,
+      Boolean(config.audio_timing_available),
+    );
+    await eleven.start();
+  }
+
+  /** Opt-in local recording of the microphone and, once connected, the assistant. */
+  function startLocalRecording(stream: MediaStream): void {
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    audioUrl = undefined;
+    store.update({ audioUrl: '', audioFilename: '' });
+    try {
+      recording = recordAudio(
+        stream,
+        (blob) => {
+          if (disposed) return;
+          audioUrl = URL.createObjectURL(blob);
+          const extension = blob.type.includes('ogg')
+            ? 'ogg'
+            : blob.type.includes('mp4')
+              ? 'm4a'
+              : 'webm';
+          store.update({ audioUrl, audioFilename: `voice-session-${Date.now()}.${extension}` });
+        },
+        (audioStatus) => {
+          if (!disposed) store.update({ audioStatus });
+        },
+      );
+    } catch {
+      throw new Error(
+        'Audio recording is unavailable in this browser. Uncheck recording or use a supported browser.',
+      );
+    }
+  }
+
+  /** Peer connection, remote audio and the provider event channel for one attempt. */
+  function openPeer(attempt: number, stream: MediaStream): RTCPeerConnection {
+    const connection = new RTCPeerConnection();
+    peer = connection;
+    stream.getTracks().forEach((track) => connection.addTrack(track, stream));
+    connection.addEventListener('track', (event) => {
+      if (attempt !== life.attempt) return;
+      const remote = new MediaStream([event.track]);
+      audio.srcObject = remote;
+      recording?.assistant(remote);
+      void audio.play().catch(() => {
+        store.update({
+          audioBlocked: true,
+          status: 'Select Enable audio to hear the assistant.',
+        });
+      });
+    });
+    connection.addEventListener('connectionstatechange', () => {
+      if (session && attempt === life.attempt)
+        void recordDebug(session, {
+          event: 'peer_state',
+          peer_state: connection.connectionState,
+        });
+      if (
+        attempt === life.attempt &&
+        shouldRecover('connectionstatechange', connection.connectionState)
+      ) {
+        void recover('Media connection failed.');
+      }
+    });
+    channel = connection.createDataChannel('oai-events');
+    channel.addEventListener('message', (message: MessageEvent<unknown>) => {
+      if (
+        attempt !== life.attempt ||
+        typeof message.data !== 'string' ||
+        message.data.length > 65536
+      )
+        return;
+      try {
+        receiveEvent(JSON.parse(message.data));
+      } catch {
+        void finish('Invalid provider event.');
+      }
+    });
+    channel.addEventListener('close', () => {
+      if (session && attempt === life.attempt)
+        void recordDebug(session, { event: 'channel_closed' });
+      if (attempt === life.attempt && shouldRecover('data-channel-close'))
+        void recover('Event connection closed.');
+    });
+    return connection;
+  }
+
+  /** Opt-in server debugging: a few bounded audio statistics every two seconds. */
+  function startDebugSampling(
+    attempt: number,
+    connection: RTCPeerConnection,
+    created: Session,
+  ): void {
+    store.update({ debugStatus: `Debug session file: ${created.id}.jsonl` });
+    debugTimer = setInterval(() => {
+      if (debugBusy || attempt !== life.attempt) return;
+      debugBusy = true;
+      void connection
+        .getStats()
+        .then(async (reports) => {
+          const samples: DebugSample[] = [];
+          reports.forEach((report: Record<string, unknown>) => {
+            const sample = audioSample(report);
+            if (sample && samples.length < 2) samples.push(sample);
+          });
+          for (const sample of samples) await recordDebug(created, sample);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          debugBusy = false;
+        });
+    }, 2000);
+  }
+
+  /**
+   * Local audio analysis: onset interrupts, the speaking indicator, intent activity and
+   * playback timing. Activity starts only once the provider answered the offer.
+   */
+  function watchAudio(
+    attempt: number,
+    stream: MediaStream,
+    config: VoiceConfig,
+    created: Session,
+    serverGeneration: number,
+  ) {
+    let audioMeter: AudioTimingMeter | undefined;
+    let timingBusy = false;
+    let timingCount = 0;
+    const activityReporter = new ActivityReporter();
+    let activityBusy = false;
+    // The server accepts activity only for a connected transport, i.e. after the offer.
+    let activityEnabled = false;
+    store.update({
+      audioTimingStatus: config.audio_timing_available
+        ? 'Waiting for audio playback.'
+        : 'Audio measurement disabled.',
+    });
+    function uploadTimings(samples: { kind: string; milliseconds: number }[]): void {
+      if (timingBusy) {
+        store.update({ audioTimingStatus: 'Audio measured locally; metric upload busy.' });
+        return;
+      }
+      timingBusy = true;
+      void Promise.all(
+        samples.map((sample) =>
+          request(
+            `/sessions/${created.id}/audio-timing`,
+            created,
+            {
+              kind: sample.kind,
+              seconds: sample.milliseconds / 1000,
+              generation: serverGeneration,
+            },
+            2000,
+          ),
+        ),
+      )
+        .catch(() => {
+          if (attempt === life.attempt)
+            store.update({ audioTimingStatus: 'Audio measured locally; metric upload failed.' });
+        })
+        .finally(() => {
+          timingBusy = false;
+        });
+    }
+    try {
+      stopVad = watchSpeech(
+        stream,
+        () => {
+          if (
+            attempt !== life.attempt ||
+            config.intent_cancellation ||
+            store.getSnapshot().worker !== 'running'
+          )
+            return;
+          void recordDebug(created, { event: 'local_onset' });
+          void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
+        },
+        audio,
+        config.audio_timing_available || config.intent_cancellation || config.session_ui
+          ? (now, local, remote, playing, remoteEnergy) => {
+              if (attempt !== life.attempt) return;
+              if (config.session_ui) {
+                const next = { user: local > 0.035, assistant: remoteEnergy > 0.02 };
+                const previous = store.getSnapshot().speaking;
+                if (
+                  !previous ||
+                  previous.user !== next.user ||
+                  previous.assistant !== next.assistant
+                )
+                  store.update({ speaking: next });
+              }
+              if (config.intent_cancellation && activityEnabled && !activityBusy) {
+                const activity = activityReporter.sample(now, local, remoteEnergy);
+                if (activity) {
+                  activityBusy = true;
+                  void request(
+                    `/sessions/${created.id}/activity`,
+                    created,
+                    { ...activity, generation: serverGeneration },
+                    1000,
+                  )
+                    .catch(() => undefined)
+                    .finally(() => {
+                      activityBusy = false;
+                    });
+                }
+              }
+              if (timingCount >= 120) return;
+              const samples = audioMeter?.sample(now, local, remote, playing) ?? [];
+              for (const sample of samples) {
+                timingCount += 1;
+                store.update({
+                  audioTimings: [...store.getSnapshot().audioTimings, sample].slice(-40),
+                  audioTimingStatus: 'Browser playback observations; not acoustic latency.',
+                });
+              }
+              if (samples.length > 0) uploadTimings(samples);
+            }
+          : undefined,
+      );
+    } catch {
+      store.update({ audioTimingStatus: 'Audio measurement unavailable in this browser.' });
+      /* Provider-side speech detection remains authoritative without local analysis. */
+    }
+    return {
+      startTiming: () => {
+        if (config.audio_timing_available) audioMeter = new AudioTimingMeter(performance.now());
+      },
+      enableActivity: () => {
+        activityEnabled = true;
+      },
+    };
+  }
+
+  /** Poll owned session state; end or recover when the server says so. */
+  function startHeartbeat(attempt: number, created: Session, config: VoiceConfig): void {
+    const heartbeatMs = config.intent_cancellation ? 2000 : 10000;
+    let heartbeatPending = false;
+    heartbeat = setInterval(() => {
+      if (attempt !== life.attempt || heartbeatPending) return;
+      heartbeatPending = true;
+      void request<{
+        delegation: string;
+        tasks?: TaskStatus[];
+        costs?: CostSummary;
+        decision_cost_usd?: number;
+        state: string;
+        sources?: Source[];
+        recap?: { latest_request: string; latest_reply: string; interrupted: boolean };
+      }>(`/sessions/${created.id}/heartbeat`, created, undefined, 8000)
+        .then((state) => {
+          if (attempt === life.attempt) {
+            heartbeatFailures = 0;
+            store.update({
+              tasks: state.tasks ?? [],
+              costs: state.costs,
+              decisionCostUsd: state.decision_cost_usd ?? 0,
+            });
+            renderSources(state.sources ?? []);
+            if (state.recap) {
+              store.update({ recap: recapText(state.recap) });
+            }
+            showWorker(state.delegation);
+            if (state.state === 'closed' || state.state === 'closing')
+              void finish('Conversation ended.');
+            if (shouldRecover('heartbeat', state.state)) void recover('Provider connection lost.');
+          }
+        })
+        .catch(() => {
+          if (attempt === life.attempt && ++heartbeatFailures >= Math.ceil(30000 / heartbeatMs))
+            void finish('Server connection lost or session expired.');
+        })
+        .finally(() => {
+          heartbeatPending = false;
+        });
+    }, heartbeatMs);
+  }
+
+  /** Start a session, or with `existing` reconnect it once through the fallback provider. */
   async function begin(existing?: Session, serverGeneration = 0): Promise<void> {
     const requestedPreferences = { ...getPreferences() };
     const personal = getPersonalKeys() !== undefined;
     const audioConsent = !existing && getAudioConsent();
-    if (!existing) {
-      store.update({ debugStatus: '' });
-      store.update({
-        speaking: undefined,
-        captions: { user: '', assistant: '' },
-        messages: [],
-        audioBlocked: false,
-        captionTails: {},
-        lastSpeaker: undefined,
-        timings: [],
-        audioTimings: [],
-        tasks: [],
-        costs: undefined,
-        decisionCostUsd: 0,
-        sources: [],
-        recap: 'No conversation yet.',
-        summary: '',
-      });
-      if (!reportPending) {
-        diagnosticId = crypto.randomUUID();
-        reportBody = undefined;
-        reportSent = false;
-        store.update({
-          reportSent: false,
-          reportLocked: false,
-          feedbackStatus: 'Ready to send a report if something goes wrong.',
-        });
-      }
-    }
+    if (!existing) resetConversation();
     const accessCode = existing?.accessCode ?? getAccessCode();
     send({ type: 'begin', fresh: !existing });
     const attempt = life.attempt;
@@ -357,14 +692,7 @@ export function createLiveSession(
     showWorker('idle');
     heartbeatFailures = 0;
     try {
-      const config = await request<{
-        voice_available: boolean;
-        transport?: string;
-        session_ui?: boolean;
-        audio_timing_available?: boolean;
-        intent_cancellation?: boolean;
-        debug_recording_available?: boolean;
-      }>(
+      const config = await request<VoiceConfig>(
         personal ? '/personal/config' : '/config',
         undefined,
         { adapter: requestedPreferences.adapter },
@@ -386,46 +714,14 @@ export function createLiveSession(
           'Set OPENAI_API_KEY on the backend to use live voice. The offline example works without a key.',
         );
       if (config.transport === 'elevenlabs_agents_webrtc') {
-        if (existing || isNativeClient())
-          throw new Error('This SDK transport is supported in browsers only. Start a new session.');
-        if (audioConsent)
-          throw new Error(
-            'Mixed audio recording is not available with this SDK transport. Uncheck audio recording to continue.',
-          );
-        if (
-          requestedPreferences.mode !== 'conversation' ||
-          requestedPreferences.language !== 'auto'
-        )
-          throw new Error(
-            'This agent uses its server-configured language and conversation style. Select Follow the speaker and Assistant conversation.',
-          );
-        const created = await createOwned(requestedPreferences, accessCode);
-        if (attempt !== life.attempt) {
-          await request(`/sessions/${created.id}/close`, created);
-          return;
-        }
-        session = created;
-        if (created.debugRecording)
-          store.update({ debugStatus: `Debug session file: ${created.id}.jsonl` });
-        eleven = elevenSession(
-          store,
-          (path, body) =>
-            request(
-              `/sessions/${created.id}${path}`,
-              created,
-              body,
-              path.endsWith('/bootstrap') ? 10000 : 5000,
-            ),
-          (message) => {
-            if (attempt === life.attempt) void finish(message);
-          },
-          () => {
-            if (attempt === life.attempt) sounds.established();
-          },
-          () => audio.muted,
-          Boolean(config.audio_timing_available),
+        await startSdk(
+          attempt,
+          config,
+          requestedPreferences,
+          accessCode,
+          existing !== undefined,
+          audioConsent,
         );
-        await eleven.start();
         return;
       }
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -436,81 +732,9 @@ export function createLiveSession(
         return;
       }
       microphone = stream;
-      if (audioConsent) {
-        if (audioUrl) URL.revokeObjectURL(audioUrl);
-        audioUrl = undefined;
-        store.update({ audioUrl: '', audioFilename: '' });
-        try {
-          recording = recordAudio(
-            stream,
-            (blob) => {
-              if (disposed) return;
-              audioUrl = URL.createObjectURL(blob);
-              const extension = blob.type.includes('ogg')
-                ? 'ogg'
-                : blob.type.includes('mp4')
-                  ? 'm4a'
-                  : 'webm';
-              store.update({ audioUrl, audioFilename: `voice-session-${Date.now()}.${extension}` });
-            },
-            (audioStatus) => {
-              if (!disposed) store.update({ audioStatus });
-            },
-          );
-        } catch {
-          throw new Error(
-            'Audio recording is unavailable in this browser. Uncheck recording or use a supported browser.',
-          );
-        }
-      } else if (existing) recording?.microphone(stream);
-      const connection = new RTCPeerConnection();
-      peer = connection;
-      stream.getTracks().forEach((track) => connection.addTrack(track, stream));
-      connection.addEventListener('track', (event) => {
-        if (attempt !== life.attempt) return;
-        const remote = new MediaStream([event.track]);
-        audio.srcObject = remote;
-        recording?.assistant(remote);
-        void audio.play().catch(() => {
-          store.update({
-            audioBlocked: true,
-            status: 'Select Enable audio to hear the assistant.',
-          });
-        });
-      });
-      connection.addEventListener('connectionstatechange', () => {
-        if (session && attempt === life.attempt)
-          void recordDebug(session, {
-            event: 'peer_state',
-            peer_state: connection.connectionState,
-          });
-        if (
-          attempt === life.attempt &&
-          shouldRecover('connectionstatechange', connection.connectionState)
-        ) {
-          void recover('Media connection failed.');
-        }
-      });
-      channel = connection.createDataChannel('oai-events');
-      channel.addEventListener('message', (message: MessageEvent<unknown>) => {
-        if (
-          attempt !== life.attempt ||
-          typeof message.data !== 'string' ||
-          message.data.length > 65536
-        )
-          return;
-        try {
-          receiveEvent(JSON.parse(message.data));
-        } catch {
-          void finish('Invalid provider event.');
-        }
-      });
-      channel.addEventListener('close', () => {
-        if (session && attempt === life.attempt)
-          void recordDebug(session, { event: 'channel_closed' });
-        if (attempt === life.attempt && shouldRecover('data-channel-close'))
-          void recover('Event connection closed.');
-      });
+      if (audioConsent) startLocalRecording(stream);
+      else if (existing) recording?.microphone(stream);
+      const connection = openPeer(attempt, stream);
       await connection.setLocalDescription(await connection.createOffer());
       await gather(connection);
       if (attempt !== life.attempt) return;
@@ -525,174 +749,13 @@ export function createLiveSession(
         return;
       }
       session = created;
-      if (created.debugRecording) {
-        store.update({ debugStatus: `Debug session file: ${created.id}.jsonl` });
-        debugTimer = setInterval(() => {
-          if (debugBusy || attempt !== life.attempt) return;
-          debugBusy = true;
-          void connection
-            .getStats()
-            .then(async (reports) => {
-              const samples: DebugSample[] = [];
-              reports.forEach((report: Record<string, unknown>) => {
-                const sample = audioSample(report);
-                if (sample && samples.length < 2) samples.push(sample);
-              });
-              for (const sample of samples) await recordDebug(created, sample);
-            })
-            .catch(() => undefined)
-            .finally(() => {
-              debugBusy = false;
-            });
-        }, 2000);
-      }
-      let audioMeter: AudioTimingMeter | undefined;
-      let timingBusy = false;
-      let timingCount = 0;
-      const activityReporter = new ActivityReporter();
-      let activityBusy = false;
-      // The server accepts activity only for a connected transport, i.e. after the offer.
-      let activityEnabled = false;
-      store.update({
-        audioTimingStatus: config.audio_timing_available
-          ? 'Waiting for audio playback.'
-          : 'Audio measurement disabled.',
-      });
-      try {
-        stopVad = watchSpeech(
-          stream,
-          () => {
-            if (
-              attempt !== life.attempt ||
-              config.intent_cancellation ||
-              store.getSnapshot().worker !== 'running'
-            )
-              return;
-            void recordDebug(created, { event: 'local_onset' });
-            void request(`/sessions/${created.id}/interrupt`, created).catch(() => undefined);
-          },
-          audio,
-          config.audio_timing_available || config.intent_cancellation || config.session_ui
-            ? (now, local, remote, playing, remoteEnergy) => {
-                if (attempt !== life.attempt) return;
-                if (config.session_ui) {
-                  const next = { user: local > 0.035, assistant: remoteEnergy > 0.02 };
-                  const previous = store.getSnapshot().speaking;
-                  if (
-                    !previous ||
-                    previous.user !== next.user ||
-                    previous.assistant !== next.assistant
-                  )
-                    store.update({ speaking: next });
-                }
-                if (config.intent_cancellation && activityEnabled && !activityBusy) {
-                  const activity = activityReporter.sample(now, local, remoteEnergy);
-                  if (activity) {
-                    activityBusy = true;
-                    void request(
-                      `/sessions/${created.id}/activity`,
-                      created,
-                      { ...activity, generation: serverGeneration },
-                      1000,
-                    )
-                      .catch(() => undefined)
-                      .finally(() => {
-                        activityBusy = false;
-                      });
-                  }
-                }
-                if (timingCount >= 120) return;
-                const samples = audioMeter?.sample(now, local, remote, playing) ?? [];
-                for (const sample of samples) {
-                  timingCount += 1;
-                  store.update({
-                    audioTimings: [...store.getSnapshot().audioTimings, sample].slice(-40),
-                    audioTimingStatus: 'Browser playback observations; not acoustic latency.',
-                  });
-                }
-                if (samples.length === 0) return;
-                if (timingBusy) {
-                  store.update({
-                    audioTimingStatus: 'Audio measured locally; metric upload busy.',
-                  });
-                  return;
-                }
-                timingBusy = true;
-                void Promise.all(
-                  samples.map((sample) =>
-                    request(
-                      `/sessions/${created.id}/audio-timing`,
-                      created,
-                      {
-                        kind: sample.kind,
-                        seconds: sample.milliseconds / 1000,
-                        generation: serverGeneration,
-                      },
-                      2000,
-                    ),
-                  ),
-                )
-                  .catch(() => {
-                    if (attempt === life.attempt)
-                      store.update({
-                        audioTimingStatus: 'Audio measured locally; metric upload failed.',
-                      });
-                  })
-                  .finally(() => {
-                    timingBusy = false;
-                  });
-              }
-            : undefined,
-        );
-      } catch {
-        store.update({ audioTimingStatus: 'Audio measurement unavailable in this browser.' });
-        /* Provider-side speech detection remains authoritative without local analysis. */
-      }
-      const heartbeatMs = config.intent_cancellation ? 2000 : 10000;
-      let heartbeatPending = false;
-      heartbeat = setInterval(() => {
-        if (attempt !== life.attempt || heartbeatPending) return;
-        heartbeatPending = true;
-        void request<{
-          delegation: string;
-          tasks?: TaskStatus[];
-          costs?: CostSummary;
-          decision_cost_usd?: number;
-          state: string;
-          sources?: Source[];
-          recap?: { latest_request: string; latest_reply: string; interrupted: boolean };
-        }>(`/sessions/${created.id}/heartbeat`, created, undefined, 8000)
-          .then((state) => {
-            if (attempt === life.attempt) {
-              heartbeatFailures = 0;
-              store.update({
-                tasks: state.tasks ?? [],
-                costs: state.costs,
-                decisionCostUsd: state.decision_cost_usd ?? 0,
-              });
-              renderSources(state.sources ?? []);
-              if (state.recap) {
-                store.update({ recap: recapText(state.recap) });
-              }
-              showWorker(state.delegation);
-              if (state.state === 'closed' || state.state === 'closing')
-                void finish('Conversation ended.');
-              if (shouldRecover('heartbeat', state.state))
-                void recover('Provider connection lost.');
-            }
-          })
-          .catch(() => {
-            if (attempt === life.attempt && ++heartbeatFailures >= Math.ceil(30000 / heartbeatMs))
-              void finish('Server connection lost or session expired.');
-          })
-          .finally(() => {
-            heartbeatPending = false;
-          });
-      }, heartbeatMs);
+      if (created.debugRecording) startDebugSampling(attempt, connection, created);
+      const audioWatch = watchAudio(attempt, stream, config, created, serverGeneration);
+      startHeartbeat(attempt, created, config);
       startup = setTimeout(() => {
         void finish('Voice startup timed out.');
       }, 40000);
-      if (config.audio_timing_available) audioMeter = new AudioTimingMeter(performance.now());
+      audioWatch.startTiming();
       const result = await request<{ sdp: string }>(
         `/sessions/${created.id}/${existing ? 'reconnect' : 'offer'}`,
         created,
@@ -703,7 +766,7 @@ export function createLiveSession(
       );
       if (attempt !== life.attempt) return;
       await connection.setRemoteDescription({ type: 'answer', sdp: result.sdp });
-      activityEnabled = true;
+      audioWatch.enableActivity();
     } catch (error) {
       if (attempt === life.attempt) {
         await finish(error instanceof Error ? error.message : 'Could not start conversation.');
