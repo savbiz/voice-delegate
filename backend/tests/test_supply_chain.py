@@ -120,3 +120,18 @@ def test_sbom_checker_rejects_bad_documents(tmp_path: Path, content: str, messag
 def test_sbom_checker_needs_a_file_argument_and_reports_missing_files(tmp_path: Path) -> None:
     assert main([]) == 2
     assert main([str(tmp_path / "missing.json")]) == 1
+
+
+def test_container_scan_builds_and_scans_both_images_and_the_configuration() -> None:
+    workflow = load(ROOT / ".github/workflows/container-scan.yml")
+    include = workflow["jobs"]["image"]["strategy"]["matrix"]["include"]
+    assert {entry["image"] for entry in include} == {"backend", "frontend"}
+    for entry in include:
+        assert (ROOT / entry["dockerfile"]).is_file()
+    scans = [s for s in steps(workflow) if "trivy-action" in s.get("uses", "")]
+    assert len(scans) == 2  # the image scan (once per matrix entry) and the configuration scan
+    # An unfixed vulnerability is not actionable, so it must not fail the build.
+    image_scan = scans[0]["with"]
+    assert image_scan["ignore-unfixed"] is True
+    assert image_scan["exit-code"] == "1"
+    assert workflow["permissions"] == {"contents": "read"}

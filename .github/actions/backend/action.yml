@@ -36,6 +36,9 @@ runs:
     - name: Check public API host documentation
       shell: bash
       run: uv run python scripts/check_deployment.py
+    - name: Audit container definitions
+      shell: bash
+      run: uv run python scripts/check_containers.py
     - shell: bash
       run: uv run python scripts/check_links.py
     - shell: bash

@@ -9,6 +9,8 @@ GitHub Actions; none of it needs a secret or a paid service.
 | CodeQL | `codeql.yml` | on `main` and weekly | Does the code contain known vulnerability patterns |
 | Dependency audit | `supply-chain.yml` | weekly, on demand, and on a lockfile change | Does a locked package have a published advisory |
 | SBOM | `sbom.yml` | on each published release, or on demand | What exactly is in the release |
+| Container audit | `scripts/check_containers.py`, in every CI run | Do the Dockerfiles and compose files meet the baseline: pinned bases, non-root, health check, hardening |
+| Container scan | `container-scan.yml` | weekly, on demand, and when a container definition or lockfile changes | Do the built images contain a fixable HIGH or CRITICAL vulnerability or misconfiguration |
 | OpenSSF Scorecard | `scorecard.yml` | weekly, on `main` and on branch-protection changes | How do the repository's practices compare with a public baseline |
 
 ## Dependency audit
@@ -38,6 +40,23 @@ dependencies (`voice-delegate-frontend.cdx.json`, from `pnpm sbom`). They are bu
 files with the tools the project already uses, so they add no dependency. `scripts/check_sbom.py`
 fails the job if a document is empty or malformed. The workflow can also be run by hand to get
 them as an artifact.
+
+## Containers
+
+`scripts/check_containers.py` is a static audit with no Docker needed. It requires every
+Dockerfile base to be pinned by digest; the final stage of each image to run as a non-root user
+and to define a `HEALTHCHECK`; no remote `ADD`, no download piped into a shell, no secret-looking
+`ENV`; and every service built by compose to have a read-only root filesystem, all capabilities
+dropped and `no-new-privileges`, with compose images pinned to a version and ports published on
+`127.0.0.1` only. It runs in the main CI, and `backend/tests/test_container_audit.py` shows it
+fails on each violation. Its first run found that the frontend image had no `HEALTHCHECK`; it now
+has one (verified by running the image read-only with all capabilities dropped).
+
+`container-scan.yml` builds the backend and frontend images and scans them with
+[Trivy](https://github.com/aquasecurity/trivy), including the operating-system packages. It fails
+on fixable HIGH or CRITICAL findings (unfixed ones are ignored so a failure is actionable) and
+uploads the results to code scanning. A second job scans the Dockerfiles and compose files for
+misconfiguration.
 
 ## Scorecard
 
