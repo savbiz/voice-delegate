@@ -1,0 +1,96 @@
+name: results
+
+# Nightly measurements of the offline stack, published as a page that never goes stale: the test
+# suite and coverage, a Locust load test and the offline worker evaluation. Nothing calls a voice
+# provider or costs money. The numbers always appear in the run's summary and as the `site`
+# artifact. They are published to GitHub Pages only after the owner enables Pages (Settings,
+# Pages, Source: GitHub Actions) and sets the repository variable PUBLISH_RESULTS to "true".
+on:
+  schedule:
+    - cron: "11 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    outputs:
+      page: ${{ steps.build.outcome == 'success' && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.12.15"
+          python-version: "3.12"
+      - run: uv sync --locked --group loadtest
+      - run: mkdir -p measurements site
+      - name: Test suite and coverage
+        id: tests
+        continue-on-error: true
+        run: >
+          uv run python -m pytest --cov=voice_delegate --cov=voice_delegate_agent
+          --cov-report=json:measurements/coverage.json --junitxml=measurements/junit.xml -q
+      - name: Load test
+        id: load
+        continue-on-error: true
+        run: uv run --group loadtest python scripts/loadtest.py --users 40 --run-time 30s --csv-prefix measurements/run
+      - name: Offline worker evaluation
+        id: evals
+        continue-on-error: true
+        run: uv run python -m evals.worker_eval --output measurements/offline.json
+      - name: Fetch the earlier history, if any has been published
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          owner=$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')
+          curl --fail --silent --show-error --max-time 30 \
+            "https://${owner}.github.io/${REPO}/results.json" -o measurements/previous.json || true
+      - name: Build the page
+        id: build
+        env:
+          LOAD_OUTCOME: ${{ steps.load.outcome }}
+        run: >
+          uv run python -m scripts.build_results
+          --junit measurements/junit.xml --coverage measurements/coverage.json
+          --loadtest-csv measurements/run_stats.csv --loadtest-users 40 --loadtest-duration 30s
+          --loadtest-outcome "$LOAD_OUTCOME" --eval-report measurements/offline.json
+          --previous measurements/previous.json --commit "$GITHUB_SHA" --output-dir site
+      - name: Show the numbers in the run summary
+        if: steps.build.outcome == 'success'
+        run: cat site/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.build.outcome == 'success'
+        with:
+          name: site
+          path: site
+          retention-days: 30
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: steps.build.outcome == 'success' && vars.PUBLISH_RESULTS == 'true'
+        with:
+          path: site
+      # The page is published even when a check failed, so a regression is visible; the run
+      # itself still fails.
+      - name: Fail the run if a measurement failed
+        if: ${{ steps.tests.outcome != 'success' || steps.load.outcome != 'success' || steps.evals.outcome != 'success' || steps.build.outcome != 'success' }}
+        run: |
+          echo "::error::tests=${{ steps.tests.outcome }} load=${{ steps.load.outcome }} evals=${{ steps.evals.outcome }} build=${{ steps.build.outcome }}"
+          exit 1
+
+  publish:
+    needs: measure
+    if: ${{ !cancelled() && vars.PUBLISH_RESULTS == 'true' && needs.measure.outputs.page == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

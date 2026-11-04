@@ -1,0 +1,26 @@
+name: mutation
+
+# Mutation testing of the limits and admission code (scripts/mutation.py). It changes the code in
+# small ways and checks that the tests notice. Weekly and on demand, not on every push: a run
+# takes several minutes. It fails when the score drops below the minimum in the command below.
+on:
+  schedule:
+    - cron: "29 4 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutmut:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.12.15"
+          python-version: "3.12"
+      - run: uv sync --locked --group mutation
+      - name: Run mutation testing
+        run: uv run --group mutation python scripts/mutation.py --min-score 85

@@ -9,8 +9,12 @@ ARG VITE_OFFLINE_STACK=false
 ENV VITE_OFFLINE_STACK=$VITE_OFFLINE_STACK VITE_API_BASE_URL=""
 RUN pnpm build
 
-FROM nginx:1.27.4-alpine@sha256:4ff102c5d78d254a6f0da062b3cf39eaf07f01eec0927fd21e219d0af8bc0591
+FROM nginx:1.30.6-alpine@sha256:0e52bd054126cdc040b1276c0af347aeb02a41b9cfe305d6094767ac30e97949
+# Security fixes for Alpine packages often land after the nginx image is published, so pick them
+# up at build time. The digest above still pins the base; this upgrades only OS packages.
+RUN apk upgrade --no-cache
 COPY --from=builder /app/frontend/dist /usr/share/nginx/html
 COPY deployment/demo/nginx.conf /etc/nginx/nginx.conf
 USER 101:101
 EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD ["wget", "--quiet", "--output-document=/dev/null", "http://127.0.0.1:8080/"]

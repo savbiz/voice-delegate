@@ -38,3 +38,6 @@ frontend/ios/App/App/capacitor.config.json
 frontend/ios/App/Pods/
 frontend/ios/**/xcuserdata/
 *.tsbuildinfo
+
+# mutmut working copy
+mutants/

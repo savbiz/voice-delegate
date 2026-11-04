@@ -1,0 +1,43 @@
+# Local pre-commit hooks that run the same checks as CI, quickly, before a commit is created.
+#
+#   uv tool install pre-commit
+#   git config --unset core.hooksPath    # only if you set it to scripts/hooks (see CONTRIBUTING.md)
+#   pre-commit install
+#   pre-commit run --all-files           # optional: check everything once
+#
+# Every hook is local: it runs a tool or script that is already in this repository. No hook
+# repository is fetched, so there is no extra third-party code to review or pin.
+repos:
+  - repo: local
+    hooks:
+      - id: independence
+        name: independence check (staged snapshot)
+        entry: uv run --no-project python scripts/check_independence.py --staged --warn-work-hours
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: forbidden-files
+        name: no environment files, keys or credentials
+        entry: uv run --no-project python scripts/check_forbidden_files.py
+        language: system
+        types: []  # the default (regular files only) would let a symlink named .env through
+      - id: editorconfig
+        name: line endings and whitespace
+        entry: uv run --no-project python scripts/check_editorconfig.py
+        language: system
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: false

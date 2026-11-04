@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+Added: a nightly results workflow and page (`docs/results.md`). It runs the test suite with coverage, the load test and the offline worker evaluation, shows the numbers in the run summary and builds a static page with a 90-run history. Publishing to GitHub Pages is off until the owner enables Pages and sets `PUBLISH_RESULTS`.
+
+Added: `.editorconfig` describing the conventions the repository already follows, a whitespace check (`scripts/check_editorconfig.py`) and a forbidden-files check (`scripts/check_forbidden_files.py`, the rule against committing `.env*`, keys and credentials) that run in every CI build, and a `.pre-commit-config.yaml` of local hooks (independence check, forbidden files, whitespace, ruff, mypy) for the optional pre-commit framework.
+
+Added: container checks. A static audit of the Dockerfiles and compose files (pinned bases, non-root user, `HEALTHCHECK`, hardened services) runs in every CI build, and a Trivy workflow scans the built backend and frontend images weekly and when a container definition changes.
+
+Fixed: the frontend image now defines a `HEALTHCHECK`; the audit found it was the only image without one.
+
+Added: mutation testing of the limits and admission code (`make mutation`, weekly workflow). It raised the score from 72.7% to roughly 88-90% by exposing untested authentication, boundary and error-shape behaviour; new tests pin those down. `mutmut` is in the optional `mutation` dependency group.
+
+Added: supply-chain checks (`docs/supply-chain.md`): a weekly and lockfile-triggered `pip-audit` and `pnpm audit`, CycloneDX SBOMs for the Python and frontend runtime dependencies attached to each release, and an OpenSSF Scorecard workflow. A test enforces that every workflow action is pinned to a commit and every workflow declares its permissions.
+
+Added: contract fuzzing of the HTTP API with Schemathesis and property-based tests (Hypothesis) of admission, quotas and the rate limiter, run with the normal test suite (`docs/testing.md`). Both are development dependencies.
+
+Fixed: the generated OpenAPI document now describes the API's real error answers. Every error body is `{"detail": "<message>"}`, but the document claimed the framework's list-shaped 422 and omitted the 400, 401, 403, 404, 409, 413, 429 and 503 responses. Runtime behaviour is unchanged.
+
+Added: a Locust load test (`make loadtest`, `docs/load-testing.md`) that drives an isolated offline backend with many concurrent sessions and fails on error or latency budgets; it uses no provider, key or paid service. Locust and its dependencies are in the optional `loadtest` dependency group and are not part of the backend.
+
 Added: a full live worker evaluation (40 cases, GPT-6 Luna with an LLM judge, 117 model calls) is published as a public Braintrust experiment: 98% judged correct, 99% grounded, 100% numeric and evidence retrieval, p50 2.4 s per case. Fixed: the eval scorers accept a typographic minus sign and curly apostrophes, which had marked correct answers as wrong. Per-case worker usage no longer includes the judge's call (reported as `judge_calls`), and skipped cases are no longer uploaded with timing invented by the Braintrust SDK. The social preview card is refreshed, with its figures labelled as LLM-judged and their source recorded.
 
 Added: `VOICE_UNLIMITED_INVITES` lists invitation names (the operator's own) that skip the daily session and voice-second allowances without drawing on the shared daily budget; concurrency and session length still apply.

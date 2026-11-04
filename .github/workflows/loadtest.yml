@@ -1,0 +1,34 @@
+name: loadtest
+
+# Manual only, to save Actions minutes. Starts the offline backend (scripted voice provider,
+# offline worker, no keys) on the runner's loopback interface and drives it with Locust.
+# Nothing outside the runner is contacted and nothing is billed.
+on:
+  workflow_dispatch:
+    inputs:
+      users:
+        description: Concurrent virtual users (1-1000)
+        default: "40"
+      run_time:
+        description: Duration, for example 30s or 2m (at most 10 minutes)
+        default: "30s"
+
+permissions:
+  contents: read
+
+jobs:
+  locust:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+        with:
+          version: "0.12.15"
+          python-version: "3.12"
+      - run: uv sync --locked --group loadtest
+      - name: Run the load test
+        env:
+          USERS: ${{ inputs.users }}
+          RUN_TIME: ${{ inputs.run_time }}
+        run: uv run --group loadtest python scripts/loadtest.py --users "$USERS" --run-time "$RUN_TIME"

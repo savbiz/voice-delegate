@@ -30,3 +30,22 @@ updates:
     groups:
       workflow-actions:
         patterns: ["*"]
+
+  # Container base images are pinned by digest, so nothing updates them unless Dependabot does.
+  - package-ecosystem: docker
+    directory: /deployment
+    schedule:
+      interval: weekly
+    groups:
+      container-base-images:
+        patterns: ["*"]
+
+  - package-ecosystem: docker-compose
+    directories:
+      - /deployment/demo
+      - /deployment/scaling
+    schedule:
+      interval: weekly
+    groups:
+      compose-images:
+        patterns: ["*"]

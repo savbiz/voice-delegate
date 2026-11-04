@@ -6,6 +6,9 @@ Open the repository folder. Use Python 3.12 or 3.13, uv, Node.js 24 and the decl
 
 ```bash
 uv run python scripts/check_independence.py
+uv run python scripts/check_forbidden_files.py --tracked
+uv run python scripts/check_editorconfig.py --tracked
+uv run python scripts/check_containers.py
 uv run ruff check .
 uv run ruff format --check .
 uv run mypy
@@ -63,3 +66,17 @@ staged content, blocking a commit on a violation. It also prints a non-blocking 
 when local time is Monday–Friday from 09:00 inclusive to 18:00 exclusive. The reminder
 does not determine whether work is permitted. To restore Git's default hooks path, run
 `git config --unset core.hooksPath` (or restore your previous path).
+
+For a fuller set of checks before each commit, use the [pre-commit](https://pre-commit.com)
+framework with the repository's `.pre-commit-config.yaml`. It runs the independence check on the
+staged snapshot, refuses environment files, keys and credentials, checks line endings and
+whitespace against `.editorconfig`, and runs ruff and mypy. Every hook is a local command, so no
+hook repository is fetched. The framework refuses to install while `core.hooksPath` is set, so
+choose one of the two:
+
+```sh
+uv tool install pre-commit
+git config --unset core.hooksPath   # if you enabled scripts/hooks above
+pre-commit install
+pre-commit run --all-files          # optional: check everything once
+```
