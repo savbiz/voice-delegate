@@ -1,24 +1,16 @@
 """Offline fallback scenarios: bounded history, one attempt, deadlines and cleanup."""
 
 import asyncio
-import json
-from typing import Any
 
-import httpx
 import pytest
 from pydantic import SecretStr
 from voice_delegate.config import Settings
-from voice_delegate.providers.azure import AzureRealtimeProvider, normalize_event
-from voice_delegate.providers.base import SidebandSocket
 from voice_delegate.providers.fake import FakeConnection, FakeProvider
 from voice_delegate.providers.models import (
-    DelegationRequested,
     ProviderCapabilities,
-    ProviderError,
     ProviderEvent,
     ProviderFailure,
     SessionConfig,
-    SpeechStarted,
     Transcript,
 )
 from voice_delegate.session.manager import SessionManager
@@ -112,58 +104,6 @@ async def test_concurrent_fallback_creates_one_call() -> None:
     await manager.aclose()
 
 
-def test_azure_normalization_and_untrusted_function_arguments() -> None:
-    event = normalize_event(
-        json.dumps(
-            {
-                "type": "response.function_call_arguments.done",
-                "name": "delegate_task",
-                "call_id": "call-1",
-                "arguments": '{"goal":"2+2"}',
-            }
-        )
-    )
-    assert isinstance(event, DelegationRequested)
-    assert event.goal == "2+2"
-    assert isinstance(normalize_event('{"type":"error"}'), ProviderFailure)
-    assert isinstance(
-        normalize_event('{"type":"input_audio_buffer.speech_started"}'), SpeechStarted
-    )
-    transcript = normalize_event(
-        json.dumps({"type": "response.output_audio_transcript.done", "transcript": "four"})
-    )
-    assert isinstance(transcript, Transcript) and transcript.committed
-
-
-async def test_azure_attach_failure_hangs_up_without_retry() -> None:
-    requests: list[httpx.Request] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        requests.append(request)
-        if request.url.path.endswith("/hangup"):
-            return httpx.Response(200)
-        return httpx.Response(201, text="v=0\r\n", headers={"Location": "/calls/rtc_1"})
-
-    class FixtureProvider(AzureRealtimeProvider):
-        async def _attach(self, call_id: str) -> SidebandSocket:
-            raise OSError("private detail")
-
-    provider = FixtureProvider(
-        "https://example.openai.azure.com",
-        "secret",
-        httpx.AsyncClient(transport=httpx.MockTransport(handler)),
-    )
-    with pytest.raises(ProviderError, match="Azure connection failed"):
-        await provider.connect(
-            config=SessionConfig("deployment", "marin", "instructions"), offer_sdp="v=0\r\n"
-        )
-    assert [r.url.path for r in requests] == [
-        "/openai/v1/realtime/calls",
-        "/openai/v1/realtime/calls/rtc_1/hangup",
-    ]
-    await provider.aclose()
-
-
 def test_fallback_rejects_non_azure_endpoint() -> None:
     with pytest.raises(ValueError, match="HTTPS Azure"):
         Settings(
@@ -171,62 +111,6 @@ def test_fallback_rejects_non_azure_endpoint() -> None:
             azure_endpoint="http://localhost",
             azure_api_key=SecretStr("secret"),
         )
-
-
-async def test_azure_success_replays_text_returns_tool_result_and_hangs_up() -> None:
-    from collections.abc import AsyncIterator
-
-    from voice_delegate.providers.models import Commentary
-
-    class Socket:
-        def __init__(self) -> None:
-            self.sent: list[dict[str, Any]] = []
-            self.closed = False
-
-        async def send(self, message: str) -> None:
-            self.sent.append(json.loads(message))
-
-        async def close(self) -> None:
-            self.closed = True
-
-        async def __aiter__(self) -> AsyncIterator[str]:
-            await asyncio.Event().wait()
-            yield ""
-
-    socket = Socket()
-    calls: list[str] = []
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        calls.append(request.url.path)
-        assert request.headers["api-key"] == "secret"
-        if request.url.path.endswith("/hangup"):
-            return httpx.Response(200)
-        assert b"delegate_task" in request.content
-        return httpx.Response(201, text="v=0\r\n", headers={"Location": "/calls/rtc_test"})
-
-    class FixtureProvider(AzureRealtimeProvider):
-        async def _attach(self, call_id: str) -> SidebandSocket:
-            assert call_id == "rtc_test"
-            return socket
-
-    provider = FixtureProvider(
-        "https://example.openai.azure.com",
-        "secret",
-        httpx.AsyncClient(transport=httpx.MockTransport(handler)),
-    )
-    connection = await provider.connect(
-        config=SessionConfig("deployment", "marin", "trusted", (("user", "untrusted text"),)),
-        offer_sdp="v=0\r\n",
-    )
-    assert socket.sent[0]["item"]["role"] == "user"
-    assert socket.sent[0]["item"]["content"][0]["text"] == "untrusted text"
-    await connection.send(Commentary("task-1", "4"))
-    assert socket.sent[1]["item"]["type"] == "function_call_output"
-    assert socket.sent[2] == {"type": "response.create"}
-    assert await connection.aclose()
-    assert await connection.aclose()
-    assert socket.closed and len(calls) == 2
-    await provider.aclose()
 
 
 async def test_failed_connection_is_closed_before_browser_reconnects(

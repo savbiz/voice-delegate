@@ -1,10 +1,11 @@
 """Load validated server settings without exposing credentials to clients."""
 
+import os
 from ipaddress import ip_address, ip_network
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import AliasChoices, Field, HttpUrl, SecretStr, field_validator, model_validator
+from pydantic import Field, HttpUrl, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import DotEnvSettingsSource, EnvSettingsSource
 from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
@@ -73,8 +74,8 @@ class Settings(BaseSettings):
     fallback_enabled: bool = False
     voice_provider: Literal["openai", "azure", "elevenlabs"] = Field(
         default="openai",
-        validation_alias=AliasChoices("VOICE_ADAPTER", "VOICE_VOICE_PROVIDER"),
-        description="Voice adapter. VOICE_VOICE_PROVIDER is a deprecated alias.",
+        validation_alias="VOICE_ADAPTER",
+        description="Default voice adapter.",
     )
 
     @field_validator("voice_provider", mode="before")
@@ -96,9 +97,6 @@ class Settings(BaseSettings):
     voice: str = "marin"
     native_clients: bool = False
     allowed_origins: list[str] = Field(default=["http://localhost:5173"], min_length=1)
-    allowed_origin: str | None = Field(
-        default=None, description="Deprecated: use VOICE_ALLOWED_ORIGINS"
-    )
     allowed_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
     trust_proxy: bool = False
     trusted_proxy_hops: int = Field(default=1, ge=1, le=32)
@@ -247,9 +245,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_origins(self) -> "Settings":
-        """Accept the deprecated singular setting only when no list was supplied."""
-        if self.allowed_origin is not None and "allowed_origins" not in self.model_fields_set:
-            self.allowed_origins = [self.allowed_origin]
+        """Require canonical browser origins."""
         for origin in self.allowed_origins:
             if self.native_clients and origin == "capacitor://localhost":
                 continue
@@ -374,8 +370,21 @@ AUTOMATIC_FEATURES = {
 }
 
 
+REMOVED_SETTINGS = {
+    "VOICE_ALLOWED_ORIGIN": 'VOICE_ALLOWED_ORIGINS (a JSON list, e.g. ["https://app.example"])',
+    "VOICE_VOICE_PROVIDER": "VOICE_ADAPTER",
+}
+
+
 def load_settings() -> Settings:
     """Load keys and deployment settings; obsolete feature environment flags are ignored."""
+    from dotenv import dotenv_values
+
+    configured = {**dotenv_values(".env"), **os.environ}
+    for name, replacement in REMOVED_SETTINGS.items():
+        if configured.get(name):
+            message = f"{name} was removed in 0.3.0; use {replacement}"
+            raise ValueError(message)
     values = {**DotEnvSettingsSource(Settings, env_file=".env")(), **EnvSettingsSource(Settings)()}
     values.update(
         cost_estimates=True,
@@ -392,7 +401,7 @@ def load_settings() -> Settings:
     values["web_search"] = bool(
         values.get("TAVILY_API_KEY") or values.get("worker_execution") == "remote"
     )
-    adapter = values.get("VOICE_ADAPTER", values.get("VOICE_VOICE_PROVIDER", "openai"))
+    adapter = values.get("VOICE_ADAPTER", "openai")
     values["fallback_enabled"] = bool(
         values.get("azure_endpoint") and values.get("azure_api_key") and adapter != "azure"
     )

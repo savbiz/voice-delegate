@@ -6,7 +6,7 @@ import pytest
 from conftest import BlockingWorker
 from langchain_core.messages import AIMessage, AnyMessage
 from voice_delegate.config import Settings
-from voice_delegate.delegation.contracts import DELEGATE_TOOL, DelegationInput
+from voice_delegate.delegation.contracts import DelegationInput
 from voice_delegate.delegation.history import History
 from voice_delegate.delegation.runner import DelegationRunner, DelegationState
 from voice_delegate.limits.tokens import count_tokens, truncate
@@ -36,9 +36,8 @@ def test_truncation_is_unicode_safe_and_bounded(text: str, budget: int) -> None:
     assert result.endswith("…")
 
 
-def test_short_result_and_single_tool_schema() -> None:
+def test_short_result_and_goal_validation() -> None:
     assert truncate("42", 10) == "42"
-    assert DELEGATE_TOOL["name"] == "delegate_task"
     with pytest.raises(ValueError):
         DelegationInput(goal="", context="")
 

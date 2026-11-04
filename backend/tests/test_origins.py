@@ -15,9 +15,16 @@ from voice_delegate.providers.fake import FakeProvider
 ORIGINS = ["http://localhost:8080", "https://localhost:8080", "https://demo.app.github.dev"]
 
 
-def test_origin_environment_alias_and_list_precedence(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_origin_list_from_environment_and_removed_singular_name(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from voice_delegate.config import load_settings
+
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("VOICE_ALLOWED_ORIGIN", "https://legacy.example")
-    assert Settings().allowed_origins == ["https://legacy.example"]
+    with pytest.raises(ValueError, match="VOICE_ALLOWED_ORIGIN was removed"):
+        load_settings()
+    monkeypatch.delenv("VOICE_ALLOWED_ORIGIN")
     monkeypatch.setenv("VOICE_ALLOWED_ORIGINS", '["https://one.example","https://two.example"]')
     assert Settings().allowed_origins == ["https://one.example", "https://two.example"]
     assert Settings(allowed_origins=ORIGINS).allowed_origins == ORIGINS
@@ -105,8 +112,6 @@ async def test_limiter_only_reflects_configured_origins(origin: str) -> None:
 def test_noncanonical_origins_are_rejected_before_serving(origin: str) -> None:
     with pytest.raises(ValidationError):
         Settings(allowed_origins=[origin])
-    with pytest.raises(ValidationError):
-        Settings(allowed_origin=origin)
 
 
 @pytest.mark.parametrize(

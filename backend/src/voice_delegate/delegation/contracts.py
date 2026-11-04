@@ -14,19 +14,6 @@ class DelegationInput(BaseModel):
     context: str = Field(default="", max_length=32768)
 
 
-DELEGATE_TOOL = {
-    "type": "function",
-    "name": "delegate_task",
-    "description": "Delegate arithmetic and project questions to the worker.",
-    "parameters": {
-        "type": "object",
-        "properties": {"goal": {"type": "string"}},
-        "required": ["goal"],
-        "additionalProperties": False,
-    },
-}
-
-
 class WorkerBusy(Exception):
     """Worker capacity was exhausted before any job was started."""
 

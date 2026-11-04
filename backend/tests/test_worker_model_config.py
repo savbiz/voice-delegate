@@ -117,27 +117,24 @@ async def test_worker_serializes_supported_tool_and_final_requests(
     assert "tools" not in captured[1]
 
 
-@pytest.mark.parametrize(
-    ("process_name", "file_name"),
-    [
-        ("VOICE_ADAPTER", "VOICE_VOICE_PROVIDER"),
-        ("VOICE_VOICE_PROVIDER", "VOICE_ADAPTER"),
-    ],
-)
-def test_process_adapter_overrides_dotenv_across_aliases_without_mutating_environment(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    process_name: str,
-    file_name: str,
+def test_process_adapter_overrides_dotenv_without_mutating_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A deprecated process override still outranks the canonical name in dotenv."""
     for key in list(os.environ):
         if key.startswith("VOICE_"):
             monkeypatch.delenv(key)
     monkeypatch.chdir(tmp_path)
-    (tmp_path / ".env").write_text(f"{file_name}=azure\nVOICE_WORKER_MODEL=file-model\n")
-    monkeypatch.setenv(process_name, "realtime")
+    (tmp_path / ".env").write_text("VOICE_ADAPTER=azure\nVOICE_WORKER_MODEL=file-model\n")
+    monkeypatch.setenv("VOICE_ADAPTER", "openai")
     assert load_settings().voice_provider == "openai"
     assert load_settings().worker_model == "file-model"
-    assert file_name not in os.environ
     assert "VOICE_WORKER_MODEL" not in os.environ
+
+
+def test_removed_adapter_alias_fails_with_its_replacement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text("VOICE_VOICE_PROVIDER=azure\n")
+    with pytest.raises(ValueError, match="use VOICE_ADAPTER"):
+        load_settings()

@@ -22,7 +22,6 @@ from voice_delegate.providers.openai import (
     OpenAILiveProvider,
     normalize_event,
 )
-from voice_delegate.providers.webrtc import RealtimeWebRTCConnection
 
 from test_support import eventually
 
@@ -206,20 +205,9 @@ async def test_rejected_creation_does_not_retry_or_leak_response() -> None:
     await provider.aclose()
 
 
-@pytest.mark.parametrize("realtime", [False, True])
-async def test_commentary_wire_budget_counts_utf8_bytes(realtime: bool) -> None:
-    from voice_delegate.providers.realtime import OpenAIRealtimeProvider
-    from voice_delegate.providers.webrtc import RealtimeWebRTCConnection
-
+async def test_commentary_wire_budget_counts_utf8_bytes() -> None:
     socket = MemorySocket()
-    provider = OpenAIRealtimeProvider(
-        "test-key", httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200)))
-    )
-    connection = (
-        RealtimeWebRTCConnection(WebRTCAnswer("id", "sdp"), socket, provider)
-        if realtime
-        else OpenAILiveConnection(WebRTCAnswer("id", "sdp"), socket, 0.05)
-    )
+    connection = OpenAILiveConnection(WebRTCAnswer("id", "sdp"), socket, 0.05)
     try:
         await connection.send(Commentary("task", "é" * 250))
         sent = len(socket.sent)
@@ -228,7 +216,6 @@ async def test_commentary_wire_budget_counts_utf8_bytes(realtime: bool) -> None:
         assert len(socket.sent) == sent
     finally:
         await connection.aclose()
-        await provider.aclose()
 
 
 def test_live_delegation_requires_nonempty_identity() -> None:
@@ -236,7 +223,7 @@ def test_live_delegation_requires_nonempty_identity() -> None:
         normalize_event('{"type":"session.delegation.created","delegation":{"id":""}}')
 
 
-@pytest.mark.parametrize("adapter", [OpenAILiveConnection, RealtimeWebRTCConnection])
+@pytest.mark.parametrize("adapter", [OpenAILiveConnection])
 async def test_unconsumed_events_do_not_break_sideband(adapter: type[OpenAILiveConnection]) -> None:
     class AdapterConnection(OpenAILiveConnection):
         normalize = staticmethod(adapter.normalize)

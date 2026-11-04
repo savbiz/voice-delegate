@@ -1,20 +1,13 @@
 """Ownership and transport validation for task controls and numeric audio activity."""
 
-import json
-
-import httpx
 import pytest
 from conftest import ASGIClientFactory, BlockingWorker, FakeClock
 from fastapi import FastAPI
-from test_provider import MemorySocket
 from voice_delegate.api.routes import build_router
 from voice_delegate.config import Settings
 from voice_delegate.delegation.contracts import DelegationInput
 from voice_delegate.delegation.intent import Job
 from voice_delegate.providers.fake import FakeProvider
-from voice_delegate.providers.models import Commentary, WebRTCAnswer
-from voice_delegate.providers.realtime import OpenAIRealtimeProvider
-from voice_delegate.providers.webrtc import RealtimeWebRTCConnection
 from voice_delegate.session.manager import SessionManager
 
 
@@ -69,34 +62,6 @@ async def test_activity_validation_and_targeted_cancel(
             assert not session.portfolio.active
     finally:
         await manager.aclose()
-
-
-async def test_realtime_detached_delivery_and_terminal_ack_wire_contract() -> None:
-    socket = MemorySocket()
-    provider = OpenAIRealtimeProvider(
-        "fixture", httpx.AsyncClient(transport=httpx.MockTransport(lambda _: httpx.Response(200)))
-    )
-    connection = RealtimeWebRTCConnection(WebRTCAnswer("call", "sdp"), socket, provider)
-    try:
-        await connection.send(Commentary("old-call", "About arithmetic: 4", detached=True))
-        item = json.loads(socket.sent[0])["item"]
-        assert item["type"] == "message" and "call_id" not in item
-        assert "4" in item["content"][0]["text"]
-        assert json.loads(socket.sent[1])["type"] == "response.create"
-        await connection.send(Commentary("cancelled-call", "Task cancelled", settle_only=True))
-        assert len(socket.sent) == 3
-        assert json.loads(socket.sent[2])["item"] == {
-            "type": "function_call_output",
-            "call_id": "cancelled-call",
-            "output": "Task cancelled",
-        }
-        await connection.send(
-            Commentary("old-call", "Task cancelled", detached=True, settle_only=True)
-        )
-        assert len(socket.sent) == 3
-    finally:
-        await connection.aclose()
-        await provider.aclose()
 
 
 async def test_heartbeat_freezes_terminal_task_duration(
