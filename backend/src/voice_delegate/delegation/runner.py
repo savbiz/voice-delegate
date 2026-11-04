@@ -154,7 +154,8 @@ class DelegationRunner:
                                 WorkerResult("Worker busy; task was not started."),
                                 "busy",
                             )
-                        except Exception:
+                        except Exception as error:
+                            logger.warning("Delegated task failed (%s)", type(error).__name__)
                             result, status = (
                                 WorkerResult("Worker failed; task incomplete."),
                                 "failed",
@@ -178,7 +179,8 @@ class DelegationRunner:
         except ProviderError:
             if work_generation == state.work_generation:
                 state.status = "delivery_failed"
-        except Exception:
+        except Exception as error:
+            logger.warning("Delegation failed (%s)", type(error).__name__)
             if work_generation == state.work_generation:
                 state.status = "failed"
 

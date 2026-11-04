@@ -157,7 +157,8 @@ class Jobs:
             raise
         except TimeoutError:
             job.status = "timeout"
-        except Exception:
+        except Exception as error:
+            logging.getLogger(__name__).warning("Worker job failed (%s)", type(error).__name__)
             job.status = "failed"
         finally:
             body.personal_keys = None

@@ -64,12 +64,12 @@
     "digest": "935c27eb3c335c5f97cd263dfa6a123ff3bc78ef545821e290acfaa636407dd5"
   },
   {
-    "id": "73067935c619bbc9",
+    "id": "8ca74d1677e9359d",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "What's implemented",
-    "text": "- **Engineering:** FastAPI + React 19 + TypeScript, uv and pnpm workspaces, about 1,000\n  automated tests (pytest, Vitest, Playwright end-to-end), strict typing and linting,\n  a Locust load test against the offline stack ([load testing](docs/load-testing.md)), CodeQL, OpenTelemetry traces and metrics (local Prometheus and Grafana, or Grafana Cloud\n  with importable dashboards), 13 decision records.",
-    "digest": "73067935c619bbc95dd6a2a3d64b12d8ae66276d61721f9f67fcaaafbb4bce9e"
+    "text": "- **Engineering:** FastAPI + React 19 + TypeScript, uv and pnpm workspaces, about 1,300\n  automated tests (pytest, Vitest, Playwright end-to-end), strict typing and linting,\n  a Locust load test against the offline stack ([load testing](docs/load-testing.md)),\n  CodeQL, OpenTelemetry traces and metrics (local Prometheus and Grafana, or Grafana Cloud\n  with importable dashboards), 13 decision records.",
+    "digest": "8ca74d1677e9359d7ebb593267ba29f0d0ee2846103c5a09cb0f650f31e880d4"
   },
   {
     "id": "d736237aa2f89ce5",

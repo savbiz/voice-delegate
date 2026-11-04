@@ -1,10 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 - 2026-11-05
+
+1.0.0 marks the point where the project is finished, documented and demonstrated: a 90-second recording of the hosted app is at the top of the README, the CI, security and supply-chain checks are in place, and dependencies are current. No new voice features. The per-provider live acceptance runs and the paid voice benchmark remain optional and are not claimed.
+
+Fixed: nine error handlers that failed safely but left no trace (a worker tool, the moderation classifier, Decisions planning, delegated tasks, the cancellation classifier and the worker service) now log a warning with the exception type. The message is never logged, because it can contain user text or tool arguments.
 
 Changed: the backend image built in CI reuses unchanged layers between runs (BuildKit with the GitHub Actions cache). The Trivy vulnerability scan still builds both images without a cache, on purpose, so it always sees current operating-system packages; a test keeps that distinction.
-
-## Unreleased
 
 Changed: CI caches the Playwright browsers between runs (the uv and pnpm package caches were already in use), and Dependabot now also watches the composite action in `.github/actions/backend`, which it had never scanned. That action was a patch release behind on `setup-uv`; it is updated, and a test requires every composite action's third-party steps to be pinned by commit and watched by Dependabot.
 
