@@ -297,3 +297,18 @@ async def test_upload_skips_cases_that_never_ran(monkeypatch: pytest.MonkeyPatch
     upload(report, ran + live_only, "test-project")
     assert len(logged) == 1
     assert "start" in logged[0]["metrics"]
+
+
+def test_scorers_accept_typographic_minus_and_apostrophes() -> None:
+    """A live run wrote a U+2212 minus and a curly apostrophe in correct answers."""
+    from evals.worker_eval import score
+
+    output = {"status": "completed", "source_ids": [], "tools": ["calculate"]}
+    arithmetic = {"kind": "arithmetic", "expected": {"tool": "calculate", "number": -25}}
+    assert (
+        score(arithmetic, {**output, "text": "100 \u2212 125 = **\u221225**."})["numeric_result"]
+        == 1
+    )
+    missing = {"kind": "missing", "expected": {}}
+    text = "I couldn\u2019t find documentation about Martian banana insurance premiums."
+    assert score(missing, {**output, "text": text})["missing_evidence_signal"] == 1

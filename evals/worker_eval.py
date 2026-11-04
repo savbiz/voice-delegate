@@ -95,9 +95,14 @@ class ObservedPlanner:
         return answer
 
 
+# Models write typographic characters (U+2212 minus, curly apostrophes); a correct answer
+# must still match the ASCII patterns below.
+TYPOGRAPHY = str.maketrans({"\u2212": "-", "\u2013": "-", "\u2019": "'", "\u2018": "'"})
+
+
 def score(case: dict[str, Any], output: dict[str, Any]) -> dict[str, float]:
     """Structural signals only; valid source IDs do not prove semantic grounding."""
-    text = output["text"]
+    text = output["text"].translate(TYPOGRAPHY)
     expected = case["expected"]
     ids = output["source_ids"]
     scores = {
@@ -123,7 +128,8 @@ def score(case: dict[str, Any], output: dict[str, Any]) -> dict[str, float]:
         scores["missing_evidence_signal"] = float(
             bool(
                 re.search(
-                    r"no supporting|not found|no documentation|cannot find|could not find",
+                    r"no supporting|not found|no documentation|cannot find|can't find"
+                    r"|could not find|couldn't find|unable to find",
                     text,
                     re.I,
                 )

@@ -144,6 +144,14 @@
     "digest": "820f0c70df0f342abd6020a83b7c3df802d7b1d554487d6ce069ddc7cdb45827"
   },
   {
+    "id": "e563707e6be245f4",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Status",
+    "text": "**Eval results:** [40 worker cases with GPT-6 Luna: 98% judged correct, 99% grounded in cited sources, 0 failures](https://www.braintrust.dev/app/savibiz/p/voice-delegate/experiments/openai-20261104T144642-6b482952)\n(public Braintrust experiment, 2026-11-04; synthetic cases from `evals/data/worker-v4.json`).",
+    "digest": "e563707e6be245f48b1d4d2d5f2ecb6cdb10a07d094234259c534fcadfa500b5"
+  },
+  {
     "id": "44f02a7715947f29",
     "title": "voice-delegate",
     "path": "README.md",
