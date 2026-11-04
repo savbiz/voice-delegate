@@ -197,3 +197,16 @@ as instructions, is unsuitable, is oversize or cannot be reviewed is withheld an
 as incomplete. Reviews add paid decision calls to the session cost estimate. See
 [ADR 013](decisions/013-moderation-boundary.md). Verification: `uv run pytest
 backend/tests/test_moderation.py`.
+
+## Optional MCP tools
+
+Set `VOICE_MCP_SERVERS` (a JSON array, `VOICE_MODERATION=true` required) to let the worker call
+read-only tools on servers you have audited. Each entry is `{"id", "url", "tools",
+"token_env"}`: a short lowercase id, a fixed `https://` endpoint, the exact tool names to
+allow and, optionally, the name of an `MCP_*` environment variable holding a bearer token.
+Tools appear to the planner as `id__tool`. Unlisted tools are never callable, whatever their
+annotations claim. A tool is dropped unless its input schema is a flat object of scalar
+properties. The catalog is cached for `VOICE_MCP_CACHE_SECONDS`; `VOICE_MCP_TIMEOUT_SECONDS`
+bounds each request. In the offline worker use `mcp id__tool {"query": "..."}`. Sessions with
+personal keys never use operator servers. Verification: `uv run pytest backend/tests/test_mcp.py`.
+See [ADR 010](decisions/010-mcp-trust-model.md).

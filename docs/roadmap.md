@@ -213,6 +213,6 @@ switches, failure behavior and test gates. No implementation is enabled by these
 | Planned milestone | Scope | Gate |
 | --- | --- | --- |
 | Moderation | Opt-in origin-aware hook for goals and tool evidence ([ADR 013](decisions/013-moderation-boundary.md)); offline adversarial fakes | Authorized quality evals; raw transcript segments |
-| Worker MCP client | Audited read-only discovery, cached catalogs and ICS example | ADR 010; moderation boundary |
+| Worker MCP client | Opt-in audited read-only client ([ADR 010](decisions/010-mcp-trust-model.md)); offline fake-server suite | Live server compatibility; ICS example |
 | SIP, optional | Authenticated telephone admission and direct provider media | Admission ADR; authorized carrier smoke |
 | Cascade, optional | STT/text/TTS adapter behind explicit audio-relay capability | Privacy/relay ADR; measured comparison |

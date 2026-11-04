@@ -14,7 +14,7 @@ place with a dated note rather than rewritten.
 | [007](007-invitation-admission.md) | Invitations and conservative quota admission | Accepted 2026-09-30 |
 | [008](008-private-worker-scaling.md) | Same-host API ownership and a private worker | Accepted 2026-09-30 |
 | [009](009-cancellation-is-intent.md) | Cancellation is intent; speech pauses narration | Accepted 2026-10-24 |
-| 010 | Reserved for the MCP trust model in [future extensions](../future-extensions.md#worker-as-an-mcp-client) | Not written |
+| [010](010-mcp-trust-model.md) | Worker as a read-only MCP client | Accepted 2026-11-04 |
 | [011](011-read-only-web-search.md) | Read-only web search in the delegated worker | Accepted |
 | [012](012-elevenlabs-agents-webhook.md) | ElevenLabs Agents with an asynchronous server webhook | Accepted 2026-11-02 |
 | [013](013-moderation-boundary.md) | Origin-aware moderation boundary in the worker | Accepted 2026-11-04 |

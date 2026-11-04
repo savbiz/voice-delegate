@@ -5,9 +5,18 @@ from ipaddress import ip_address, ip_network
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import Field, HttpUrl, SecretStr, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    HttpUrl,
+    SecretStr,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import DotEnvSettingsSource, EnvSettingsSource
+from voice_delegate_agent.mcp import McpServer
 from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
 from voice_delegate_agent.web_search import domain_name
 
@@ -58,6 +67,21 @@ def worker_transport_allowed(url: str) -> bool:
             "fc00::/7",
         )
     )
+
+
+class McpServerSetting(BaseModel):
+    """One operator-audited MCP server. The token is read from a dedicated variable by name."""
+
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(pattern=r"^[a-z][a-z0-9]{0,15}$")
+    url: str = Field(max_length=512)
+    tools: list[str] = Field(min_length=1, max_length=8)
+    token_env: str = Field(default="", pattern=r"^(MCP_[A-Z0-9_]{1,60})?$")
+
+    @model_validator(mode="after")
+    def validate_entry(self) -> "McpServerSetting":
+        McpServer(self.id, self.url, tuple(self.tools))  # raises ValueError when unsafe
+        return self
 
 
 class Settings(BaseSettings):
@@ -154,6 +178,11 @@ class Settings(BaseSettings):
     moderation_threshold: float = Field(default=0.8, ge=0.5, le=1)
     moderation_timeout_seconds: float = Field(default=1, gt=0, le=5)
     moderation_max_reviews: int = Field(default=6, ge=1, le=24)
+    # Operator allowlist, e.g. [{"id":"cal","url":"https://host/mcp","tools":["next_events"]}].
+    # Servers are enabled by being listed; requires moderation. Never discovered from output.
+    mcp_servers: list[McpServerSetting] = Field(default_factory=list, max_length=4)
+    mcp_timeout_seconds: float = Field(default=3, gt=0, le=3)
+    mcp_cache_seconds: float = Field(default=60, ge=1, le=600)
     worker_model: str = DEFAULT_WORKER_MODEL
     delegation_timeout_seconds: float = Field(default=15, gt=0, le=120)
     delegation_result_tokens: int = Field(default=120, ge=8, le=480)
@@ -247,6 +276,17 @@ class Settings(BaseSettings):
             and not self.tavily_api_key.get_secret_value()
         ):
             message = "Web search requires TAVILY_API_KEY on the worker host"
+            raise ValueError(message)
+        return self
+
+    @model_validator(mode="after")
+    def validate_mcp(self) -> "Settings":
+        ids = [server.id for server in self.mcp_servers]
+        if len(set(ids)) != len(ids) or sum(len(s.tools) for s in self.mcp_servers) > 8:
+            message = "MCP servers need unique ids and at most eight allowlisted tools in total"
+            raise ValueError(message)
+        if self.mcp_servers and not self.moderation:
+            message = "MCP servers require VOICE_MODERATION"
             raise ValueError(message)
         return self
 

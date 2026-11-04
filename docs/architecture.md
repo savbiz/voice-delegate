@@ -319,6 +319,14 @@ Verdicts are allow, quarantine or refuse, decided by deterministic policy over a
 classifier signals. Withheld evidence ends the job as incomplete and is never narrated or
 cited. See [ADR 013](decisions/013-moderation-boundary.md).
 
+## Optional MCP tools
+
+Operators can list audited MCP servers and the exact tools the worker may call
+(`VOICE_MCP_SERVERS`, which requires moderation). The voice model still sees only
+`delegate_task`. Each delegation uses an immutable, cached, schema-reviewed snapshot of
+`server__tool` names; results are moderated, cited as evidence and terminal like web
+evidence. See [ADR 010](decisions/010-mcp-trust-model.md).
+
 ## Browser audio observations
 
 The WebRTC stream analyser automatically

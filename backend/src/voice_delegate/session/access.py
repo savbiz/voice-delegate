@@ -45,6 +45,8 @@ class PersonalKeys(BaseModel):
                 "worker_mode": "openai" if self.openai_key.get_secret_value() else "offline",
                 "web_search": bool(self.tavily_key.get_secret_value()),
                 "moderation": settings.moderation and bool(self.openai_key.get_secret_value()),
+                # Operator servers are never shared with sessions that bring their own keys.
+                "mcp_servers": [],
                 "decisions_cancel": False,
             }
         )
