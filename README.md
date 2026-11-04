@@ -45,7 +45,7 @@ individual tools.
 - **Hosted:** open [voice-delegate.vercel.app](https://voice-delegate.vercel.app). Choose
   **Your API keys** to use your own provider account, or **Platform API** with an
   invitation code. No code? Use **Request access** on the page and the maintainer is notified.
-- **No keys at all:** **Tools & examples → Offline example** plays a scripted session
+- **No keys at all:** the **Offline example** tab plays a scripted session
   for free, with no microphone or backend.
 - **Locally:** see below.
 
@@ -63,7 +63,7 @@ make invite   # terminal 3: prints the local invitation code
 ```
 
 Paste the code, choose **Live voice** and start talking. Without a key, the worker runs
-its offline planner and **Tools & examples → Offline example** still works. Voice and
+its offline planner and the **Offline example** tab still works. Voice and
 text-worker usage are billed separately by the provider; a ChatGPT subscription is not an
 API key. Details: [local development](docs/local-development.md) and the
 [configuration reference](docs/configuration.md).

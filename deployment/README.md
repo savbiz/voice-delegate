@@ -74,7 +74,7 @@ there are no refunds on failed creation. Local Docker checks cover authenticatio
 quota persistence after restart, not the availability of a publicly hosted deployment.
 
 The [Documentation workflow](../docs/milestones/m6.md) is bundled with the agent and available
-under Tools & examples → Project documentation without a paid model call.
+in the Project documentation tab without a paid model call.
 
 
 ## Cost controls
@@ -251,7 +251,7 @@ Open **http://localhost:8080**, then **Run offline worker**. The fake provider e
 one fixed arithmetic request; the backend delegates through the private worker service
 to LangGraph's OfflinePlanner and displays the actual result. No provider keys,
 microphone or generated voice are used. The public-site Offline example remains
-static under Tools & examples; this container enables `VITE_OFFLINE_STACK=true` at build time and the backend
+static in the Offline example tab; this container enables `VITE_OFFLINE_STACK=true` at build time and the backend
 factory requires `VOICE_OFFLINE_DEMO=1`. This factory refuses provider keys, paid
 planning, fallback and server transcript recording. Compose does not import local
 provider environment files or forward host provider keys.

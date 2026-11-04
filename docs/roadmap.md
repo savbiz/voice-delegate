@@ -124,8 +124,8 @@ observes a real local WebRTC tone loopback without a provider; this verifies mea
 plumbing, not voice recognition or model quality. Paid comparison runs require explicit
 opt-in, a clean source revision, hashed local WAV inputs and an exact session budget.
 
-GPT-Live, OpenAI Realtime and Azure comparison results remain pending. ElevenLabs remains
-unsupported until its transport evaluation and adapter are approved. No paid calls,
+GPT-Live (OpenAI and Azure) and ElevenLabs Agents comparison results remain pending; the
+OpenAI Realtime adapter was removed in 0.3.0. No paid calls,
 new deployment, measured provider latency or new live acceptance are claimed. The current
 Grafana stack has no retained trace data source; the optional trace exporter is verified
 with offline mocks and requires an existing Tempo-backed Grafana for a real export.
@@ -153,8 +153,8 @@ local invitation without rewriting existing configuration or credentials.
 
 ### Configuration naming and worker model migration
 
-`VOICE_ADAPTER` replaces the ambiguous voice-provider selector name, with the old
-name accepted as a deprecated alias. New worker/eval defaults use GPT-6 Luna with
+`VOICE_ADAPTER` replaces the ambiguous voice-provider selector name. The old name was a
+deprecated alias in 0.2.0; since 0.3.0 the backend refuses to start while it is set. New worker/eval defaults use GPT-6 Luna with
 Chat Completions reasoning disabled for tool calling. Offline request-format and
 alias-precedence checks are separate from live model acceptance, which is pending.
 Existing explicit environment overrides are not silently changed.

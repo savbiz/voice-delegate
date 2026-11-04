@@ -64,20 +64,20 @@
     "digest": "fc41087a781bb8c5eda874b9cd5652d2566b23d325239ed27b147e3878a07d7e"
   },
   {
-    "id": "c54bdf3df3074816",
+    "id": "89748f4157066101",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Try it",
-    "text": "- **No keys at all:** **Tools & examples → Offline example** plays a scripted session\n  for free, with no microphone or backend.",
-    "digest": "c54bdf3df30748167d8ae281e4579968f6a5309111be305772320eea98de5620"
+    "text": "- **No keys at all:** the **Offline example** tab plays a scripted session\n  for free, with no microphone or backend.",
+    "digest": "89748f41570661012f7ad1238855db65d93780c02504915975b0c0769ff70f06"
   },
   {
-    "id": "47b6d6166d9ee690",
+    "id": "efa14c23fe9a1fbb",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Run it locally",
-    "text": "Paste the code, choose **Live voice** and start talking. Without a key, the worker runs\nits offline planner and **Tools & examples → Offline example** still works. Voice and\ntext-worker usage are billed separately by the provider; a ChatGPT subscription is not an\nAPI key. Details: [local development](docs/local-development.md) and the\n[configuration reference](docs/configuration.md).",
-    "digest": "47b6d6166d9ee6909cbffafc6b3532d8b7d7b01a7c063ddffa4193301b7e0452"
+    "text": "Paste the code, choose **Live voice** and start talking. Without a key, the worker runs\nits offline planner and the **Offline example** tab still works. Voice and\ntext-worker usage are billed separately by the provider; a ChatGPT subscription is not an\nAPI key. Details: [local development](docs/local-development.md) and the\n[configuration reference](docs/configuration.md).",
+    "digest": "efa14c23fe9a1fbb75bc2d2e7d678eef4b2cc2b7631ea6c5795c8e10a2073108"
   },
   {
     "id": "11bcf96c837b4b47",

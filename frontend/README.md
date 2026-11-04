@@ -38,8 +38,8 @@ and existing Tailwind utilities where useful. No complete CSS migration is requi
 
 `src/components/Button.tsx` provides primary, secondary and danger actions while retaining
 native button attributes. Its default type is `button`; form actions explicitly use
-`type="submit"`. `WorkspaceNavigation.tsx` keeps Live voice primary and places Offline example and Project
-documentation under Tools & examples. Native links support keyboard navigation and browser
+`type="submit"`. `WorkspaceNavigation.tsx` renders Live voice, Offline example and Project
+documentation as three peer tabs, Live voice first. Native links support keyboard navigation and browser
 history; `#live`, `#demo` and `#reference` can be opened directly.
 Keep those components at module scope so rerenders preserve component identity.
 

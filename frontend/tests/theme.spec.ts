@@ -5,7 +5,6 @@ test('narrow navigation remains visible and keyboard focus has sufficient contra
 }) => {
   await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('/');
-  await page.getByText('Tools & examples', { exact: true }).click();
   const tabs = page.getByRole('navigation', { name: 'Workspace' }).getByRole('link');
   for (const tab of await tabs.all()) {
     const bounds = await tab.boundingBox();
