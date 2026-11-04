@@ -1,8 +1,14 @@
-FROM node:24-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS builder
+FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS builder
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
-# Corepack installs the pnpm release and hash named by packageManager in package.json.
-RUN corepack enable && corepack prepare --activate
+# pnpm is fetched from the registry and installed only when its SHA-512 matches. Node 25+ no
+# longer bundles Corepack, so this does not depend on it. Keep the version and hash in step with
+# `packageManager` in package.json.
+ARG PNPM_VERSION=11.19.0
+ARG PNPM_SHA512=7881f3ed590d472c4a955e2b88b2121791116066dcc88cbca3849ec9b60f1bbaa6d2ccb221fa91da4e1c65bef2bcbe379365aea7ac539c7bf86dedc3a1b22dce
+# NODE_USE_ENV_PROXY makes fetch honour the HTTPS_PROXY that Docker passes on proxied networks.
+RUN NODE_USE_ENV_PROXY=1 node -e "const {createHash}=require('node:crypto'),fs=require('node:fs');fetch('https://registry.npmjs.org/pnpm/-/pnpm-'+process.argv[1]+'.tgz').then(r=>{if(!r.ok)throw new Error(r.status);return r.arrayBuffer()}).then(b=>{const d=Buffer.from(b);if(createHash('sha512').update(d).digest('hex')!==process.argv[2])throw new Error('pnpm checksum mismatch');fs.writeFileSync('/tmp/pnpm.tgz',d)})" "$PNPM_VERSION" "$PNPM_SHA512" \
+    && npm install --global /tmp/pnpm.tgz && rm /tmp/pnpm.tgz
 RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
 COPY THIRD_PARTY_NOTICES.md /app/THIRD_PARTY_NOTICES.md
