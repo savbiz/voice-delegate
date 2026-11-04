@@ -41,6 +41,7 @@ Approved requests appear in `make invite-list` as `email-<hash>`; revoke them wi
 ## Quotas and cost controls
 
 - `VOICE_DAILY_SESSIONS_PER_USER` limits sessions reserved per principal per UTC day.
+- `VOICE_UNLIMITED_INVITES` (JSON list of invitation names, for example `["savino"]`) exempts those invitations from the daily session and voice-second allowances, so the operator can test without resets. Their sessions do not draw on the global daily budget either; concurrency and session-length limits still apply. Keep the list to your own invitations: provider spend for them is unbounded by these allowances.
 - `VOICE_CONCURRENT_SESSIONS_PER_USER` limits active leases per principal.
 - `VOICE_MAX_SESSIONS` caps local API sessions and, with shared SQLite, global active leases.
 - `VOICE_DAILY_VOICE_SECONDS_PER_USER` and `VOICE_DAILY_VOICE_SECONDS_GLOBAL` cap reserved voice seconds per UTC day for platform-funded sessions in public-demo mode; personal-key sessions skip these daily reservations. Each admitted platform session reserves `ceil(session_ttl_seconds + 1)`, doubled only when the session opts into Azure recovery. Early close and failed connect do not refund the reservation.
