@@ -20,6 +20,7 @@ from voice_delegate.session.models import Session
 from voice_delegate.session.preferences import VoicePreferences
 
 from .schemas import (
+    ERROR_RESPONSES,
     Activity,
     Answer,
     AudioTiming,
@@ -52,7 +53,7 @@ class ReferenceQuery(BaseModel):
 
 def build_access_router(access_requests: AccessRequests) -> APIRouter:
     """Owner decisions from notification buttons; the one-time secret is the credential."""
-    router = APIRouter(prefix="/access")
+    router = APIRouter(prefix="/access", responses=ERROR_RESPONSES)
     RequestId = Annotated[str, Path(min_length=8, max_length=32, pattern=r"^[A-Za-z0-9_-]+$")]
     Secret = Annotated[str, Path(min_length=32, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")]
 
@@ -87,7 +88,9 @@ def build_router(
             raise HTTPException(403, "Unexpected request origin")
         response.headers["Cache-Control"] = "no-store"
 
-    router = APIRouter(prefix="/api", dependencies=[Depends(check_origin)])
+    router = APIRouter(
+        prefix="/api", dependencies=[Depends(check_origin)], responses=ERROR_RESPONSES
+    )
 
     async def authorize(request: Request) -> str:
         return manager.admission.authenticate(request.headers.get("authorization", ""))

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+Added: contract fuzzing of the HTTP API with Schemathesis and property-based tests (Hypothesis) of admission, quotas and the rate limiter, run with the normal test suite (`docs/testing.md`). Both are development dependencies.
+
+Fixed: the generated OpenAPI document now describes the API's real error answers. Every error body is `{"detail": "<message>"}`, but the document claimed the framework's list-shaped 422 and omitted the 400, 401, 403, 404, 409, 413, 429 and 503 responses. Runtime behaviour is unchanged.
+
 Added: a Locust load test (`make loadtest`, `docs/load-testing.md`) that drives an isolated offline backend with many concurrent sessions and fails on error or latency budgets; it uses no provider, key or paid service. Locust and its dependencies are in the optional `loadtest` dependency group and are not part of the backend.
 
 Added: a full live worker evaluation (40 cases, GPT-6 Luna with an LLM judge, 117 model calls) is published as a public Braintrust experiment: 98% judged correct, 99% grounded, 100% numeric and evidence retrieval, p50 2.4 s per case. Fixed: the eval scorers accept a typographic minus sign and curly apostrophes, which had marked correct answers as wrong.

@@ -15,6 +15,8 @@ from voice_delegate.providers.elevenlabs_session import ElevenLabsConnection
 from voice_delegate.providers.models import ProviderError
 from voice_delegate.session.manager import SessionManager
 
+from .schemas import ERROR_RESPONSES
+
 WEBHOOK_TIMEOUT_SECONDS = 115
 
 
@@ -52,7 +54,7 @@ class WebhookInput(BaseModel):
 
 
 def build_webhook_router(manager: SessionManager) -> APIRouter:
-    router = APIRouter(route_class=ServiceRoute)
+    router = APIRouter(route_class=ServiceRoute, responses=ERROR_RESPONSES)
 
     async def authenticated(
         request: Request,

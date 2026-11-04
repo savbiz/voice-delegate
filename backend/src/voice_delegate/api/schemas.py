@@ -1,7 +1,7 @@
 """Validated browser-facing contracts, separate from provider wire formats."""
 
 from dataclasses import replace
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from voice_delegate_agent.limits import SOURCE_PREVIEW_CHARS
@@ -9,6 +9,30 @@ from voice_delegate_agent.reference import Source
 
 from voice_delegate.costs import CostSummary
 from voice_delegate.session.summary import Recap
+
+
+class ErrorBody(BaseModel):
+    """Every error the API returns: one short message, never internal detail."""
+
+    detail: str
+
+
+ERROR_STATUSES = {
+    400: "The body is not valid JSON",
+    401: "A valid invitation or access code is required",
+    403: "Unexpected request origin, or the feature is disabled",
+    404: "Unknown session, source or request",
+    409: "The session is not in a state that allows this call",
+    413: "Request body too large",
+    422: "Invalid request",
+    429: "Rate limit or capacity reached",
+    503: "Temporarily unavailable",
+}
+# The custom handlers in app.py return {"detail": "<message>"} for every error, so the generated
+# schema must not claim FastAPI's default list-shaped validation error.
+ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
+    status: {"model": ErrorBody, "description": text} for status, text in ERROR_STATUSES.items()
+}
 
 
 class Offer(BaseModel):
