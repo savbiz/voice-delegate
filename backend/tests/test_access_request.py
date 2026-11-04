@@ -174,11 +174,17 @@ async def test_approval_emails_a_code_that_authenticates(
         assert str(notice.url) == URL
         assert notice.headers["Cache"] == "no"
         code = notice.content.decode().split("\n")[1]
-        action = notice.headers["Actions"]
-        assert action.startswith("view, Send email, mailto:visitor@example.com?subject=")
-        assert "," not in action.split("mailto:")[1].removesuffix(", clear=true")
-        assert ";" not in action
-        assert f"Invitation%20code%3A%20{code}" in action
+        gmail, mail = notice.headers["Actions"].split("; ")
+        assert gmail.startswith(
+            "view, Gmail, https://mail.google.com/mail/?view=cm&fs=1&to=visitor@example.com&su="
+        )
+        assert mail.startswith("view, Mail app, mailto:visitor@example.com?subject=")
+        for action, url_start in ((gmail, "https://"), (mail, "mailto:")):
+            # Commas and semicolons separate ntfy actions, so the URLs must not contain them.
+            url = action.split(url_start, 1)[1].removesuffix(", clear=true")
+            assert "," not in url
+            assert ";" not in url
+            assert f"Invitation%20code%3A%20{code}" in url
         assert (await client.post(approve)).status_code == 409
         assert (await client.post(deny)).status_code == 409
         session = await client.post(

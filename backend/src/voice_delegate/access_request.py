@@ -278,6 +278,12 @@ class AccessRequests:
             f"mailto:{quote(email, safe='@')}"
             f"?subject={quote(subject, safe='')}&body={quote(text, safe='')}"
         )
+        # The ntfy web app opens view actions in the browser (Safari on iPhone), where mailto
+        # does not reach Gmail; Gmail's compose page opens prefilled in any browser.
+        gmail = (
+            "https://mail.google.com/mail/?view=cm&fs=1"
+            f"&to={quote(email, safe='@')}&su={quote(subject, safe='')}&body={quote(text, safe='')}"
+        )
         try:
             # Cache: no keeps the code off the ntfy server once delivered to the owner's phone.
             response = await self.client.post(
@@ -287,7 +293,9 @@ class AccessRequests:
                     "Title": "voice-delegate invitation approved",
                     "Tags": "white_check_mark",
                     "Cache": "no",
-                    "Actions": f"view, Send email, {mailto}, clear=true",
+                    "Actions": (
+                        f"view, Gmail, {gmail}, clear=true; view, Mail app, {mailto}, clear=true"
+                    ),
                 },
             )
             response.raise_for_status()
