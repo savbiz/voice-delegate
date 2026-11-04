@@ -6,7 +6,7 @@ GitHub Actions; none of it needs a secret or a paid service.
 | Check | Workflow | When | What it answers |
 |---|---|---|---|
 | Dependabot | `.github/dependabot.yml` | weekly | Which updates exist (Python, npm, GitHub Actions) |
-| CodeQL | `codeql.yml` | on `main` and weekly | Does the code contain known vulnerability patterns |
+| CodeQL | `codeql.yml` | pull requests, `main` and weekly | Does the code contain known vulnerability patterns |
 | Dependency audit | `supply-chain.yml` | weekly, on demand, and on a lockfile change | Does a locked package have a published advisory |
 | SBOM | `sbom.yml` | on each published release, or on demand | What exactly is in the release |
 | Container audit | `scripts/check_containers.py` | in every CI run | Do the Dockerfiles and compose files meet the baseline: pinned bases, non-root, health check, hardening |

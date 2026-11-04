@@ -45,6 +45,19 @@ def test_every_workflow_sets_permissions_and_avoids_pull_request_target(path: Pa
     assert "pull_request_target" not in triggers(workflow)
 
 
+@pytest.mark.parametrize("path", WORKFLOWS, ids=lambda p: p.name)
+def test_workflows_run_on_commits_cancel_superseded_runs(path: Path) -> None:
+    workflow = load(path)
+    if not {"pull_request", "push"} & set(triggers(workflow)):
+        pytest.skip("not triggered by commits")
+    concurrency = workflow.get("concurrency")
+    assert concurrency, f"{path.name}: a newer commit must cancel the older run"
+    assert concurrency["cancel-in-progress"] is True
+    # Per workflow and ref, so a pull request never cancels main and workflows stay independent.
+    assert "github.workflow" in concurrency["group"]
+    assert "github.ref" in concurrency["group"]
+
+
 def test_pnpm_only_runs_inside_the_frontend_directory() -> None:
     for path in WORKFLOWS:
         workflow = load(path)
