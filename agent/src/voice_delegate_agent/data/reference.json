@@ -200,6 +200,14 @@
     "digest": "a290f1daf6c232833b8ff9cbbe69ffb87f890adfc8e1448e3f1cc91d214ba95f"
   },
   {
+    "id": "76574b0271aa7de5",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Boundaries",
+    "text": "The worker runs inside the API process or, in the scaled and offline stacks, as a separate private\nservice. Audio never passes through the backend; only text events and delegation results do.",
+    "digest": "76574b0271aa7de54782e37e85f9d34de4b3a124109e07b435adb3705640a9b6"
+  },
+  {
     "id": "cf18a51ef3853579",
     "title": "Architecture",
     "path": "docs/architecture.md",

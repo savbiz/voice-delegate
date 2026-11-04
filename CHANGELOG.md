@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Added: releases now carry a signed build-provenance attestation for the SBOM documents (GitHub artifact attestations), attached as `voice-delegate.intoto.jsonl` and verifiable with `gh attestation verify`. It applies from the next published release. An overview diagram of the system components is added to `docs/architecture.md`, and Sentry is recorded as a possible later addition in `docs/future-extensions.md`.
+
 Added: fast-check property tests in the frontend (`frontend/src/properties.test.ts`). They generate event sequences for the session lifecycle state machine and arbitrary URLs for the evidence-link filter. fast-check (MIT) is a development dependency only.
 
 Changed: the remaining unpinned build inputs are pinned by hash. The frontend image gets pnpm through Corepack from the `packageManager` field, which now carries the release's SHA-512, and the development container base image is pinned by digest and covered by Dependabot.

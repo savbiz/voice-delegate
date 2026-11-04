@@ -143,6 +143,14 @@ usage partial. Measure end-of-user-speech to first playback and total turn durat
 existing benchmark harness, with stage traces containing no content. Publish measured relay
 latency only after authorized live tests; do not infer it from loopback peers.
 
+## Other ideas, not planned
+
+- **Error tracking with Sentry.** Traces, metrics and the Grafana dashboards already cover
+  observability. Sentry would add grouped exceptions and alerts for the hosted demo, including
+  browser crashes. If added, it must be opt-in (enabled only when a DSN is set), send no
+  request bodies, transcripts, session keys or provider keys, and have tests that prove the
+  scrubbing.
+
 ## Suggested implementation order and review gates
 
 1. Complete formal ElevenLabs live acceptance (the maintainer reports it working live on the
