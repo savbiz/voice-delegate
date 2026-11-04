@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "json": { "()": "voice_delegate.logs.JsonFormatter" }
+  },
+  "filters": {
+    "quiet_access": { "()": "voice_delegate.logs.QuietAccessFilter" }
+  },
+  "handlers": {
+    "stdout": {
+      "class": "logging.StreamHandler",
+      "stream": "ext://sys.stdout",
+      "formatter": "json"
+    },
+    "access": {
+      "class": "logging.StreamHandler",
+      "stream": "ext://sys.stdout",
+      "formatter": "json",
+      "filters": ["quiet_access"]
+    }
+  },
+  "loggers": {
+    "uvicorn": { "handlers": ["stdout"], "level": "INFO", "propagate": false },
+    "uvicorn.error": { "handlers": ["stdout"], "level": "INFO", "propagate": false },
+    "uvicorn.access": { "handlers": ["access"], "level": "INFO", "propagate": false }
+  },
+  "root": { "handlers": ["stdout"], "level": "INFO" }
+}

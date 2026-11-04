@@ -33,6 +33,12 @@ A complete, deployed system, not a prototype:
   per-session cost estimates.
 - **Reliability:** bounded session lifetimes, heartbeats, one consented Azure recovery,
   explicit client state machine, separate worker service for scaling.
+- **iOS and Android:** the same React app packaged with Capacitor as an opt-in native shell;
+  iOS Simulator and Android debug builds compile, with native voice gated behind a test
+  build ([mobile](docs/mobile.md)).
+- **Evaluations:** 40 versioned worker cases scored deterministically and by an LLM judge,
+  run offline on every CI push and against real models on demand, with results tracked as
+  Braintrust experiments ([evals](evals/README.md)).
 - **Engineering:** FastAPI + React 19 + TypeScript, uv and pnpm workspaces, about 1,000
   automated tests (pytest, Vitest, Playwright end-to-end), strict typing and linting,
   CodeQL, OpenTelemetry traces and metrics (local Prometheus and Grafana, or Grafana Cloud
@@ -83,8 +89,7 @@ flowchart LR
 
 Audio flows directly between the browser and the voice provider. The backend owns the
 session, admission, quotas and delegated work; the voice model never sees the worker's
-individual tools. Details: the [documentation index](docs/README.md) and
-[session flow](docs/session-flow.md).
+individual tools.
 
 ## Try it
 

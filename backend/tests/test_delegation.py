@@ -460,3 +460,21 @@ async def test_parallel_rejection_is_not_a_completed_task() -> None:
     result = await LangGraphWorker(ParallelPlanner()).delegate_task("Calculate", "")
     assert result.status == "failed"
     assert "rejected parallel" in result.text
+
+
+async def test_worker_system_message_carries_todays_date() -> None:
+    from datetime import date
+
+    from langchain_core.messages import AIMessage, AnyMessage, SystemMessage
+
+    seen: list[str] = []
+
+    class Capture:
+        async def respond(self, messages: list[AnyMessage]) -> AIMessage:
+            seen.append(str(next(m for m in messages if isinstance(m, SystemMessage)).content))
+            return AIMessage(content="done")
+
+    worker = LangGraphWorker(Capture())
+    worker.today = lambda: date(2026, 11, 4)
+    await worker.delegate_task("who played yesterday", "")
+    assert "Current date (UTC): 2026-11-04." in seen[0]

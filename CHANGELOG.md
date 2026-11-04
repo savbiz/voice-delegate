@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+Added: `VOICE_UNLIMITED_INVITES` lists invitation names (the operator's own) that skip the daily session and voice-second allowances without drawing on the shared daily budget; concurrency and session length still apply.
+
+Fixed: spoken cancellation now works with GPT-Live. Its user transcript arrives one word at a time, and each word discarded the pending decision; the classifier now waits for the utterance to settle (0.4 s) and decides once, and its default deadline is 3 seconds instead of 1. The voice prompt no longer lets the assistant claim it stopped work before confirmation. The worker receives today's date, so questions about today or yesterday resolve. ElevenLabs captions no longer show expressive audio tags such as `[happy]`. README: iOS and Android shells and the evaluation setup are listed. Production logs are JSON on stdout with the real level, so Railway no longer shows every restart as errors, and successful polling calls are no longer logged.
+
+Fixed: the offline worker eval retrieves every expected source again, and CI now fails if a documentation case misses one. Braintrust experiments record the worker's own duration and model calls instead of the upload time.
+
 Fixed: a private worker service without a platform OpenAI key no longer disables moderation for personal-key jobs that bring their own key; the moderation classifier uses its own decider, so `VOICE_MODERATION_TIMEOUT_SECONDS` is no longer cut short by the 1-second decider default. README: live dashboard link and a 0.4.0 screenshot.
 
 ## 0.4.0 - 2026-11-04

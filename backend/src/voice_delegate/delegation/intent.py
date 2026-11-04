@@ -101,6 +101,10 @@ class IntentRunner:
         self.settings = settings
         self.clock = clock
         self.decider = decider
+        # GPT-Live streams user transcripts word by word and never marks them committed.
+        # Deciding on every fragment made each newer word discard the previous decision, so
+        # wait until the fragments stop for this long and decide once on the whole utterance.
+        self.settle_seconds = 0.4
 
     def start(
         self,
@@ -317,6 +321,10 @@ class IntentRunner:
     async def _decide_segments(self, state: Portfolio) -> None:
         # Coalesce fragment bursts into the latest bounded utterance, never an unbounded queue.
         while state.queued_segment is not None and state.active:
+            seen = state.revision
+            await asyncio.sleep(self.settle_seconds)
+            if state.revision != seen:
+                continue  # Still speaking: wait for the utterance to settle.
             user, assistant = state.queued_segment
             state.queued_segment = None
             if state.decision_calls >= self.settings.decisions_max_calls:

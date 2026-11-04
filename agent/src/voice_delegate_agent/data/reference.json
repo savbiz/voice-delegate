@@ -56,6 +56,22 @@
     "digest": "b3821e79fe7f31f215d51b9b540fc6bc631d9999c7b091a006d0673979d20d29"
   },
   {
+    "id": "eae3895ca8608a99",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "What's implemented",
+    "text": "- **iOS and Android:** the same React app packaged with Capacitor as an opt-in native shell;\n  iOS Simulator and Android debug builds compile, with native voice gated behind a test\n  build ([mobile](docs/mobile.md)).",
+    "digest": "eae3895ca8608a9941d2b6c0f0058ed09c37aeaeb0995ae30a456babb5c7ef28"
+  },
+  {
+    "id": "935c27eb3c335c5f",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "What's implemented",
+    "text": "- **Evaluations:** 40 versioned worker cases scored deterministically and by an LLM judge,\n  run offline on every CI push and against real models on demand, with results tracked as\n  Braintrust experiments ([evals](evals/README.md)).",
+    "digest": "935c27eb3c335c5f97cd263dfa6a123ff3bc78ef545821e290acfaa636407dd5"
+  },
+  {
     "id": "45ebd843a03e251e",
     "title": "voice-delegate",
     "path": "README.md",
@@ -72,12 +88,12 @@
     "digest": "d736237aa2f89ce546e9c3a80379055982669df61a10858676417f739926f38c"
   },
   {
-    "id": "611968cbef148db1",
+    "id": "96630748de0df450",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "System design",
-    "text": "Audio flows directly between the browser and the voice provider. The backend owns the\nsession, admission, quotas and delegated work; the voice model never sees the worker's\nindividual tools. Details: the [documentation index](docs/README.md) and\n[session flow](docs/session-flow.md).",
-    "digest": "611968cbef148db182023b169b0ca23cfe28062fccbe547873e064ed669e4298"
+    "text": "Audio flows directly between the browser and the voice provider. The backend owns the\nsession, admission, quotas and delegated work; the voice model never sees the worker's\nindividual tools.",
+    "digest": "96630748de0df45090b06c5a63f68f12cec37cb740618a709a4d3be142049121"
   },
   {
     "id": "fc41087a781bb8c5",

@@ -3,8 +3,9 @@
 import contextlib
 import json
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import asdict
+from datetime import UTC, date, datetime
 from html import escape
 from typing import Annotated, Literal, TypedDict
 
@@ -88,6 +89,8 @@ class LangGraphWorker:
         self.max_reviews = max_reviews
         registry = {tool.name: tool for tool in (TOOLS if tools is None else tools)}
         self.instructions = instructions
+        # Injectable for tests; relative dates in goals need today's date to resolve.
+        self.today: Callable[[], date] = lambda: datetime.now(UTC).date()
 
         async def reason(state: State) -> dict[str, object]:
             if state["steps"] >= self.max_steps:
@@ -249,7 +252,11 @@ class LangGraphWorker:
             result = await self.graph.ainvoke(
                 {
                     "messages": [
-                        SystemMessage(content=self.instructions),
+                        SystemMessage(
+                            content=f"{self.instructions}\n\nCurrent date (UTC): "
+                            f"{self.today().isoformat()}. Resolve relative dates such as "
+                            "today, yesterday or this week against it."
+                        ),
                         HumanMessage(
                             content=f"<goal>{escape(goal)}</goal>\n<context>{escape(context)}</context>"
                         ),

@@ -155,6 +155,15 @@ demand from the Actions tab. It is deliberately infrequent: polling every few mi
 
 Check backend health, worker busy/timeouts, provider error/cancelled outcomes, lease counts and provider billed usage. Use [observability](../observability/README.md) for optional local dashboards; hosted alerting and trace retention are operator responsibilities.
 
+### Logs
+
+The production image starts Uvicorn with `backend/logging.json`: every line is one JSON
+object on stdout with `time`, `level`, `logger` and `message` (access lines add `method`,
+`path` and `status`). Railway reads `level`, so filter real failures with `@level:error`
+instead of every restart appearing as an error. Successful polling calls (heartbeat,
+activity, audio timing, debug samples, ElevenLabs events) and CORS preflights are not
+logged; failures on those paths still are. Local `make be` keeps readable text.
+
 ### Hosted telemetry (Grafana Cloud)
 
 The backend can export traces and metrics straight to an OTLP service such as the free

@@ -12,6 +12,17 @@ type SDK = Pick<
 >;
 export type ElevenFactory = (options: PartialOptions) => Promise<SDK>;
 export type SDKRequest = <T>(path: string, body?: unknown) => Promise<T>;
+/**
+ * Expressive ElevenLabs voices write audio tags such as `[happy]` or `[whispers]` into the
+ * agent transcript. They steer delivery, not content, so captions and history omit them.
+ */
+export function stripAudioTags(text: string): string {
+  return text
+    .replace(/\[[a-z][a-z ]{0,23}\]\s*/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 export function elevenSession(
   store: LiveStore,
   request: SDKRequest,
@@ -103,9 +114,11 @@ export function elevenSession(
         });
         void connectedReport.catch(() => ended('Server connection failed.'));
       },
-      onMessage: ({ message, role, event_id, response_id }) => {
-        if (stopped || !message || message.length > 8192) return;
+      onMessage: ({ message: raw, role, event_id, response_id }) => {
+        if (stopped || !raw || raw.length > 8192) return;
         const speaker = role === 'user' ? 'user' : 'assistant';
+        const message = speaker === 'assistant' ? stripAudioTags(raw) : raw;
+        if (!message) return;
         store.update(
           processEvent(
             store.getSnapshot(),
