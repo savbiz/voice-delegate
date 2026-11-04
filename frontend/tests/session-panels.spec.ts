@@ -91,7 +91,6 @@ test('leaving voice for a secondary tool closes the session and releases media',
   await page.goto('/');
   await page.getByRole('button', { name: 'Start conversation', exact: true }).click();
   await expect(page.locator('#status')).toContainText('Connected');
-  await page.getByText('Tools & examples', { exact: true }).click();
   await page.getByRole('link', { name: 'Offline example', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Start demo', exact: true })).toBeVisible();
   await expect.poll(() => closed).toEqual(['/api/sessions/owned/close']);

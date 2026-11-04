@@ -179,12 +179,6 @@ export function LiveWorkspace({ code, onCode }: { code: string; onCode: (code: s
           pending.
         </p>
       )}
-      <p className="notice">
-        {apiSource === 'personal'
-          ? 'Live voice uses your own provider accounts, which bill you directly.'
-          : 'Live voice uses the platform’s provider accounts and counts against your allowance.'}{' '}
-        Your microphone is requested only when you start.
-      </p>
       {state.sessionUi && state.active && <SpeakingStatus activity={state.speaking} />}
       <div className="session-controls">
         <p id="status" role="status">
@@ -287,6 +281,12 @@ export function LiveWorkspace({ code, onCode }: { code: string; onCode: (code: s
             Stop
           </Button>
         </div>
+        <p id="billing-note" className="muted">
+          {apiSource === 'personal'
+            ? 'Billed to your own provider accounts.'
+            : 'Uses the platform’s accounts and your allowance.'}{' '}
+          The microphone is requested only when you start.
+        </p>
         <div className="actions">
           <Button id="mute-audio" aria-pressed={muted} onClick={() => setMuted((value) => !value)}>
             {muted ? 'Unmute assistant' : 'Mute assistant'}

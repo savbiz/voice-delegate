@@ -49,7 +49,7 @@ zero-dollar estimate does not establish that the call was free.
 
 ## Primary voice workspace
 
-Live voice opens by default. Tools & examples holds the Offline example (a simulated,
+Live voice opens by default. Two peer tabs follow: Offline example (a simulated,
 silent walkthrough) and Project documentation (search of bundled project sources).
 Neither is presented as a voice-provider mode or a general web search. Native links
 support keyboard access, direct `#live`, `#demo`, `#reference` URLs and browser history.

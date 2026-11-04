@@ -69,10 +69,10 @@ test('voice is primary and secondary tools support keyboard navigation and direc
     'aria-current',
     'page',
   );
-  await expect(page.getByRole('link', { name: 'Offline example', exact: true })).toBeHidden();
-  await expect(page.getByRole('link', { name: 'Project documentation', exact: true })).toBeHidden();
-  await page.getByText('Tools & examples', { exact: true }).focus();
-  await page.keyboard.press('Enter');
+  await expect(
+    page.getByRole('link', { name: 'Project documentation', exact: true }),
+  ).toBeVisible();
+  await page.getByRole('link', { name: 'Live voice', exact: true }).focus();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: 'Offline example', exact: true })).toBeFocused();
   await page.keyboard.press('Enter');
