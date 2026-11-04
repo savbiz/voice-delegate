@@ -85,6 +85,24 @@ def test_history_merges_fragments_and_clamps_memory() -> None:
     assert count_tokens(history.context()) <= 100
 
 
+def test_latest_request_joins_split_user_turns_since_the_last_reply() -> None:
+    history = History()
+    # ElevenLabs-style final messages without timestamps stay separate turns.
+    history.append(Transcript("user", "Che ha fatto ieri", 0, 0, committed=True))
+    history.append(Transcript("assistant", "Controllo subito.", 0, 0, committed=True))
+    history.append(Transcript("user", "Vorrei un corso di infor", 0, 0, committed=True))
+    history.append(Transcript("assistant", "   ", 0, 0, committed=True))
+    history.append(Transcript("user", "matica", 0, 0, committed=True))
+    assert history.goal() == "matica"
+    assert history.latest_request() == "Vorrei un corso di infor matica"
+    # A reply that follows (or overlaps) the request does not hide it.
+    history.append(Transcript("assistant", "Certo.", 0, 0, committed=True))
+    assert history.latest_request() == "Vorrei un corso di infor matica"
+    history.append(Transcript("user", "Grazie", 0, 0, committed=True))
+    assert history.latest_request() == "Grazie"
+    assert History().latest_request() == ""
+
+
 async def test_delegation_result_and_duplicate_are_delivered_once() -> None:
     provider = FakeProvider()
     worker = CountingWorker()

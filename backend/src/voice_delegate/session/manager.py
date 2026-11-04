@@ -296,7 +296,7 @@ class SessionManager:
                     session.history.append(event)
                     self._seal_history(session, include_latest=event.committed)
                     session.recap.observe(
-                        event, session.history.goal(), session.history.latest_reply()
+                        event, session.history.latest_request(), session.history.latest_reply()
                     )
                     if self.settings.intent_cancellation and event.text.strip():
                         self.intent.pause(session.portfolio)
