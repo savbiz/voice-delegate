@@ -16,7 +16,7 @@ The generated launcher icons and splash screens are placeholders, not store asse
 
 ## Build the packaged frontend
 
-Use Node.js 24 and the declared pnpm version. Run commands from `frontend/` only:
+Use Node.js 26 and the declared pnpm version. Run commands from `frontend/` only:
 
 ```sh
 cd frontend
