@@ -175,3 +175,24 @@ async def test_public_demo_environment_requires_invites_and_persists_quotas(
         "SELECT SUM(sessions) FROM reservations"
     ).fetchone() == (1,)
     await manager.aclose()
+
+
+async def test_unlimited_invitation_skips_daily_allowance_but_not_concurrency(
+    public_settings: PublicSettingsFactory, tmp_path: Path, fake_clock: FakeClock
+) -> None:
+    settings = public_settings(tmp_path, daily_sessions_per_user=1).model_copy(
+        update={"unlimited_invites": ["alice"]}
+    )
+    manager = SessionManager(FakeProvider(), settings, clock=fake_clock, admission_clock=fake_clock)
+    for _ in range(5):
+        session = manager.create("alice")
+        with pytest.raises(SessionError) as concurrent:
+            manager.create("alice")
+        assert concurrent.value.status == 429
+        await manager.close(session)
+    # The shared budget is untouched, and other invitations keep their limits.
+    await manager.close(manager.create("bob"))
+    with pytest.raises(SessionError) as daily:
+        manager.create("bob")
+    assert daily.value.status == 429
+    await manager.aclose()

@@ -157,6 +157,8 @@ class Settings(BaseSettings):
     concurrent_sessions_per_user: int = Field(default=1, ge=1, le=10)
     daily_voice_seconds_per_user: int = Field(default=1500, ge=1)
     daily_voice_seconds_global: int = Field(default=6000, ge=1)
+    # Invitation names (the operator's own, for example) that skip daily allowances.
+    unlimited_invites: list[str] = Field(default_factory=list, max_length=8)
     max_delegations_per_session: int = Field(default=8, ge=1, le=64)
     otel_enabled: bool = False
     otel_endpoint: str = ""

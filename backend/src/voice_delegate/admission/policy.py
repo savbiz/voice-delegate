@@ -95,8 +95,18 @@ class Admission:
         seconds = math.ceil(self.settings.session_ttl_seconds + 1) * (
             2 if (self.settings.fallback_enabled if recovery is None else recovery) else 1
         )
+        unlimited = principal in self.settings.unlimited_invites
         try:
-            self._reserve(database, day, identity, seconds, now, session_id, personal=personal)
+            self._reserve(
+                database,
+                day,
+                identity,
+                seconds,
+                now,
+                session_id,
+                personal=personal,
+                unlimited=unlimited,
+            )
         except SessionError:
             database.rollback()
             raise
@@ -114,6 +124,7 @@ class Admission:
         session_id: str,
         *,
         personal: bool = False,
+        unlimited: bool = False,
     ) -> None:
         database.execute("BEGIN IMMEDIATE")
         database.execute("DELETE FROM reservations WHERE day < ?", (day,))
@@ -132,7 +143,9 @@ class Admission:
             1 if personal else self.settings.concurrent_sessions_per_user
         ):
             raise SessionError(429, "Shared session capacity reached")
-        if not personal:
+        # Unlimited invitations skip daily allowances and do not draw on the shared budget;
+        # concurrency limits above still apply.
+        if not personal and not unlimited:
             row = database.execute(
                 "SELECT sessions, seconds FROM reservations WHERE day=? AND principal=?",
                 (day, identity),

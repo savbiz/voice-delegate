@@ -60,6 +60,7 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `concurrent_sessions_per_user` | `VOICE_CONCURRENT_SESSIONS_PER_USER` | `1` | `{"type": "integer", "minimum": 1, "maximum": 10}` |
 | `daily_voice_seconds_per_user` | `VOICE_DAILY_VOICE_SECONDS_PER_USER` | `1500` | `{"type": "integer", "minimum": 1}` |
 | `daily_voice_seconds_global` | `VOICE_DAILY_VOICE_SECONDS_GLOBAL` | `6000` | `{"type": "integer", "minimum": 1}` |
+| `unlimited_invites` | `VOICE_UNLIMITED_INVITES` | `[]` | `{"type": "array", "items": {"type": "string"}, "maxItems": 8}` |
 | `max_delegations_per_session` | `VOICE_MAX_DELEGATIONS_PER_SESSION` | `8` | `{"type": "integer", "minimum": 1, "maximum": 64}` |
 | `otel_endpoint` | `VOICE_OTEL_ENDPOINT` | `""` | `{"type": "string"}` |
 | `otel_metrics_endpoint` | `VOICE_OTEL_METRICS_ENDPOINT` | `""` | `{"type": "string"}` |

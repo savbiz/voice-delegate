@@ -58,6 +58,7 @@ def test_server_template_boots_with_optional_features_off(
         "VOICE_ELEVENLABS_WEBHOOK_URL",
         "VOICE_ACCESS_REQUEST_URL",
         "VOICE_ACCESS_DATABASE",
+        "VOICE_UNLIMITED_INVITES",
         "VOICE_PUBLIC_API_URL",
     }
     assert set(values) == canonical_names | {"BRAINTRUST_API_KEY"}
