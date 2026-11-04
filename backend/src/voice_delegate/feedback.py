@@ -1,6 +1,12 @@
-"""Bounded diagnostic categories only; never accept conversation content."""
+"""Bounded diagnostic categories and an optional short note the reporter typed.
+
+The app never attaches audio or conversation text. The note holds only what the user writes;
+it is stored with the report, never logged, and deleted with it after seven days.
+"""
 
 import hashlib
+import logging
+import re
 import sqlite3
 import time
 from importlib.metadata import version
@@ -8,9 +14,21 @@ from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+import httpx
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from voice_delegate.session.models import SessionError
+
+logger = logging.getLogger(__name__)
+
+CATEGORY_LABELS = {
+    "wrong_answer": "Wrong answer",
+    "source": "Unhelpful source",
+    "audio": "Audio problem",
+    "connection": "Connection problem",
+    "other": "Other problem",
+}
+LOOKS_LIKE_A_KEY = re.compile(r"[A-Za-z0-9_\-]{32,}")
 
 
 class FeedbackInput(BaseModel):
@@ -19,6 +37,17 @@ class FeedbackInput(BaseModel):
     category: Literal["wrong_answer", "source", "audio", "connection", "other"]
     state: Literal["ready", "connecting", "connected", "working", "busy", "recovering", "ended"]
     adapter: Literal["openai", "azure", "elevenlabs"] | None = None
+    note: str = Field(default="", max_length=500)
+
+    @field_validator("note")
+    @classmethod
+    def plain_note(cls, value: str) -> str:
+        note = " ".join(value.split())
+        # A long unbroken token is almost certainly a pasted API key or invitation code.
+        if LOOKS_LIKE_A_KEY.search(note):
+            message = "The note looks like it contains a key or code; remove it"
+            raise ValueError(message)
+        return note
 
 
 class FeedbackStore:
@@ -35,8 +64,13 @@ class FeedbackStore:
         self.db.execute("PRAGMA secure_delete=ON")
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS feedback (id TEXT PRIMARY KEY, principal TEXT, "
-            "category TEXT, state TEXT, provider TEXT, version TEXT, created REAL)"
+            "category TEXT, state TEXT, provider TEXT, version TEXT, created REAL, note TEXT)"
         )
+        columns = {row[1] for row in self.db.execute("PRAGMA table_info(feedback)")}
+        if "note" not in columns:
+            # Databases created before notes existed keep their reports.
+            self.db.execute("ALTER TABLE feedback ADD COLUMN note TEXT")
+        self.db.commit()
         self.capacity = capacity
         self.purge()
 
@@ -47,47 +81,94 @@ class FeedbackStore:
             )
 
     def submit(self, principal: str, body: FeedbackInput, provider: str) -> str:
+        return self.submit_report(principal, body, provider)[0]
+
+    def submit_report(self, principal: str, body: FeedbackInput, provider: str) -> tuple[str, bool]:
+        """Return (diagnostic ID, whether this call stored a new report rather than a retry)."""
         identity = hashlib.sha256(principal.encode()).hexdigest()
         report_id = str(body.diagnostic_id)
         now = time.time()
         try:
-            self._store(identity, report_id, now, body, provider)
+            created = self._store(identity, report_id, now, body, provider)
         except SessionError:
             self.db.rollback()
             raise
         except sqlite3.Error as exc:
             self.db.rollback()
             raise SessionError(503, "Feedback temporarily unavailable") from exc
-
-        return report_id
+        return report_id, created
 
     def _store(
         self, identity: str, report_id: str, now: float, body: FeedbackInput, provider: str
-    ) -> None:
+    ) -> bool:
         self.db.execute("BEGIN IMMEDIATE")
         self.db.execute("DELETE FROM feedback WHERE created <= ?", (now - self.retention_seconds,))
         row = self.db.execute(
-            "SELECT principal, category, state FROM feedback WHERE id=?", (report_id,)
+            "SELECT principal, category, state, COALESCE(note, '') FROM feedback WHERE id=?",
+            (report_id,),
         ).fetchone()
         if row:
             if row[0] != identity:
                 raise SessionError(404, "Diagnostic report unavailable")
-            if row[1:] != (body.category, body.state):
+            if row[1:] != (body.category, body.state, body.note):
                 raise SessionError(409, "This diagnostic report has already been submitted")
-        else:
-            count = self.db.execute(
-                "SELECT COUNT(*) FROM feedback WHERE principal=? AND created>=?",
-                (identity, now - 86400),
-            ).fetchone()[0]
-            if count >= 5:
-                raise SessionError(429, "Feedback limit reached; try again tomorrow")
-            if self.db.execute("SELECT COUNT(*) FROM feedback").fetchone()[0] >= self.capacity:
-                raise SessionError(503, "Feedback temporarily unavailable")
-            self.db.execute(
-                "INSERT INTO feedback VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (report_id, identity, body.category, body.state, provider, self.version, now),
-            )
+            self.db.commit()
+            return False
+        count = self.db.execute(
+            "SELECT COUNT(*) FROM feedback WHERE principal=? AND created>=?",
+            (identity, now - 86400),
+        ).fetchone()[0]
+        if count >= 5:
+            raise SessionError(429, "Feedback limit reached; try again tomorrow")
+        if self.db.execute("SELECT COUNT(*) FROM feedback").fetchone()[0] >= self.capacity:
+            raise SessionError(503, "Feedback temporarily unavailable")
+        self.db.execute(
+            "INSERT INTO feedback (id, principal, category, state, provider, version, created, "
+            "note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                report_id,
+                identity,
+                body.category,
+                body.state,
+                provider,
+                self.version,
+                now,
+                body.note or None,
+            ),
+        )
         self.db.commit()
+        return True
 
     def close(self) -> None:
         self.db.close()
+
+
+class FeedbackNotifier:
+    """Tell the owner a report arrived, through the access-request ntfy topic.
+
+    The note never leaves this server: the notification carries only the category, provider,
+    interface state and whether a note is attached. Delivery is best effort; the report is
+    already stored when this runs.
+    """
+
+    def __init__(self, url: str, client: httpx.AsyncClient | None = None) -> None:
+        self.url = url
+        self.client = client or httpx.AsyncClient(timeout=5, follow_redirects=False)
+
+    async def notify(self, body: FeedbackInput, provider: str) -> None:
+        message = f"{CATEGORY_LABELS[body.category]} · {provider} · {body.state}"
+        message += f"\nReport {str(body.diagnostic_id)[:8]}"
+        if body.note:
+            message += "\nA note is attached; read it on the server (it is not sent here)."
+        try:
+            response = await self.client.post(
+                self.url,
+                content=message.encode(),
+                headers={"Title": "New feedback to read", "Tags": "bug"},
+            )
+            response.raise_for_status()
+        except httpx.HTTPError:
+            logger.warning("Feedback notification could not be delivered")
+
+    async def aclose(self) -> None:
+        await self.client.aclose()

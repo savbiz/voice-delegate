@@ -174,11 +174,17 @@ async def test_approval_emails_a_code_that_authenticates(
         assert str(notice.url) == URL
         assert notice.headers["Cache"] == "no"
         code = notice.content.decode().split("\n")[1]
-        action = notice.headers["Actions"]
-        assert action.startswith("view, Send email, mailto:visitor@example.com?subject=")
-        assert "," not in action.split("mailto:")[1].removesuffix(", clear=true")
-        assert ";" not in action
-        assert f"Invitation%20code%3A%20{code}" in action
+        gmail, mail = notice.headers["Actions"].split("; ")
+        assert gmail.startswith(
+            "view, Gmail, https://mail.google.com/mail/?view=cm&fs=1&to=visitor@example.com&su="
+        )
+        assert mail.startswith("view, Mail app, mailto:visitor@example.com?subject=")
+        for action, url_start in ((gmail, "https://"), (mail, "mailto:")):
+            # Commas and semicolons separate ntfy actions, so the URLs must not contain them.
+            url = action.split(url_start, 1)[1].removesuffix(", clear=true")
+            assert "," not in url
+            assert ";" not in url
+            assert f"Invitation%20code%3A%20{code}" in url
         assert (await client.post(approve)).status_code == 409
         assert (await client.post(deny)).status_code == 409
         session = await client.post(
@@ -194,6 +200,33 @@ async def test_approval_emails_a_code_that_authenticates(
     assert stored == [(None, None, "approved")]
     assert store.db.execute("SELECT token_hash FROM invites").fetchone()[0] != code
     store.close()
+
+
+async def test_ntfy_web_app_can_read_only_decision_results(
+    tmp_path: Path, asgi_client: ASGIClientFactory
+) -> None:
+    seen: list[httpx.Request] = []
+    requests = approval_flow(tmp_path, seen)
+    settings = Settings(access_request_url=URL, invite_tokens={"owner": SecretStr("o" * 32)})
+    app = create_app(settings, FakeProvider(), requests)
+    ntfy = {"Origin": "https://ntfy.example"}
+    async with asgi_client(app) as client:
+        await client.post(
+            "/api/access-request",
+            json={"contact": "a@example.com"},
+            headers={"Origin": "http://localhost:5173"},
+        )
+        approve, deny = buttons(seen[-1])
+        # A simple POST from the notification origin: the result must be readable so ntfy
+        # clears the buttons, and a repeated tap must show the real conflict, not a fetch error.
+        for path, status in ((approve, 200), (approve, 409), (deny, 409)):
+            response = await client.post(path, headers=ntfy)
+            assert response.status_code == status
+            assert response.headers["Access-Control-Allow-Origin"] == "https://ntfy.example"
+        other = await client.post(approve, headers={"Origin": "https://evil.example"})
+        assert "Access-Control-Allow-Origin" not in other.headers
+        config = await client.post("/api/config", headers=ntfy)
+        assert "Access-Control-Allow-Origin" not in config.headers
 
 
 async def test_denial_repeats_and_failed_email(tmp_path: Path) -> None:

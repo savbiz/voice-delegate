@@ -40,10 +40,16 @@ export function SourcesPanel({ sources }: { sources: Source[] }) {
   );
 }
 
-export function RecapPanel({ recap }: { recap: string }) {
+export function RecapPanel({ recap, summary = '' }: { recap: string; summary?: string }) {
   return (
     <details className="secondary-panel">
       <summary>Conversation recap</summary>
+      {summary && (
+        <p id="summary" className="recap-summary">
+          <strong>Generated summary</strong> (written by a model at the end; may be inaccurate):{' '}
+          {summary}
+        </p>
+      )}
       <p className="muted">
         Latest request and reply from the transcript. Interrupted work may still be incomplete.
       </p>
@@ -100,15 +106,19 @@ export function FeedbackPanel({
   state: LiveState;
   personal: boolean;
   code: string;
-  onSend: (category: string) => void;
+  onSend: (category: string, note: string) => void;
 }) {
   const [category, setCategory] = useState('wrong_answer');
+  const [note, setNote] = useState('');
+  // Mirrors the server check: a long unbroken token is almost certainly a pasted key or code.
+  const keyLike = /[A-Za-z0-9_-]{32,}/.test(note);
   return (
     <details className="secondary-panel">
       <summary>Report a problem</summary>
       <p>
-        Reports include a category and app diagnostics, without audio or conversation text. They are
-        kept for seven days.
+        Reports include a category, app diagnostics and any note you write. The app never attaches
+        audio or conversation text. Reports are kept for seven days; do not include keys or personal
+        details.
       </p>
       <label>
         Problem category{' '}
@@ -125,11 +135,27 @@ export function FeedbackPanel({
           <option value="other">Other problem</option>
         </select>
       </label>
+      <label>
+        What happened? (optional)
+        <textarea
+          id="feedback-note"
+          maxLength={500}
+          rows={3}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          disabled={state.reportLocked}
+        />
+      </label>
+      {keyLike && (
+        <p className="muted" role="alert">
+          The note looks like it contains a key or code. Remove it before sending.
+        </p>
+      )}
       <Button
         id="send-feedback"
-        disabled={personal || !code || state.reportPending || state.reportSent}
+        disabled={personal || !code || keyLike || state.reportPending || state.reportSent}
         onClick={() => {
-          onSend(category);
+          onSend(category, note);
         }}
       >
         Send report

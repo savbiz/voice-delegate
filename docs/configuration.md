@@ -41,6 +41,7 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `delivery_silence_seconds` | `VOICE_DELIVERY_SILENCE_SECONDS` | `0.6` | `{"type": "number", "minimum": 0.3, "maximum": 5}` |
 | `delivery_preamble` | `VOICE_DELIVERY_PREAMBLE` | `"About your request"` | `{"type": "string", "minLength": 1, "maxLength": 80}` |
 | `decisions_cancel` | `VOICE_DECISIONS_CANCEL` | `false` | `{"type": "boolean"}` |
+| `session_summary` | `VOICE_SESSION_SUMMARY` | `false` | `{"type": "boolean"}` |
 | `decisions_threshold` | `VOICE_DECISIONS_THRESHOLD` | `0.85` | `{"type": "number", "minimum": 0.5, "maximum": 1}` |
 | `decisions_timeout_seconds` | `VOICE_DECISIONS_TIMEOUT_SECONDS` | `1` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
 | `decisions_max_calls` | `VOICE_DECISIONS_MAX_CALLS` | `60` | `{"type": "integer", "minimum": 1, "maximum": 300}` |

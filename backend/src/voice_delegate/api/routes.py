@@ -10,7 +10,7 @@ from voice_delegate_agent.reference import search, source_by_id
 
 from voice_delegate.access_request import AccessRequestInput, AccessRequests
 from voice_delegate.debug import DebugSample
-from voice_delegate.feedback import FeedbackInput, FeedbackStore
+from voice_delegate.feedback import FeedbackInput, FeedbackNotifier, FeedbackStore
 from voice_delegate.personal import PersonalSession, create_personal_session
 from voice_delegate.providers.elevenlabs import ElevenLabsProvider
 from voice_delegate.providers.elevenlabs_session import ElevenLabsConnection
@@ -76,6 +76,7 @@ def build_router(
     feedback: FeedbackStore | None = None,
     elevenlabs: ElevenLabsProvider | None = None,
     access_requests: AccessRequests | None = None,
+    feedback_notifier: FeedbackNotifier | None = None,
 ) -> APIRouter:
     """Bind a router to one lifecycle-owned manager, avoiding untyped app state."""
 
@@ -99,7 +100,10 @@ def build_router(
             raise HTTPException(503, "Feedback requires a configured invitation or access code")
         provider = body.adapter if body.adapter in manager.providers else None
         provider = provider or manager.settings.voice_provider
-        return {"diagnostic_id": feedback.submit(principal, body, provider)}
+        report_id, created = feedback.submit_report(principal, body, provider)
+        if created and feedback_notifier is not None:
+            await feedback_notifier.notify(body, provider)
+        return {"diagnostic_id": report_id}
 
     @router.post("/access-request", status_code=202)
     async def request_access(body: AccessRequestInput) -> dict[str, str]:
@@ -318,9 +322,11 @@ def build_router(
     @router.post("/sessions/{session_id}/close")
     async def close(session: Annotated[Session, Depends(owned)]) -> Closed:
         manager = root.owner_for(session)
-        finalized = await manager.close(session)
+        finalized = await manager.close(session, summarize=True)
         return Closed(
-            finalized=finalized, costs=session.costs.snapshot() if session.costs else None
+            finalized=finalized,
+            costs=session.costs.snapshot() if session.costs else None,
+            summary=session.summary,
         )
 
     @router.post("/sessions/{session_id}/interrupt")

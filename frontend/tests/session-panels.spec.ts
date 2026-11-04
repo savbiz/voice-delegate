@@ -161,8 +161,10 @@ test('a server with no configured provider explains it and blocks Start', async 
 
 test('request access sends a bounded request and reports the result', async ({ page }) => {
   let body: unknown;
+  let requests = 0;
   await page.route('**/api/**', (route) => {
     if (route.request().url().endsWith('/api/access-request')) {
+      requests += 1;
       body = route.request().postDataJSON();
       return route.fulfill({ status: 202, json: { status: 'sent' } });
     }
@@ -182,8 +184,13 @@ test('request access sends a bounded request and reports the result', async ({ p
   await expect(send).toBeDisabled();
   await page.getByLabel('How to reach you').fill('visitor@example.com');
   await page.getByLabel('Note (optional)').fill('Curious about the demo');
-  await send.click();
+  await expect(send).toHaveClass(/\bbutton\b/);
+  await send.dblclick();
   await expect(page.getByRole('status').filter({ hasText: 'Request sent' })).toBeVisible();
+  // Once sent, the form is replaced by the confirmation and cannot be submitted again.
+  await expect(send).toHaveCount(0);
+  await expect(page.getByLabel('How to reach you')).toHaveCount(0);
+  expect(requests).toBe(1);
   expect(body).toEqual({ contact: 'visitor@example.com', note: 'Curious about the demo' });
 });
 

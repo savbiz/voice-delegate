@@ -49,6 +49,7 @@ enable flags are ignored. Remaining operational switches include:
 | `VOICE_API_DOCS` | Production API documentation, default false; local docs are enabled. |
 | `VOICE_TRUST_PROXY` | Trust forwarded addresses for rate limiting only behind the configured proxy hops, default false. |
 | `VOICE_DECISIONS_CANCEL` | Optional semantic cancellation adviser, default false; separate from a Decisions worker planner. |
+| `VOICE_SESSION_SUMMARY` | Optional generated recap at user close, default false. One worker-model call on the bounded recent transcript, with the session's OpenAI key (the visitor's own key for personal sessions); no key or an offline worker means no summary. ElevenLabs sessions then also send their transcript to OpenAI. Expiry cleanup never summarizes, and any failure keeps the extractive recap. |
 | `VOICE_WORKER_EXECUTION` | `local` by default; `remote` selects the authenticated private worker service. |
 | `VOICE_WORKER_MODE` | Automatically OpenAI with a key, otherwise offline; explicit `offline`, `openai` or `decisions` overrides. |
 

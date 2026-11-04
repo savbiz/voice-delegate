@@ -33,6 +33,8 @@ class Session:
     )
     preferences: VoicePreferences = field(default_factory=VoicePreferences)
     recap: Recap = field(default_factory=Recap)
+    # Generated at user close when enabled; None means use the extractive recap.
+    summary: str | None = None
     principal: str = field(default="local", repr=False)
     debug: DebugRecording | None = field(default=None, repr=False)
     adapter: str = ""

@@ -33,6 +33,11 @@ test('provider credits and USD remain separate from estimated application costs'
     final: true,
   };
   expect(costText(value)).toContain('ElevenLabs usage has not been reported yet');
+  // With a bundled ElevenLabs rate the voice is priced, but the receipt is still pending.
+  expect(costText({ ...value, partial: false, unpriced: [], adapters: ['elevenlabs'] })).toContain(
+    'ElevenLabs usage has not been reported yet',
+  );
+  expect(costText({ ...value, unpriced: [], adapters: ['openai'] })).not.toContain('ElevenLabs');
   const text = costText({
     ...value,
     provider_usage: {

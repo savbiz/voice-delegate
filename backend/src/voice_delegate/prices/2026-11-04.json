@@ -1,6 +1,6 @@
 {
-  "version": "2026-11-03-public-assumptions-v2",
-  "date": "2026-11-03",
+  "version": "2026-11-04-public-assumptions-v3",
+  "date": "2026-11-04",
   "rates": {
     "voice.live.second": {
       "usd": 0.0008333333333333334,
@@ -15,8 +15,8 @@
       "source": "Assumed equal to https://developers.openai.com/api/docs/models/gpt-live-1; Azure publishes no gpt-live-1 meter (only gpt-live-transcribe, https://prices.azure.com/api/retail/prices)"
     },
     "voice.elevenlabs.second": {
-      "usd": null,
-      "source": "https://elevenlabs.io/pricing"
+      "usd": 0.0013333333333333333,
+      "source": "Assumed https://elevenlabs.io/pricing/api Agents rate of $0.08 per additional minute (same on all plans); excludes included plan minutes, LLM usage and $0.16/minute burst above the concurrency limit"
     },
     "worker.gpt-6-luna.input_token": {
       "usd": 1.0000000000000001e-07,

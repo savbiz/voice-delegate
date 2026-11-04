@@ -112,6 +112,8 @@ class Settings(BaseSettings):
     delivery_silence_seconds: float = Field(default=0.6, ge=0.3, le=5)
     delivery_preamble: str = Field(default="About your request", min_length=1, max_length=80)
     decisions_cancel: bool = False
+    # Opt-in: one worker-model call at user close; needs an OpenAI key and a non-offline worker.
+    session_summary: bool = False
     decisions_threshold: float = Field(default=0.85, ge=0.5, le=1)
     decisions_timeout_seconds: float = Field(default=1, gt=0, le=5)
     decisions_max_calls: int = Field(default=60, ge=1, le=300)

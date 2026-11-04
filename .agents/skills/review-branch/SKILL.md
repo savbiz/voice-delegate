@@ -39,7 +39,7 @@ git diff --stat origin/main...<branch>
 - If squashed upstream commits make the replay conflict, abort. Instead build a single
   commit whose tree equals the old merge tree on top of `origin/main`, then cherry-pick
   the remaining unique commits. Verify `git diff <backup> HEAD` is empty.
-- Never push or force-push; tell the author the branch needs a force push.
+- Never force-push; tell the author the branch needs a force push.
 
 ## Report
 

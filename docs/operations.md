@@ -34,7 +34,7 @@ Set `VOICE_ACCESS_REQUEST_URL` to an HTTPS [ntfy](https://ntfy.sh) topic URL wit
 
 **Remote approval** additionally needs `VOICE_PUBLIC_API_URL`, the public HTTPS origin of this API (for example `https://voice-delegate-api-production.up.railway.app`); the notification buttons call it. `VOICE_ACCESS_DATABASE` (default `.local/access.sqlite3`) must be on the persistent volume.
 
-The visitor must then enter an email address. The notification carries **Approve** and **Deny** buttons; each is a `POST` to `/access/{id}/{secret}/approve|deny` with a one-time secret, so only the topic's subscribers can decide. Approve creates a new invitation code, stores only its SHA-256 hash and sends a second notification with the code and a **Send email** button: a `mailto:` link that opens your mail app with the recipient, subject and text (including the code) filled in. That notification is published with `Cache: no`, so ntfy.sh does not keep it after delivery; if it cannot be published, the code is revoked and Approve can be pressed again. The code works at once, without a redeploy. Approved principals are pseudonymous (`email-` plus a hash prefix), so quotas and logs never contain the address. The address and note are deleted when the owner decides or after 7 days; a hash of the address is kept for 30 days to ignore repeated requests (and indefinitely for approved addresses). At most 20 requests are accepted per day.
+The visitor must then enter an email address. The notification carries **Approve** and **Deny** buttons; each is a `POST` to `/access/{id}/{secret}/approve|deny` with a one-time secret, so only the topic's subscribers can decide. Approve creates a new invitation code, stores only its SHA-256 hash and sends a second notification with the code and two buttons that open an email with the recipient, subject and text (including the code) filled in: **Gmail** opens Gmail's web compose page, which works from the ntfy web app on a phone (it opens links in the browser, where `mailto:` may not reach your mail app), and **Mail app** is a `mailto:` link. That notification is published with `Cache: no`, so ntfy.sh does not keep it after delivery; if it cannot be published, the code is revoked and Approve can be pressed again. The code works at once, without a redeploy. Approved principals are pseudonymous (`email-` plus a hash prefix), so quotas and logs never contain the address. The address and note are deleted when the owner decides or after 7 days; a hash of the address is kept for 30 days to ignore repeated requests (and indefinitely for approved addresses). At most 20 requests are accepted per day.
 
 Approved requests appear in `make invite-list` as `email-<hash>`; revoke them with `invite-revoke` like any other name.
 
@@ -47,6 +47,7 @@ Approved requests appear in `make invite-list` as `email-<hash>`; revoke them wi
 - `VOICE_SESSION_TTL_SECONDS` bounds a conversation's lifetime. Heartbeat expiry reclaims abandoned sessions; neither heartbeat nor fallback extends the absolute TTL.
 - `VOICE_MAX_DELEGATIONS_PER_SESSION` caps accepted distinct worker requests. An over-limit request does not cancel already-running work.
 - Worker step, duration, result-size and concurrency limits cap application-owned work; they are not a dollar-accurate billing meter.
+- `VOICE_SESSION_SUMMARY` (default false) adds at most one bounded worker-model call per user-closed conversation (about 2,000 input and 300 output tokens). It is counted as a worker call in the session estimate.
 
 Use project-scoped provider keys. Configure provider budget alerts and available hard spending controls; verify whether the selected provider/account treats a budget as a warning or actually rejects additional use. Monitor billed usage separately from local reserved seconds. Disable new sessions and revoke/disable a provider key if uncontrolled provider usage continues. Never assume a local timeout proves upstream billing stopped.
 
@@ -60,9 +61,10 @@ From an administrative shell where the `sqlite3` CLI is available, use read-only
 sqlite3 -readonly /app/.local/quotas.sqlite3 'SELECT day, SUM(sessions), SUM(seconds) FROM reservations GROUP BY day;'
 sqlite3 -readonly /app/.local/quotas.sqlite3 'SELECT COUNT(*), MIN(expires), MAX(expires) FROM leases;'
 sqlite3 -readonly /app/.local/feedback.sqlite3 'SELECT category, state, COUNT(*) FROM feedback GROUP BY category, state;'
+sqlite3 -readonly /app/.local/feedback.sqlite3 "SELECT datetime(created, 'unixepoch'), category, note FROM feedback WHERE note IS NOT NULL ORDER BY created DESC;"
 ```
 
-Quota principals are hashes, not invitation tokens. Leases expire even if release fails. Reservations roll over by UTC day. Feedback has no free-text field, retains reports for seven days, allows five per principal per rolling 24 hours, and caps storage at 10,000 records. Treat backups as sensitive operational data. Use SQLite's backup mechanism or a quiesced consistent volume snapshot; copying a live WAL database file alone is not a safe backup.
+Quota principals are hashes, not invitation tokens. Leases expire even if release fails. Reservations roll over by UTC day. Feedback accepts an optional typed note of at most 500 characters (which may contain whatever the reporter writes, so treat it as personal data). When `VOICE_ACCESS_REQUEST_URL` is set, each new report (not a retry) sends a "New feedback to read" notification to that ntfy topic with the category, provider, interface state, the first eight characters of the diagnostic ID and whether a note is attached; the note itself stays on the server, so read it with the query above. A failed notification is logged and the report is still stored. Feedback retains reports for seven days, allows five per principal per rolling 24 hours, and caps storage at 10,000 records. Treat backups as sensitive operational data. Use SQLite's backup mechanism or a quiesced consistent volume snapshot; copying a live WAL database file alone is not a safe backup.
 
 ## Reset one invitation’s daily allowance
 
@@ -129,9 +131,10 @@ Usage → Cost separately from agent conversations and simulations. These setup 
 are outside the application session ledger; reading an agent configuration through MCP
 is not an Architect chat. See [Architect pricing and usage](https://elevenlabs.io/docs/eleven-agents/operate/architect/pricing).
 
-`finalized=true` means provider closure was confirmed, including a failed call. A partial
-zero-dollar estimate with `unpriced: ["voice.elevenlabs.second"]` means the voice rate is
-unknown. `provider_usage: null` means no provider receipt was available; it is not a
+`finalized=true` means provider closure was confirmed, including a failed call. The bundled
+ElevenLabs voice rate is an assumption ($0.08/minute); `unpriced: ["voice.elevenlabs.second"]`
+appears only with a custom price file that leaves it out. `adapters` lists the voice providers
+the session used. `provider_usage: null` means no provider receipt was available; it is not a
 confirmed zero bill. Never log private keys or conversation contents to investigate this.
 
 ## Rollback while retaining data
@@ -168,9 +171,9 @@ contain conversation content. A normal stream end without finalization is report
 At INFO level, delegation interruption logs distinguish client requests, provider speech
 and timed provider transcripts. These describe worker cancellation, not every audio interruption.
 
-Feedback remains limited to category, diagnostic ID, interface state, provider and version,
-with a pseudonymous quota identity and seven-day retention. It does not save conversations,
-audio or transcripts, and its ID is not a session-log correlation key. Use the report time
+Feedback remains limited to category, diagnostic ID, interface state, provider, version and an
+optional note the reporter types, with a pseudonymous quota identity and seven-day retention. It
+does not save conversations, audio or transcripts, and its ID is not a session-log correlation key. Use the report time
 alongside local server logs. Do not paste keys or invitation codes into bug reports.
 
 ## Opt-in server session recording

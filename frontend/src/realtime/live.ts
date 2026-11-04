@@ -30,7 +30,8 @@ export function createLiveSession(
   const sounds = new ConnectionSounds();
   let diagnosticId = crypto.randomUUID();
   let reportBody:
-    { diagnostic_id: string; category: string; state: string; adapter?: string } | undefined;
+    | { diagnostic_id: string; category: string; state: string; adapter?: string; note?: string }
+    | undefined;
   let reportSent = false;
   let reportPending = false;
   function showState(phase: Phase, status: string, help: string): void {
@@ -200,11 +201,12 @@ export function createLiveSession(
     store.update(endedWorkerState(store.getSnapshot()));
     if (owner) {
       const close = () =>
-        request<{ finalized: boolean; costs?: CostSummary }>(
+        request<{ finalized: boolean; costs?: CostSummary; summary?: string | null }>(
           `/sessions/${owner.id}/close`,
           owner,
           undefined,
-          5000,
+          // Allows an opt-in server-side summary (bounded to about 7 seconds) to finish.
+          12000,
         );
       const closing =
         owner.debugRecording && userStopped
@@ -212,7 +214,11 @@ export function createLiveSession(
           : close();
       void closing
         .then((result) => {
-          if (closedAttempt === attemptId) store.update({ costs: result.costs });
+          if (closedAttempt === attemptId)
+            store.update({
+              costs: result.costs,
+              summary: typeof result.summary === 'string' ? result.summary.slice(0, 600) : '',
+            });
           if (closedAttempt === attemptId && !result.finalized)
             store.update({ status: message + ' Provider finalization unconfirmed.' });
         })
@@ -398,6 +404,7 @@ export function createLiveSession(
         decisionCostUsd: 0,
         sources: [],
         recap: 'No conversation yet.',
+        summary: '',
       });
       if (!reportPending) {
         diagnosticId = crypto.randomUUID();
@@ -776,7 +783,7 @@ export function createLiveSession(
     }
   }
 
-  const onFeedback = async (category: string) => {
+  const onFeedback = async (category: string, note = '') => {
     if (reportPending || reportSent || !getAccessCode()) return;
     reportPending = true;
     store.update({ reportPending: true, reportLocked: true });
@@ -785,6 +792,8 @@ export function createLiveSession(
       category,
       state: store.getSnapshot().phase,
       ...(getPreferences().adapter ? { adapter: getPreferences().adapter } : {}),
+      // Fixed with the first attempt, so a retry repeats the same report.
+      ...(note.trim() ? { note: note.split(/\s+/).join(' ').trim().slice(0, 500) } : {}),
     };
     store.update({ feedbackStatus: 'Sending report…' });
     try {

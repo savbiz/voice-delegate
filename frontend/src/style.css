@@ -55,7 +55,8 @@ body {
 }
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 .button,
@@ -104,6 +105,7 @@ select {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 summary:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--accent-deep);
@@ -197,7 +199,8 @@ h2 {
   text-transform: uppercase;
 }
 input,
-select {
+select,
+textarea {
   width: 100%;
   margin-top: var(--space-2);
   padding: var(--space-3);
@@ -208,6 +211,10 @@ select {
 }
 select {
   max-width: 22rem;
+}
+textarea {
+  display: block;
+  resize: vertical;
 }
 audio {
   max-width: 100%;
@@ -467,6 +474,23 @@ fieldset label {
   cursor: pointer;
   font-size: 0.85rem;
   color: var(--muted, inherit);
+}
+.request-access .button {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+.recap-summary {
+  padding: var(--space-3);
+  border-left: 3px solid var(--accent-line);
+  background: var(--accent-soft);
+  border-radius: var(--radius-control);
+}
+.request-access-sent {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-3);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-control);
+  background: var(--accent-soft);
 }
 .api-access .show-keys {
   display: flex;

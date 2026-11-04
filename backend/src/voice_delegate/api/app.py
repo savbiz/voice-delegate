@@ -17,7 +17,7 @@ from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 from voice_delegate.access_request import AccessRequests, Approval
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.delegation.planner import build_planner
-from voice_delegate.feedback import FeedbackStore
+from voice_delegate.feedback import FeedbackNotifier, FeedbackStore
 from voice_delegate.limits.http import BodyLimitMiddleware
 from voice_delegate.limits.ratelimit import RateLimitMiddleware
 from voice_delegate.observability.metrics import Metrics, configure_metrics
@@ -32,6 +32,7 @@ from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
 
 from .elevenlabs_webhook import build_webhook_router
+from .notification_cors import NotificationActionCors, origin_of
 from .routes import build_access_router, build_router
 
 
@@ -122,6 +123,12 @@ def create_app(
         or settings.public_api_url
         else None
     )
+    # New reports ping the owner on the access-request topic; notes stay on this server.
+    feedback_notifier = (
+        FeedbackNotifier(settings.access_request_url)
+        if feedback is not None and settings.access_request_url
+        else None
+    )
 
     async def clean_feedback() -> None:
         while True:
@@ -178,6 +185,8 @@ def create_app(
                 await feedback_janitor
             if feedback is not None:
                 feedback.close()
+            if feedback_notifier is not None:
+                await feedback_notifier.aclose()
             if access_requests is not None:
                 await access_requests.aclose()
             with suppress(asyncio.CancelledError):
@@ -210,6 +219,9 @@ def create_app(
         allow_methods=["POST"],
         allow_headers=["Content-Type", "X-Session-Key", "Authorization"],
     )
+    if access_requests is not None and access_requests.store is not None:
+        # Approve/Deny buttons in the ntfy web app call /access/ from the notification origin.
+        app.add_middleware(NotificationActionCors, origin=origin_of(access_requests.url))
     # Wrap CORS too: preflights must pass host validation and consume the same IP budget.
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
     app.add_middleware(
@@ -242,7 +254,9 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    app.include_router(build_router(manager, feedback, elevenlabs, access_requests))
+    app.include_router(
+        build_router(manager, feedback, elevenlabs, access_requests, feedback_notifier)
+    )
     app.include_router(build_webhook_router(manager))
     if access_requests is not None and access_requests.store is not None:
         app.include_router(build_access_router(access_requests))

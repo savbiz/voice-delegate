@@ -145,7 +145,7 @@ All `/api` routes require the configured exact Origin. Session, reference and fe
 | `POST /api/sessions/{id}/token` | 501 for GPT-Live; adapter capability boundary |
 | `POST /api/reference/search` | Search the bundled corpus with a bounded query |
 | `POST /api/reference/{id}` | Read one source excerpt by corpus ID |
-| `POST /api/feedback` | Store a bounded diagnostic report without conversation content |
+| `POST /api/feedback` | Store a bounded diagnostic report and an optional typed note, without conversation content |
 
 ## Private worker service API
 
@@ -271,7 +271,9 @@ The UI retains last-reported task states after session end; interrupted narratio
 automatically repeated. Transcript bubbles group consecutive segments from the same speaker
 without changing the underlying provider transcript events. The backend separately reconstructs
 bounded conversational turns across overlapping speakers for recap and worker context, while
-keeping sealed provider segments for fallback replay. Delegation context explicitly identifies
+keeping sealed provider segments for fallback replay. The recap's latest request joins the user
+turns since the previous assistant reply, because providers can split one spoken request into
+separate final transcripts. Delegation context explicitly identifies
 the preceding user turn alongside bounded conversation text. Both are untrusted data; the worker
 uses the recent topic to resolve corrections and asks for clarification when ambiguous.
 

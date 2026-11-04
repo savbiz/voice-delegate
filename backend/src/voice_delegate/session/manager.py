@@ -12,6 +12,8 @@ from uuid import uuid4
 
 from opentelemetry import trace
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
+from voice_delegate_agent.summary import SUMMARY_TIMEOUT_SECONDS, OpenAISummarizer, Summarizer
+from voice_delegate_agent.usage import usage_sink
 
 from voice_delegate.admission.policy import Admission
 from voice_delegate.config import Settings
@@ -61,6 +63,7 @@ class SessionManager:
         admission_clock: Callable[[], float] = time.time,
         decider: Decider | None = None,
         providers: dict[str, RealtimeProvider] | None = None,
+        summarizer: Summarizer | None = None,
     ) -> None:
         # Persistent leases use epoch time independently of monotonic session deadlines.
         self.admission = Admission(settings, clock=admission_clock)
@@ -83,6 +86,16 @@ class SessionManager:
                 timeout=settings.decisions_timeout_seconds,
             )
         self.intent = IntentRunner(self.delegator, settings, clock, self.decider)
+        self.summarizer = summarizer
+        key = settings.openai_api_key.get_secret_value()
+        if (
+            self.summarizer is None
+            and settings.session_summary
+            and settings.worker_mode != "offline"
+            and key
+        ):
+            # Personal sessions get their own manager, so this bills the session's own key.
+            self.summarizer = OpenAISummarizer(key, settings.worker_model)
         self.prices = Prices.load(settings.price_file) if settings.cost_estimates else None
         self.providers = providers or {settings.voice_provider: provider}
         self.provider = provider
@@ -296,7 +309,7 @@ class SessionManager:
                     session.history.append(event)
                     self._seal_history(session, include_latest=event.committed)
                     session.recap.observe(
-                        event, session.history.goal(), session.history.latest_reply()
+                        event, session.history.latest_request(), session.history.latest_reply()
                     )
                     if self.settings.intent_cancellation and event.text.strip():
                         self.intent.pause(session.portfolio)
@@ -504,10 +517,13 @@ class SessionManager:
                 else:
                     return session.connection.answer
 
-    async def close(self, session: Session) -> bool:
-        """Idempotently close upstream before canceling the event consumer."""
+    async def close(self, session: Session, *, summarize: bool = False) -> bool:
+        """Idempotently close upstream before canceling the event consumer.
+
+        `summarize` is set only for a user-initiated close; expiry cleanup never pays for one.
+        """
         if session.owner is not None and session.owner is not self:
-            return await session.owner.close(session)
+            return await session.owner.close(session, summarize=summarize)
         try:
             async with session.lock:
                 if session.state == "closed":
@@ -525,6 +541,9 @@ class SessionManager:
                     if watcher is not None and watcher is not asyncio.current_task():
                         watcher.cancel()
                         await asyncio.gather(watcher, return_exceptions=True)
+                    if summarize and self.summarizer is not None:
+                        # Before the cost ledger is finalized, so the call is in the estimate.
+                        session.summary = await self._summarize(session, self.summarizer)
                     if session.debug:
                         session.debug.close(session.finalized and session.previous_finalized)
                     if session.costs is not None:
@@ -570,6 +589,22 @@ class SessionManager:
             except Exception:
                 logger.exception("Session janitor failed")
 
+    async def _summarize(self, session: Session, summarizer: Summarizer) -> str | None:
+        """Best effort: any failure keeps the extractive recap."""
+        history = session.history
+        if not any(
+            t.speaker == "user" and t.text.strip() for t in history.turns or history.entries
+        ):
+            return None
+        try:
+            with usage_sink(session.costs.record if session.costs is not None else None):
+                async with asyncio.timeout(SUMMARY_TIMEOUT_SECONDS + 1):
+                    summary = await summarizer.summarize(history.context())
+        except Exception:  # The summary is optional; never block close.
+            logger.warning("Session summary unavailable")
+            return None
+        return summary or None
+
     async def aclose(self) -> None:
         """Drain all owned sessions before releasing the provider."""
         self._shutting_down = True
@@ -582,6 +617,8 @@ class SessionManager:
         await self.delegator.aclose()
         if self.decider is not None:
             await self.decider.aclose()
+        if self.summarizer is not None:
+            await self.summarizer.aclose()
         for provider in {id(p): p for p in self.providers.values()}.values():
             await provider.aclose()
         self.admission.close()

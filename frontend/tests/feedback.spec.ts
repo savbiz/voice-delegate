@@ -35,3 +35,34 @@ test('feedback retries the same bounded report and prevents duplicate clicks', a
     state: 'ready',
   });
 });
+
+test('feedback sends an optional note and refuses one that looks like a key', async ({ page }) => {
+  const bodies: unknown[] = [];
+  await page.route('**/api/feedback', (route) => {
+    const body = route.request().postDataJSON();
+    bodies.push(body);
+    return route.fulfill({ status: 201, json: { diagnostic_id: body.diagnostic_id } });
+  });
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Live voice', exact: true }).click();
+  await page.getByText('Report a problem', { exact: true }).click();
+  await page.getByLabel('Personal invitation code').fill('invitation');
+  const note = page.getByLabel('What happened? (optional)');
+  const send = page.getByRole('button', { name: 'Send report' });
+  await note.fill('my key sk-' + 'a'.repeat(40));
+  await expect(page.getByRole('alert')).toContainText('looks like it contains a key');
+  await expect(send).toBeDisabled();
+  await note.fill('  It said Juve won,\n but they lost  ');
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(page.locator('#feedback-status')).toContainText('Report received');
+  await expect(note).toBeDisabled();
+  expect(bodies).toEqual([
+    {
+      diagnostic_id: expect.any(String),
+      category: 'wrong_answer',
+      state: 'ready',
+      note: 'It said Juve won, but they lost',
+    },
+  ]);
+});

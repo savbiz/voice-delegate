@@ -80,6 +80,22 @@ class History:
             "",
         )
 
+    def latest_request(self) -> str:
+        """Join the latest run of user turns not separated by an assistant reply, for the recap.
+
+        Providers can split one spoken request into separate final transcripts (a pause, or
+        ElevenLabs messages that carry no timestamps), so the last turn alone may be a fragment.
+        Assistant turns after the latest user turn are skipped: audio streams overlap.
+        """
+        parts: list[str] = []
+        for item in reversed(self.turns or self.entries):
+            text = item.text.strip()
+            if item.speaker == "assistant" and text and parts:
+                break
+            if item.speaker == "user" and text:
+                parts.append(text)
+        return truncate(" ".join(reversed(parts)), 512)
+
     @staticmethod
     def _render(entries: list[Transcript]) -> str:
         return "\n".join(f"{item.speaker}: {item.text}" for item in entries)

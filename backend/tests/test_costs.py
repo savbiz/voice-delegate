@@ -42,13 +42,20 @@ def test_ledger_snapshot_close_and_unknown_rates() -> None:
     assert ledger.snapshot().final
     ledger.close(False)
     assert not ledger.snapshot().partial
-    unknown = CostLedger(Prices.load(), "elevenlabs", "other-model", lambda: now[0], Metrics())
+    unknown = CostLedger(Prices.load(), "realtime", "other-model", lambda: now[0], Metrics())
     unknown.connect()
     now[0] += 10
     unknown.record(Usage(input_tokens=1))
     unknown.close(False)
     assert unknown.snapshot().partial
-    assert "voice.elevenlabs.second" in unknown.snapshot().unpriced
+    assert "voice.realtime.second" in unknown.snapshot().unpriced
+    assert unknown.snapshot().adapters == ["realtime"]
+    eleven = CostLedger(Prices.load(), "elevenlabs", "gpt-6-luna", lambda: now[0], Metrics())
+    eleven.connect()
+    now[0] += 60
+    eleven.close(True)
+    assert "voice.elevenlabs.second" not in eleven.snapshot().unpriced
+    assert eleven.snapshot().components["voice"] == pytest.approx(0.08)
     assert "worker.other-model.input_token" in unknown.snapshot().unpriced
 
 

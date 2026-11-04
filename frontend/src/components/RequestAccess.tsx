@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { Button } from './Button';
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
@@ -11,7 +12,11 @@ export function RequestAccess({ email = false }: { email?: boolean }) {
   const [note, setNote] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState('');
+  // Blocks a second click that lands before React re-renders the disabled button.
+  const inFlight = useRef(false);
   async function send() {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setStatus('sending');
     try {
       const response = await fetch(
@@ -43,7 +48,20 @@ export function RequestAccess({ email = false }: { email?: boolean }) {
     } catch {
       setStatus('error');
       setMessage('Could not send the request. Try again later.');
+    } finally {
+      inFlight.current = false;
     }
+  }
+  if (status === 'sent') {
+    // The form is gone once sent, so a request cannot be submitted twice from this page.
+    return (
+      <details className="key-details request-access" open>
+        <summary>No invitation code? Request access</summary>
+        <p role="status" aria-live="polite" className="request-access-sent">
+          {message}
+        </p>
+      </details>
+    );
   }
   return (
     <details className="key-details request-access">
@@ -60,7 +78,7 @@ export function RequestAccess({ email = false }: { email?: boolean }) {
           autoComplete="email"
           maxLength={120}
           value={contact}
-          disabled={status === 'sending' || status === 'sent'}
+          disabled={status === 'sending'}
           onChange={(event) => setContact(event.target.value)}
         />
       </label>
@@ -70,17 +88,16 @@ export function RequestAccess({ email = false }: { email?: boolean }) {
           type="text"
           maxLength={300}
           value={note}
-          disabled={status === 'sending' || status === 'sent'}
+          disabled={status === 'sending'}
           onChange={(event) => setNote(event.target.value)}
         />
       </label>
-      <button
-        type="button"
-        disabled={contact.trim().length < 3 || status === 'sending' || status === 'sent'}
+      <Button
+        disabled={contact.trim().length < 3 || status === 'sending'}
         onClick={() => void send()}
       >
-        Request access
-      </button>
+        {status === 'sending' ? 'Sending…' : 'Request access'}
+      </Button>
       <p role="status" aria-live="polite">
         {message}
       </p>
