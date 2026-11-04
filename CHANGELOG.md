@@ -20,7 +20,7 @@ Fixed: the generated OpenAPI document now describes the API's real error answers
 
 Added: a Locust load test (`make loadtest`, `docs/load-testing.md`) that drives an isolated offline backend with many concurrent sessions and fails on error or latency budgets; it uses no provider, key or paid service. Locust and its dependencies are in the optional `loadtest` dependency group and are not part of the backend.
 
-Added: a full live worker evaluation (40 cases, GPT-6 Luna with an LLM judge, 117 model calls) is published as a public Braintrust experiment: 98% judged correct, 99% grounded, 100% numeric and evidence retrieval, p50 2.4 s per case. Fixed: the eval scorers accept a typographic minus sign and curly apostrophes, which had marked correct answers as wrong.
+Added: a full live worker evaluation (40 cases, GPT-6 Luna with an LLM judge, 117 model calls) is published as a public Braintrust experiment: 98% judged correct, 99% grounded, 100% numeric and evidence retrieval, p50 2.4 s per case. Fixed: the eval scorers accept a typographic minus sign and curly apostrophes, which had marked correct answers as wrong. Per-case worker usage no longer includes the judge's call (reported as `judge_calls`), and skipped cases are no longer uploaded with timing invented by the Braintrust SDK. The social preview card is refreshed, with its figures labelled as LLM-judged and their source recorded.
 
 Added: `VOICE_UNLIMITED_INVITES` lists invitation names (the operator's own) that skip the daily session and voice-second allowances without drawing on the shared daily budget; concurrency and session length still apply.
 

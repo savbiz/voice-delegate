@@ -31,6 +31,7 @@ Start with the [project README](../README.md). Pick the path that matches what y
 
 | Guide | What it covers |
 |---|---|
+| [Start here](start-here.md) | A five-minute reading path for reviewers |
 | [Architecture](architecture.md) | Components, session ownership, delegation and limits |
 | [Session flow](session-flow.md) | One conversation from creation to cleanup, including recovery |
 | [Worker](worker.md) | Planners, tools, prompts and remote execution |
