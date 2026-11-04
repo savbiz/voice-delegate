@@ -61,9 +61,10 @@ From an administrative shell where the `sqlite3` CLI is available, use read-only
 sqlite3 -readonly /app/.local/quotas.sqlite3 'SELECT day, SUM(sessions), SUM(seconds) FROM reservations GROUP BY day;'
 sqlite3 -readonly /app/.local/quotas.sqlite3 'SELECT COUNT(*), MIN(expires), MAX(expires) FROM leases;'
 sqlite3 -readonly /app/.local/feedback.sqlite3 'SELECT category, state, COUNT(*) FROM feedback GROUP BY category, state;'
+sqlite3 -readonly /app/.local/feedback.sqlite3 "SELECT datetime(created, 'unixepoch'), category, note FROM feedback WHERE note IS NOT NULL ORDER BY created DESC;"
 ```
 
-Quota principals are hashes, not invitation tokens. Leases expire even if release fails. Reservations roll over by UTC day. Feedback has no free-text field, retains reports for seven days, allows five per principal per rolling 24 hours, and caps storage at 10,000 records. Treat backups as sensitive operational data. Use SQLite's backup mechanism or a quiesced consistent volume snapshot; copying a live WAL database file alone is not a safe backup.
+Quota principals are hashes, not invitation tokens. Leases expire even if release fails. Reservations roll over by UTC day. Feedback accepts an optional typed note of at most 500 characters (which may contain whatever the reporter writes, so treat it as personal data), retains reports for seven days, allows five per principal per rolling 24 hours, and caps storage at 10,000 records. Treat backups as sensitive operational data. Use SQLite's backup mechanism or a quiesced consistent volume snapshot; copying a live WAL database file alone is not a safe backup.
 
 ## Reset one invitation’s daily allowance
 
@@ -170,9 +171,9 @@ contain conversation content. A normal stream end without finalization is report
 At INFO level, delegation interruption logs distinguish client requests, provider speech
 and timed provider transcripts. These describe worker cancellation, not every audio interruption.
 
-Feedback remains limited to category, diagnostic ID, interface state, provider and version,
-with a pseudonymous quota identity and seven-day retention. It does not save conversations,
-audio or transcripts, and its ID is not a session-log correlation key. Use the report time
+Feedback remains limited to category, diagnostic ID, interface state, provider, version and an
+optional note the reporter types, with a pseudonymous quota identity and seven-day retention. It
+does not save conversations, audio or transcripts, and its ID is not a session-log correlation key. Use the report time
 alongside local server logs. Do not paste keys or invitation codes into bug reports.
 
 ## Opt-in server session recording

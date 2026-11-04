@@ -30,7 +30,8 @@ export function createLiveSession(
   const sounds = new ConnectionSounds();
   let diagnosticId = crypto.randomUUID();
   let reportBody:
-    { diagnostic_id: string; category: string; state: string; adapter?: string } | undefined;
+    | { diagnostic_id: string; category: string; state: string; adapter?: string; note?: string }
+    | undefined;
   let reportSent = false;
   let reportPending = false;
   function showState(phase: Phase, status: string, help: string): void {
@@ -782,7 +783,7 @@ export function createLiveSession(
     }
   }
 
-  const onFeedback = async (category: string) => {
+  const onFeedback = async (category: string, note = '') => {
     if (reportPending || reportSent || !getAccessCode()) return;
     reportPending = true;
     store.update({ reportPending: true, reportLocked: true });
@@ -791,6 +792,8 @@ export function createLiveSession(
       category,
       state: store.getSnapshot().phase,
       ...(getPreferences().adapter ? { adapter: getPreferences().adapter } : {}),
+      // Fixed with the first attempt, so a retry repeats the same report.
+      ...(note.trim() ? { note: note.split(/\s+/).join(' ').trim().slice(0, 500) } : {}),
     };
     store.update({ feedbackStatus: 'Sending report…' });
     try {

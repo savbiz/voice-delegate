@@ -20,7 +20,7 @@ The backend serves JSON over HTTPS in hosted deployments. All `/api` routes requ
 | POST | `/api/sessions/{id}/token` | No supported browser credential contract | — | 501 unsupported |
 | POST | `/api/reference/search` | `{"query":"…"}` (1–500 chars) → `sources`, `status` | 200 | — |
 | POST | `/api/reference/{id}` | No body → source by corpus ID | 200 | 404 unknown source |
-| POST | `/api/feedback` | `diagnostic_id` UUID, `category`, `state` → same diagnostic ID | 201 | 404 another principal's ID; 409 changed duplicate; 429 report quota; 503 disabled/full/unavailable store |
+| POST | `/api/feedback` | `diagnostic_id` UUID, `category`, `state`, optional `note` (≤500 characters) → same diagnostic ID | 201 | 404 another principal's ID; 409 changed duplicate; 429 report quota; 503 disabled/full/unavailable store |
 
 Common errors: 400 invalid Host; 401 authentication; 403 Origin; 404 missing session/ownership; 413 oversized request; 422 schema validation; 429 IP rate limit. Rate-limited responses carry `Cache-Control: no-store`. CORS preflight uses OPTIONS and checks the configured origin. Framework documentation routes (`/docs`, `/redoc`, `/openapi.json`, `/docs/oauth2-redirect`) are enabled outside production. In production, set `VOICE_API_DOCS=true` temporarily to expose Swagger; default off in production. ReDoc and the OpenAPI schema follow the same switch. Enabled documentation routes remain subject to host/body/rate middleware.
 
@@ -31,7 +31,7 @@ Preferences are immutable during a session. SDP must start with `v=0`, contain a
 
 Heartbeat returns `state`, `delegation`, transport `generation`, `fallback_available`, `sources` and `recap`. State is one of `created`, `connecting`, `connected`, `reconnecting`, `closing`, `closed`; closed sessions are ordinarily removed and return 404. Delegation outcomes include idle/running/completed/cancelled/timeout/failed/busy/request_limit/delivery_failed. Recap has `latest_request`, `latest_reply`, `interrupted`, `revision`. Sources contain `id`, `title`, `path`, `section`, `text`, `digest`; heartbeat source text is clipped to 400 characters.
 
-Feedback categories are `wrong_answer`, `source`, `audio`, `connection`, `other`; UI states are `ready`, `connecting`, `connected`, `working`, `busy`, `recovering`, `ended`. No free-text transcripts or credentials are accepted. Repeating the identical diagnostic ID/body is idempotent; a changed body conflicts.
+Feedback categories are `wrong_answer`, `source`, `audio`, `connection`, `other`; UI states are `ready`, `connecting`, `connected`, `working`, `busy`, `recovering`, `ended`. The optional `note` is what the reporter types: whitespace is collapsed, and a note containing a long unbroken token (a likely key or code) is rejected with 422. No transcripts are attached. Repeating the identical diagnostic ID/body is idempotent; a changed body conflicts.
 
 ## Private worker service
 

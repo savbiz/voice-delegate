@@ -55,7 +55,8 @@ body {
 }
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 .button,
@@ -104,6 +105,7 @@ select {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
+textarea:focus-visible,
 summary:focus-visible,
 a:focus-visible {
   outline: 3px solid var(--accent-deep);
@@ -197,7 +199,8 @@ h2 {
   text-transform: uppercase;
 }
 input,
-select {
+select,
+textarea {
   width: 100%;
   margin-top: var(--space-2);
   padding: var(--space-3);
@@ -208,6 +211,10 @@ select {
 }
 select {
   max-width: 22rem;
+}
+textarea {
+  display: block;
+  resize: vertical;
 }
 audio {
   max-width: 100%;

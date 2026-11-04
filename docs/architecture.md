@@ -145,7 +145,7 @@ All `/api` routes require the configured exact Origin. Session, reference and fe
 | `POST /api/sessions/{id}/token` | 501 for GPT-Live; adapter capability boundary |
 | `POST /api/reference/search` | Search the bundled corpus with a bounded query |
 | `POST /api/reference/{id}` | Read one source excerpt by corpus ID |
-| `POST /api/feedback` | Store a bounded diagnostic report without conversation content |
+| `POST /api/feedback` | Store a bounded diagnostic report and an optional typed note, without conversation content |
 
 ## Private worker service API
 

@@ -403,7 +403,7 @@ export function LiveWorkspace({ code, onCode }: { code: string; onCode: (code: s
         state={state}
         personal={apiSource === 'personal'}
         code={code}
-        onSend={(category) => void controller.current?.feedback(category)}
+        onSend={(category, note) => void controller.current?.feedback(category, note)}
       />
     </div>
   );

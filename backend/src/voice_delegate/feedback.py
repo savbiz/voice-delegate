@@ -1,6 +1,11 @@
-"""Bounded diagnostic categories only; never accept conversation content."""
+"""Bounded diagnostic categories and an optional short note the reporter typed.
+
+The app never attaches audio or conversation text. The note holds only what the user writes;
+it is stored with the report, never logged, and deleted with it after seven days.
+"""
 
 import hashlib
+import re
 import sqlite3
 import time
 from importlib.metadata import version
@@ -8,9 +13,11 @@ from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from voice_delegate.session.models import SessionError
+
+LOOKS_LIKE_A_KEY = re.compile(r"[A-Za-z0-9_\-]{32,}")
 
 
 class FeedbackInput(BaseModel):
@@ -19,6 +26,17 @@ class FeedbackInput(BaseModel):
     category: Literal["wrong_answer", "source", "audio", "connection", "other"]
     state: Literal["ready", "connecting", "connected", "working", "busy", "recovering", "ended"]
     adapter: Literal["openai", "azure", "elevenlabs"] | None = None
+    note: str = Field(default="", max_length=500)
+
+    @field_validator("note")
+    @classmethod
+    def plain_note(cls, value: str) -> str:
+        note = " ".join(value.split())
+        # A long unbroken token is almost certainly a pasted API key or invitation code.
+        if LOOKS_LIKE_A_KEY.search(note):
+            message = "The note looks like it contains a key or code; remove it"
+            raise ValueError(message)
+        return note
 
 
 class FeedbackStore:
@@ -35,8 +53,13 @@ class FeedbackStore:
         self.db.execute("PRAGMA secure_delete=ON")
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS feedback (id TEXT PRIMARY KEY, principal TEXT, "
-            "category TEXT, state TEXT, provider TEXT, version TEXT, created REAL)"
+            "category TEXT, state TEXT, provider TEXT, version TEXT, created REAL, note TEXT)"
         )
+        columns = {row[1] for row in self.db.execute("PRAGMA table_info(feedback)")}
+        if "note" not in columns:
+            # Databases created before notes existed keep their reports.
+            self.db.execute("ALTER TABLE feedback ADD COLUMN note TEXT")
+        self.db.commit()
         self.capacity = capacity
         self.purge()
 
@@ -67,12 +90,13 @@ class FeedbackStore:
         self.db.execute("BEGIN IMMEDIATE")
         self.db.execute("DELETE FROM feedback WHERE created <= ?", (now - self.retention_seconds,))
         row = self.db.execute(
-            "SELECT principal, category, state FROM feedback WHERE id=?", (report_id,)
+            "SELECT principal, category, state, COALESCE(note, '') FROM feedback WHERE id=?",
+            (report_id,),
         ).fetchone()
         if row:
             if row[0] != identity:
                 raise SessionError(404, "Diagnostic report unavailable")
-            if row[1:] != (body.category, body.state):
+            if row[1:] != (body.category, body.state, body.note):
                 raise SessionError(409, "This diagnostic report has already been submitted")
         else:
             count = self.db.execute(
@@ -84,8 +108,18 @@ class FeedbackStore:
             if self.db.execute("SELECT COUNT(*) FROM feedback").fetchone()[0] >= self.capacity:
                 raise SessionError(503, "Feedback temporarily unavailable")
             self.db.execute(
-                "INSERT INTO feedback VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (report_id, identity, body.category, body.state, provider, self.version, now),
+                "INSERT INTO feedback (id, principal, category, state, provider, version, created, "
+                "note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    report_id,
+                    identity,
+                    body.category,
+                    body.state,
+                    provider,
+                    self.version,
+                    now,
+                    body.note or None,
+                ),
             )
         self.db.commit()
 

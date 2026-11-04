@@ -142,3 +142,60 @@ async def test_feedback_records_the_selected_adapter_when_configured(
         rows = dict(database.execute("SELECT id, provider FROM feedback"))
     assert rows[chosen["diagnostic_id"]] == "azure"
     assert rows[unknown["diagnostic_id"]] == "openai"
+
+
+def test_feedback_note_is_optional_plain_and_never_a_key(tmp_path: Path) -> None:
+    assert report().note == ""
+    note = FeedbackInput(
+        diagnostic_id=uuid4(), category="wrong_answer", state="ended", note="  It said\nJuve won  "
+    )
+    assert note.note == "It said Juve won"
+    for pasted in ("sk-" + "a" * 40, "my code is " + "Q" * 43):
+        with pytest.raises(ValueError, match="key or code"):
+            FeedbackInput(diagnostic_id=uuid4(), category="other", state="ended", note=pasted)
+    with pytest.raises(ValueError, match="at most 500"):
+        FeedbackInput(diagnostic_id=uuid4(), category="other", state="ended", note="x " * 251)
+    store = FeedbackStore(str(tmp_path / "feedback.sqlite3"))
+    store.submit("alice", note, "openai")
+    # A retry with the same diagnostic ID must carry the same note.
+    with pytest.raises(SessionError) as exc:
+        store.submit("alice", note.model_copy(update={"note": "different"}), "openai")
+    assert exc.value.status == 409
+    stored = store.db.execute("SELECT note FROM feedback").fetchall()
+    assert stored == [("It said Juve won",)]
+    store.submit("alice", report(), "openai")
+    assert store.db.execute("SELECT COUNT(*) FROM feedback WHERE note IS NULL").fetchone() == (1,)
+    store.close()
+
+
+def test_feedback_store_adds_the_note_column_to_an_existing_database(tmp_path: Path) -> None:
+    path = tmp_path / "feedback.sqlite3"
+    with closing(sqlite3.connect(path)) as db:
+        db.execute(
+            "CREATE TABLE feedback (id TEXT PRIMARY KEY, principal TEXT, category TEXT, "
+            "state TEXT, provider TEXT, version TEXT, created REAL)"
+        )
+        db.execute("INSERT INTO feedback VALUES ('old', 'p', 'audio', 'ended', 'openai', '0', 9e9)")
+        db.commit()
+    store = FeedbackStore(str(path))
+    store.submit("alice", report().model_copy(update={"note": "Audio cut out"}), "openai")
+    rows = store.db.execute("SELECT id, note FROM feedback ORDER BY id").fetchall()
+    assert ("old", None) in rows
+    assert any(note == "Audio cut out" for _, note in rows)
+    store.close()
+
+
+async def test_feedback_api_accepts_a_note(asgi_client: ASGIClientFactory, tmp_path: Path) -> None:
+    path = str(tmp_path / "feedback.sqlite3")
+    secret = "private-invitation-never-stored-123456"
+    settings = Settings(feedback_database=path, invite_tokens={"alice": SecretStr(secret)})
+    app = create_app(settings, FakeProvider())
+    async with asgi_client(app) as client:
+        client.headers["Origin"] = settings.allowed_origins[0]
+        client.headers["Authorization"] = "Bearer " + secret
+        body = {**report().model_dump(mode="json"), "note": "Wrong score"}
+        assert (await client.post("/api/feedback", json=body)).status_code == 201
+        keyed = {**report().model_dump(mode="json"), "note": "sk-" + "b" * 40}
+        assert (await client.post("/api/feedback", json=keyed)).status_code == 422
+    with closing(sqlite3.connect(path)) as db:
+        assert db.execute("SELECT note FROM feedback").fetchall() == [("Wrong score",)]
