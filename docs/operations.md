@@ -10,6 +10,22 @@ Set `VOICE_DEMO_ENABLED=false` on the backend and restart/redeploy every API ins
 
 Edit `VOICE_INVITE_TOKENS`, a JSON map of stable pseudonymous names to unique random tokens of at least 32 characters. Generate a replacement locally with `uv run python -c 'import secrets; print(secrets.token_urlsafe(32))'`. Keep the name unchanged when rotating so its hashed quota identity and reservations remain associated. Remove the name to revoke it. Apply the same mapping to all API instances and restart them. Distribute tokens privately. Never put tokens in URLs, screenshots, issue reports or frontend environment variables. `VOICE_ACCESS_TOKEN` is only for private testing, not the public-demo profile.
 
+Invitations can also live in `VOICE_ACCESS_DATABASE` (SQLite on the volume, codes stored only as SHA-256 hashes). They take effect at once, without a redeploy, and the public demo may run with `VOICE_INVITE_TOKENS={}`. Keep one named code in the variable as an emergency path if the database is ever unavailable.
+
+```sh
+make invite-add NAME=alice      # prints the code once
+make invite-list                # names and creation dates, never codes
+make invite-revoke NAME=alice
+```
+
+On Railway, run the module in the deployed container, with `VOICE_ACCESS_DATABASE` set to an absolute path on the volume (for example `/app/.local/access.sqlite3`):
+
+```sh
+railway ssh "/app/.venv/bin/python -m voice_delegate.invites add alice"
+```
+
+To migrate a variable entry, add the same name to the database, then remove it from `VOICE_INVITE_TOKENS` and redeploy; the name keeps its quota identity, but the code changes. To rotate, revoke and add again.
+
 ### Access requests
 
 Set `VOICE_ACCESS_REQUEST_URL` to an HTTPS [ntfy](https://ntfy.sh) topic URL with a long, unguessable topic (for example `https://ntfy.sh/<random-string>`) and subscribe to it in the ntfy phone app. The hosted UI then shows **No invitation code? Request access**. At most five notifications are sent per hour per process and a repeated contact is ignored within the hour. Treat the topic URL as a secret: anyone who knows it can read or post to it. Leave the variable empty to hide the button.
@@ -20,7 +36,7 @@ Set `VOICE_ACCESS_REQUEST_URL` to an HTTPS [ntfy](https://ntfy.sh) topic URL wit
 
 The visitor must then enter an email address. The notification carries **Approve** and **Deny** buttons; each is a `POST` to `/access/{id}/{secret}/approve|deny` with a one-time secret, so only the topic's subscribers can decide. Approve creates a new invitation code, stores only its SHA-256 hash and sends a second notification with the code and a **Send email** button: a `mailto:` link that opens your mail app with the recipient, subject and text (including the code) filled in. That notification is published with `Cache: no`, so ntfy.sh does not keep it after delivery; if it cannot be published, the code is revoked and Approve can be pressed again. The code works at once, without a redeploy. Approved principals are pseudonymous (`email-` plus a hash prefix), so quotas and logs never contain the address. The address and note are deleted when the owner decides or after 7 days; a hash of the address is kept for 30 days to ignore repeated requests (and indefinitely for approved addresses). At most 20 requests are accepted per day.
 
-To revoke an approved invitation, delete its row from the `invites` table of `VOICE_ACCESS_DATABASE` (for example through `railway ssh`); `VOICE_INVITE_TOKENS` keeps working for named codes.
+Approved requests appear in `make invite-list` as `email-<hash>`; revoke them with `invite-revoke` like any other name.
 
 ## Quotas and cost controls
 

@@ -314,8 +314,8 @@ class Settings(BaseSettings):
         if any(len(value) < 32 for value in values) or len(set(values)) != len(values):
             message = "Invitations require unique random tokens of at least 32 characters"
             raise ValueError(message)
-        if self.public_demo and (not values or self.quota_database == ":memory:"):
-            message = "Public demo requires named invitations and durable quota storage"
+        if self.public_demo and ":memory:" in {self.quota_database, self.access_database}:
+            message = "Public demo requires durable quota and invitation storage"
             raise ValueError(message)
         if self.public_demo and self.environment != "production":
             message = "Public demo requires production configuration"
@@ -341,7 +341,12 @@ class Settings(BaseSettings):
             if "testserver" in self.allowed_hosts:
                 message = "Production requires explicit VOICE_ALLOWED_HOSTS without testserver"
                 raise ValueError(message)
-            if not self.invite_tokens and len(self.access_token.get_secret_value()) < 24:
+            database_invites = self.public_demo or bool(self.public_api_url)
+            if (
+                not self.invite_tokens
+                and not database_invites
+                and len(self.access_token.get_secret_value()) < 24
+            ):
                 message = "Production requires VOICE_ACCESS_TOKEN of at least 24 characters"
                 raise ValueError(message)
             if any(

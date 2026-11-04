@@ -163,6 +163,29 @@ class InviteStore:
         ).fetchone()
         return str(row[0]) if row else None
 
+    def add(self, name: str, token: str) -> None:
+        """Store a named invitation; raises if the name exists (revoke it first to rotate)."""
+        try:
+            with self.db:
+                self.db.execute(
+                    "INSERT INTO invites VALUES (?, ?, ?)", (name, digest(token), self.clock())
+                )
+        except sqlite3.IntegrityError as exc:
+            message = f"Invitation {name!r} already exists"
+            raise ValueError(message) from exc
+
+    def revoke(self, name: str) -> bool:
+        with self.db:
+            return self.db.execute("DELETE FROM invites WHERE principal=?", (name,)).rowcount > 0
+
+    def names(self) -> list[tuple[str, float]]:
+        return [
+            (str(name), float(created))
+            for name, created in self.db.execute(
+                "SELECT principal, created FROM invites ORDER BY created"
+            )
+        ]
+
     def close(self) -> None:
         self.db.close()
 

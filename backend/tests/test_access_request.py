@@ -6,7 +6,7 @@ from pathlib import Path
 
 import httpx
 import pytest
-from conftest import ASGIClientFactory
+from conftest import ASGIClientFactory, PublicSettingsFactory
 from pydantic import SecretStr, ValidationError
 from voice_delegate.access_request import AccessRequestInput, AccessRequests, Approval, InviteStore
 from voice_delegate.api.app import create_app
@@ -255,3 +255,54 @@ def test_remote_approval_requires_complete_settings(overrides: dict[str, str]) -
         Settings.model_validate({**base, **overrides})
     settings = Settings.model_validate({**base, "public_api_url": "https://api.example"})
     assert settings.public_api_url == "https://api.example"
+
+
+def test_invite_cli_adds_lists_and_revokes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from voice_delegate.invites import main
+
+    path = tmp_path / "access.sqlite3"
+    monkeypatch.setenv("VOICE_ACCESS_DATABASE", str(path))
+    assert main(["add", "alice"]) == 0
+    token = capsys.readouterr().out.strip()
+    assert len(token) >= 40
+    assert main(["add", "alice"]) == 1
+    assert main(["add", "email-forged"]) == 2
+    assert main(["add", "bad name"]) == 2
+    capsys.readouterr()
+    assert main(["list"]) == 0
+    listed = capsys.readouterr().out
+    assert listed.startswith("alice\t") and token not in listed
+    store = InviteStore(str(path))
+    assert store.principal(token) == "alice"
+    assert token not in path.read_bytes().decode(errors="ignore")
+    store.close()
+    assert main(["revoke", "alice"]) == 0
+    assert main(["revoke", "alice"]) == 1
+    store = InviteStore(str(path))
+    assert store.principal(token) is None
+    store.close()
+
+
+async def test_public_demo_with_database_invites_only_rejects_unknown_codes(
+    public_settings: PublicSettingsFactory, tmp_path: Path, asgi_client: ASGIClientFactory
+) -> None:
+    settings = public_settings(tmp_path, invite_tokens={})
+    store = InviteStore(settings.access_database)
+    store.add("alice", "t" * 43)
+    store.close()
+    app = create_app(settings, FakeProvider())
+    headers = {"Origin": "https://demo.example", "Host": "localhost"}
+    async with asgi_client(app) as client:
+        config = (await client.post("/api/config", headers=headers)).json()
+        assert config["requires_access_code"] is True
+        for authorization in ({}, {"Authorization": "Bearer " + "x" * 43}):
+            denied = await client.post(
+                "/api/sessions", json={}, headers={**headers, **authorization}
+            )
+            assert denied.status_code == 401
+        allowed = await client.post(
+            "/api/sessions", json={}, headers={**headers, "Authorization": "Bearer " + "t" * 43}
+        )
+        assert allowed.status_code == 201

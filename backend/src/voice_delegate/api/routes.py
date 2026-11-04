@@ -125,7 +125,9 @@ def build_router(
             "access_request_available": access_requests is not None,
             "access_request_email": access_requests is not None and access_requests.requires_email,
             "requires_access_code": bool(
-                manager.settings.invite_tokens or manager.settings.access_token.get_secret_value()
+                manager.settings.invite_tokens
+                or manager.settings.access_token.get_secret_value()
+                or manager.admission.invites is not None
             ),
             "voice_available": bool(
                 manager.settings.elevenlabs_api_key.get_secret_value()

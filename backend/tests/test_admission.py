@@ -94,8 +94,10 @@ async def test_quota_day_rolls_over_using_injected_clock(
 def test_public_configuration_rejects_shared_gate_and_duplicate_invites(
     public_settings: PublicSettingsFactory, tmp_path: Path
 ) -> None:
-    with pytest.raises(ValueError, match="named invitations"):
-        public_settings(tmp_path, invite_tokens={})
+    # Database invitations alone are allowed, but only on durable storage.
+    assert public_settings(tmp_path, invite_tokens={}).public_demo
+    with pytest.raises(ValueError, match="durable quota and invitation storage"):
+        public_settings(tmp_path, invite_tokens={}, access_database=":memory:")
     with pytest.raises(ValueError, match="unique random"):
         public_settings(
             tmp_path, invite_tokens={"alice": SecretStr("a" * 32), "bob": SecretStr("a" * 32)}
@@ -159,9 +161,10 @@ async def test_public_demo_environment_requires_invites_and_persists_quotas(
     monkeypatch.setenv("VOICE_ALLOWED_ORIGIN", "https://demo.example")
     monkeypatch.setenv("VOICE_QUOTA_DATABASE", str(tmp_path / "quotas.sqlite3"))
     monkeypatch.setenv("VOICE_FEEDBACK_DATABASE", str(tmp_path / "feedback.sqlite3"))
-    monkeypatch.setenv("VOICE_INVITE_TOKENS", "{}")
-    with pytest.raises(ValueError, match="named invitations"):
+    monkeypatch.setenv("VOICE_ACCESS_DATABASE", ":memory:")
+    with pytest.raises(ValueError, match="durable quota and invitation storage"):
         Settings()
+    monkeypatch.setenv("VOICE_ACCESS_DATABASE", str(tmp_path / "access.sqlite3"))
     monkeypatch.setenv("VOICE_INVITE_TOKENS", '{"alice":"' + "a" * 32 + '"}')
     manager = SessionManager(FakeProvider(), Settings())
     await manager.close(manager.create("alice"))

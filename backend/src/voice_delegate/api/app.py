@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 
-from voice_delegate.access_request import AccessRequests, Approval, InviteStore
+from voice_delegate.access_request import AccessRequests, Approval
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.delegation.planner import build_planner
 from voice_delegate.feedback import FeedbackStore
@@ -42,18 +42,6 @@ def create_app(
 ) -> FastAPI:
     """Build a single-process app; inject an offline provider in tests."""
     settings = settings or load_settings()
-    if access_requests is None and settings.access_request_url:
-        remote_approval = bool(settings.public_api_url)
-        access_requests = AccessRequests(
-            settings.access_request_url,
-            store=InviteStore(settings.access_database) if remote_approval else None,
-            approval=Approval(
-                public_api_url=settings.public_api_url.rstrip("/"),
-                frontend_url=settings.allowed_origins[0],
-            )
-            if remote_approval
-            else None,
-        )
     elevenlabs = (
         ElevenLabsProvider(
             settings.elevenlabs_api_key.get_secret_value(),
@@ -128,7 +116,10 @@ def create_app(
     # SQLite calls are synchronous by design for the single-process demo.
     feedback = (
         FeedbackStore(settings.feedback_database)
-        if settings.invite_tokens or settings.access_token.get_secret_value()
+        if settings.invite_tokens
+        or settings.access_token.get_secret_value()
+        or settings.public_demo
+        or settings.public_api_url
         else None
     )
 
@@ -157,7 +148,22 @@ def create_app(
     )
 
     if access_requests is not None and access_requests.store is not None:
-        manager.admission.invite_lookup = access_requests.store.principal
+        # An injected store (tests) replaces the one admission opened.
+        if manager.admission.invites is not None:
+            manager.admission.invites.close()
+        manager.admission.invites = access_requests.store
+    elif access_requests is None and settings.access_request_url:
+        store = manager.admission.invites if settings.public_api_url else None
+        access_requests = AccessRequests(
+            settings.access_request_url,
+            store=store,
+            approval=Approval(
+                public_api_url=settings.public_api_url.rstrip("/"),
+                frontend_url=settings.allowed_origins[0],
+            )
+            if store is not None
+            else None,
+        )
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
