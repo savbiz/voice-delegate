@@ -315,7 +315,7 @@ class McpRegistry:
                     },
                     ensure_ascii=False,
                 )
-            except (McpUnavailableError, TimeoutError, httpx.HTTPError):
+            except McpUnavailableError, TimeoutError, httpx.HTTPError:
                 return json.dumps(
                     {"sources": [], "status": "mcp_unavailable", "notice": "MCP tool unavailable."}
                 )
@@ -343,7 +343,7 @@ class McpRegistry:
     async def _discover(self, client: McpClient) -> tuple[BaseTool, ...]:
         try:
             reviewed = review_tools(client.server, await client.list_tools())
-        except (McpUnavailableError, TimeoutError, httpx.HTTPError):
+        except McpUnavailableError, TimeoutError, httpx.HTTPError:
             return ()
         return tuple(
             self._tool(client, name, description, model)

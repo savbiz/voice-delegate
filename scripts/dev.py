@@ -75,7 +75,7 @@ def main() -> None:
             print(invitation(ROOT))
             return
         environment = backend_environment(ROOT)
-    except (ValueError, OSError):
+    except ValueError, OSError:
         print(
             "Local setup unavailable. Check .env, development mode, VOICE_PUBLIC_DEMO=false "
             "and .local directory permissions. No configured credentials were printed.",

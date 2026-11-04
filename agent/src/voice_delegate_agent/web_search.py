@@ -73,7 +73,7 @@ def source_url(value: str) -> str | None:
         ):
             return None
         host = domain_name(parsed.hostname)
-    except (ValueError, UnicodeError):
+    except ValueError, UnicodeError:
         return None
     return urlunsplit(("https", host, parsed.path or "/", parsed.query, ""))
 
@@ -202,7 +202,7 @@ class TavilySearch:
                 },
                 ensure_ascii=False,
             )
-        except (httpx.HTTPError, TimeoutError, ValueError, KeyError, TypeError, RecursionError):
+        except httpx.HTTPError, TimeoutError, ValueError, KeyError, TypeError, RecursionError:
             return json.dumps(
                 {
                     "sources": [asdict(source) for source in search(query)],

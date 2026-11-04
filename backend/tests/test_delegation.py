@@ -465,7 +465,7 @@ async def test_parallel_rejection_is_not_a_completed_task() -> None:
 async def test_worker_system_message_carries_todays_date() -> None:
     from datetime import date
 
-    from langchain_core.messages import AIMessage, AnyMessage, SystemMessage
+    from langchain_core.messages import AIMessage, SystemMessage
 
     seen: list[str] = []
 

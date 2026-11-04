@@ -38,7 +38,7 @@ class Session:
     principal: str = field(default="local", repr=False)
     debug: DebugRecording | None = field(default=None, repr=False)
     adapter: str = ""
-    owner: "SessionManager | None" = field(default=None, repr=False)
+    owner: SessionManager | None = field(default=None, repr=False)
     release_personal: Callable[[], Awaitable[None]] | None = field(default=None, repr=False)
     costs: CostLedger | None = None
     connection: RealtimeConnection | None = None

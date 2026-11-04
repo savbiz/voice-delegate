@@ -3,7 +3,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-REQUIRED_CHECKS = ("backend (3.12)", "backend (3.13)", "frontend")
+REQUIRED_CHECKS = ("backend (3.14)", "frontend")
 
 
 def workflow(name: str) -> str:
@@ -18,10 +18,12 @@ def test_required_check_names_exist_as_plain_jobs() -> None:
     assert "matrix:" not in ci
 
 
-def test_python_313_is_skipped_on_pull_requests_not_removed() -> None:
+def test_backend_checks_run_on_the_one_supported_python_for_every_event() -> None:
     ci = workflow("ci.yml")
-    job = ci.split("  backend-313:\n", 1)[1].split("\n  frontend:", 1)[0]
-    assert "if: github.event_name != 'pull_request'" in job
+    job = ci.split("  backend:\n", 1)[1].split("\n  frontend:", 1)[0]
+    assert 'python: "3.14"' in job
+    assert "github.event_name" not in job
+    assert "backend-31" not in ci
 
 
 def test_codeql_scans_pull_requests_and_cancels_superseded_runs() -> None:
@@ -44,7 +46,7 @@ def test_docs_only_skips_fail_open_and_never_use_path_filters() -> None:
     assert "needs.changes.outputs.docs_only == 'true'" not in ci
     frontend = ci.split("  frontend:\n", 1)[1].split("\n    runs-on:", 1)[0]
     assert "!cancelled()" in frontend
-    backend = ci.split("  backend-312:\n", 1)[1].split("\n    runs-on:", 1)[0]
+    backend = ci.split("  backend:\n", 1)[1].split("\n    runs-on:", 1)[0]
     assert "!cancelled()" in backend
 
 

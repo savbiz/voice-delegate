@@ -109,7 +109,7 @@ individual tools.
 
 ## Run it locally
 
-Prerequisites: Python 3.12 or 3.13, [uv](https://docs.astral.sh/uv/), Node.js 26, pnpm and make.
+Prerequisites: Python 3.14, [uv](https://docs.astral.sh/uv/), Node.js 26, pnpm and make.
 
 ```sh
 uv sync --locked

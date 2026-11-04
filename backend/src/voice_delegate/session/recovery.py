@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class Recovery:
     """Owns the fallback rules; the manager keeps the session registry and event loop."""
 
-    def __init__(self, manager: "SessionManager") -> None:
+    def __init__(self, manager: SessionManager) -> None:
         self.manager = manager
 
     def eligible(self, session: Session) -> bool:

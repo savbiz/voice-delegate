@@ -252,7 +252,7 @@ async def test_row_usage_counts_the_worker_only_and_the_judge_separately(
             self.root_async_client = SimpleNamespace(close=aclose)
             self.root_client = SimpleNamespace(close=lambda: None)
 
-        def with_structured_output(self, *_: object, **__: object) -> "FakeJudge":
+        def with_structured_output(self, *_: object, **__: object) -> FakeJudge:
             return self
 
         async def ainvoke(self, _: object) -> dict[str, object]:

@@ -231,7 +231,7 @@ class OpenAILiveConnection:
                     async with asyncio.timeout(self._close_timeout):
                         await self._socket.send(json.dumps({"type": "session.close"}))
                         await self._finalized.wait()
-            except (TimeoutError, WebSocketException, OSError):
+            except TimeoutError, WebSocketException, OSError:
                 logger.warning("Provider finalization unconfirmed")
             finally:
                 await self._socket.close()
@@ -323,7 +323,7 @@ class OpenAILiveProvider:
                         socket = await self._attach(answer.session_id)
                         abandoned = OpenAILiveConnection(answer, socket, self._close_timeout)
                         await abandoned.aclose()
-                except (TimeoutError, WebSocketException, OSError):
+                except TimeoutError, WebSocketException, OSError:
                     logger.exception(
                         "Could not recover sideband for cleanup; finalization unconfirmed"
                     )

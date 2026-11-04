@@ -186,7 +186,7 @@ class SessionManager:
             raise SessionError(422, "Voice adapter is not enabled on this server")
         return adapter
 
-    def owner_for(self, session: Session) -> "SessionManager":
+    def owner_for(self, session: Session) -> SessionManager:
         return session.owner or self
 
     def provider_for(self, session: Session | None = None) -> RealtimeProvider:

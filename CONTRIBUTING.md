@@ -1,6 +1,6 @@
 # Contributing
 
-Open the repository folder. Use Python 3.12 or 3.13, uv, Node.js 26 and the declared pnpm version. Install with `uv sync --locked` and `pnpm --dir frontend install --frozen-lockfile`. Work in small reviewable commits; add regression tests for changed behavior and preserve public HTTP/provider contracts unless the change explicitly includes a migration.
+Open the repository folder. Use Python 3.14, uv, Node.js 26 and the declared pnpm version. Install with `uv sync --locked` and `pnpm --dir frontend install --frozen-lockfile`. Work in small reviewable commits; add regression tests for changed behavior and preserve public HTTP/provider contracts unless the change explicitly includes a migration.
 
 ## Required checks
 
@@ -25,7 +25,7 @@ docker build -f deployment/Dockerfile.backend -t voice-delegate:ci .
 uv run python scripts/smoke_container.py
 ```
 
-CI runs backend checks on Python 3.12 and 3.13, container build/smoke on 3.12, tag/version checks on tag pushes, and a frontend check rejecting unresolved Vercel placeholders. Pytest also verifies generated configuration documentation.
+CI runs backend checks and the container build/smoke on Python 3.14, tag/version checks on tag pushes, and a frontend check rejecting unresolved Vercel placeholders. Pytest also verifies generated configuration documentation.
 
 Run pnpm only for `frontend/`. Backend tests disable IP sockets and use fakes; do not add paid provider calls to CI. Voice/Azure acceptance is recorded separately with real environment and measurements, never invented numbers. Regenerate the reference corpus after evergreen documentation changes; bump the evaluation dataset version whenever labels change.
 
