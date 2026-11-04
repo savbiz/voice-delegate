@@ -11,7 +11,7 @@ from langchain_core.messages import AnyMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from pydantic import ValidationError
 from voice_delegate.config import Settings, load_settings
-from voice_delegate_agent import graph
+from voice_delegate_agent import planners
 from voice_delegate_agent.model_config import DEFAULT_WORKER_MODEL
 
 
@@ -95,8 +95,8 @@ async def test_worker_serializes_supported_tool_and_final_requests(
             """Inject a fake transport into the real SDK client."""
             return ChatOpenAI(**kwargs, http_async_client=http)
 
-        monkeypatch.setattr(graph, "ChatOpenAI", local_client)
-        planner = graph.OpenAIPlanner("offline-fixture", model)
+        monkeypatch.setattr(planners, "ChatOpenAI", local_client)
+        planner = planners.OpenAIPlanner("offline-fixture", model)
         try:
             messages: list[AnyMessage] = [HumanMessage(content="calculate 2+2")]
             answer = await planner.respond(messages)
