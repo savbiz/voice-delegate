@@ -53,6 +53,13 @@ files = ["backend/src", "backend/tests", "agent/src", "evals", "scripts", "test_
 module = ["locust", "locust.*"]
 ignore_missing_imports = true
 
+# CI installs only the default groups, so locust is absent there and its classes are Any.
+# The scenario file is checked with the same settings whether or not locust is installed.
+[[tool.mypy.overrides]]
+module = ["locustfile"]
+disallow_subclassing_any = false
+disallow_untyped_decorators = false
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["backend/tests", "evals"]
