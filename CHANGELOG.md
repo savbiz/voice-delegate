@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Changed: CodeQL also scans pull requests, so every change is analysed before merge (OpenSSF Scorecard's SAST check measures this). CodeQL, the container scan and the supply-chain audit cancel an older run when a newer commit arrives on the same branch.
+
 Added: a nightly results workflow and page (`docs/results.md`). It runs the test suite with coverage, the load test and the offline worker evaluation, shows the numbers in the run summary and builds a static page with a 90-run history. Publishing to GitHub Pages is off until the owner enables Pages and sets `PUBLISH_RESULTS`.
 
 Added: `.editorconfig` describing the conventions the repository already follows, a whitespace check (`scripts/check_editorconfig.py`) and a forbidden-files check (`scripts/check_forbidden_files.py`, the rule against committing `.env*`, keys and credentials) that run in every CI build, and a `.pre-commit-config.yaml` of local hooks (independence check, forbidden files, whitespace, ruff, mypy) for the optional pre-commit framework.

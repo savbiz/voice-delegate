@@ -24,10 +24,11 @@ def test_python_313_is_skipped_on_pull_requests_not_removed() -> None:
     assert "if: github.event_name != 'pull_request'" in job
 
 
-def test_codeql_does_not_scan_every_pull_request_push() -> None:
+def test_codeql_scans_pull_requests_and_cancels_superseded_runs() -> None:
     codeql = workflow("codeql.yml")
     triggers = codeql.split("\npermissions:", 1)[0]
-    assert "pull_request" not in triggers
+    assert "pull_request:" in triggers
+    assert "cancel-in-progress: true" in triggers
     assert "branches: [main]" in triggers
     assert "schedule:" in triggers
     assert "workflow_dispatch:" in triggers
