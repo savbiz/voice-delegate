@@ -1,22 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-11-04
+
+Access to the hosted demo can now be requested and approved from a phone, and the codebase is trimmed for v1: one prompt source, fewer adapters, documentation by task.
 
 **Breaking:** `VOICE_ALLOWED_ORIGIN` and `VOICE_VOICE_PROVIDER` were removed; the backend refuses to start while either is set and names the replacement (`VOICE_ALLOWED_ORIGINS` as a JSON list, `VOICE_ADAPTER`). The unused OpenAI and Azure Realtime adapters were removed; GPT-Live on OpenAI and Azure plus ElevenLabs Agents remain.
 
-Changed: voice prompts are composed from single-purpose blocks and now include spoken-output and failure rules; `python -m voice_delegate.prompts` prints the text for the ElevenLabs agent. The frontend shell is split into workspace, panel and demo components. Documentation is organised by task in `docs/README.md`, with an ADR index and ADR 012 for the ElevenLabs transport. A daily workflow checks the hosted API.
+Added: a **Request access** button that notifies the owner through an ntfy topic (`VOICE_ACCESS_REQUEST_URL`), rate limited. With `VOICE_PUBLIC_API_URL`, the notification has Approve and Deny buttons; Approve creates a code (stored only as a hash) and sends the owner a second notification with mail-app and Gmail buttons to forward it, with no redeploy. Database invitations with `make invite-add/list/revoke`; the public demo no longer requires `VOICE_INVITE_TOKENS`. The page waits up to 30 seconds for a sleeping backend. An opt-in generated end-of-session summary (`VOICE_SESSION_SUMMARY`). Problem reports accept a short typed note and notify the owner. A daily health workflow with an optional ntfy alert. The Railway service is described with Infrastructure as Code in `.railway/railway.ts`.
 
-Added: an optional **Request access** button that notifies the owner through an ntfy topic (`VOICE_ACCESS_REQUEST_URL`); requests are rate limited and never stored. With `VOICE_PUBLIC_API_URL` set, the owner can approve from the notification and receives the new code with a prefilled email to send, without a redeploy. Invitations can be added, listed and revoked in the database with `make invite-add/list/revoke` (or `python -m voice_delegate.invites` on the server), and the public demo no longer requires `VOICE_INVITE_TOKENS`.
+Changed: voice prompts are composed from single-purpose blocks with spoken-output and failure rules; `python -m voice_delegate.prompts` prints the text for the ElevenLabs agent. The provider menu reads "OpenAI · GPT-Live", "Azure" and "ElevenLabs · Agents". ElevenLabs voice time is estimated at an assumed $0.08/minute (price snapshot 2026-11-04). The recap joins user turns split by the provider. The frontend shell is split into workspace, panel and demo components. The README is shorter and the documentation is organised by task in `docs/README.md`, with an ADR index, ADR 012 for the ElevenLabs transport and future-extension proposals.
 
-Added: the page waits up to 30 seconds for a sleeping backend to start, showing a starting message, before discovering providers; the Railway service is described with Infrastructure as Code in `.railway/railway.ts`.
+Fixed: Approve and Deny in the ntfy web app reported "Failed to fetch" although the decision succeeded. A fallback end-to-end test no longer assumes one heartbeat per interval.
 
-Changed: the provider menu names OpenAI as "OpenAI · GPT-Live" and Azure simply as "Azure". Documentation: the maintainer reported ElevenLabs Agents working live on the deployed backend on 2026-11-03 (formal acceptance and cost reconciliation remain pending); future-extension proposals added under `docs/`.
-
-Added: an opt-in generated conversation summary at the end of a session (`VOICE_SESSION_SUMMARY`, default off), labelled as generated and falling back to the extractive recap; a Gmail compose button next to the mail-app button in the approved-invitation notification. Problem reports accept an optional typed note (at most 500 characters, kept seven days; pasted keys or codes are rejected), and each new report sends a "New feedback to read" ntfy notification when `VOICE_ACCESS_REQUEST_URL` is set; the note itself stays on the server.
-
-Changed: the recap's latest request joins user turns split by the provider; ElevenLabs Agents voice time is estimated at an assumed $0.08/minute (price snapshot 2026-11-04) and cost summaries list the voice adapters used; the Request access form uses the standard button and is replaced by its confirmation once sent.
-
-Fixed: Approve and Deny in the ntfy web app reported "Failed to fetch" and kept the buttons although the decision succeeded; the `/access/` routes now allow the notification origin to read the result. The root `railway.json` was removed after the Railway Infrastructure as Code cutover.
+Verified through offline backend and frontend tests and hosted CI. The maintainer reported ElevenLabs Agents working live on the deployed backend on 2026-11-03; formal live acceptance, cost reconciliation and native-device acceptance remain open.
 
 ## 0.2.0 - 2026-11-03
 
