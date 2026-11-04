@@ -2,11 +2,13 @@
 
 ## 0.4.0 - 2026-11-04
 
-The worker gains an opt-in safety boundary and read-only MCP tools, the page is easier for first-time visitors, and the largest modules are split by responsibility.
+The worker gains an opt-in safety boundary and read-only MCP tools, the hosted backend can export telemetry, the page is easier for first-time visitors, and the largest modules are split by responsibility.
 
 Added: an opt-in moderation boundary in the worker (`VOICE_MODERATION`, ADR 013). Goals and tool evidence are reviewed by origin before planning; injected instructions in documentation or web excerpts are quarantined, and classifier failure withholds evidence instead of allowing it. An opt-in read-only MCP client for the worker (`VOICE_MCP_SERVERS`, ADR 010): operator-allowlisted servers and tools, reviewed flat schemas, cached immutable catalogs, bounded calls and moderated, cited output. It requires moderation and adds no dependency.
 
 Changed: Live voice, Offline example and Project documentation are three peer tabs instead of a tab and a dropdown; while the invitation field is empty, a hint points to the Offline example and to Your API keys; the billing note is one line under Start; the tabs fit phone widths down to 320px. The README opens with what is implemented and a system diagram; the roadmap is a status table, with the verification history moved to `docs/milestones/evidence-log.md`; the transport notes moved next to the frontend code.
+
+Added: hosted telemetry with the standard OpenTelemetry variables. With `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` set (as Grafana Cloud provides them), traces and metrics are exported without a collector; explicit `VOICE_OTEL_*` endpoints keep precedence.
 
 Internal: Azure recovery moved from the session manager to `session/recovery.py`; the browser session lifecycle is an explicit, unit-tested state machine (`lifecycle.ts`) with backend requests in `api.ts`, and the session start is split into named steps; the worker planners moved to `planners.py` and MCP data review to `mcp_review.py`. Behavior is unchanged.
 
