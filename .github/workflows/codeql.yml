@@ -1,8 +1,10 @@
 name: CodeQL
+
+# Scans main after each merge and weekly, not on every pull request push, to save Actions
+# minutes. Findings therefore appear after a merge; run it manually (workflow_dispatch) on a
+# branch to scan before merging. No ruleset check depends on this workflow.
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   schedule:
     - cron: '23 6 * * 1'
