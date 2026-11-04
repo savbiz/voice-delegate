@@ -8,7 +8,7 @@ GitHub Actions; none of it needs a secret or a paid service.
 | Dependabot | `.github/dependabot.yml` | weekly | Which updates exist (Python, npm, GitHub Actions) |
 | CodeQL | `codeql.yml` | pull requests, `main` and weekly | Does the code contain known vulnerability patterns |
 | Dependency audit | `supply-chain.yml` | weekly, on demand, and on a lockfile change | Does a locked package have a published advisory |
-| SBOM | `sbom.yml` | on each published release, or on demand | What exactly is in the release |
+| SBOM and provenance | `sbom.yml` | on each published release, or on demand | What exactly is in the release, and who built it |
 | Container audit | `scripts/check_containers.py` | in every CI run | Do the Dockerfiles and compose files meet the baseline: pinned bases, non-root, health check, hardening |
 | Container scan | `container-scan.yml` | weekly, on demand, and when a container definition or lockfile changes | Do the built images contain a fixable HIGH or CRITICAL vulnerability or misconfiguration |
 | OpenSSF Scorecard | `scorecard.yml` | weekly, on `main` and on branch-protection changes | How do the repository's practices compare with a public baseline |
@@ -40,6 +40,19 @@ dependencies (`voice-delegate-frontend.cdx.json`, from `pnpm sbom`). They are bu
 files with the tools the project already uses, so they add no dependency. `scripts/check_sbom.py`
 fails the job if a document is empty or malformed. The workflow can also be run by hand to get
 them as an artifact.
+
+Both documents are also covered by a signed build-provenance attestation: GitHub's artifact
+attestations (Sigstore) record that this repository's `sbom.yml` workflow, at the released
+commit, produced them. The signed statement is attached to the release as
+`voice-delegate.intoto.jsonl`, which is also the file name OpenSSF Scorecard looks for. To check
+a downloaded document:
+
+```sh
+gh attestation verify voice-delegate-python.cdx.json --repo savbiz/voice-delegate
+```
+
+Attestations are created when a release is published, so releases before this was added have
+none; the next release is the first to carry one.
 
 ## Containers
 
