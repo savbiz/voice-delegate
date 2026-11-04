@@ -22,6 +22,7 @@ Start with the [project README](../README.md). Pick the path that matches what y
 | [Azure setup](azure-setup.md) | Creating the `gpt-live-1` deployment and its endpoint |
 | [ElevenLabs integration](elevenlabs.md) | Agent prompt, the `delegate_task` webhook tool and its authentication |
 | [Testing beyond examples](testing.md) | Contract fuzzing, property-based tests and mutation testing of admission and rate limits |
+| [Nightly results](results.md) | The page the nightly workflow builds, what it measures and how to publish it |
 | [Load testing](load-testing.md) | Locust scenario against the offline backend, budgets and reference results |
 | [Supply-chain checks](supply-chain.md) | Dependency audit, SBOMs, Scorecard and what the tests enforce |
 | [Production scope](production.md) | What this reference does and does not provide for a real service |

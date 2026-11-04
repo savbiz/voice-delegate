@@ -39,7 +39,9 @@ def test_a_client_never_exceeds_burst_plus_refill(gaps: list[float]) -> None:
 
 
 @PROFILE
-@given(GAPS, st.floats(min_value=BURST / RATE, max_value=1000))
+# A refill of exactly burst/rate seconds is 4.999999... tokens once the clock has accumulated
+# float error, so the property asks for a millisecond of margin beyond it.
+@given(GAPS, st.floats(min_value=BURST / RATE + 0.001, max_value=1000))
 def test_an_idle_client_always_regains_its_full_burst(gaps: list[float], idle: float) -> None:
     now = [0.0]
     bucket = limiter(now)

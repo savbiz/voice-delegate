@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Added: a nightly results workflow and page (`docs/results.md`). It runs the test suite with coverage, the load test and the offline worker evaluation, shows the numbers in the run summary and builds a static page with a 90-run history. Publishing to GitHub Pages is off until the owner enables Pages and sets `PUBLISH_RESULTS`.
+
 Added: `.editorconfig` describing the conventions the repository already follows, a whitespace check (`scripts/check_editorconfig.py`) and a forbidden-files check (`scripts/check_forbidden_files.py`, the rule against committing `.env*`, keys and credentials) that run in every CI build, and a `.pre-commit-config.yaml` of local hooks (independence check, forbidden files, whitespace, ruff, mypy) for the optional pre-commit framework.
 
 Added: container checks. A static audit of the Dockerfiles and compose files (pinned bases, non-root user, `HEALTHCHECK`, hardened services) runs in every CI build, and a Trivy workflow scans the built backend and frontend images weekly and when a container definition changes.
