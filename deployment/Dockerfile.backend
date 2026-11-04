@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:0.12.15@sha256:62f8c047d0a0e9ece6b53fc63df902585a67a47a7f318ddec4a37db586edc8e3 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 AS uv
 FROM python:3.14-slim@sha256:930e1abba7c4e8f96ed93e8012c35d174d7732752731bbd5e8e757d7ec6f3966 AS builder
 COPY --from=uv /uv /uvx /bin/
 WORKDIR /app
@@ -11,6 +11,9 @@ RUN uv sync --locked --no-dev --no-editable
 FROM python:3.14-slim@sha256:930e1abba7c4e8f96ed93e8012c35d174d7732752731bbd5e8e757d7ec6f3966
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+# The runtime needs no installer; the base image's pip bundles copies of other packages that
+# vulnerability scanners report separately from the locked dependencies.
+RUN python -m pip uninstall -y pip
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/backend/logging.json /app/logging.json
 RUN useradd --uid 10001 --create-home app && mkdir /app/.local && chown app /app/.local
