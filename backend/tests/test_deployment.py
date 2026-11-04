@@ -34,19 +34,14 @@ def test_vercel_headers_and_install_command_are_ready_for_git_deployment() -> No
 
 
 def test_platforms_share_storage_health_and_required_variables() -> None:
-    railway = json.loads((ROOT / "railway.json").read_text())
     resources = json.loads((ROOT / "deployment/railway-requirements.json").read_text())
     render = (ROOT / "render.yaml").read_text()
-    assert railway["build"] == {
-        "builder": "DOCKERFILE",
-        "dockerfilePath": "deployment/Dockerfile.backend",
-    }
-    assert railway["deploy"]["restartPolicyType"] == "ON_FAILURE"
-    assert railway["deploy"]["healthcheckPath"] == "/healthz"
+    assert not (ROOT / "railway.json").exists()
     iac = (ROOT / ".railway/railway.ts").read_text()
     assert 'builder: "DOCKERFILE", dockerfilePath: "deployment/Dockerfile.backend"' in iac
     assert 'healthcheck: "/healthz"' in iac
-    assert 'restartPolicyType: "ON_FAILURE"' in iac
+    # Railway's default restart policy is stored as unset; declaring it never converges.
+    assert "restartPolicy" not in iac
     assert f'volumeMounts: {{ "{resources["volumeMountPath"]}": data }}' in iac
     assert "variables: { managed: false }" in iac
     health = re.search(r"healthCheckPath: (/\S+)", render)
