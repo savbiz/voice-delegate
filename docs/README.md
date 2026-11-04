@@ -33,7 +33,7 @@ Start with the [project README](../README.md). Pick the path that matches what y
 | [HTTP API](api.md) | Every endpoint, its payload and its errors |
 | [Decisions](decisions/README.md) | Architecture decision records |
 | [Benchmarks](benchmarks.md) | How voice timing is measured, and what it does not prove |
-| [Future extensions](future-extensions.md) | Proposals: MCP, moderation, SIP and a cascaded pipeline |
+| [Future extensions](future-extensions.md) | Proposals: SIP and a cascaded pipeline; remaining work on moderation and MCP |
 
 ## Internals and history
 

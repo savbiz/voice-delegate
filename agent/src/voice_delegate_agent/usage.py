@@ -16,6 +16,7 @@ class Usage(BaseModel):
     decision_calls: int = Field(default=0, ge=0, le=1000000)
     decision_tokens: int = Field(default=0, ge=0, le=1000000000)
     web_calls: int = Field(default=0, ge=0, le=1000000)
+    mcp_calls: int = Field(default=0, ge=0, le=1000000)
     uncertain: bool = False
 
     def plus(self, other: "Usage") -> "Usage":

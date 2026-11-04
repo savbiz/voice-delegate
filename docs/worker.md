@@ -185,3 +185,28 @@ Personal API sessions forward only their own OpenAI/Tavily keys to `/personal-jo
 remote execution is configured. Older private workers return 404 for that endpoint; no
 platform job is submitted as a fallback. Job keys are removed on terminal outcomes. See
 [personal access](personal-api.md).
+
+## Optional moderation
+
+`VOICE_MODERATION=true` with `OPENAI_API_KEY` on the worker host reviews the delegated goal
+and every documentation, web or tool result (arithmetic excepted) with a Decisions classifier
+before the planner sees it. Tune it with `VOICE_MODERATION_THRESHOLD`,
+`VOICE_MODERATION_TIMEOUT_SECONDS` and `VOICE_MODERATION_MAX_REVIEWS` (per job). A request
+that is unsuitable is declined; one that cannot be reviewed is not started. Evidence that reads
+as instructions, is unsuitable, is oversize or cannot be reviewed is withheld and the job ends
+as incomplete. Reviews add paid decision calls to the session cost estimate. See
+[ADR 013](decisions/013-moderation-boundary.md). Verification: `uv run pytest
+backend/tests/test_moderation.py`.
+
+## Optional MCP tools
+
+Set `VOICE_MCP_SERVERS` (a JSON array, `VOICE_MODERATION=true` required) to let the worker call
+read-only tools on servers you have audited. Each entry is `{"id", "url", "tools",
+"token_env"}`: a short lowercase id, a fixed `https://` endpoint, the exact tool names to
+allow and, optionally, the name of an `MCP_*` environment variable holding a bearer token.
+Tools appear to the planner as `id__tool`. Unlisted tools are never callable, whatever their
+annotations claim. A tool is dropped unless its input schema is a flat object of scalar
+properties. The catalog is cached for `VOICE_MCP_CACHE_SECONDS`; `VOICE_MCP_TIMEOUT_SECONDS`
+bounds each request. In the offline worker use `mcp id__tool {"query": "..."}`. Sessions with
+personal keys never use operator servers. Verification: `uv run pytest backend/tests/test_mcp.py`.
+See [ADR 010](decisions/010-mcp-trust-model.md).

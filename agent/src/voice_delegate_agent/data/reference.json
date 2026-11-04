@@ -304,6 +304,22 @@
     "digest": "2c107b8aca3dabd68b3279e1716622f493e5b122604bab74a204334b9316e18f"
   },
   {
+    "id": "3b83c17c82ab2385",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional moderation boundary",
+    "text": "With `VOICE_MODERATION` and an OpenAI key on the worker host, the worker reviews the\ndelegated goal and each documentation, web or tool result before the planner sees it.\nVerdicts are allow, quarantine or refuse, decided by deterministic policy over advisory\nclassifier signals. Withheld evidence ends the job as incomplete and is never narrated or\ncited. See [ADR 013](decisions/013-moderation-boundary.md).",
+    "digest": "3b83c17c82ab2385c03820530a245c3daee3428f3525194390f428d9f17ee7a6"
+  },
+  {
+    "id": "68a914db56f95c00",
+    "title": "Architecture",
+    "path": "docs/architecture.md",
+    "section": "Optional MCP tools",
+    "text": "Operators can list audited MCP servers and the exact tools the worker may call\n(`VOICE_MCP_SERVERS`, which requires moderation). The voice model still sees only\n`delegate_task`. Each delegation uses an immutable, cached, schema-reviewed snapshot of\n`server__tool` names; results are moderated, cited as evidence and terminal like web\nevidence. See [ADR 010](decisions/010-mcp-trust-model.md).",
+    "digest": "68a914db56f95c00c10f421f8e8f31b41dea8145292a8a35dbb3012059416609"
+  },
+  {
     "id": "ee47cad3a2f165da",
     "title": "Architecture",
     "path": "docs/architecture.md",
@@ -512,6 +528,94 @@
     "digest": "61dfe122ffe8e470400d03498954098f192c00078e72735ab0107eebbc8443ae"
   },
   {
+    "id": "0b26fcca23c44e20",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "ADR 010: Worker as a read-only MCP client",
+    "text": "Date: 2026-11-04\nStatus: accepted",
+    "digest": "0b26fcca23c44e2004047e13a574e4e6340aa75643580251389185b951ff6b7d"
+  },
+  {
+    "id": "6f0aa17499c1bc65",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "Context",
+    "text": "MCP offers tool discovery and invocation, but a server is not trusted by speaking it, and\ntool annotations such as `readOnlyHint` are hints from the server, not guarantees. The voice\nmodel keeps one tool, `delegate_task`; any new capability belongs to the worker. Moderation\n([ADR 013](013-moderation-boundary.md)) must stand between external output and the planner\nbefore remote tools are allowed.",
+    "digest": "6f0aa17499c1bc65171fd958c539e6f2e05bf019a242fefd7ec9861514d0b14f"
+  },
+  {
+    "id": "53d67d47b8e28cf9",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "Decision",
+    "text": "The worker can call tools on servers listed in `VOICE_MCP_SERVERS`. An entry names a server\nid, a fixed HTTPS endpoint (no credentials, query, fragment or custom port), the exact tools\nthe operator has audited, and optionally the name of one `MCP_*` environment variable that\nholds a bearer token. Servers are never discovered from speech, search results or tool\noutput, and no invitation code or provider key is forwarded. Any server requires\n`VOICE_MODERATION`, so every MCP result is reviewed with the MCP origin first.",
+    "digest": "53d67d47b8e28cf9d960f9354aa894ee5f7fd67157b3c0a63a2cb7025b0d775e"
+  },
+  {
+    "id": "a634e244b5598a90",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "Decision",
+    "text": "The client is a small JSON-RPC adapter over the existing `httpx` dependency (Streamable HTTP;\nJSON or a single event-stream reply; no redirects, retries or SDK; protocol versions\n2025-06-18 and 2025-03-26 only). Each operation uses a fresh short-lived protocol session.",
+    "digest": "a634e244b5598a907066436a55b95083228ec473733bf92f96014af1b2062634"
+  },
+  {
+    "id": "24dee8bf1821b692",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "Decision",
+    "text": "- Discovery runs at most once per cache lifetime per server (default 60 s; a failed server is\n  retried after 10 s), with 3 pages, 64 raw tools, a per-request timeout of at most 3 s and a\n  5 s discovery cap. A refresh builds a new immutable snapshot; each delegation keeps the\n  snapshot it started with. Discovery never happens per planner step.",
+    "digest": "24dee8bf1821b692d29e4136d7972154c8f569bf17b822b670e85fe27629c7cd"
+  },
+  {
+    "id": "0aa156db9145ca5c",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "Decision",
+    "text": "- A tool is kept only if the operator listed it, its name is unique in the response, it does\n  not declare `readOnlyHint: false`, and its parameter schema is a flat object of at most eight\n  string, integer, number or boolean properties. Anything else (nested objects, arrays,\n  references, unions) is dropped rather than approximated. Arguments are validated against\n  the derived model before a request leaves the process.",
+    "digest": "0aa156db9145ca5c68917eb160237c8d7d46738131ea001c8276b26ea2ec927c"
+  },
+  {
+    "id": "598f44bc97273597",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "Decision",
+    "text": "- Names are prefixed `server__tool`. The total across servers is at most eight, so the\n  Decisions choice list keeps room for built-ins, direct answers and refusals. The Decisions\n  planner can call only a tool whose single required parameter is text, passing the goal\n  verbatim; a model planner may supply validated arguments for others.",
+    "digest": "598f44bc97273597d6f838ed3c3e2e23c0f46903f8b96ca8bcbb70d34f5caa05"
+  },
+  {
+    "id": "7bcce50c3bebc92e",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "Decision",
+    "text": "- A call has a bounded deadline, at most 8 KiB of text, and only `text` content; other\n  content types are unavailable. Tool-reported errors (`isError`) are kept separate from\n  transport failures. An invocation is never retried, and cancellation propagates.",
+    "digest": "7bcce50c3bebc92e8f2c0ee95c24269e3a20472b199844bb1e8dd986f165490b"
+  },
+  {
+    "id": "c7b6bb2e5ca861ad",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "Decision",
+    "text": "- Output is moderated, then becomes one cited source (400-character excerpt). As with web\n  evidence, no tool call may follow it, and at most three citations survive. A failure ends\n  with an explicit unavailable result; built-in tools stay available when a server is down.",
+    "digest": "c7b6bb2e5ca861ad65fa51b2ebafc987750fa5cfb7f50ca5c6b31b8baf97698d"
+  },
+  {
+    "id": "794ae2c4f89bd890",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "Decision",
+    "text": "- Sessions that bring their own keys never receive operator servers. A private worker applies\n  the same policy and validates returned MCP sources before the API accepts them.",
+    "digest": "794ae2c4f89bd8908adfe423728c59ea9697588b2f537a20be197a675d50b608"
+  },
+  {
+    "id": "93cdfa0a50d59ade",
+    "title": "ADR 010: Worker as a read-only MCP client",
+    "path": "docs/decisions/010-mcp-trust-model.md",
+    "section": "Consequences",
+    "text": "Disabled mode is unchanged and adds no dependency. Fakes prove that the application\nenforces the allowlist, schema review, bounds and quarantine; they do not prove a remote\nserver is honest or that a listed tool is truly read-only. The operator audits each listed\ntool and should give the server read-only credentials and egress limits. Live\ncompatibility needs a separately authorized server and its recorded version. The proposed\nICS calendar example server is not part of this change.",
+    "digest": "93cdfa0a50d59ade1ab095b90d8501ade5e75ff27a964ebd42a1c7115b224dc9"
+  },
+  {
     "id": "98442652154f254f",
     "title": "ADR 011: Read-only web search in the delegated worker",
     "path": "docs/decisions/011-read-only-web-search.md",
@@ -638,6 +742,78 @@
     "section": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
     "text": "Setup and limits: [ElevenLabs integration](../elevenlabs.md). Sources:\n[webhook tools](https://elevenlabs.io/docs/eleven-agents/customization/tools/webhook-tools),\n[client tools](https://elevenlabs.io/docs/eleven-agents/customization/tools/client-tools),\n[dynamic variables](https://elevenlabs.io/docs/eleven-agents/customization/personalization/dynamic-variables).",
     "digest": "3bebe318dcd98420b521fe4c2e309cc3f84bc7cb6d0d8319e9c9bd0174fbb71e"
+  },
+  {
+    "id": "c998afb439a3bb1a",
+    "title": "ADR 013: Origin-aware moderation boundary in the worker",
+    "path": "docs/decisions/013-moderation-boundary.md",
+    "section": "ADR 013: Origin-aware moderation boundary in the worker",
+    "text": "Date: 2026-11-04\nStatus: accepted",
+    "digest": "c998afb439a3bb1a7fbe1dfa75927a1ad9d0e7859869ba6fb5d5558b0506c3a2"
+  },
+  {
+    "id": "580939457e0a0466",
+    "title": "ADR 013: Origin-aware moderation boundary in the worker",
+    "path": "docs/decisions/013-moderation-boundary.md",
+    "section": "Context",
+    "text": "The worker reads text from three kinds of source: the user's delegated goal, bundled\ndocumentation and external evidence such as web excerpts. Evidence can contain\ninstructions addressed to an assistant. A user request that is phrased as an imperative is\nordinary input and must not be treated the same way. A classifier can estimate, not prove,\nthat text is safe.",
+    "digest": "580939457e0a0466814b6a3f6889f976af851f780d2007d0ccab457216a150ac"
+  },
+  {
+    "id": "2244d49be5af4c41",
+    "title": "ADR 013: Origin-aware moderation boundary in the worker",
+    "path": "docs/decisions/013-moderation-boundary.md",
+    "section": "Decision",
+    "text": "Introduce one `Moderator` contract in the agent package, so the worker can import it\nwithout a dependency on the API. Each review carries an `Origin` (user, documentation, web,\nMCP) and returns a typed `Verdict` with an action (allow, quarantine, refuse) and a fixed\n`Reason`. A `Classifier` supplies two advisory probabilities, instruction-to-assistant and\nunsuitable; `PolicyModerator` applies deterministic rules to them:",
+    "digest": "2244d49be5af4c41ff2188551e8897a2630ae8a3494072389d0213870abeb676"
+  },
+  {
+    "id": "b32fe077f6dcd782",
+    "title": "ADR 013: Origin-aware moderation boundary in the worker",
+    "path": "docs/decisions/013-moderation-boundary.md",
+    "section": "Decision",
+    "text": "- User text is refused only when unsuitable. An instruction-like signal is ignored, so\n  ordinary requests and the cancellation-intent logic are unaffected.",
+    "digest": "b32fe077f6dcd782ece8ed394b615d29effbde61f5053e230a03337c6454f749"
+  },
+  {
+    "id": "10fbbae62c5bc10a",
+    "title": "ADR 013: Origin-aware moderation boundary in the worker",
+    "path": "docs/decisions/013-moderation-boundary.md",
+    "section": "Decision",
+    "text": "- Oversize text, an exhausted per-job review budget, a timeout and any classifier fault never\n  allow. Evidence is quarantined; a user goal is declined with a reason and the session is\n  unaffected.",
+    "digest": "10fbbae62c5bc10a849a5dee6aaad39625f46a2edff29e99d52c220ad66c0d8d"
+  },
+  {
+    "id": "7d11c2202865b1bd",
+    "title": "ADR 013: Origin-aware moderation boundary in the worker",
+    "path": "docs/decisions/013-moderation-boundary.md",
+    "section": "Decision",
+    "text": "The worker reviews the goal before planning and every tool result except arithmetic before\nthe planner sees it. A quarantined result ends the job as incomplete, records no sources and\nis never narrated. There is no automatic substitution of other evidence in this version.",
+    "digest": "7d11c2202865b1bd0fe140c89ee3946816166d03e286bff2d6927e599322d443"
+  },
+  {
+    "id": "eed4f4186b303f63",
+    "title": "ADR 013: Origin-aware moderation boundary in the worker",
+    "path": "docs/decisions/013-moderation-boundary.md",
+    "section": "Decision",
+    "text": "The backend adapter `DecisionsClassifier` calls the existing Decisions client once per\nreview with both predicates. `VOICE_MODERATION` is a flag because the feature spends money\nand has no credential of its own to key off; it also requires `OPENAI_API_KEY` on the worker\nhost and is disabled on a private worker that lacks one. Review budgets are per job, so jobs\ncannot contaminate one another, and decision calls and tokens flow into the existing cost\nestimate. Telemetry is a counter labelled with origin, action and reason; text is never\nlogged.",
+    "digest": "eed4f4186b303f639f4f145fcf591ba05bc9f9d54fa5c654c634c36455f5113b"
+  },
+  {
+    "id": "6bf0bee64fa43737",
+    "title": "ADR 013: Origin-aware moderation boundary in the worker",
+    "path": "docs/decisions/013-moderation-boundary.md",
+    "section": "Consequences",
+    "text": "Disabled mode is unchanged. Enabled mode adds one classifier call for the goal and one per\ndocumentation, web or MCP result, each bounded by a timeout. The hook is also the boundary\nthat any future tool registry must pass through: unknown tools are reviewed with the MCP\norigin.",
+    "digest": "6bf0bee64fa437379f65dfbe90755b7ba6ce961df8bea2ebbedda7eae42ba781"
+  },
+  {
+    "id": "ec2dc29ff8730774",
+    "title": "ADR 013: Origin-aware moderation boundary in the worker",
+    "path": "docs/decisions/013-moderation-boundary.md",
+    "section": "Consequences",
+    "text": "Offline tests inject instructions through documentation and a fake web search, and cover\nclassifier failure, oversize text, budget exhaustion and legitimate imperative requests.\nThey prove enforcement with scripted signals. Real classifier quality, false-positive rates\nand live latency remain pending authorized evaluation. Raw transcript segments before they\nbecome a goal are not yet reviewed.",
+    "digest": "ec2dc29ff8730774bfd0d693c6e2a7a6ad6259a84e2b32400aaa896674e69a52"
   },
   {
     "id": "6cc11666e98522dd",

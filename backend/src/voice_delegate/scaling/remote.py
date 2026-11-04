@@ -73,10 +73,11 @@ class RemoteWorker:
                     note(result.usage)
                     received_usage = True
                 if result.status == "completed" or (result.status == "failed" and result.text):
-                    if result.web_sources and not self.settings.web_search:
+                    external = self.settings.web_search or bool(self.settings.mcp_servers)
+                    if result.web_sources and not external:
                         message = "Remote worker web evidence was not enabled"
                         raise RuntimeError(message)
-                    web = {s.id: s for s in result.web_sources} if self.settings.web_search else {}
+                    web = {s.id: s for s in result.web_sources} if external else {}
                     sources = tuple(
                         s
                         for key in result.source_ids

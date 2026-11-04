@@ -14,6 +14,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from voice_delegate_agent.mcp import verified_mcp_source
 from voice_delegate_agent.reference import Source
 from voice_delegate_agent.usage import Usage, usage_sink
 from voice_delegate_agent.web_search import verified_web_source
@@ -24,6 +25,11 @@ from voice_delegate.delegation.planner import build_planner
 from voice_delegate.limits.http import BodyLimitMiddleware
 from voice_delegate.limits.results import clip_worker_result
 from voice_delegate.session.access import PersonalKeys
+
+
+def verified_external_source(source: Source) -> bool:
+    """Web and MCP evidence are the only non-bundled sources a worker may return."""
+    return verified_web_source(source) or verified_mcp_source(source)
 
 
 class JobInput(BaseModel):
@@ -46,7 +52,7 @@ class JobOutput(BaseModel):
     @classmethod
     def validate_web_sources(cls, sources: tuple[Source, ...]) -> tuple[Source, ...]:
         if len({s.id for s in sources}) != len(sources) or not all(
-            verified_web_source(s) for s in sources
+            verified_external_source(s) for s in sources
         ):
             message = "Invalid web evidence from worker"
             raise ValueError(message)
@@ -142,7 +148,9 @@ class Jobs:
                 result = clip_worker_result(result, self.settings.delegation_result_tokens)
                 job.text = result.text
                 job.source_ids = tuple(s.id for s in result.sources[:3])
-                job.web_sources = tuple(s for s in result.sources[:3] if verified_web_source(s))
+                job.web_sources = tuple(
+                    s for s in result.sources[:3] if verified_external_source(s)
+                )
                 job.status = result.status
         except asyncio.CancelledError:
             job.status = "cancelled"
@@ -174,6 +182,8 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
     if worker is None:
         if not settings.tavily_api_key.get_secret_value():
             settings = settings.model_copy(update={"web_search": False})
+        if not settings.openai_api_key.get_secret_value():
+            settings = settings.model_copy(update={"moderation": False, "mcp_servers": []})
         runtime = build_planner(settings)
         worker = runtime.worker(settings.worker_max_steps)
     jobs = Jobs(worker, settings)

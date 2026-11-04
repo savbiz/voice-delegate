@@ -73,6 +73,13 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `tavily_api_key` | `TAVILY_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
 | `web_search_domains` | `VOICE_WEB_SEARCH_DOMAINS` | `[]` | `{"type": "array", "items": {"type": "string"}, "maxItems": 20}` |
 | `web_search_timeout_seconds` | `VOICE_WEB_SEARCH_TIMEOUT_SECONDS` | `3` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
+| `moderation` | `VOICE_MODERATION` | `false` | `{"type": "boolean"}` |
+| `moderation_threshold` | `VOICE_MODERATION_THRESHOLD` | `0.8` | `{"type": "number", "minimum": 0.5, "maximum": 1}` |
+| `moderation_timeout_seconds` | `VOICE_MODERATION_TIMEOUT_SECONDS` | `1` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
+| `moderation_max_reviews` | `VOICE_MODERATION_MAX_REVIEWS` | `6` | `{"type": "integer", "minimum": 1, "maximum": 24}` |
+| `mcp_servers` | `VOICE_MCP_SERVERS` | `[]` | `{"type": "array", "items": {"$ref": "#/$defs/McpServerSetting"}, "maxItems": 4}` |
+| `mcp_timeout_seconds` | `VOICE_MCP_TIMEOUT_SECONDS` | `3` | `{"type": "number", "maximum": 3, "exclusiveMinimum": 0}` |
+| `mcp_cache_seconds` | `VOICE_MCP_CACHE_SECONDS` | `60` | `{"type": "number", "minimum": 1, "maximum": 600}` |
 | `worker_model` | `VOICE_WORKER_MODEL` | `"gpt-6-luna"` | `{"type": "string"}` |
 | `delegation_timeout_seconds` | `VOICE_DELEGATION_TIMEOUT_SECONDS` | `15` | `{"type": "number", "maximum": 120, "exclusiveMinimum": 0}` |
 | `delegation_result_tokens` | `VOICE_DELEGATION_RESULT_TOKENS` | `120` | `{"type": "integer", "minimum": 8, "maximum": 480}` |
@@ -198,6 +205,18 @@ def validate_web_search(self) -> "Settings":
 
 
 @model_validator(mode="after")
+def validate_mcp(self) -> "Settings":
+    ids = [server.id for server in self.mcp_servers]
+    if len(set(ids)) != len(ids) or sum(len(s.tools) for s in self.mcp_servers) > 8:
+        message = "MCP servers need unique ids and at most eight allowlisted tools in total"
+        raise ValueError(message)
+    if self.mcp_servers and not self.moderation:
+        message = "MCP servers require VOICE_MODERATION"
+        raise ValueError(message)
+    return self
+
+
+@model_validator(mode="after")
 def validate_origins(self) -> "Settings":
     """Require canonical browser origins."""
     for origin in self.allowed_origins:
@@ -287,6 +306,13 @@ def validate_production(self) -> "Settings":
         raise ValueError(message)
     if self.worker_mode != "offline" and not self.openai_api_key.get_secret_value():
         message = "Paid worker modes require OPENAI_API_KEY"
+        raise ValueError(message)
+    if (
+        self.moderation
+        and self.worker_execution == "local"
+        and not self.openai_api_key.get_secret_value()
+    ):
+        message = "Moderation requires OPENAI_API_KEY on the worker host"
         raise ValueError(message)
     if self.environment == "production":
         if "testserver" in self.allowed_hosts:

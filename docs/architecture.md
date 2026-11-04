@@ -311,6 +311,22 @@ System prompts ship as Markdown resources inside the backend and agent packages,
 with server-selected variants matching enabled tools and cancellation behavior.
 
 
+## Optional moderation boundary
+
+With `VOICE_MODERATION` and an OpenAI key on the worker host, the worker reviews the
+delegated goal and each documentation, web or tool result before the planner sees it.
+Verdicts are allow, quarantine or refuse, decided by deterministic policy over advisory
+classifier signals. Withheld evidence ends the job as incomplete and is never narrated or
+cited. See [ADR 013](decisions/013-moderation-boundary.md).
+
+## Optional MCP tools
+
+Operators can list audited MCP servers and the exact tools the worker may call
+(`VOICE_MCP_SERVERS`, which requires moderation). The voice model still sees only
+`delegate_task`. Each delegation uses an immutable, cached, schema-reviewed snapshot of
+`server__tool` names; results are moderated, cited as evidence and terminal like web
+evidence. See [ADR 010](decisions/010-mcp-trust-model.md).
+
 ## Browser audio observations
 
 The WebRTC stream analyser automatically
