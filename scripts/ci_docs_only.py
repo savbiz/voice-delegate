@@ -1,7 +1,7 @@
 """Decide whether a pull request changes only documentation.
 
-The ci workflow uses this to skip the frontend job, the container build and the Python 3.13
-run for changes they cannot affect. Backend lint, types, tests and the documentation checks
+The ci workflow uses this to skip the frontend job, the container build and the container
+smoke tests for changes they cannot affect. Backend lint, types, tests and the documentation checks
 still run. Reads changed paths from standard input, one per line (a rename lists both its old
 and new path), and prints `true` or `false`. Anything unexpected prints `false`: a wrong
 `false` only costs minutes, a wrong `true` would skip a check.

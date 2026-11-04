@@ -23,8 +23,9 @@ def main(worker: bool = False) -> int:
         with urlopen(request, timeout=3) as response:
             return 0 if not worker and response.status == 200 else 1
     except HTTPError as error:
+        error.close()  # releases the response; Python 3.14 reports an unclosed one
         return 0 if worker and error.code == 401 else 1
-    except (URLError, TimeoutError, ValueError, IndexError, TypeError, AttributeError):
+    except URLError, TimeoutError, ValueError, IndexError, TypeError, AttributeError:
         return 1
 
 

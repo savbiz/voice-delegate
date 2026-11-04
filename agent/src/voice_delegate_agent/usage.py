@@ -19,7 +19,7 @@ class Usage(BaseModel):
     mcp_calls: int = Field(default=0, ge=0, le=1000000)
     uncertain: bool = False
 
-    def plus(self, other: "Usage") -> "Usage":
+    def plus(self, other: Usage) -> Usage:
         return Usage(
             **{
                 name: min(

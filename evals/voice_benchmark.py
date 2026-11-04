@@ -31,7 +31,7 @@ class Dataset(StrictModel):
     cases: list[Case] = Field(min_length=30, max_length=30)
 
     @model_validator(mode="after")
-    def unique_cases(self) -> "Dataset":
+    def unique_cases(self) -> Dataset:
         if len({case.id for case in self.cases}) != 30:
             message = "Case identifiers must be unique"
             raise ValueError(message)
@@ -58,7 +58,7 @@ class Observation(StrictModel):
     speech_end_ms: float | None = Field(default=None, gt=0, le=10_000)
 
     @model_validator(mode="after")
-    def consistent_timing(self) -> "Observation":
+    def consistent_timing(self) -> Observation:
         if self.outcome == "completed" and (
             self.first_audio_ms is None or self.turn_ms is None or self.delegated is None
         ):
@@ -97,7 +97,7 @@ class Capture(StrictModel):
     observations: list[Observation] = Field(min_length=1, max_length=300)
 
     @model_validator(mode="after")
-    def provenance(self) -> "Capture":
+    def provenance(self) -> Capture:
         if (self.mode == "offline") != (self.provider == "fake"):
             message = "Scripted observations must never be attributed to a live provider"
             raise ValueError(message)

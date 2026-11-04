@@ -25,7 +25,7 @@ class Prices(BaseModel):
     rates: dict[str, Rate] = Field(max_length=64)
 
     @classmethod
-    def load(cls, path: str = "") -> "Prices":
+    def load(cls, path: str = "") -> Prices:
         raw = (
             Path(path).read_bytes()
             if path

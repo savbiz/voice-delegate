@@ -301,7 +301,7 @@ class ElevenLabsProvider:
                                 )
                             ):
                                 on_usage(usage)
-        except (httpx.HTTPError, TimeoutError, ValueError, TypeError):
+        except httpx.HTTPError, TimeoutError, ValueError, TypeError:
             return False
         return confirmed
 
@@ -328,7 +328,7 @@ class ElevenLabsProvider:
         """Mint once; no retry after an ambiguous credential request."""
         try:
             return await self._fetch_bootstrap()
-        except (httpx.HTTPError, TimeoutError, ValueError):
+        except httpx.HTTPError, TimeoutError, ValueError:
             message = "ElevenLabs session setup unavailable"
             raise ProviderError(message) from None
 

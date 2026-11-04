@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Changed: the project now builds and tests on Python 3.14 only (it was 3.12 and 3.13): packages, tools, the backend image and CI. CI has one backend job, `backend (3.14)`, replacing `backend (3.12)` and `backend (3.13)`, so the required checks in the repository ruleset must be updated. A test keeps every place that names the version in agreement. Python 3.14 reports an unclosed HTTP error response, so the container health check now closes it. The backend image no longer ships pip, whose bundled copies of other packages a scan reported.
+
 Added: releases now carry a signed build-provenance attestation for the SBOM documents (GitHub artifact attestations), attached as `voice-delegate.intoto.jsonl` and verifiable with `gh attestation verify`. It applies from the next published release. An overview diagram of the system components is added to `docs/architecture.md`, and Sentry is recorded as a possible later addition in `docs/future-extensions.md`.
 
 Changed: the frontend build uses Node.js 26 (now an LTS line) in the image, CI and `engines`. Node is only used to build and test the frontend; the production image serves static files from nginx. The pnpm install in that image no longer depends on Corepack, which Node 25 and later do not bundle: the registry tarball is installed only if its SHA-512 matches.
