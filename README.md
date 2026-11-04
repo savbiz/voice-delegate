@@ -1,6 +1,8 @@
 # voice-delegate
 
 [![ci](https://github.com/savbiz/voice-delegate/actions/workflows/ci.yml/badge.svg)](https://github.com/savbiz/voice-delegate/actions/workflows/ci.yml)
+[![hosted API health](https://github.com/savbiz/voice-delegate/actions/workflows/health.yml/badge.svg)](https://github.com/savbiz/voice-delegate/actions/workflows/health.yml)
+[![coverage gate](https://img.shields.io/badge/coverage%20gate-%E2%89%A585%25-brightgreen.svg)](.github/actions/backend/action.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![release](https://img.shields.io/github/v/release/savbiz/voice-delegate)](https://github.com/savbiz/voice-delegate/releases)
 
@@ -14,6 +16,8 @@ and the answer is spoken when you pause. Interrupting the voice never throws tha
 <p align="center">
   <img src="docs/images/workspace.png" alt="The voice workspace: provider choice, API access and invitation code" width="720">
 </p>
+
+Reviewing this repository? [Start here](docs/start-here.md) for a five-minute reading path.
 
 ## What's implemented
 
