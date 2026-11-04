@@ -169,7 +169,7 @@ async def test_failover_replays_inflight_question_and_paused_same_speaker_segmen
     assert fallback.configs[0].history == tuple(expected[-12:])
     assert session.sealed_index == segments
     # Re-flushing cannot duplicate already sealed text.
-    manager._seal_history(session, include_latest=True)
+    manager.seal_history(session, include_latest=True)
     assert tuple(
         (entry.speaker, entry.text) for entry in session.committed_history.entries
     ) == tuple(expected[-12:])
