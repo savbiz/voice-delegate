@@ -24,9 +24,9 @@ in a live provider call. Do not publish measured latency from the offline demons
 
 ## Recording guide
 
-Everything above is the storyboard. This section is how to record it. Nothing here has been
-recorded yet; update the status line at the top with the commit and date once a take is
-published.
+Everything above is the storyboard. This section is how to record it, and how the current
+recording was made. Re-record it when the interface changes noticeably, and update the status
+line at the top with the date and version.
 
 ### Before recording
 
@@ -99,5 +99,4 @@ ffmpeg -i demo.mp4 -vf "scale=1280:-2,fps=30" -c:v libx264 -crf 28 -preset slow 
    plain URL on its own line; leave it on its own line and GitHub shows it as a video player.
 3. Add one sentence above it saying what it shows and which commit it was recorded on,
    then commit through a branch and a pull request as usual.
-4. Update the status line at the top of this file and the first item under "Next, for v1.0"
-   in [the roadmap](roadmap.md).
+4. Update the status line at the top of this file.
