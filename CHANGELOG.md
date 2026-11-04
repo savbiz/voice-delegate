@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Added: fast-check property tests in the frontend (`frontend/src/properties.test.ts`). They generate event sequences for the session lifecycle state machine and arbitrary URLs for the evidence-link filter. fast-check (MIT) is a development dependency only.
+
 Changed: the remaining unpinned build inputs are pinned by hash. The frontend image gets pnpm through Corepack from the `packageManager` field, which now carries the release's SHA-512, and the development container base image is pinned by digest and covered by Dependabot.
 
 Changed: CodeQL also scans pull requests, so every change is analysed before merge (OpenSSF Scorecard's SAST check measures this). CodeQL, the container scan and the supply-chain audit cancel an older run when a newer commit arrives on the same branch.
