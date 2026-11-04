@@ -1,6 +1,6 @@
 # Frontend
 
-React renders session status, captions, worker state, recap, sources and timings from the live store. `src/realtime/live.ts` owns WebRTC, HTTP and timers; provider audio flows directly between browser and provider. The scripted demo uses no microphone or provider key.
+React renders session status, captions, worker state, recap, sources and timings from the live store. `src/realtime/live.ts` owns WebRTC and timers, `api.ts` the backend requests and `lifecycle.ts` the explicit idle/ending/recovering state and attempt numbering; provider audio flows directly between browser and provider. The scripted demo uses no microphone or provider key.
 
 Use Node.js 24 and the pnpm version declared in `package.json`. From the repository root:
 

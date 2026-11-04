@@ -55,6 +55,7 @@ enable flags are ignored. Remaining operational switches include:
 
 Implementation: [factory](../backend/src/voice_delegate/api/app.py),
 [session manager](../backend/src/voice_delegate/session/manager.py),
+[Azure recovery](../backend/src/voice_delegate/session/recovery.py),
 [personal access](../backend/src/voice_delegate/personal.py),
 [worker planner](../backend/src/voice_delegate/delegation/planner.py).
 See [configuration](configuration.md), [personal API](personal-api.md),
