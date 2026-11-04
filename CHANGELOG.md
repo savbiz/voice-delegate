@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 - 2026-11-05
+
+1.0.0 marks the point where the project is finished, documented and demonstrated: a 90-second recording of the hosted app is at the top of the README, the CI, security and supply-chain checks are in place, and dependencies are current. No new voice features. The per-provider live acceptance runs and the paid voice benchmark remain optional and are not claimed.
 
 Changed: the backend image built in CI reuses unchanged layers between runs (BuildKit with the GitHub Actions cache). The Trivy vulnerability scan still builds both images without a cache, on purpose, so it always sees current operating-system packages; a test keeps that distinction.
 

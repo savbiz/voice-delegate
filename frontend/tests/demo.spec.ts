@@ -9,7 +9,7 @@ test('demo completes without backend requests', async ({ page }) => {
   });
   await page.clock.install();
   await page.goto('/#demo');
-  await expect(page.locator('header .badge')).toHaveText('OPEN REFERENCE · 0.5.0');
+  await expect(page.locator('header .badge')).toHaveText('OPEN REFERENCE · 1.0.0');
   await page.getByRole('button', { name: 'Start demo', exact: true }).click();
   await page.clock.runFor(4000);
   await expect(page.getByText('310 ms · simulated')).toBeVisible();
