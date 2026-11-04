@@ -9,7 +9,7 @@ The backend serves JSON over HTTPS in hosted deployments. All `/api` routes requ
 | GET | `/healthz` | `{"status":"ok"}`; process health, no provider call | 200 | — |
 | POST | `/api/config` | `requires_access_code`, `voice_available`, `feedback_available`, `access_request_available`, `access_request_email` booleans | 200 | — |
 | POST | `/api/access-request` | `contact` (an email when `access_request_email`) and optional `note`; notifies the owner | 202 | 422 invalid; 429 budget; 503 disabled or notification failure |
-| POST | `/access/{id}/{secret}/approve` | Owner decision from the notification; emails a new invitation code | 200 | 404 unknown; 409 decided or expired; 502 email failure |
+| POST | `/access/{id}/{secret}/approve` | Owner decision from the notification; sends the owner the new code and a prefilled email | 200 | 404 unknown; 409 decided or expired; 502 notification failure |
 | POST | `/access/{id}/{secret}/deny` | Owner decision from the notification | 200 | 404 unknown; 409 decided or expired |
 | POST | `/api/sessions` | Optional `adapter`, `language`, `mode`, `azure_recovery` and debug consent preferences; returns `id`, `key`, `ttl_seconds` | 201 | 429 capacity/quota; 503 kill switch or quota store failure |
 | POST | `/api/sessions/{id}/offer` | `{"sdp":"v=0\r\n…"}` → `{"sdp":"…"}` | 200 | 409 duplicate/invalid state; 502 provider failure; 504 setup timeout |

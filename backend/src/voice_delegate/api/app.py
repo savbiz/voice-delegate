@@ -43,13 +43,11 @@ def create_app(
     """Build a single-process app; inject an offline provider in tests."""
     settings = settings or load_settings()
     if access_requests is None and settings.access_request_url:
-        remote_approval = bool(settings.resend_api_key.get_secret_value())
+        remote_approval = bool(settings.public_api_url)
         access_requests = AccessRequests(
             settings.access_request_url,
             store=InviteStore(settings.access_database) if remote_approval else None,
             approval=Approval(
-                resend_api_key=settings.resend_api_key.get_secret_value(),
-                sender=settings.access_email_from,
                 public_api_url=settings.public_api_url.rstrip("/"),
                 frontend_url=settings.allowed_origins[0],
             )

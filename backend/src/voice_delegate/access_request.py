@@ -3,12 +3,12 @@
 Notification only (``VOICE_ACCESS_REQUEST_URL``): the request is forwarded once to an ntfy
 topic and nothing is stored.
 
-Remote approval (also ``RESEND_API_KEY``, ``VOICE_ACCESS_EMAIL_FROM`` and
-``VOICE_PUBLIC_API_URL``): the visitor gives an email address, the ntfy notification carries
-Approve and Deny buttons bound to a one-time secret, and approval emails a new invitation
-code through Resend. The email address is kept only until the owner decides or the request
-expires; afterwards only its hash remains, to refuse repeated requests for a cooling-off
-period. Invitation codes are stored only as SHA-256 hashes.
+Remote approval (also ``VOICE_PUBLIC_API_URL``): the visitor gives an email address, the
+ntfy notification carries Approve and Deny buttons bound to a one-time secret, and approval
+sends the owner a second notification with the new code and a prefilled email to forward.
+The email address is kept only until the owner decides or the request expires; afterwards
+only its hash remains, to refuse repeated requests for a cooling-off period.
+Invitation codes are stored only as SHA-256 hashes.
 """
 
 import hashlib
@@ -20,6 +20,7 @@ from collections import deque
 from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
+from urllib.parse import quote
 
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -169,8 +170,6 @@ class InviteStore:
 class Approval(BaseModel):
     """Settings for remote approval; all fields are operator configuration."""
 
-    resend_api_key: str
-    sender: str
     public_api_url: str
     frontend_url: str
 
@@ -231,7 +230,7 @@ class AccessRequests:
                 f"http, Approve, {base}/approve, method=POST, clear=true; "
                 f"http, Deny, {base}/deny, method=POST, clear=true"
             )
-            message += "\nApprove emails a new invitation code to this address."
+            message += "\nApprove creates a code and a prefilled email for you to send."
         try:
             response = await self.client.post(self.url, content=message.encode(), headers=headers)
             response.raise_for_status()
@@ -245,28 +244,34 @@ class AccessRequests:
         if self.store is None or self.approval is None:
             raise SessionError(404, "Access request not found")
         email, token = self.store.approve(request_id, secret)
+        subject = "Your voice-delegate invitation"
         text = (
-            "Your request to try voice-delegate was approved.\n\n"
+            "Hello,\n\nyour request to try voice-delegate was approved.\n\n"
             f"Invitation code: {token}\n\n"
             f"Open {self.approval.frontend_url}, choose Platform API and paste the code. "
             "Keep it private: it is personal and daily limits apply.\n"
         )
+        mailto = (
+            f"mailto:{quote(email, safe='@')}"
+            f"?subject={quote(subject, safe='')}&body={quote(text, safe='')}"
+        )
         try:
+            # Cache: no keeps the code off the ntfy server once delivered to the owner's phone.
             response = await self.client.post(
-                "https://api.resend.com/emails",
-                headers={"Authorization": f"Bearer {self.approval.resend_api_key}"},
-                json={
-                    "from": self.approval.sender,
-                    "to": [email],
-                    "subject": "Your voice-delegate invitation",
-                    "text": text,
+                self.url,
+                content=f"Invitation code for {email}:\n{token}".encode(),
+                headers={
+                    "Title": "voice-delegate invitation approved",
+                    "Tags": "white_check_mark",
+                    "Cache": "no",
+                    "Actions": f"view, Send email, {mailto}, clear=true",
                 },
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:
-            # Undelivered codes are revoked; the request stays pending so Approve can be retried.
+            # An undelivered code is revoked; the request stays pending so Approve can be retried.
             self.store.revoke_token(token)
-            raise SessionError(502, "The invitation email could not be sent") from exc
+            raise SessionError(502, "The invitation code could not be delivered") from exc
         self.store.decide(request_id, "approved")
 
     def deny(self, request_id: str, secret: str) -> None:

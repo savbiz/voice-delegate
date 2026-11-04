@@ -54,10 +54,8 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `quota_database` | `VOICE_QUOTA_DATABASE` | `".local/quotas.sqlite3"` | `{"type": "string"}` |
 | `feedback_database` | `VOICE_FEEDBACK_DATABASE` | `".local/feedback.sqlite3"` | `{"type": "string"}` |
 | `access_request_url` | `VOICE_ACCESS_REQUEST_URL` | `""` | `{"type": "string"}` |
-| `access_email_from` | `VOICE_ACCESS_EMAIL_FROM` | `""` | `{"type": "string"}` |
 | `access_database` | `VOICE_ACCESS_DATABASE` | `".local/access.sqlite3"` | `{"type": "string"}` |
 | `public_api_url` | `VOICE_PUBLIC_API_URL` | `""` | `{"type": "string"}` |
-| `resend_api_key` | `RESEND_API_KEY` | `""` | `{"type": "string", "format": "password"}` |
 | `daily_sessions_per_user` | `VOICE_DAILY_SESSIONS_PER_USER` | `4` | `{"type": "integer", "minimum": 1, "maximum": 100}` |
 | `concurrent_sessions_per_user` | `VOICE_CONCURRENT_SESSIONS_PER_USER` | `1` | `{"type": "integer", "minimum": 1, "maximum": 10}` |
 | `daily_voice_seconds_per_user` | `VOICE_DAILY_VOICE_SECONDS_PER_USER` | `1500` | `{"type": "integer", "minimum": 1}` |
@@ -153,11 +151,10 @@ def validate_elevenlabs(self) -> "Settings":
         ):
             message = "VOICE_ACCESS_REQUEST_URL must be an HTTPS topic URL with a long topic"
             raise ValueError(message)
-    if self.resend_api_key.get_secret_value():
+    if self.public_api_url:
         api = urlsplit(self.public_api_url)
         if (
             not self.access_request_url
-            or not self.access_email_from
             or api.scheme != "https"
             or not api.hostname
             or api.path not in {"", "/"}
@@ -167,8 +164,8 @@ def validate_elevenlabs(self) -> "Settings":
             or api.password
         ):
             message = (
-                "Remote access approval needs VOICE_ACCESS_REQUEST_URL, "
-                "VOICE_ACCESS_EMAIL_FROM and an HTTPS VOICE_PUBLIC_API_URL origin"
+                "Remote access approval needs VOICE_ACCESS_REQUEST_URL and "
+                "an HTTPS VOICE_PUBLIC_API_URL origin"
             )
             raise ValueError(message)
     if self.voice_provider == "elevenlabs" and not self.intent_cancellation:

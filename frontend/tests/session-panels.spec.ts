@@ -232,11 +232,13 @@ test('remote approval asks for an email and explains where it goes', async ({ pa
   });
   await page.goto('/');
   await page.getByText('No invitation code? Request access').click();
-  await expect(page.getByText('emailed to you through Resend', { exact: false })).toBeVisible();
+  await expect(page.getByText('emails you an invitation code', { exact: false })).toBeVisible();
   const field = page.getByLabel('Your email');
   await expect(field).toHaveAttribute('type', 'email');
   await field.fill('visitor@example.com');
   await page.getByRole('button', { name: 'Request access', exact: true }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'arrives by email' })).toBeVisible();
+  await expect(
+    page.getByRole('status').filter({ hasText: 'will email you an invitation code' }),
+  ).toBeVisible();
   expect(body).toEqual({ contact: 'visitor@example.com', note: '' });
 });

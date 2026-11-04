@@ -27,7 +27,7 @@ export function RequestAccess({ email = false }: { email?: boolean }) {
         setStatus('sent');
         setMessage(
           email
-            ? 'Request sent. If it is approved, your invitation code arrives by email.'
+            ? 'Request sent. If it is approved, the owner will email you an invitation code.'
             : 'Request sent. The owner will reply with an invitation code.',
         );
         return;
@@ -50,7 +50,7 @@ export function RequestAccess({ email = false }: { email?: boolean }) {
       <summary>No invitation code? Request access</summary>
       <p className="muted">
         {email
-          ? 'Leave your email. The owner is notified through ntfy.sh and, if approved, an invitation code is emailed to you through Resend. This server keeps your address only until the owner decides (at most 7 days); afterwards only a hash remains, to prevent repeated requests.'
+          ? 'Leave your email. The owner is notified through ntfy.sh and, if approved, emails you an invitation code. This server keeps your address only until the owner decides (at most 7 days); afterwards only a hash remains, to prevent repeated requests.'
           : 'Leave an email or other way to reach you. It is sent to the owner through ntfy.sh as a notification, and the owner may reply with a code. This server stores nothing.'}
       </p>
       <label>

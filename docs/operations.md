@@ -14,20 +14,13 @@ Edit `VOICE_INVITE_TOKENS`, a JSON map of stable pseudonymous names to unique ra
 
 Set `VOICE_ACCESS_REQUEST_URL` to an HTTPS [ntfy](https://ntfy.sh) topic URL with a long, unguessable topic (for example `https://ntfy.sh/<random-string>`) and subscribe to it in the ntfy phone app. The hosted UI then shows **No invitation code? Request access**. At most five notifications are sent per hour per process and a repeated contact is ignored within the hour. Treat the topic URL as a secret: anyone who knows it can read or post to it. Leave the variable empty to hide the button.
 
-**Notification only** (no Resend key): the visitor's contact and optional note are forwarded as one notification and never stored or logged. To reply, add a name to `VOICE_INVITE_TOKENS` as above, redeploy and send the token privately.
+**Notification only** (no `VOICE_PUBLIC_API_URL`): the visitor's contact and optional note are forwarded as one notification and never stored or logged. To reply, add a name to `VOICE_INVITE_TOKENS` as above, redeploy and send the token privately.
 
-**Remote approval** additionally needs:
+**Remote approval** additionally needs `VOICE_PUBLIC_API_URL`, the public HTTPS origin of this API (for example `https://voice-delegate-api-production.up.railway.app`); the notification buttons call it. `VOICE_ACCESS_DATABASE` (default `.local/access.sqlite3`) must be on the persistent volume.
 
-| Variable | Value |
-|---|---|
-| `RESEND_API_KEY` | A [Resend](https://resend.com) API key with sending access only |
-| `VOICE_ACCESS_EMAIL_FROM` | A sender on a domain verified in Resend, e.g. `voice-delegate <invites@example.com>` |
-| `VOICE_PUBLIC_API_URL` | The public HTTPS origin of this API, used in the notification buttons |
-| `VOICE_ACCESS_DATABASE` | SQLite path on the persistent volume (default `.local/access.sqlite3`) |
+The visitor must then enter an email address. The notification carries **Approve** and **Deny** buttons; each is a `POST` to `/access/{id}/{secret}/approve|deny` with a one-time secret, so only the topic's subscribers can decide. Approve creates a new invitation code, stores only its SHA-256 hash and sends a second notification with the code and a **Send email** button: a `mailto:` link that opens your mail app with the recipient, subject and text (including the code) filled in. That notification is published with `Cache: no`, so ntfy.sh does not keep it after delivery; if it cannot be published, the code is revoked and Approve can be pressed again. The code works at once, without a redeploy. Approved principals are pseudonymous (`email-` plus a hash prefix), so quotas and logs never contain the address. The address and note are deleted when the owner decides or after 7 days; a hash of the address is kept for 30 days to ignore repeated requests (and indefinitely for approved addresses). At most 20 requests are accepted per day.
 
-The visitor must then enter an email address. The notification carries **Approve** and **Deny** buttons; each is a `POST` to `/access/{id}/{secret}/approve|deny` with a one-time secret, so only the topic's subscribers can decide. Approve creates a new invitation code, stores only its SHA-256 hash and emails the code to the visitor; if the email fails, the code is revoked and Approve can be pressed again. Approved principals are pseudonymous (`email-` plus a hash prefix), so quotas and logs never contain the address. The address and note are deleted when the owner decides or after 7 days; a hash of the address is kept for 30 days to ignore repeated requests (and forever for approved addresses). At most 20 requests are accepted per day. No redeploy is needed.
-
-To revoke an emailed invitation, delete its row from the `invites` table of `VOICE_ACCESS_DATABASE` (for example through `railway ssh`); `VOICE_INVITE_TOKENS` keeps working for named codes. Without a verified domain, Resend only delivers to the account owner's address, so remote approval needs a domain.
+To revoke an approved invitation, delete its row from the `invites` table of `VOICE_ACCESS_DATABASE` (for example through `railway ssh`); `VOICE_INVITE_TOKENS` keeps working for named codes.
 
 ## Quotas and cost controls
 

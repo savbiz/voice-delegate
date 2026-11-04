@@ -112,18 +112,18 @@ async def test_api_endpoint_and_capability_flag(asgi_client: ASGIClientFactory) 
         assert invalid.status_code == 422
 
 
-# Remote approval: ntfy buttons, Resend email and database-backed invitations.
+# Remote approval: ntfy buttons, a code notification with a prefilled email, and stored invites.
 
 API = "https://api.example"
 
 
 def approval_flow(
-    tmp_path: Path, seen: list[httpx.Request], email_status: int = 200
+    tmp_path: Path, seen: list[httpx.Request], code_status: int = 200
 ) -> AccessRequests:
     def handle(request: httpx.Request) -> httpx.Response:
         seen.append(request)
-        if request.url.host == "api.resend.com":
-            return httpx.Response(email_status, json={"id": "e"})
+        if "Cache" in request.headers:
+            return httpx.Response(code_status)
         return httpx.Response(200)
 
     return AccessRequests(
@@ -131,8 +131,6 @@ def approval_flow(
         httpx.AsyncClient(transport=httpx.MockTransport(handle)),
         store=InviteStore(str(tmp_path / "access.sqlite3")),
         approval=Approval(
-            resend_api_key="re_test",
-            sender="Invites <invites@example.com>",
             public_api_url=API,
             frontend_url="https://demo.example",
         ),
@@ -172,12 +170,15 @@ async def test_approval_emails_a_code_that_authenticates(
         wrong = await client.post(approve.replace(approve.split("/")[3], "x" * 43))
         assert wrong.status_code == 404
         assert (await client.post(approve)).json() == {"status": "approved"}
-        email = seen[-1]
-        assert email.url.host == "api.resend.com"
-        assert email.headers["Authorization"] == "Bearer re_test"
-        body = email.read().decode()
-        code = body.split("Invitation code: ")[1].split("\\n")[0]
-        assert "visitor@example.com" in body
+        notice = seen[-1]
+        assert str(notice.url) == URL
+        assert notice.headers["Cache"] == "no"
+        code = notice.content.decode().split("\n")[1]
+        action = notice.headers["Actions"]
+        assert action.startswith("view, Send email, mailto:visitor@example.com?subject=")
+        assert "," not in action.split("mailto:")[1].removesuffix(", clear=true")
+        assert ";" not in action
+        assert f"Invitation%20code%3A%20{code}" in action
         assert (await client.post(approve)).status_code == 409
         assert (await client.post(deny)).status_code == 409
         session = await client.post(
@@ -197,11 +198,11 @@ async def test_approval_emails_a_code_that_authenticates(
 
 async def test_denial_repeats_and_failed_email(tmp_path: Path) -> None:
     seen: list[httpx.Request] = []
-    requests = approval_flow(tmp_path, seen, email_status=500)
+    requests = approval_flow(tmp_path, seen, code_status=500)
     await requests.submit(AccessRequestInput(contact="a@example.com"))
     approve, _ = buttons(seen[-1])
     _, request_id, secret, _ = approve.split("/")[1:]
-    with pytest.raises(Exception, match="could not be sent"):
+    with pytest.raises(Exception, match="could not be delivered"):
         await requests.approve(request_id, secret)
     assert requests.store is not None
     assert requests.store.db.execute("SELECT COUNT(*) FROM invites").fetchone()[0] == 0
@@ -243,15 +244,14 @@ def test_daily_request_budget(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "overrides",
     [
-        {},
-        {"access_email_from": "x@example.com"},
-        {"access_email_from": "x@example.com", "public_api_url": "http://api.example"},
-        {"access_email_from": "x@example.com", "public_api_url": "https://api.example/path"},
+        {"public_api_url": "http://api.example"},
+        {"public_api_url": "https://api.example/path"},
+        {"public_api_url": "https://api.example", "access_request_url": ""},
     ],
 )
 def test_remote_approval_requires_complete_settings(overrides: dict[str, str]) -> None:
-    base = {"RESEND_API_KEY": "re_x", "access_request_url": URL}
+    base = {"access_request_url": URL}
     with pytest.raises(ValidationError, match="Remote access approval"):
         Settings.model_validate({**base, **overrides})
-    complete = {"access_email_from": "x@example.com", "public_api_url": "https://api.example"}
-    assert Settings.model_validate({**base, **complete}).resend_api_key.get_secret_value()
+    settings = Settings.model_validate({**base, "public_api_url": "https://api.example"})
+    assert settings.public_api_url == "https://api.example"

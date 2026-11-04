@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Added: an optional **Request access** button that notifies the owner through an ntfy topic (`VOICE_ACCESS_REQUEST_URL`); requests are rate limited and never stored. With Resend configured, the owner can approve from the notification and the visitor receives an invitation code by email, without a redeploy.
+Added: an optional **Request access** button that notifies the owner through an ntfy topic (`VOICE_ACCESS_REQUEST_URL`); requests are rate limited and never stored. With `VOICE_PUBLIC_API_URL` set, the owner can approve from the notification and receives the new code with a prefilled email to send, without a redeploy.
 
 Added: the page waits up to 30 seconds for a sleeping backend to start, showing a starting message, before discovering providers; the Railway service is described with Infrastructure as Code in `.railway/railway.ts`.
 
