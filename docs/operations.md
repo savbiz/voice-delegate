@@ -169,6 +169,18 @@ Grafana Cloud tier, with no collector:
    (`voice_operation_duration_seconds` and the others listed in
    [observability](../observability/README.md)) under **Explore → Prometheus**.
 
+4. Import the two dashboards from [`observability/grafana-cloud/`](../observability/grafana-cloud/)
+   (**Dashboards → New → Import**, upload the JSON). They use the stack's default Prometheus
+   and Tempo data sources:
+   - `overview.json`: connections, delegated tasks, error rate, estimated cost, connect
+     p95, interruptions, latency by operation, transcript wait, browser audio timing and
+     cost by component.
+   - `worker-traces.json`: worker duration and outcomes, cancellations, deliveries,
+     moderation reviews, span duration by name, recent traces and slow or failed spans.
+
+   Totals use each backend process's counters (`max_over_time`), because `increase()`
+   drops the first sample of every new series and undercounts at demo traffic.
+
 Explicit `VOICE_OTEL_ENDPOINT` and `VOICE_OTEL_METRICS_ENDPOINT` take precedence over the
 standard variables. Without any endpoint, traces go to the service log and metrics are not
 exported. Exported data contains no transcripts, session IDs, credentials or tool results. For a security issue use the [private reporting channel](../SECURITY.md), not a public transcript or log dump.

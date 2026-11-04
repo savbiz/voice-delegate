@@ -15,7 +15,7 @@ is in the [evidence log](milestones/evidence-log.md).
 | Access and quotas | Your own keys, or invitation codes with daily quotas; Request access with phone approval | Yes |
 | Costs | Per-session cost estimates from a versioned price snapshot | Estimates only, not reconciled with invoices |
 | Safety | Opt-in moderation of goals and tool evidence ([ADR 013](decisions/013-moderation-boundary.md)); read-only MCP client behind it ([ADR 010](decisions/010-mcp-trust-model.md)) | Not yet |
-| Observability | OpenTelemetry, Prometheus and Grafana; opt-in debug recordings and feedback reports | Locally |
+| Observability | OpenTelemetry metrics and traces; local Prometheus and Grafana, or Grafana Cloud with importable dashboards; opt-in debug recordings and feedback reports | Yes, hosted backend to Grafana Cloud |
 | Scaling | Two API instances, a separate private worker, shared leases; crash and load tests | Not on hosted voice |
 | Deployment | Railway backend (infrastructure as code), Vercel frontend, daily health check | Yes |
 | Mobile | Opt-in Capacitor shell for iOS and Android | Simulator build only |

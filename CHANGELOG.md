@@ -8,11 +8,11 @@ Added: an opt-in moderation boundary in the worker (`VOICE_MODERATION`, ADR 013)
 
 Changed: Live voice, Offline example and Project documentation are three peer tabs instead of a tab and a dropdown; while the invitation field is empty, a hint points to the Offline example and to Your API keys; the billing note is one line under Start; the tabs fit phone widths down to 320px. The README opens with what is implemented and a system diagram; the roadmap is a status table, with the verification history moved to `docs/milestones/evidence-log.md`; the transport notes moved next to the frontend code.
 
-Added: hosted telemetry with the standard OpenTelemetry variables. With `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` set (as Grafana Cloud provides them), traces and metrics are exported without a collector; explicit `VOICE_OTEL_*` endpoints keep precedence.
+Added: hosted telemetry with the standard OpenTelemetry variables. With `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` set (as Grafana Cloud provides them), traces and metrics are exported without a collector; explicit `VOICE_OTEL_*` endpoints keep precedence. Two importable Grafana Cloud dashboards (`observability/grafana-cloud/`) cover connections, latency, errors, cost, worker outcomes and traces.
 
 Internal: Azure recovery moved from the session manager to `session/recovery.py`; the browser session lifecycle is an explicit, unit-tested state machine (`lifecycle.ts`) with backend requests in `api.ts`, and the session start is split into named steps; the worker planners moved to `planners.py` and MCP data review to `mcp_review.py`. Behavior is unchanged.
 
-Verified through offline backend and frontend tests and hosted CI. Moderation and MCP have no live acceptance yet; voice acceptance status is unchanged from 0.3.0.
+Verified through offline backend and frontend tests and hosted CI. The maintainer reported short sessions with all three voice providers on the deployed backend on 2026-11-04, with telemetry arriving in Grafana Cloud; this is not the recorded live checklist. Moderation and MCP have no live acceptance yet.
 
 ## 0.3.0 - 2026-11-04
 
