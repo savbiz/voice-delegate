@@ -72,12 +72,12 @@
     "digest": "d736237aa2f89ce546e9c3a80379055982669df61a10858676417f739926f38c"
   },
   {
-    "id": "611968cbef148db1",
+    "id": "96630748de0df450",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "System design",
-    "text": "Audio flows directly between the browser and the voice provider. The backend owns the\nsession, admission, quotas and delegated work; the voice model never sees the worker's\nindividual tools. Details: the [documentation index](docs/README.md) and\n[session flow](docs/session-flow.md).",
-    "digest": "611968cbef148db182023b169b0ca23cfe28062fccbe547873e064ed669e4298"
+    "text": "Audio flows directly between the browser and the voice provider. The backend owns the\nsession, admission, quotas and delegated work; the voice model never sees the worker's\nindividual tools.",
+    "digest": "96630748de0df45090b06c5a63f68f12cec37cb740618a709a4d3be142049121"
   },
   {
     "id": "fc41087a781bb8c5",

@@ -83,8 +83,7 @@ flowchart LR
 
 Audio flows directly between the browser and the voice provider. The backend owns the
 session, admission, quotas and delegated work; the voice model never sees the worker's
-individual tools. Details: the [documentation index](docs/README.md) and
-[session flow](docs/session-flow.md).
+individual tools.
 
 ## Try it
 

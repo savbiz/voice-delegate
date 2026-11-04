@@ -215,3 +215,16 @@ def test_comparison_cli_gates_paid_runs_and_validates_rates(
         with pytest.raises(SystemExit) as exc:
             worker_eval.main()
         assert exc.value.code == 2
+
+
+async def test_offline_baseline_retrieves_every_expected_source() -> None:
+    """Docs edits can reorder the keyword search; catch it before a paid run does."""
+    report = await run_cases(CASES, "offline", "unused", 0)
+    summary = report["summary"]
+    assert summary["failed"] == 0
+    misses = [
+        row["id"]
+        for row in report["rows"]
+        if row.get("scores", {}).get("expected_evidence_retrieved", 1) < 1
+    ]
+    assert misses == []

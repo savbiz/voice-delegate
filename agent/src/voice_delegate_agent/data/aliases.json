@@ -15,5 +15,6 @@
   "architettura": "architecture",
   "replayed": "replay",
   "replays": "replay",
-  "abandoned": "cancellation"
+  "abandoned": "cancellation",
+  "unconfirmed": "confirmed"
 }
