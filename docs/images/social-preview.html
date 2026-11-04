@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- Source of social-preview.png: render at 1280x640 (GitHub Settings, Social preview).
+     Figures: full live worker eval, 2026-11-04, commit fc103c7, dataset worker-v4,
+     40 executed / 0 skipped, worker and judge GPT-6 Luna. "Correct" and "grounded" are
+     advisory LLM-judge means (evals/README.md); public experiment
+     openai-20261104T144642-6b482952 on Braintrust, linked from the README. -->
+<html><head><meta charset="utf-8"><style>
+  html,body{margin:0;width:1280px;height:640px;background:#0d1117;color:#e6edf3;
+    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;}
+  .wrap{padding:84px 96px 0}
+  .eyebrow{color:#8b949e;letter-spacing:.12em;font-size:24px;}
+  h1{margin:14px 0 0;font-size:96px;font-weight:800;letter-spacing:-.035em;line-height:1}
+  h1 span{color:#58a6ff}
+  .tag{margin-top:22px;font-size:34px;color:#c9d1d9;line-height:1.35}
+  .flow{display:flex;align-items:center;gap:14px;margin-top:34px}
+  .box{border:1px solid #30363d;background:#161b22;border-radius:10px;padding:10px 18px;font-size:22px}
+  .arrow{color:#58a6ff;font-size:24px}
+  .stats{display:flex;gap:36px;margin-top:30px}
+  .stat b{display:block;font-size:30px;color:#3fb950}
+  .stat{font-size:18px;color:#8b949e}
+  .foot{position:absolute;left:96px;bottom:40px;font-size:20px;color:#8b949e}
+</style></head><body><div class="wrap">
+  <div class="eyebrow">OPEN SOURCE · APACHE-2.0</div>
+  <h1>voice-delegate<span>.</span></h1>
+  <div class="tag">A fast voice conversation. A separate worker for the heavy lifting.</div>
+  <div class="flow">
+    <div class="box">You speak</div><div class="arrow">→</div>
+    <div class="box">Voice model</div><div class="arrow">→</div>
+    <div class="box">delegate_task</div><div class="arrow">→</div>
+    <div class="box">LangGraph worker</div><div class="arrow">→</div>
+    <div class="box">Cited result</div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>98%</b>correct, LLM-judged · 40 live cases</div>
+    <div class="stat"><b>99%</b>grounded in cited sources, LLM-judged</div>
+    <div class="stat"><b>3</b>voice providers, live</div>
+  </div>
+</div>
+<div class="foot">OpenAI GPT-Live · Azure · ElevenLabs — FastAPI · React · WebRTC · iOS/Android · Grafana · Braintrust</div>
+</body></html>

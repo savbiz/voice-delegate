@@ -227,6 +227,12 @@ async def run_cases(
             except Exception as exc:
                 status = type(exc).__name__  # Do not log exception messages or provider bodies.
             elapsed = time.perf_counter() - started
+            # Snapshot the worker's own usage before the judge adds its call to the budget.
+            worker_usage = (
+                budget.calls - calls_before,
+                budget.input_tokens - tokens_before[0],
+                budget.output_tokens - tokens_before[1],
+            )
             output = {"text": text, "source_ids": ids, "tools": observer.tools, "status": status}
             signals = score(case, output)
             quality_names = {"numeric_result", "expected_evidence_retrieved"}
@@ -277,9 +283,10 @@ async def run_cases(
                     "judge_status": judge_status,
                     "worker_seconds": elapsed,
                     "started_at": started_at,
-                    "model_calls": budget.calls - calls_before,
-                    "input_tokens": budget.input_tokens - tokens_before[0],
-                    "output_tokens": budget.output_tokens - tokens_before[1],
+                    "model_calls": worker_usage[0],
+                    "input_tokens": worker_usage[1],
+                    "output_tokens": worker_usage[2],
+                    "judge_calls": budget.calls - calls_before - worker_usage[0],
                 }
             )
     finally:
@@ -338,6 +345,8 @@ def upload(report: dict[str, Any], cases: list[dict[str, Any]], project: str) ->
     )
     by_id = {c["id"]: c for c in cases}
     for row in report["rows"]:
+        if "started_at" not in row:
+            continue  # Skipped cases have no output or timing; the SDK would invent one.
         case = by_id[row["id"]]
         experiment.log(
             input={"goal": case["goal"], "context": case["context"]},

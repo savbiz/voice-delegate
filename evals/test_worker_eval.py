@@ -235,6 +235,70 @@ async def test_offline_baseline_retrieves_every_expected_source() -> None:
     assert misses == []
 
 
+async def test_row_usage_counts_the_worker_only_and_the_judge_separately(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    from langchain_core.messages import AIMessage
+
+    from evals import worker_eval
+
+    class FakeJudge:
+        def __init__(self, **_: object) -> None:
+            async def aclose() -> None:
+                return None
+
+            self.root_async_client = SimpleNamespace(close=aclose)
+            self.root_client = SimpleNamespace(close=lambda: None)
+
+        def with_structured_output(self, *_: object, **__: object) -> "FakeJudge":
+            return self
+
+        async def ainvoke(self, _: object) -> dict[str, object]:
+            raw = AIMessage(
+                content="",
+                usage_metadata={"input_tokens": 500, "output_tokens": 50, "total_tokens": 550},
+            )
+            parsed = worker_eval.JudgeScore(correctness=1, usefulness=1, groundedness=1)
+            return {"raw": raw, "parsed": parsed}
+
+    monkeypatch.setenv("OPENAI_API_KEY", "fixture")
+    monkeypatch.setattr(worker_eval, "ChatOpenAI", FakeJudge)
+    report = await run_cases(CASES[:1], "offline", "unused", 5, judge_model="fake")
+    row = report["rows"][0]
+    # The offline worker makes no model call; the judge's call and tokens stay out of it.
+    assert (row["model_calls"], row["input_tokens"], row["output_tokens"]) == (0, 0, 0)
+    assert row["judge_calls"] == 1
+    assert report["summary"]["model_calls"] == 1
+
+
+async def test_upload_skips_cases_that_never_ran(monkeypatch: pytest.MonkeyPatch) -> None:
+    import sys
+    from types import SimpleNamespace
+
+    from evals.worker_eval import upload
+
+    logged: list[dict[str, Any]] = []
+    experiment = SimpleNamespace(
+        log=lambda **row: logged.append(row), flush=lambda: None, summarize=lambda: "ok"
+    )
+    monkeypatch.setitem(sys.modules, "braintrust", SimpleNamespace(init=lambda **_: experiment))
+    monkeypatch.setitem(
+        sys.modules,
+        "braintrust.git_fields",
+        SimpleNamespace(GitMetadataSettings=lambda **kwargs: kwargs),
+    )
+    monkeypatch.setenv("BRAINTRUST_API_KEY", "test-private-key")
+    live_only = [c for c in CASES if not c["offline"]][:1]
+    ran = [c for c in CASES if c["offline"]][:1]
+    report = await run_cases(ran + live_only, "offline", "unused", 0)
+    assert [r["status"] for r in report["rows"]] == ["completed", "skipped"]
+    upload(report, ran + live_only, "test-project")
+    assert len(logged) == 1
+    assert "start" in logged[0]["metrics"]
+
+
 def test_scorers_accept_typographic_minus_and_apostrophes() -> None:
     """A live run wrote a U+2212 minus and a curly apostrophe in correct answers."""
     from evals.worker_eval import score
