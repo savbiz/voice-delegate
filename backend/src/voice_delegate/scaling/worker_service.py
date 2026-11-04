@@ -180,12 +180,15 @@ def create_worker_app(settings: Settings | None = None, worker: Worker | None = 
         raise ValueError(message)
     runtime = None
     if worker is None:
-        if not settings.tavily_api_key.get_secret_value():
-            settings = settings.model_copy(update={"web_search": False})
-        if not settings.openai_api_key.get_secret_value():
-            settings = settings.model_copy(update={"moderation": False, "mcp_servers": []})
-        runtime = build_planner(settings)
-        worker = runtime.worker(settings.worker_max_steps)
+        # Downgrade only the platform runtime: personal-key jobs derive their own settings
+        # from the configured ones, so they keep moderation when they bring an OpenAI key.
+        platform = settings
+        if not platform.tavily_api_key.get_secret_value():
+            platform = platform.model_copy(update={"web_search": False})
+        if not platform.openai_api_key.get_secret_value():
+            platform = platform.model_copy(update={"moderation": False, "mcp_servers": []})
+        runtime = build_planner(platform)
+        worker = runtime.worker(platform.worker_max_steps)
     jobs = Jobs(worker, settings)
 
     async def janitor() -> None:

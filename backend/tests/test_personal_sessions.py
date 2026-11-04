@@ -439,3 +439,37 @@ def test_azure_origin_accepts_resource_origin_with_optional_slash() -> None:
     assert azure_origin_allowed("https://foo.openai.azure.com")
     assert azure_origin_allowed("https://foo.openai.azure.com/")
     assert azure_origin_allowed("https://foo.openai.azure.com:443")
+
+
+async def test_keyless_worker_service_keeps_moderation_for_personal_keys(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from voice_delegate.scaling import worker_service
+
+    captured: list[Settings] = []
+
+    def planner(settings: Settings) -> PlannerRuntime:
+        captured.append(settings)
+        return PlannerRuntime(OfflinePlanner())
+
+    monkeypatch.setattr(worker_service, "build_planner", planner)
+    configured = Settings.model_construct(
+        **{
+            **Settings().model_dump(),
+            "worker_service_token": SecretStr("t" * 32),
+            "moderation": True,
+            "worker_execution": "remote",
+        }
+    )
+    jobs_settings: list[Settings] = []
+
+    class RecordingJobs(worker_service.Jobs):
+        def __init__(self, worker: object, settings: Settings) -> None:
+            jobs_settings.append(settings)
+            super().__init__(worker, settings)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(worker_service, "Jobs", RecordingJobs)
+    worker_service.create_worker_app(configured)
+    assert captured[0].moderation is False  # platform runtime: no key, no moderation
+    personal = PersonalKeys(openai_key=SecretStr("mine")).worker_settings(jobs_settings[0])
+    assert personal.moderation is True

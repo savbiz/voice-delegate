@@ -217,3 +217,22 @@ async def test_build_planner_wires_moderation_only_when_enabled() -> None:
         await on.aclose()
     with pytest.raises(ValueError, match="Moderation requires"):
         Settings(moderation=True)
+
+
+async def test_moderation_uses_its_own_deadline_not_the_shared_deciders() -> None:
+    runtime = build_planner(
+        Settings(
+            openai_api_key=SecretStr("k"),
+            moderation=True,
+            moderation_timeout_seconds=3,
+            worker_mode="decisions",
+            decisions_timeout_seconds=1,
+        )
+    )
+    try:
+        assert runtime.classifier is not None
+        assert runtime.classifier.owns
+        assert runtime.classifier.decider is not runtime.decider
+        assert runtime.classifier.decider._timeout == 3  # type: ignore[attr-defined]
+    finally:
+        await runtime.aclose()

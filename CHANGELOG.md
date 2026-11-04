@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Fixed: a private worker service without a platform OpenAI key no longer disables moderation for personal-key jobs that bring their own key; the moderation classifier uses its own decider, so `VOICE_MODERATION_TIMEOUT_SECONDS` is no longer cut short by the 1-second decider default. README: live dashboard link and a 0.4.0 screenshot.
+
 ## 0.4.0 - 2026-11-04
 
 The worker gains an opt-in safety boundary and read-only MCP tools, the hosted backend can export telemetry, the page is easier for first-time visitors, and the largest modules are split by responsibility.
