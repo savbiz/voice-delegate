@@ -536,6 +536,14 @@
     "digest": "bc2cfdd3b12e8c7c0f35b9172e4f67b84480c66fd18fd7ac88b75a53f4997d17"
   },
   {
+    "id": "2652334fc64546b4",
+    "title": "ADR 001: GPT-Live with client delegation",
+    "path": "docs/decisions/001-live-client-delegation.md",
+    "section": "ADR 001: GPT-Live with client delegation",
+    "text": "Amended 2026-11-04: the OpenAI and Azure Realtime adapters were removed in 0.3.0. GPT-Live\non OpenAI and on Azure (`AzureLiveProvider`) are the supported WebRTC adapters; ElevenLabs\nAgents uses its own transport. Fallback remains one explicit attempt to Azure Live.",
+    "digest": "2652334fc64546b4d079975d34034c467c9b1debd4292df4724ccd389e5de14a"
+  },
+  {
     "id": "c95e177cccf46e9f",
     "title": "ADR 002: Explicit lifecycle ownership and finite budgets",
     "path": "docs/decisions/002-lifecycle-and-bounds.md",
@@ -726,6 +734,14 @@
     "section": "Consequences",
     "text": "Offline HTTP fakes verify routing, budgets, failures, citations and blocked follow-up\ntool execution. Live relevance, answer grounding, paid account behavior and narration\nremain pending. The existing offline demo keeps search disabled.",
     "digest": "375fd28b9c5385d42b2344129793fe9479f1262c517bda00091b633453a6c0b1"
+  },
+  {
+    "id": "6cc11666e98522dd",
+    "title": "Architecture decision records",
+    "path": "docs/decisions/README.md",
+    "section": "Architecture decision records",
+    "text": "Each record states one decision, its context and its consequences. Records are amended in\nplace with a dated note rather than rewritten.",
+    "digest": "6cc11666e98522dd658a6e72c9d03ccca02350a7778c82a7b4892d164bed68f8"
   },
   {
     "id": "904d7d622c908ea9",
