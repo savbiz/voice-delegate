@@ -56,12 +56,12 @@
     "digest": "b3821e79fe7f31f215d51b9b540fc6bc631d9999c7b091a006d0673979d20d29"
   },
   {
-    "id": "4d7c3f094c8981c5",
+    "id": "45ebd843a03e251e",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "What's implemented",
-    "text": "- **Engineering:** FastAPI + React 19 + TypeScript, uv and pnpm workspaces, about 1,000\n  automated tests (pytest, Vitest, Playwright end-to-end), strict typing and linting,\n  CodeQL, OpenTelemetry metrics with Prometheus and Grafana, 13 decision records.",
-    "digest": "4d7c3f094c8981c5ae717b0574b623debf9709b43c0b2be32feaa15356544d79"
+    "text": "- **Engineering:** FastAPI + React 19 + TypeScript, uv and pnpm workspaces, about 1,000\n  automated tests (pytest, Vitest, Playwright end-to-end), strict typing and linting,\n  CodeQL, OpenTelemetry traces and metrics (local Prometheus and Grafana, or Grafana Cloud\n  with importable dashboards), 13 decision records.",
+    "digest": "45ebd843a03e251ee49e8a02b67fb742592dcee395576b8b7537e3035612ad76"
   },
   {
     "id": "d736237aa2f89ce5",

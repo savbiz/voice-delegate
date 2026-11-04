@@ -17,7 +17,7 @@ Start with the [project README](../README.md). Pick the path that matches what y
 | Guide | What it covers |
 |---|---|
 | [Deployment](../deployment/README.md) | Vercel frontend, Railway API (Infrastructure as Code), variables, offline stack |
-| [Operations runbook](operations.md) | Invitations and access requests, quotas, resets, rollback, diagnostics |
+| [Operations runbook](operations.md) | Invitations and access requests, quotas, resets, rollback, diagnostics, hosted telemetry (Grafana Cloud) |
 | [Configuration reference](configuration.md) | Every setting, its default and its bounds (generated) |
 | [Azure setup](azure-setup.md) | Creating the `gpt-live-1` deployment and its endpoint |
 | [ElevenLabs integration](elevenlabs.md) | Agent prompt, the `delegate_task` webhook tool and its authentication |

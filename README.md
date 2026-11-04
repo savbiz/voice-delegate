@@ -35,7 +35,8 @@ A complete, deployed system, not a prototype:
   explicit client state machine, separate worker service for scaling.
 - **Engineering:** FastAPI + React 19 + TypeScript, uv and pnpm workspaces, about 1,000
   automated tests (pytest, Vitest, Playwright end-to-end), strict typing and linting,
-  CodeQL, OpenTelemetry metrics with Prometheus and Grafana, 13 decision records.
+  CodeQL, OpenTelemetry traces and metrics (local Prometheus and Grafana, or Grafana Cloud
+  with importable dashboards), 13 decision records.
 - **Delivery:** Railway (infrastructure as code) and Vercel, tagged releases with a
   changelog, a daily health check and a one-command offline demo for Codespaces.
 
@@ -76,7 +77,7 @@ flowchart LR
     S -->|"delegate_task"| M --> P --> T
     T -->|"cited result"| S
     S -->|"spoken after a pause"| OAI
-    S -.-> O["OpenTelemetry<br/>Prometheus + Grafana"]
+    S -.-> O["OpenTelemetry<br/>Grafana Cloud or local stack"]
     S -.-> N["ntfy<br/>access requests"]
 ```
 
