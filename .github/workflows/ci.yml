@@ -10,46 +10,32 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  backend:
+  # The main ruleset requires the checks "backend (3.12)", "backend (3.13)" and "frontend".
+  # Keep these job names exactly. A job skipped by `if` counts as passed for a required check,
+  # but a job that never exists (a dropped matrix leg, a workflow-level path filter) blocks merges.
+  backend-312:
+    name: backend (3.12)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        python: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
+      - uses: ./.github/actions/backend
         with:
-          version: "0.12.15"
-          python-version: ${{ matrix.python }}
-      - name: Check project independence
-        run: uv run --no-project python scripts/check_independence.py
-      - run: uv sync --locked
-      - name: Check release tag matches installed version
-        if: github.ref_type == 'tag'
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: uv run python scripts/check_release.py
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy
-      - run: uv run pytest --cov=voice_delegate --cov=voice_delegate_agent --cov-fail-under=85
-      - name: Check public API host documentation
-        run: uv run python scripts/check_deployment.py
-      - run: uv run python scripts/check_links.py
-      - run: uv run python scripts/build_reference.py --check
-      - run: uv build --all-packages
-      - name: Build backend container
-        if: matrix.python == '3.12'
-        run: docker build -f deployment/Dockerfile.backend -t voice-delegate:ci .
-      - name: Smoke test offline demo stack
-        if: matrix.python == '3.12'
-        run: uv run python scripts/smoke_container.py --demo
-      - name: Smoke test backend container
-        if: matrix.python == '3.12'
-        run: uv run python scripts/smoke_container.py
+          python: "3.12"
+          containers: "true"
+  # Python 3.13 runs on main and tags only; pull requests rely on 3.12.
+  backend-313:
+    name: backend (3.13)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/backend
+        with:
+          python: "3.13"
   frontend:
+    name: frontend
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
