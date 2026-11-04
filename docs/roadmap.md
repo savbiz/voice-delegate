@@ -23,7 +23,6 @@ is in the [evidence log](milestones/evidence-log.md).
 ## Next, for v1.0
 
 1. A 60–90 second demo video in the README.
-2. A hosted session completed by an external user.
 
 ## Later
 

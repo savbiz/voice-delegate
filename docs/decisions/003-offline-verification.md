@@ -10,4 +10,4 @@ Consequences: offline CI can verify deterministic timeout policy and cleanup. It
 
 Amended 2026-10-05: v0.x tags are implementation releases; acceptance-gated tags begin at v1.0.
 
-Amended 2026-11-04: the gate for v1.0 is the roadmap's remaining items, a recorded demonstration and one hosted session by an external user. The full live checklist and the paid benchmark stay documented as optional procedures; until they are run, the project claims no formal live acceptance or latency figures.
+Amended 2026-11-04: the gate for v1.0 is a recorded demonstration of the main path. The full live checklist and the paid benchmark stay documented as optional procedures; until they are run, the project claims no formal live acceptance or latency figures.
