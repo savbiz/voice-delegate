@@ -32,6 +32,7 @@ from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
 
 from .elevenlabs_webhook import build_webhook_router
+from .notification_cors import NotificationActionCors, origin_of
 from .routes import build_access_router, build_router
 
 
@@ -210,6 +211,9 @@ def create_app(
         allow_methods=["POST"],
         allow_headers=["Content-Type", "X-Session-Key", "Authorization"],
     )
+    if access_requests is not None and access_requests.store is not None:
+        # Approve/Deny buttons in the ntfy web app call /access/ from the notification origin.
+        app.add_middleware(NotificationActionCors, origin=origin_of(access_requests.url))
     # Wrap CORS too: preflights must pass host validation and consume the same IP budget.
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
     app.add_middleware(

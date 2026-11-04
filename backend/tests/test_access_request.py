@@ -196,6 +196,33 @@ async def test_approval_emails_a_code_that_authenticates(
     store.close()
 
 
+async def test_ntfy_web_app_can_read_only_decision_results(
+    tmp_path: Path, asgi_client: ASGIClientFactory
+) -> None:
+    seen: list[httpx.Request] = []
+    requests = approval_flow(tmp_path, seen)
+    settings = Settings(access_request_url=URL, invite_tokens={"owner": SecretStr("o" * 32)})
+    app = create_app(settings, FakeProvider(), requests)
+    ntfy = {"Origin": "https://ntfy.example"}
+    async with asgi_client(app) as client:
+        await client.post(
+            "/api/access-request",
+            json={"contact": "a@example.com"},
+            headers={"Origin": "http://localhost:5173"},
+        )
+        approve, deny = buttons(seen[-1])
+        # A simple POST from the notification origin: the result must be readable so ntfy
+        # clears the buttons, and a repeated tap must show the real conflict, not a fetch error.
+        for path, status in ((approve, 200), (approve, 409), (deny, 409)):
+            response = await client.post(path, headers=ntfy)
+            assert response.status_code == status
+            assert response.headers["Access-Control-Allow-Origin"] == "https://ntfy.example"
+        other = await client.post(approve, headers={"Origin": "https://evil.example"})
+        assert "Access-Control-Allow-Origin" not in other.headers
+        config = await client.post("/api/config", headers=ntfy)
+        assert "Access-Control-Allow-Origin" not in config.headers
+
+
 async def test_denial_repeats_and_failed_email(tmp_path: Path) -> None:
     seen: list[httpx.Request] = []
     requests = approval_flow(tmp_path, seen, code_status=500)
