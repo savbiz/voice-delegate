@@ -72,196 +72,44 @@
     "digest": "c54bdf3df30748167d8ae281e4579968f6a5309111be305772320eea98de5620"
   },
   {
-    "id": "cede2b9ea93b49a2",
+    "id": "47b6d6166d9ee690",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Run it locally",
-    "text": "Prerequisites: Python 3.12 or 3.13, uv, Node.js 24, pnpm 11.19.0 and make. From the\nrepository root, install dependencies once:",
-    "digest": "cede2b9ea93b49a29e4f431e24c585d30a4b21e0c94dce3ea5ede9a6390af5d3"
+    "text": "Paste the code, choose **Live voice** and start talking. Without a key, the worker runs\nits offline planner and **Tools & examples → Offline example** still works. Voice and\ntext-worker usage are billed separately by the provider; a ChatGPT subscription is not an\nAPI key. Details: [local development](docs/local-development.md) and the\n[configuration reference](docs/configuration.md).",
+    "digest": "47b6d6166d9ee6909cbffafc6b3532d8b7d7b01a7c063ddffa4193301b7e0452"
   },
   {
-    "id": "4f4e5a139cbf3fd0",
+    "id": "11bcf96c837b4b47",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Run it locally",
-    "text": "Open **http://localhost:5173** for the voice workspace. For a scripted example, open\n**Tools & examples → Offline example** or **http://localhost:5173/#demo**. The example\nis silent and free: no microphone, backend or provider key is required.",
-    "digest": "4f4e5a139cbf3fd0bfbbd19bedb85d0b3c5fc81d31b007f742b567448982d0c9"
+    "text": "No keys at all? `bash .devcontainer/start-demo.sh` starts the API, a separate worker, the UI\nand Prometheus/Grafana with a deterministic planner on http://localhost:8080, also in\n[![Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/savbiz/voice-delegate).",
+    "digest": "11bcf96c837b4b4793c41847882c17346f2ce3633d665ac637afb065938a9d33"
   },
   {
-    "id": "b4398b2460e8211c",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Run it locally",
-    "text": "For local live voice, put your real `OPENAI_API_KEY` in the private root `.env`.\nStart the backend in another terminal, then get the local invitation in a third:",
-    "digest": "b4398b2460e8211c3788566b10cf54ff7de7a2d7f8aaca844ef3ee368238a4a3"
-  },
-  {
-    "id": "d3df809c38fed862",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Run it locally",
-    "text": "Paste that invitation in the browser and select **Live voice**. Stop each server\nwith Ctrl+C. `make` shows help. Existing `.env` values override code defaults; the\nlauncher changes local admission only, never your file or provider key.",
-    "digest": "d3df809c38fed86218bc9eff2fa527a857a8cf7fc0f5e6b47a6938bef85a0687"
-  },
-  {
-    "id": "fbe0484949177314",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Run it locally",
-    "text": "The [minimal template](config/local.env.template) needs only keys and deployment choices.\nThe worker uses Luna when an OpenAI key is configured, otherwise the offline planner.\nYou can explicitly select the model-backed planner:",
-    "digest": "fbe0484949177314ce4c2e427443313c5942eaa295c62c4011fb18033cc3c864"
-  },
-  {
-    "id": "2d7fd7cd9bc9308a",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Run it locally",
-    "text": "Voice provider usage and text-worker usage are billed separately. A ChatGPT\nsubscription does not supply an API key. See the [copyable local configuration](docs/local-development.md#copyable-local-configuration)\nand [all variables, allowed choices and bounds](docs/configuration.md).",
-    "digest": "2d7fd7cd9bc9308a38bf66864c0f16ac4b5b5176611bf277409aa9f86a3168f8"
-  },
-  {
-    "id": "18c138642d17a291",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "One-command offline stack and Codespaces",
-    "text": "With Docker running, this starts the API, separate worker, frontend, Prometheus,\nGrafana and collector without any provider key:",
-    "digest": "18c138642d17a291d3379477086a2494653f0950c643a969204383b0f868f2f5"
-  },
-  {
-    "id": "5504dca48c4f58ee",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "One-command offline stack and Codespaces",
-    "text": "Open **http://localhost:8080** and use **Run offline worker**. Unlike the scripted\nbrowser demo, this executes the real worker graph with a deterministic planner.\nSee [offline stack](deployment/README.md#offline-stack-in-one-command) for inspection\nand shutdown commands. Codespaces uses the same stack; keep forwarded ports private.",
-    "digest": "5504dca48c4f58ee393b8fe041b29c9cdf347bac14bcef0661d5139cec21863b"
-  },
-  {
-    "id": "4f413a940b9f38c9",
+    "id": "cdbf8004aea2a549",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status",
-    "text": "v0.2.0 is an implementation release: offline tests and hosted CI cover every feature,\nand the maintainer has used each voice provider live. Formal, recorded acceptance is the\ngate for v1.0.",
-    "digest": "4f413a940b9f38c9b9c08af3bb295f4563dc3d5856a262f6c2981b75b47aebaa"
+    "text": "Every feature is covered by offline tests and CI, and the maintainer has used each voice\nprovider live on the hosted demo. Recorded live acceptance is the gate for v1.0.",
+    "digest": "cdbf8004aea2a549db71ae51852d4495fa373ae936c395e5fc49e257e66c77f5"
   },
   {
-    "id": "ed294876f1e62859",
+    "id": "44f02a7715947f29",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status",
-    "text": "Evidence and remaining gates: [roadmap](docs/roadmap.md),\n[live checklist](docs/milestones/live-verification.md) and [benchmarks](docs/benchmarks.md).\nThe hosted API is on [Railway](https://voice-delegate-api-production.up.railway.app/healthz);\napplication allowances and provider credits are independent, see [operations](docs/operations.md).",
-    "digest": "ed294876f1e62859ac455866b063f3bd729db3a199ce4e1f5eefb33d73566dbd"
+    "text": "Evidence and remaining gates: [roadmap](docs/roadmap.md) and\n[live checklist](docs/milestones/live-verification.md).",
+    "digest": "44f02a7715947f296140061eff7f11259f7aadc64e9ba52bfba8fce24d654bcd"
   },
   {
-    "id": "bc84cde40e5aaf90",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Providers and worker modes",
-    "text": "`VOICE_ADAPTER` selects the default integration (`openai`, `azure` or `elevenlabs`).\nAzure needs a `gpt-live-1` deployment. Azure recovery is off unless the session checkbox enables it. All adapters\nshare the same delegation boundary; see [the session flow](docs/session-flow.md).",
-    "digest": "bc84cde40e5aaf90462fe7d501f74f502e6504c3c32c750683e8f29992338fdf"
-  },
-  {
-    "id": "0fb3a0058350f09f",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Providers and worker modes",
-    "text": "ElevenLabs requires its private backend API key, agent ID and shared webhook token;\nsee [agent setup and authentication](docs/elevenlabs.md). The browser receives a\nshort-lived conversation token, never the private provider key.",
-    "digest": "0fb3a0058350f09f6dd41b630b513d96058943d48cbbdfa4d6efa2f3d245cc10"
-  },
-  {
-    "id": "69dfba04d9a200d3",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Providers and worker modes",
-    "text": "Provider selection, observed audio activity and responsive session panels are enabled\nby default. Provider choice is fixed for each conversation;\nthis selector uses operator-configured credentials, not user-supplied keys.\n[Session controls](docs/session-ui.md) describe availability and unsupported preferences.",
-    "digest": "69dfba04d9a200d39055b5d4a2ca98724e635d81497f9e988e8a11499ccf3b89"
-  },
-  {
-    "id": "68593206f222e874",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Providers and worker modes",
-    "text": "[Cost estimates](docs/cost-estimates.md) are enabled by default. The UI retains a final\nbreakdown by voice, worker, decisions and search, labeling missing prices as partial. When available, ElevenLabs\nreported credits/USD are shown separately; estimates are not a provider invoice.\nCross-vendor fallback, SIP telephone entry and worker MCP connections are not implemented.\nThe [roadmap](docs/roadmap.md) tracks these and moderation/cascade design work separately.",
-    "digest": "68593206f222e874e87ca372e5ed6c1c47db4cec2fceabaf8449c4d0bac466b9"
-  },
-  {
-    "id": "630648d4a43cd2fb",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Providers and worker modes",
-    "text": "The UI also offers **Your API keys** without an invitation. Keys are submitted once and\nkept in memory for that session, including in a configured private remote worker; they\nare not saved to browser storage or a database. **Platform API** uses the operator's keys\nand existing invitation gate. Personal sessions never borrow platform keys or recovery.\nElevenLabs additionally needs your private agent ID and its configured webhook token.\nSee [personal-key access](docs/personal-api.md).",
-    "digest": "630648d4a43cd2fb3e9213084b69af8e0f4b62ec528b307bec57ffb497d131ee"
-  },
-  {
-    "id": "b6416bd6d6454d69",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Providers and worker modes",
-    "text": "`VOICE_WORKER_EXECUTION=local` runs that graph inside the API process. `remote`\nuses a separately started private HTTP worker service; it can be another container\non the same machine. It does not automatically deploy another service. Both modes\nretain the selected planner and limits. See [worker configuration](docs/worker.md).",
-    "digest": "b6416bd6d6454d69995673e74c209026f7529d7a7511bcad0c3541589441a296"
-  },
-  {
-    "id": "12cfee7c8dc51bf5",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Providers and worker modes",
-    "text": "The worker has `calculate` and `search_documentation`. Optional `web_search` needs\na private Tavily key on the worker host; providing that key enables search and may incur\nsearch-provider charges. A web result is untrusted data and\nends further tool selection for that delegation. The voice model still sees only\n`delegate_task`, never these individual tools. [Prompts](agent/src/voice_delegate_agent/prompts/)\nare versioned with the worker.",
-    "digest": "12cfee7c8dc51bf5c2be75597736c7d1994185963ba1f085d897336c73b18a4f"
-  },
-  {
-    "id": "0e2291a7d6ca7cf5",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Interruption, cancellation and delivery",
-    "text": "- Explicit UI/API cancellation and session end cancel work. Optional semantic cancellation\n  additionally requires `VOICE_DECISIONS_CANCEL=true`; failure leaves work running.",
-    "digest": "0e2291a7d6ca7cf509054d21e40b09f72427d6710af138c75aff1e538702c0f2"
-  },
-  {
-    "id": "6d99d11b90277310",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Interruption, cancellation and delivery",
-    "text": "“Result sent” means the provider accepted it, not that the user heard the complete\nanswer. Interrupted audio is not automatically repeated. Task execution and delivery\nwait are shown separately. See [ADR 009](docs/decisions/009-cancellation-is-intent.md).",
-    "digest": "6d99d11b9027731024574257d6c4a9d281e3aa395baabd41b3a1eb418f23321a"
-  },
-  {
-    "id": "4c535609a75d25cb",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Data flow and limits",
-    "text": "Audio goes directly between the browser and voice provider. Backend-owned sessions,\nqueues, history, model steps, results and external requests have explicit limits.\nInvitations, quota SQLite stores and leases control public access. Provider recovery\ncreates a new browser peer and replays bounded text, never tool executions.",
-    "digest": "4c535609a75d25cb32f456fe75c516749a5b9c91a9ebf4d9bc88c313dd0c3c3c"
-  },
-  {
-    "id": "dbcca4fe310169f8",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Data flow and limits",
-    "text": "Browser audio timing measures onset/playback separately\nfrom the always-labeled transcript timestamp gap. A transcript gap is not acoustic\nlatency; browser measurements are proxies, not a hardware loopback measurement.\nSee [measurement methodology](docs/benchmarks.md) and [observability](observability/README.md).",
-    "digest": "dbcca4fe310169f80407200366e846b7223387a1255f5863bfa528bf3c8a3a30"
-  },
-  {
-    "id": "536613882f012bb8",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Data flow and limits",
-    "text": "Ordinary diagnostics exclude conversation text. Server debug recording requires\nexplicit session consent; it stores bounded data for up to\n24 hours while the backend runs. Audio recording is a separate browser-only consent\nand download. The operator can read server debug recordings. See [operations](docs/operations.md).",
-    "digest": "536613882f012bb8b9b8f3be58688b686e745a2418fb9a42708c5877e7dd1c39"
-  },
-  {
-    "id": "e1cdc92b8c709e70",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "Checks",
-    "text": "CI checks Python 3.12 and 3.13, builds/smokes the backend and offline demo containers,\nand syncs the opt-in native scaffold. Python tests disable external sockets; browser\ntests use local fakes. Installing dependencies/browsers needs internet; testing does\nnot require provider credentials or paid requests.",
-    "digest": "e1cdc92b8c709e70b8ab8ab3e8ba7d6fa6d4739529543ff733ac975f481bb167"
-  },
-  {
-    "id": "128a43289808c8c2",
+    "id": "287bacd0e2207c35",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Documentation",
-    "text": "The [documentation index](docs/README.md) is organised by task: use it, deploy and operate\nit, or understand it. Highlights:\n[deployment](deployment/README.md), [operations](docs/operations.md),\n[configuration](docs/configuration.md) and the [decision records](docs/decisions/README.md).\nProposals for MCP, moderation, SIP and a cascaded pipeline are in\n[future extensions](docs/future-extensions.md). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).",
-    "digest": "128a43289808c8c29d865eb5001fb4a9f3843c8a4f5d50d78350f95a2fefe971"
+    "text": "Everything else (design, worker modes, interruption and delivery rules, deployment,\noperations, configuration and decision records) is in the\n[documentation index](docs/README.md). Contributing and checks: [CONTRIBUTING.md](CONTRIBUTING.md).",
+    "digest": "287bacd0e2207c354005f6b374359463b76aff7ec893223f3aa0dadb2653c957"
   },
   {
     "id": "cd5cc7bab4d6420e",
