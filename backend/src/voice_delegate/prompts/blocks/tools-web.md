@@ -1,0 +1,1 @@
+It has a calculator, project documentation search and read-only public web search. Delegate requests for current external information and wait for cited results. It cannot book, send messages or access private records.

@@ -25,9 +25,11 @@ No environment file or provider account is created or changed automatically.
 
 The agent already exists in ElevenLabs and owns its voice, language and prompt. The browser
 uses default language/style; unsupported overrides and mixed-audio recording are rejected.
-Configure the agent prompt to route calculation, project documentation and opted-in web
-requests through `delegate_task`, treat returned evidence as data, and describe cancellation,
-expiry and failure as incomplete work. The worker owns all individual tools and limits.
+Use the same instructions as the other providers so behavior does not drift: print them with
+`uv run python -m voice_delegate.prompts --mode intent` (add `--web-search` when the worker
+has a Tavily key) and paste the output into the agent's system prompt. Re-paste after
+changing a block in `backend/src/voice_delegate/prompts/blocks/`. The worker owns all
+individual tools and limits.
 
 ## Required agent tool
 
@@ -38,7 +40,7 @@ configuration before minting a browser token, including referenced tool definiti
 {
   "type": "webhook",
   "name": "delegate_task",
-  "description": "Delegate bounded work to the application worker and use its returned result.",
+  "description": "Ask the worker for calculations, project documentation or public web results. The answer arrives later; keep talking meanwhile.",
   "execution_mode": "async",
   "interruption_mode": "allow",
   "response_timeout_secs": 120,
@@ -55,7 +57,7 @@ configuration before minting a browser token, including referenced tool definiti
       "type": "object",
       "required": ["goal"],
       "properties": {
-        "goal": {"type": "string", "description": "The bounded task requested by the user"}
+        "goal": {"type": "string", "description": "A self-contained request in the user's words, including every number and detail needed"}
       }
     }
   }

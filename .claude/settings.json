@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run ruff check .)",
+      "Bash(uv run ruff format --check .)",
+      "Bash(uv run mypy)",
+      "Bash(uv run pytest)",
+      "Bash(uv run python scripts/check_independence.py)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm test)",
+      "Bash(git fetch)",
+      "Bash(claude mcp list)",
+      "Bash(claude mcp get *)"
+    ]
+  }
+}
