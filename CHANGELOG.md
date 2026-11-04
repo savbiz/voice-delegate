@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Changed: Dependabot groups only minor and patch updates, one pull request per ecosystem each week. Major updates are no longer grouped, so each arrives as its own pull request that can be reviewed and reverted alone. A test keeps this in the configuration.
+
 Added: releases now carry a signed build-provenance attestation for the SBOM documents (GitHub artifact attestations), attached as `voice-delegate.intoto.jsonl` and verifiable with `gh attestation verify`. It applies from the next published release. An overview diagram of the system components is added to `docs/architecture.md`, and Sentry is recorded as a possible later addition in `docs/future-extensions.md`.
 
 Changed: the frontend build uses Node.js 26 (now an LTS line) in the image, CI and `engines`. Node is only used to build and test the frontend; the production image serves static files from nginx. The pnpm install in that image no longer depends on Corepack, which Node 25 and later do not bundle: the registry tarball is installed only if its SHA-512 matches.

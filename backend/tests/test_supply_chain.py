@@ -58,6 +58,17 @@ def test_workflows_run_on_commits_cancel_superseded_runs(path: Path) -> None:
     assert "github.ref" in concurrency["group"]
 
 
+def test_dependabot_groups_minor_and_patch_updates_and_leaves_majors_separate() -> None:
+    config = load(ROOT / ".github/dependabot.yml")
+    ecosystems = {entry["package-ecosystem"] for entry in config["updates"]}
+    assert {"uv", "npm", "github-actions", "docker", "docker-compose"} <= ecosystems
+    for entry in config["updates"]:
+        assert entry["schedule"]["interval"] == "weekly"
+        for name, group in entry["groups"].items():
+            # A major update inside a group would hide a breaking change in a routine batch.
+            assert group["update-types"] == ["minor", "patch"], name
+
+
 def test_pnpm_only_runs_inside_the_frontend_directory() -> None:
     for path in WORKFLOWS:
         workflow = load(path)
