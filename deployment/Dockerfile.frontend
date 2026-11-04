@@ -8,7 +8,10 @@ ARG PNPM_VERSION=11.19.0
 ARG PNPM_SHA512=7881f3ed590d472c4a955e2b88b2121791116066dcc88cbca3849ec9b60f1bbaa6d2ccb221fa91da4e1c65bef2bcbe379365aea7ac539c7bf86dedc3a1b22dce
 # NODE_USE_ENV_PROXY makes fetch honour the HTTPS_PROXY that Docker passes on proxied networks.
 RUN NODE_USE_ENV_PROXY=1 node -e "const {createHash}=require('node:crypto'),fs=require('node:fs');fetch('https://registry.npmjs.org/pnpm/-/pnpm-'+process.argv[1]+'.tgz').then(r=>{if(!r.ok)throw new Error(r.status);return r.arrayBuffer()}).then(b=>{const d=Buffer.from(b);if(createHash('sha512').update(d).digest('hex')!==process.argv[2])throw new Error('pnpm checksum mismatch');fs.writeFileSync('/tmp/pnpm.tgz',d)})" "$PNPM_VERSION" "$PNPM_SHA512" \
-    && npm install --global /tmp/pnpm.tgz && rm /tmp/pnpm.tgz
+    && mkdir -p /usr/local/lib/node_modules/pnpm \
+    && tar -xzf /tmp/pnpm.tgz -C /usr/local/lib/node_modules/pnpm --strip-components=1 \
+    && ln -s ../lib/node_modules/pnpm/bin/pnpm.mjs /usr/local/bin/pnpm \
+    && rm /tmp/pnpm.tgz
 RUN pnpm install --frozen-lockfile
 COPY frontend/ ./
 COPY THIRD_PARTY_NOTICES.md /app/THIRD_PARTY_NOTICES.md

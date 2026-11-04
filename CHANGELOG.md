@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Changed: the frontend image unpacks the checksum-verified pnpm tarball itself instead of running `npm install` on it, because OpenSSF Scorecard counts any `npm install` without a hash as an unpinned dependency.
+
 Changed: dependency refresh. Python packages are re-locked to their latest releases (FastAPI 0.141 → 0.162, Pydantic 2.14, websockets 17, langgraph 1.2.19, langchain-openai 1.7 and others), the frontend tools are updated (Vitest 5.1, `@types/node` 26, the ElevenLabs client 1.33, Tailwind 4.3.4) and the build backend `uv_build` is aligned with uv 0.13. The OpenAI chat clients now set `use_responses_api=False`, because langchain-openai 1.7 would otherwise switch some models to the Responses API, which the worker and its cost accounting do not use. pnpm stays on 11.19.0: pnpm 12 writes a second YAML document with its own binaries into `pnpm-lock.yaml`, which the lockfile tests and Dependabot do not expect.
 
 Changed: Dependabot groups only minor and patch updates, one pull request per ecosystem each week. Major updates are no longer grouped, so each arrives as its own pull request that can be reviewed and reverted alone. A test keeps this in the configuration.
