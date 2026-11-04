@@ -129,6 +129,11 @@ async def test_cloud_upload_is_explicit_and_uses_only_curated_rows(
     assert len(logged) == 1
     assert logged[0]["input"] == {"goal": CASES[0]["goal"], "context": ""}
     assert "test-private-key" not in json.dumps(logged)
+    metrics = logged[0]["metrics"]
+    row = report["rows"][0]
+    # Duration in Braintrust is end - start: the worker's time, not the upload's.
+    assert metrics["end"] - metrics["start"] == pytest.approx(row["worker_seconds"], abs=1e-5)
+    assert metrics["model_calls"] == row["model_calls"]
 
 
 async def test_planner_comparison_is_offline_and_reports_per_case_steps(

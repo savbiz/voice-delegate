@@ -205,6 +205,7 @@ async def run_cases(
                 continue
             observer = ObservedPlanner(planner, budget, paid)
             started = time.perf_counter()
+            started_at = time.time()
             tokens_before = (budget.input_tokens, budget.output_tokens)
             calls_before = budget.calls
             text, ids, status = "", [], "completed"
@@ -269,6 +270,7 @@ async def run_cases(
                     "plumbing": plumbing,
                     "judge_status": judge_status,
                     "worker_seconds": elapsed,
+                    "started_at": started_at,
                     "model_calls": budget.calls - calls_before,
                     "input_tokens": budget.input_tokens - tokens_before[0],
                     "output_tokens": budget.output_tokens - tokens_before[1],
@@ -344,9 +346,18 @@ def upload(report: dict[str, Any], cases: list[dict[str, Any]], project: str) ->
                 "worker_seconds": row.get("worker_seconds"),
                 "model_calls": row.get("model_calls"),
             },
+            # Braintrust derives duration from start/end. Logging after the run would
+            # otherwise measure only the upload, so pass the worker's own wall-clock span.
             metrics={
                 "prompt_tokens": row.get("input_tokens", 0),
                 "completion_tokens": row.get("output_tokens", 0),
+                "tokens": row.get("input_tokens", 0) + row.get("output_tokens", 0),
+                "model_calls": row.get("model_calls", 0),
+                **(
+                    {"start": row["started_at"], "end": row["started_at"] + row["worker_seconds"]}
+                    if "started_at" in row
+                    else {}
+                ),
             },
         )
     experiment.flush()
