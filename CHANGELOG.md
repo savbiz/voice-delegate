@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Added: supply-chain checks (`docs/supply-chain.md`): a weekly and lockfile-triggered `pip-audit` and `pnpm audit`, CycloneDX SBOMs for the Python and frontend runtime dependencies attached to each release, and an OpenSSF Scorecard workflow. A test enforces that every workflow action is pinned to a commit and every workflow declares its permissions.
+
 Added: contract fuzzing of the HTTP API with Schemathesis and property-based tests (Hypothesis) of admission, quotas and the rate limiter, run with the normal test suite (`docs/testing.md`). Both are development dependencies.
 
 Fixed: the generated OpenAPI document now describes the API's real error answers. Every error body is `{"detail": "<message>"}`, but the document claimed the framework's list-shaped 422 and omitted the 400, 401, 403, 404, 409, 413, 429 and 503 responses. Runtime behaviour is unchanged.

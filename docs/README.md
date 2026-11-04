@@ -23,6 +23,7 @@ Start with the [project README](../README.md). Pick the path that matches what y
 | [ElevenLabs integration](elevenlabs.md) | Agent prompt, the `delegate_task` webhook tool and its authentication |
 | [Testing beyond examples](testing.md) | Contract fuzzing and property-based tests of admission and rate limits |
 | [Load testing](load-testing.md) | Locust scenario against the offline backend, budgets and reference results |
+| [Supply-chain checks](supply-chain.md) | Dependency audit, SBOMs, Scorecard and what the tests enforce |
 | [Production scope](production.md) | What this reference does and does not provide for a real service |
 
 ## Understand it

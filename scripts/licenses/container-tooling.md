@@ -15,6 +15,9 @@ licence material when redistributing images; this table is not an OS package inv
 | Prometheus 3.2.1 | Apache-2.0 | [Prometheus licence](https://github.com/prometheus/prometheus/blob/v3.2.1/LICENSE), [NOTICE](https://github.com/prometheus/prometheus/blob/v3.2.1/NOTICE) |
 | Grafana 11.6.0 | AGPL-3.0-only | [Grafana licence](https://github.com/grafana/grafana/blob/v11.6.0/LICENSE) |
 | Railway TypeScript SDK `railway` 3.16.0, with `graphql` 16.14.2 and `@graphql-typed-document-node/core` 3.2.0 (`.railway/` only, for `railway config plan`) | MIT | [railway-ts-sdk](https://github.com/railwayapp/railway-ts-sdk), [graphql-js licence](https://github.com/graphql/graphql-js/blob/v16.14.2/LICENSE), [typed-document-node licence](https://github.com/dotansimha/graphql-typed-document-node/blob/master/LICENSE) |
+| pip-audit 2.10.1 (CI only, run with `uv tool run`) | Apache-2.0 | [pip-audit licence](https://github.com/pypa/pip-audit/blob/v2.10.1/LICENSE) |
+| OpenSSF Scorecard action 2.5.0 (CI only) | Apache-2.0 | [scorecard-action licence](https://github.com/ossf/scorecard-action/blob/v2.5.0/LICENSE) |
+| `actions/upload-artifact` 7.0.2 (CI only) | MIT | [licence](https://github.com/actions/upload-artifact/blob/v7.0.2/LICENSE) |
 
 uv 0.12.15 and pnpm 11.19.0 are existing build tools; their installed dependency
 attributions are included above where present. This optional stack does not grant
