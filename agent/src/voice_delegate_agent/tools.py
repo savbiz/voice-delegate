@@ -24,7 +24,7 @@ def calculate(expression: str) -> str:
         return "Calculation rejected: expression too long."
     try:
         return f"{_evaluate(expression):.12g}"
-    except (ValueError, SyntaxError, ZeroDivisionError, OverflowError):
+    except ValueError, SyntaxError, ZeroDivisionError, OverflowError:
         return "Calculation rejected: use finite arithmetic within ±1e12, without powers or code."
 
 

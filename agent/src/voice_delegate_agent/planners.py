@@ -332,7 +332,7 @@ class DecisionsPlanner:
             else:
                 try:
                     self._validate_arguments(tools[selection.value], arguments)
-                except (ValidationError, TypeError):
+                except ValidationError, TypeError:
                     answer = AIMessage(content="Tool input invalid; please clarify the task.")
                 else:
                     answer = AIMessage(

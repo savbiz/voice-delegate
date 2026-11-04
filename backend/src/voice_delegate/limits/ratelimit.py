@@ -60,7 +60,7 @@ class RateLimitMiddleware:
                     address = str(
                         ip_address(forwarded[-self.trusted_proxy_hops].strip().decode("ascii"))
                     )
-            except (UnicodeError, ValueError):
+            except UnicodeError, ValueError:
                 pass
         try:
             parsed = ip_address(address)

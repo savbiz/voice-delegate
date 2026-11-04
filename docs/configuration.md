@@ -119,7 +119,7 @@ Field types use Pydantic's normal environment parsing; this is not strict JSON t
 
 ```python
 @model_validator(mode="after")
-def validate_elevenlabs(self) -> "Settings":
+def validate_elevenlabs(self) -> Settings:
     if self.voice_provider == "elevenlabs" and not self.elevenlabs_enabled:
         message = "ElevenLabs adapter requires complete backend agent credentials"
         raise ValueError(message)
@@ -191,7 +191,7 @@ def validate_elevenlabs(self) -> "Settings":
 
 
 @model_validator(mode="after")
-def validate_web_search(self) -> "Settings":
+def validate_web_search(self) -> Settings:
     self.web_search_domains = list(
         dict.fromkeys(domain_name(value) for value in self.web_search_domains)
     )
@@ -206,7 +206,7 @@ def validate_web_search(self) -> "Settings":
 
 
 @model_validator(mode="after")
-def validate_mcp(self) -> "Settings":
+def validate_mcp(self) -> Settings:
     ids = [server.id for server in self.mcp_servers]
     if len(set(ids)) != len(ids) or sum(len(s.tools) for s in self.mcp_servers) > 8:
         message = "MCP servers need unique ids and at most eight allowlisted tools in total"
@@ -218,7 +218,7 @@ def validate_mcp(self) -> "Settings":
 
 
 @model_validator(mode="after")
-def validate_origins(self) -> "Settings":
+def validate_origins(self) -> Settings:
     """Require canonical browser origins."""
     for origin in self.allowed_origins:
         if self.native_clients and origin == "capacitor://localhost":
@@ -245,7 +245,7 @@ def validate_origins(self) -> "Settings":
 
 
 @model_validator(mode="after")
-def validate_production(self) -> "Settings":
+def validate_production(self) -> Settings:
     """Require an explicit browser origin and access gate on public deployments."""
     if self.decisions_cancel and (
         not self.intent_cancellation or not self.openai_api_key.get_secret_value()

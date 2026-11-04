@@ -79,7 +79,7 @@ class McpServerSetting(BaseModel):
     token_env: str = Field(default="", pattern=r"^(MCP_[A-Z0-9_]{1,60})?$")
 
     @model_validator(mode="after")
-    def validate_entry(self) -> "McpServerSetting":
+    def validate_entry(self) -> McpServerSetting:
         McpServer(self.id, self.url, tuple(self.tools))  # raises ValueError when unsafe
         return self
 
@@ -197,7 +197,7 @@ class Settings(BaseSettings):
     max_body_bytes: int = Field(default=65536, ge=1024, le=1048576)
 
     @model_validator(mode="after")
-    def validate_elevenlabs(self) -> "Settings":
+    def validate_elevenlabs(self) -> Settings:
         if self.voice_provider == "elevenlabs" and not self.elevenlabs_enabled:
             message = "ElevenLabs adapter requires complete backend agent credentials"
             raise ValueError(message)
@@ -268,7 +268,7 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
-    def validate_web_search(self) -> "Settings":
+    def validate_web_search(self) -> Settings:
         self.web_search_domains = list(
             dict.fromkeys(domain_name(value) for value in self.web_search_domains)
         )
@@ -282,7 +282,7 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
-    def validate_mcp(self) -> "Settings":
+    def validate_mcp(self) -> Settings:
         ids = [server.id for server in self.mcp_servers]
         if len(set(ids)) != len(ids) or sum(len(s.tools) for s in self.mcp_servers) > 8:
             message = "MCP servers need unique ids and at most eight allowlisted tools in total"
@@ -293,7 +293,7 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
-    def validate_origins(self) -> "Settings":
+    def validate_origins(self) -> Settings:
         """Require canonical browser origins."""
         for origin in self.allowed_origins:
             if self.native_clients and origin == "capacitor://localhost":
@@ -319,7 +319,7 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
-    def validate_production(self) -> "Settings":
+    def validate_production(self) -> Settings:
         """Require an explicit browser origin and access gate on public deployments."""
         if self.decisions_cancel and (
             not self.intent_cancellation or not self.openai_api_key.get_secret_value()

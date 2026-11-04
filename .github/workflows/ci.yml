@@ -14,7 +14,7 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  # The main ruleset requires the checks "backend (3.12)", "backend (3.13)" and "frontend".
+  # The main ruleset requires the checks "backend (3.14)" and "frontend".
   # Keep these job names exactly. A job skipped by `if` counts as passed for a required check,
   # but a job that never exists (a dropped matrix leg, a workflow-level path filter) blocks merges.
   #
@@ -48,8 +48,8 @@ jobs:
           fi
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
           echo "docs_only=$docs_only"
-  backend-312:
-    name: backend (3.12)
+  backend:
+    name: backend (3.14)
     needs: changes
     if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
@@ -58,19 +58,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/backend
         with:
-          python: "3.12"
+          python: "3.14"
           containers: ${{ needs.changes.outputs.docs_only != 'true' }}
-  # Python 3.13 runs on main and tags only; pull requests rely on 3.12.
-  backend-313:
-    name: backend (3.13)
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/backend
-        with:
-          python: "3.13"
   frontend:
     name: frontend
     needs: changes
@@ -85,7 +74,7 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.12.15"
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Check project independence
         run: uv run --no-project python ../scripts/check_independence.py
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0

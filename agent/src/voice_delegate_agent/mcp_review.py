@@ -139,7 +139,7 @@ def verified_mcp_source(source: Source) -> bool:
 
 
 def review_tools(
-    server: "McpServer", raw: list[dict[str, Any]]
+    server: McpServer, raw: list[dict[str, Any]]
 ) -> dict[str, tuple[str, type[BaseModel]]]:
     """Keep only allowlisted, uniquely named tools with reviewable schemas.
 
