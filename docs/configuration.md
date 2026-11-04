@@ -53,6 +53,9 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `demo_enabled` | `VOICE_DEMO_ENABLED` | `true` | `{"type": "boolean"}` |
 | `quota_database` | `VOICE_QUOTA_DATABASE` | `".local/quotas.sqlite3"` | `{"type": "string"}` |
 | `feedback_database` | `VOICE_FEEDBACK_DATABASE` | `".local/feedback.sqlite3"` | `{"type": "string"}` |
+| `access_request_url` | `VOICE_ACCESS_REQUEST_URL` | `""` | `{"type": "string"}` |
+| `access_database` | `VOICE_ACCESS_DATABASE` | `".local/access.sqlite3"` | `{"type": "string"}` |
+| `public_api_url` | `VOICE_PUBLIC_API_URL` | `""` | `{"type": "string"}` |
 | `daily_sessions_per_user` | `VOICE_DAILY_SESSIONS_PER_USER` | `4` | `{"type": "integer", "minimum": 1, "maximum": 100}` |
 | `concurrent_sessions_per_user` | `VOICE_CONCURRENT_SESSIONS_PER_USER` | `1` | `{"type": "integer", "minimum": 1, "maximum": 10}` |
 | `daily_voice_seconds_per_user` | `VOICE_DAILY_VOICE_SECONDS_PER_USER` | `1500` | `{"type": "integer", "minimum": 1}` |
@@ -133,6 +136,36 @@ def validate_elevenlabs(self) -> "Settings":
             message = (
                 "ElevenLabs requires a webhook token of at least 32 characters "
                 "and an HTTPS webhook URL"
+            )
+            raise ValueError(message)
+    if self.access_request_url:
+        ntfy = urlsplit(self.access_request_url)
+        if (
+            ntfy.scheme != "https"
+            or not ntfy.hostname
+            or ntfy.username
+            or ntfy.password
+            or ntfy.query
+            or ntfy.fragment
+            or len(ntfy.path.strip("/")) < 8
+        ):
+            message = "VOICE_ACCESS_REQUEST_URL must be an HTTPS topic URL with a long topic"
+            raise ValueError(message)
+    if self.public_api_url:
+        api = urlsplit(self.public_api_url)
+        if (
+            not self.access_request_url
+            or api.scheme != "https"
+            or not api.hostname
+            or api.path not in {"", "/"}
+            or api.query
+            or api.fragment
+            or api.username
+            or api.password
+        ):
+            message = (
+                "Remote access approval needs VOICE_ACCESS_REQUEST_URL and "
+                "an HTTPS VOICE_PUBLIC_API_URL origin"
             )
             raise ValueError(message)
     if self.voice_provider == "elevenlabs" and not self.intent_cancellation:
@@ -235,8 +268,8 @@ def validate_production(self) -> "Settings":
     if any(len(value) < 32 for value in values) or len(set(values)) != len(values):
         message = "Invitations require unique random tokens of at least 32 characters"
         raise ValueError(message)
-    if self.public_demo and (not values or self.quota_database == ":memory:"):
-        message = "Public demo requires named invitations and durable quota storage"
+    if self.public_demo and ":memory:" in {self.quota_database, self.access_database}:
+        message = "Public demo requires durable quota and invitation storage"
         raise ValueError(message)
     if self.public_demo and self.environment != "production":
         message = "Public demo requires production configuration"
@@ -262,7 +295,12 @@ def validate_production(self) -> "Settings":
         if "testserver" in self.allowed_hosts:
             message = "Production requires explicit VOICE_ALLOWED_HOSTS without testserver"
             raise ValueError(message)
-        if not self.invite_tokens and len(self.access_token.get_secret_value()) < 24:
+        database_invites = self.public_demo or bool(self.public_api_url)
+        if (
+            not self.invite_tokens
+            and not database_invites
+            and len(self.access_token.get_secret_value()) < 24
+        ):
             message = "Production requires VOICE_ACCESS_TOKEN of at least 24 characters"
             raise ValueError(message)
         if any(

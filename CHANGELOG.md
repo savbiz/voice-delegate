@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+Added: an optional **Request access** button that notifies the owner through an ntfy topic (`VOICE_ACCESS_REQUEST_URL`); requests are rate limited and never stored. With `VOICE_PUBLIC_API_URL` set, the owner can approve from the notification and receives the new code with a prefilled email to send, without a redeploy. Invitations can be added, listed and revoked in the database with `make invite-add/list/revoke` (or `python -m voice_delegate.invites` on the server), and the public demo no longer requires `VOICE_INVITE_TOKENS`.
+
+Added: the page waits up to 30 seconds for a sleeping backend to start, showing a starting message, before discovering providers; the Railway service is described with Infrastructure as Code in `.railway/railway.ts`.
+
+Changed: the provider menu names OpenAI as "OpenAI · GPT-Live" and Azure simply as "Azure". Documentation: the maintainer reported ElevenLabs Agents working live on the deployed backend on 2026-11-03 (formal acceptance and cost reconciliation remain pending); future-extension proposals added under `docs/`.
+
 ## 0.2.0 - 2026-11-03
 
 Live voice is now the primary workspace, with a per-session choice of voice provider and billing source.

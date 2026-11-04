@@ -3,22 +3,54 @@
 [![ci](https://github.com/savbiz/voice-delegate/actions/workflows/ci.yml/badge.svg)](https://github.com/savbiz/voice-delegate/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
+[![release](https://img.shields.io/github/v/release/savbiz/voice-delegate)](https://github.com/savbiz/voice-delegate/releases)
+
 **A fast voice conversation. A separate worker for the heavy lifting.**
 
-## Independence
+Talk to a real-time voice model and keep talking while slower work happens in the
+background. The voice model knows exactly one tool, `delegate_task`. A bounded LangGraph
+worker does the calculation, cited project-documentation lookup or optional web search,
+and the answer is spoken when you pause. Interrupting the voice never throws that work away.
 
-This is a personal project by Savino Bizzoca. It is independent and not affiliated with,
-endorsed by, or derived from my employer's products, code or internal information. It is
-also not affiliated with or endorsed by OpenAI, Microsoft Azure or any other provider
-named in this documentation; product names are used descriptively. Copyright 2026 Savino
-Bizzoca, Apache-2.0.
+<p align="center">
+  <img src="docs/images/workspace.png" alt="The voice workspace: provider choice, API access and invitation code" width="720">
+</p>
 
-Ask a question, delegate a calculation or a documentation lookup, and keep talking.
-The voice model knows one tool, `delegate_task`; a bounded LangGraph worker handles
-calculation, cited project documentation and optional public web search. Preserving
-work while the user speaks uses the intent-based lifecycle described below.
+- **Three voice providers, chosen per session:** OpenAI GPT-Live, Azure (a GPT-Live
+  deployment) and ElevenLabs Agents.
+- **Background delegation:** up to two tasks run at once; results wait for silence and
+  carry the original request.
+- **Your keys or the platform's:** bring your own provider keys (memory only) or use an
+  invitation code with daily quotas.
+- **Cost estimates** per session, optional Azure recovery, OpenTelemetry metrics and an
+  opt-in iOS/Android shell.
 
-## Try it locally
+## How it works
+
+```mermaid
+flowchart LR
+    U["You speak"] <-->|WebRTC audio| V["Voice model"]
+    V -->|delegate_task| A["FastAPI session owner"]
+    A --> W["LangGraph worker"]
+    W --> T["Calculator · project docs · web search"]
+    W -->|bounded, cited result| A
+    A -->|after a silence| V
+```
+
+Audio flows directly between the browser and the voice provider. The backend owns the
+session, admission, quotas and delegated work; the voice model never sees the worker's
+individual tools.
+
+## Try it
+
+- **Hosted:** open [voice-delegate.vercel.app](https://voice-delegate.vercel.app). Choose
+  **Your API keys** to use your own provider account, or **Platform API** with an
+  invitation code. No code? Use **Request access** on the page and the maintainer is notified.
+- **No keys at all:** **Tools & examples → Offline example** plays a scripted session
+  for free, with no microphone or backend.
+- **Locally:** follow the steps below.
+
+## Run it locally
 
 Prerequisites: Python 3.12 or 3.13, uv, Node.js 24, pnpm 11.19.0 and make. From the
 repository root, install dependencies once:
@@ -79,48 +111,38 @@ and shutdown commands. Codespaces uses the same stack; keep forwarded ports priv
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/savbiz/voice-delegate)
 
-## Status and verification
+## Status
 
-**v0.2.0 is an implementation release.** Offline tests cover session ownership,
-limits, worker tools, cancellation, recovery, metrics and browser behavior.
-The maintainer reported successful local GPT-Live conversations and tool use; the
-full recorded live acceptance checklist is still pending. A small live Decisions
-API smoke is recorded separately; it does not establish cancellation quality.
+v0.2.0 is an implementation release: offline tests and hosted CI cover every feature,
+and the maintainer has used each voice provider live. Formal, recorded acceptance is the
+gate for v1.0.
 
-The [hosted frontend](https://voice-delegate.vercel.app) opens the voice workspace.
-Tools & examples contains the offline example and a search of bundled project documentation;
-these are secondary utilities rather than conversation modes.
-Live voice and hosted documentation search use the
-[configured Railway API](https://voice-delegate-api-production.up.railway.app/healthz)
-and require a healthy deployment, invitation and applicable provider credentials.
-Application daily allowances and provider account credits are independent;
-see [operations](docs/operations.md) for diagnosis and targeted quota resets.
-Deployment availability and provider credit balance must be checked at use time.
+| Area | Works today | Not yet claimed |
+|---|---|---|
+| OpenAI GPT-Live | Live conversations and tool use (maintainer) | Recorded acceptance checklist |
+| Azure | Live sessions as primary provider (maintainer) | Live recovery, measured latency |
+| ElevenLabs Agents | Live on the deployed backend (maintainer, 2026-11-03) | Formal acceptance, cost reconciliation |
+| Worker and delegation | Offline suite, worker evals, a small live Decisions smoke | Live Luna evaluation, cancellation quality |
+| Hosted demo | Vercel frontend, Railway API, invitations and quotas | Cold-start timings |
+| Native shells | iOS Simulator and Android debug builds compile | Device audio, store publication |
 
-Codespaces offline worker/metrics acceptance was reported on 2026-10-25; the
-startup/origin fixes are covered offline, while a new hosted rerun and cold-start
-timings remain pending. iOS Simulator and Android debug builds compile; device
-microphone, audio routing and store publication are separate acceptance work.
-
-See [current evidence and remaining gates](docs/roadmap.md), the
-[live checklist](docs/milestones/live-verification.md), [benchmarks](docs/benchmarks.md)
-and the [two-minute video script](docs/demo-video.md). The script is preparation,
-not a published demo video. No measured provider comparison, live Luna evaluation
-or Azure recovery result is claimed.
+Evidence and remaining gates: [roadmap](docs/roadmap.md),
+[live checklist](docs/milestones/live-verification.md) and [benchmarks](docs/benchmarks.md).
+The hosted API is on [Railway](https://voice-delegate-api-production.up.railway.app/healthz);
+application allowances and provider credits are independent, see [operations](docs/operations.md).
 
 ## Providers and worker modes
 
-`VOICE_ADAPTER` selects an integration; the old `VOICE_VOICE_PROVIDER` name remains
-a deprecated alias. Legacy values `live` and `realtime` now select `openai` and always
-use GPT-Live. Azure requires a deployment of `gpt-live-1`. Recovery is off by default
-and enabled only by the session checkbox. See [the session flow](docs/session-flow.md).
-All adapters expose the same delegation boundary.
+`VOICE_ADAPTER` selects the default integration (`VOICE_VOICE_PROVIDER` and the values
+`live`/`realtime` are deprecated aliases for `openai`). Azure needs a `gpt-live-1`
+deployment. Azure recovery is off unless the session checkbox enables it. All adapters
+share the same delegation boundary; see [the session flow](docs/session-flow.md).
 
-| Adapter | Voice service and transport | State |
+| Adapter | UI label | Voice service and transport |
 |---|---|---|
-| `openai` | OpenAI GPT-Live; browser WebRTC audio and backend sideband | Default; partial local smoke reported |
-| `azure` | Azure GPT-Live; browser WebRTC and backend sideband | Primary or one recovery attempt with session consent; live acceptance pending |
-| `elevenlabs` | ElevenLabs Agents; browser SDK WebRTC and authenticated backend webhook | Opt-in; offline contracts tested, full live acceptance pending |
+| `openai` | OpenAI · GPT-Live | OpenAI GPT-Live; browser WebRTC audio and backend sideband (default) |
+| `azure` | Azure | Azure `gpt-live-1` deployment; browser WebRTC and backend sideband; also the optional recovery target |
+| `elevenlabs` | ElevenLabs · Agents | ElevenLabs Agents; browser SDK WebRTC and an authenticated backend webhook (deployed backend only) |
 
 ElevenLabs requires its private backend API key, agent ID and shared webhook token;
 see [agent setup and authentication](docs/elevenlabs.md). The browser receives a
@@ -252,5 +274,16 @@ not require provider credentials or paid requests.
 - [Session controls](docs/session-ui.md), [ElevenLabs setup](docs/elevenlabs.md), [cost estimates](docs/cost-estimates.md)
 - [Native packaging](docs/mobile.md), [third-party notices](THIRD_PARTY_NOTICES.md) and [contributing](CONTRIBUTING.md)
 
-Public protocol sources are cited in the design documents and ADRs. The project is
-Apache-2.0; dependencies and bundled data retain their individual licence terms.
+- Future work: [MCP, moderation, telephone SIP and a cascaded voice pipeline](docs/future-extensions.md) (proposals only)
+
+Public protocol sources are cited in the design documents and ADRs.
+
+## Independence and licence
+
+This is a personal project by Savino Bizzoca. It is independent and not affiliated with,
+endorsed by, or derived from my employer's products, code or internal information. It is
+also not affiliated with or endorsed by OpenAI, Microsoft Azure or any other provider
+named in this documentation; product names are used descriptively.
+
+Copyright 2026 Savino Bizzoca. Licensed under [Apache-2.0](LICENSE); dependencies and
+bundled data retain their individual licence terms ([notices](THIRD_PARTY_NOTICES.md)).

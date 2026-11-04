@@ -135,7 +135,7 @@ All `/api` routes require the configured exact Origin. Session, reference and fe
 | Method and path | Meaning |
 |---|---|
 | `GET /healthz` | Process health; no provider call |
-| `POST /api/config` | Return `requires_access_code`, `voice_available` and `feedback_available` booleans |
+| `POST /api/config` | Return `requires_access_code`, `voice_available`, `feedback_available` and `access_request_available` booleans |
 | `POST /api/sessions` | Reserve an application session; return ID, key, TTL |
 | `POST /api/sessions/{id}/offer` | JSON SDP offer; return SDP answer |
 | `POST /api/sessions/{id}/reconnect` | New SDP offer and current generation; consume one configured fallback attempt |
@@ -397,6 +397,10 @@ The [Agents integration](elevenlabs.md) uses direct browser WebRTC media and an 
 ## Session provider selection
 
 The [session UI](session-ui.md) selects from a server-owned adapter registry before creation; each session keeps its provider, while ElevenLabs never uses Azure recovery.
+
+## Planned extensions
+
+[MCP, moderation, SIP and cascaded audio](future-extensions.md) have design notes and diagrams only; they retain one voice-facing delegate_task tool and require separate opt-in implementations and acceptance.
 
 ## Sources
 

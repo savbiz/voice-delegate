@@ -29,6 +29,7 @@ def shared(path: Path, instance: str) -> Settings:
         instance_id=instance,
         allowed_origins=["https://demo.example"],
         quota_database=str(path / "quota.db"),
+        access_database=str(path / "access.db"),
         invite_tokens={"alice": SecretStr("a" * 32), "bob": SecretStr("b" * 32)},
         max_sessions=2,
     )

@@ -39,6 +39,7 @@ async def test_recording_requires_both_gates_and_ownership(
         allowed_origins=["https://frontend.example"],
         public_demo=environment == "production",
         quota_database=str(tmp_path / "quotas.sqlite3"),
+        access_database=str(tmp_path / "access.sqlite3"),
         feedback_database=str(tmp_path / "feedback.sqlite3"),
         invite_tokens={"tester": SecretStr("local-placeholder-invitation-32-characters")},
     )

@@ -3,11 +3,12 @@
 from dataclasses import asdict
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from voice_delegate_agent.limits import QUERY_MAX_CHARS
 from voice_delegate_agent.reference import search, source_by_id
 
+from voice_delegate.access_request import AccessRequestInput, AccessRequests
 from voice_delegate.debug import DebugSample
 from voice_delegate.feedback import FeedbackInput, FeedbackStore
 from voice_delegate.personal import PersonalSession, create_personal_session
@@ -49,10 +50,32 @@ class ReferenceQuery(BaseModel):
     query: str = Field(min_length=1, max_length=QUERY_MAX_CHARS)
 
 
+def build_access_router(access_requests: AccessRequests) -> APIRouter:
+    """Owner decisions from notification buttons; the one-time secret is the credential."""
+    router = APIRouter(prefix="/access")
+    RequestId = Annotated[str, Path(min_length=8, max_length=32, pattern=r"^[A-Za-z0-9_-]+$")]
+    Secret = Annotated[str, Path(min_length=32, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")]
+
+    @router.post("/{request_id}/{secret}/approve")
+    async def approve(request_id: RequestId, secret: Secret, response: Response) -> dict[str, str]:
+        response.headers["Cache-Control"] = "no-store"
+        await access_requests.approve(request_id, secret)
+        return {"status": "approved"}
+
+    @router.post("/{request_id}/{secret}/deny")
+    async def deny(request_id: RequestId, secret: Secret, response: Response) -> dict[str, str]:
+        response.headers["Cache-Control"] = "no-store"
+        access_requests.deny(request_id, secret)
+        return {"status": "denied"}
+
+    return router
+
+
 def build_router(
     manager: SessionManager,
     feedback: FeedbackStore | None = None,
     elevenlabs: ElevenLabsProvider | None = None,
+    access_requests: AccessRequests | None = None,
 ) -> APIRouter:
     """Bind a router to one lifecycle-owned manager, avoiding untyped app state."""
 
@@ -78,6 +101,13 @@ def build_router(
         provider = provider or manager.settings.voice_provider
         return {"diagnostic_id": feedback.submit(principal, body, provider)}
 
+    @router.post("/access-request", status_code=202)
+    async def request_access(body: AccessRequestInput) -> dict[str, str]:
+        if access_requests is None:
+            raise HTTPException(503, "Access requests are not enabled on this server")
+        await access_requests.submit(body)
+        return {"status": "sent"}
+
     @router.post("/config")
     async def configuration(body: VoicePreferences | None = None) -> dict[str, object]:
         adapter = manager.select_adapter(body.adapter if body else None)
@@ -92,8 +122,12 @@ def build_router(
             "audio_timing_available": manager.settings.audio_timing,
             "intent_cancellation": manager.settings.intent_cancellation,
             "feedback_available": feedback is not None,
+            "access_request_available": access_requests is not None,
+            "access_request_email": access_requests is not None and access_requests.requires_email,
             "requires_access_code": bool(
-                manager.settings.invite_tokens or manager.settings.access_token.get_secret_value()
+                manager.settings.invite_tokens
+                or manager.settings.access_token.get_secret_value()
+                or manager.admission.invites is not None
             ),
             "voice_available": bool(
                 manager.settings.elevenlabs_api_key.get_secret_value()

@@ -148,6 +148,8 @@ function Live({ code, onCode }: { code: string; onCode: (code: string) => void }
         disabled={state.active || state.ending}
         code={code}
         webhookUrl={options?.elevenlabs_webhook_url}
+        requestAccess={options?.access_request_available === true}
+        requestAccessEmail={options?.access_request_email === true}
         onCode={onCode}
         onSource={(source) => {
           setApiSource(source);

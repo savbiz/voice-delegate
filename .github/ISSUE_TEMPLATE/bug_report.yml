@@ -1,0 +1,35 @@
+name: Bug report
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Never paste API keys, invitation codes, webhook tokens, transcripts or audio here.
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options: [Hosted demo, Local (make be / make fe), Offline Docker stack, Native preview]
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Voice provider
+      options: [OpenAI · GPT-Live, Azure, ElevenLabs · Agents, Not applicable]
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      placeholder: v0.2.0

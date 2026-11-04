@@ -53,6 +53,7 @@ def public_settings() -> PublicSettingsFactory:
             "public_demo": True,
             "allowed_origins": ["https://demo.example"],
             "quota_database": str(path / "quotas.sqlite3"),
+            "access_database": str(path / "access.sqlite3"),
             "invite_tokens": {"alice": "a" * 32, "bob": "b" * 32},
             "session_ttl_seconds": 10,
             "daily_sessions_per_user": 2,

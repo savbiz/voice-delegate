@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Request access to the hosted demo
+    url: https://voice-delegate.vercel.app
+    about: Use the Request access button on the page; do not post your email in an issue.
+  - name: Report a security vulnerability
+    url: https://github.com/savbiz/voice-delegate/security/advisories/new
+    about: Report privately, as described in SECURITY.md.

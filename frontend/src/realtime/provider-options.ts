@@ -1,7 +1,7 @@
 /** Bounded configuration discovery; failure preserves the existing fixed-provider UI. */
 export const adapterNames = {
-  openai: 'OpenAI',
-  azure: 'Azure · GPT-Live',
+  openai: 'OpenAI · GPT-Live',
+  azure: 'Azure',
   elevenlabs: 'ElevenLabs · Agents',
 } as const;
 export type Adapter = keyof typeof adapterNames;
@@ -10,6 +10,8 @@ export type VoiceOptions = {
   available_adapters: Adapter[];
   session_ui: true;
   azure_recovery_available?: boolean;
+  access_request_available?: boolean;
+  access_request_email?: boolean;
   elevenlabs_webhook_url?: string;
 };
 export async function voiceOptions(
@@ -83,6 +85,8 @@ export async function discoverVoiceOptions(
         available_adapters: configured,
         session_ui: true,
         azure_recovery_available: data.azure_recovery_available === true,
+        access_request_available: data.access_request_available === true,
+        access_request_email: data.access_request_email === true,
         elevenlabs_webhook_url:
           typeof data.elevenlabs_webhook_url === 'string' &&
           data.elevenlabs_webhook_url.length <= 512

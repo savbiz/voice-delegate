@@ -126,6 +126,9 @@ class Settings(BaseSettings):
     demo_enabled: bool = True
     quota_database: str = ".local/quotas.sqlite3"
     feedback_database: str = ".local/feedback.sqlite3"
+    access_request_url: str = ""
+    access_database: str = ".local/access.sqlite3"
+    public_api_url: str = ""
     daily_sessions_per_user: int = Field(default=4, ge=1, le=100)
     concurrent_sessions_per_user: int = Field(default=1, ge=1, le=10)
     daily_voice_seconds_per_user: int = Field(default=1500, ge=1)
@@ -182,6 +185,36 @@ class Settings(BaseSettings):
                 message = (
                     "ElevenLabs requires a webhook token of at least 32 characters "
                     "and an HTTPS webhook URL"
+                )
+                raise ValueError(message)
+        if self.access_request_url:
+            ntfy = urlsplit(self.access_request_url)
+            if (
+                ntfy.scheme != "https"
+                or not ntfy.hostname
+                or ntfy.username
+                or ntfy.password
+                or ntfy.query
+                or ntfy.fragment
+                or len(ntfy.path.strip("/")) < 8
+            ):
+                message = "VOICE_ACCESS_REQUEST_URL must be an HTTPS topic URL with a long topic"
+                raise ValueError(message)
+        if self.public_api_url:
+            api = urlsplit(self.public_api_url)
+            if (
+                not self.access_request_url
+                or api.scheme != "https"
+                or not api.hostname
+                or api.path not in {"", "/"}
+                or api.query
+                or api.fragment
+                or api.username
+                or api.password
+            ):
+                message = (
+                    "Remote access approval needs VOICE_ACCESS_REQUEST_URL and "
+                    "an HTTPS VOICE_PUBLIC_API_URL origin"
                 )
                 raise ValueError(message)
         if self.voice_provider == "elevenlabs" and not self.intent_cancellation:
@@ -281,8 +314,8 @@ class Settings(BaseSettings):
         if any(len(value) < 32 for value in values) or len(set(values)) != len(values):
             message = "Invitations require unique random tokens of at least 32 characters"
             raise ValueError(message)
-        if self.public_demo and (not values or self.quota_database == ":memory:"):
-            message = "Public demo requires named invitations and durable quota storage"
+        if self.public_demo and ":memory:" in {self.quota_database, self.access_database}:
+            message = "Public demo requires durable quota and invitation storage"
             raise ValueError(message)
         if self.public_demo and self.environment != "production":
             message = "Public demo requires production configuration"
@@ -308,7 +341,12 @@ class Settings(BaseSettings):
             if "testserver" in self.allowed_hosts:
                 message = "Production requires explicit VOICE_ALLOWED_HOSTS without testserver"
                 raise ValueError(message)
-            if not self.invite_tokens and len(self.access_token.get_secret_value()) < 24:
+            database_invites = self.public_demo or bool(self.public_api_url)
+            if (
+                not self.invite_tokens
+                and not database_invites
+                and len(self.access_token.get_secret_value()) < 24
+            ):
                 message = "Production requires VOICE_ACCESS_TOKEN of at least 24 characters"
                 raise ValueError(message)
             if any(

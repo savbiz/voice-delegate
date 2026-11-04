@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from voice_delegate_agent.graph import LangGraphWorker, OfflinePlanner
 
+from voice_delegate.access_request import AccessRequests, Approval
 from voice_delegate.config import Settings, load_settings
 from voice_delegate.delegation.planner import build_planner
 from voice_delegate.feedback import FeedbackStore
@@ -31,11 +32,13 @@ from voice_delegate.session.manager import SessionManager
 from voice_delegate.session.models import SessionError
 
 from .elevenlabs_webhook import build_webhook_router
-from .routes import build_router
+from .routes import build_access_router, build_router
 
 
 def create_app(
-    settings: Settings | None = None, provider: RealtimeProvider | None = None
+    settings: Settings | None = None,
+    provider: RealtimeProvider | None = None,
+    access_requests: AccessRequests | None = None,
 ) -> FastAPI:
     """Build a single-process app; inject an offline provider in tests."""
     settings = settings or load_settings()
@@ -113,7 +116,10 @@ def create_app(
     # SQLite calls are synchronous by design for the single-process demo.
     feedback = (
         FeedbackStore(settings.feedback_database)
-        if settings.invite_tokens or settings.access_token.get_secret_value()
+        if settings.invite_tokens
+        or settings.access_token.get_secret_value()
+        or settings.public_demo
+        or settings.public_api_url
         else None
     )
 
@@ -141,6 +147,24 @@ def create_app(
         providers=providers,
     )
 
+    if access_requests is not None and access_requests.store is not None:
+        # An injected store (tests) replaces the one admission opened.
+        if manager.admission.invites is not None:
+            manager.admission.invites.close()
+        manager.admission.invites = access_requests.store
+    elif access_requests is None and settings.access_request_url:
+        store = manager.admission.invites if settings.public_api_url else None
+        access_requests = AccessRequests(
+            settings.access_request_url,
+            store=store,
+            approval=Approval(
+                public_api_url=settings.public_api_url.rstrip("/"),
+                frontend_url=settings.allowed_origins[0],
+            )
+            if store is not None
+            else None,
+        )
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         janitor = asyncio.create_task(manager.sweep(), name="session-janitor")
@@ -154,6 +178,8 @@ def create_app(
                 await feedback_janitor
             if feedback is not None:
                 feedback.close()
+            if access_requests is not None:
+                await access_requests.aclose()
             with suppress(asyncio.CancelledError):
                 await janitor
             await manager.aclose()
@@ -216,6 +242,8 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    app.include_router(build_router(manager, feedback, elevenlabs))
+    app.include_router(build_router(manager, feedback, elevenlabs, access_requests))
     app.include_router(build_webhook_router(manager))
+    if access_requests is not None and access_requests.store is not None:
+        app.include_router(build_access_router(access_requests))
     return app

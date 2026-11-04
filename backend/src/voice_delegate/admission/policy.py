@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from secrets import compare_digest
 
+from voice_delegate.access_request import InviteStore
 from voice_delegate.config import Settings
 from voice_delegate.session.models import SessionError
 
@@ -19,6 +20,12 @@ class Admission:
 
     def __init__(self, settings: Settings, clock: Callable[[], float] = time.time) -> None:
         self.settings = settings
+        # Database invitations (approved requests and `voice_delegate.invites`), hashed at rest.
+        self.invites: InviteStore | None = (
+            InviteStore(settings.access_database)
+            if settings.public_demo or settings.public_api_url
+            else None
+        )
         self.clock = clock
         self.database: sqlite3.Connection | None = None
         if settings.public_demo:
@@ -49,6 +56,9 @@ class Admission:
         actual = (
             authorization.removeprefix("Bearer ") if authorization.startswith("Bearer ") else ""
         )
+        approved = self.invites.principal(actual) if self.invites is not None else None
+        if approved is not None:
+            return approved
         if self.settings.invite_tokens:
             identity = None
             for user, token in self.settings.invite_tokens.items():
@@ -57,6 +67,9 @@ class Admission:
             if identity is None:
                 raise SessionError(401, "A valid personal invitation is required")
             return identity
+        if self.invites is not None:
+            # Database invitations only: never fall back to the open local identity.
+            raise SessionError(401, "A valid personal invitation is required")
         expected = self.settings.access_token.get_secret_value()
         if expected and not compare_digest(actual.encode(), expected.encode()):
             raise SessionError(401, "A valid demo access code is required")
@@ -172,3 +185,5 @@ class Admission:
     def close(self) -> None:
         if self.database is not None:
             self.database.close()
+        if self.invites is not None:
+            self.invites.close()
