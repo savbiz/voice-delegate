@@ -26,8 +26,12 @@ so symmetry between schema and behaviour is not a contract of this API.
 The run is deterministic (`derandomize`), uses a different client address per request so the
 per-IP limiter does not hide routes, and takes a few seconds.
 
-## Property-based tests (Hypothesis)
+## Property-based tests (Hypothesis, fast-check)
 
+- The frontend uses fast-check in `frontend/src/properties.test.ts`: generated event sequences
+  for the session lifecycle state machine (the attempt counter never decreases, the single
+  fallback is consumed only by a granted fallback) and generated URLs for the evidence-link
+  filter (only credential-free HTTPS links come out, and nothing throws).
 - `test_admission_properties.py` drives the real SQLite-backed admission through random
   sequences of reservations, releases, clock advances and lease expiries, under three
   configurations that each make a different limit the one that binds. After every step it

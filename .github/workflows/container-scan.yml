@@ -16,6 +16,9 @@ on:
       - frontend/pnpm-lock.yaml
       - .github/workflows/container-scan.yml
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 
