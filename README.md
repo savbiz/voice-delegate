@@ -18,10 +18,6 @@ A 90-second demonstration: a spoken question, a calculation, and a cited documen
 
 https://github.com/user-attachments/assets/6aa298a5-4809-426e-a2ea-c4dcb1fe3eda
 
-<p align="center">
-  <img src="docs/images/workspace.png" alt="The voice workspace: provider choice, API access and invitation code" width="720">
-</p>
-
 Reviewing this repository? [Start here](docs/start-here.md) for a five-minute reading path.
 
 How it is tested beyond examples: [fuzzing, property tests and mutation testing](docs/testing.md), a [load test](docs/load-testing.md) and [nightly results](docs/results.md).
@@ -137,7 +133,7 @@ and Prometheus/Grafana with a deterministic planner on http://localhost:8080, al
 ## Status
 
 Every feature is covered by offline tests and CI, and the maintainer has used each voice
-provider live on the hosted demo. A recorded demo video is the gate for v1.0.
+provider live on the hosted demo. The demonstration above is a recording of the hosted deployment.
 
 **Live dashboard:** [latency, errors and estimated cost from the hosted demo](https://valiantocelot1730.grafana.net/public-dashboards/22ada44e8fa241b98648a33f34de9b98)
 (Grafana Cloud, last 30 days, read-only). Traffic is light, so some panels are sparse.

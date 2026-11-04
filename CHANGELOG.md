@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+Changed: CI caches the Playwright browsers between runs (the uv and pnpm package caches were already in use), and Dependabot now also watches the composite action in `.github/actions/backend`, which it had never scanned. That action was a patch release behind on `setup-uv`; it is updated, and a test requires every composite action's third-party steps to be pinned by commit and watched by Dependabot.
+
+Added: a 90-second demonstration video of the hosted app (a spoken question, a calculation and a cited documentation lookup running in the background) at the top of the README, replacing the static screenshot (`docs/images/workspace.png`, now removed). The roadmap no longer lists it as pending, and `docs/demo-video.md` records what the video covers.
+
 ## 0.5.0 - 2026-11-04
 
 This release is about evidence and upkeep rather than new voice features. The project now builds and tests on Python 3.14 and Node.js 26, every dependency is refreshed, and the repository gains load testing, contract fuzzing, property and mutation tests, container and supply-chain checks, signed SBOM provenance, a nightly results page and an OpenSSF Scorecard badge.

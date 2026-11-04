@@ -12,6 +12,7 @@ from scripts.check_sbom import check, main
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = sorted((ROOT / ".github/workflows").glob("*.yml"))
+COMPOSITE_ACTIONS = sorted((ROOT / ".github/actions").glob("*/action.yml"))
 PINNED = re.compile(r"^[\w.-]+/[\w./-]+@[0-9a-f]{40}$")
 
 
@@ -67,6 +68,28 @@ def test_dependabot_groups_minor_and_patch_updates_and_leaves_majors_separate() 
         for name, group in entry["groups"].items():
             # A major update inside a group would hide a breaking change in a routine batch.
             assert group["update-types"] == ["minor", "patch"], name
+
+
+@pytest.mark.parametrize("path", COMPOSITE_ACTIONS, ids=lambda p: p.parent.name)
+def test_composite_actions_are_pinned_and_watched_by_dependabot(path: Path) -> None:
+    action = load(path)
+    for step in action["runs"]["steps"]:
+        reference = step.get("uses", "")
+        if reference and not reference.startswith("./"):
+            assert PINNED.match(reference), f"{path.parent.name}: {reference} is not pinned"
+    config = load(ROOT / ".github/dependabot.yml")
+    watched = next(e for e in config["updates"] if e["package-ecosystem"] == "github-actions")
+    # Dependabot only reads action.yml files in the directories it is told about.
+    assert f"/.github/actions/{path.parent.name}" in watched["directories"]
+
+
+def test_playwright_browsers_are_cached_between_runs() -> None:
+    commands = steps(load(ROOT / ".github/workflows/ci.yml"))
+    names = [step.get("uses", "") + step.get("run", "") for step in commands]
+    cache = next(i for i, text in enumerate(names) if text.startswith("actions/cache@"))
+    install = next(i for i, text in enumerate(names) if "playwright install" in text)
+    assert cache < install, "restore the browser cache before installing"
+    assert commands[cache]["with"]["path"] == "~/.cache/ms-playwright"
 
 
 def test_pnpm_only_runs_inside_the_frontend_directory() -> None:
