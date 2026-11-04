@@ -46,9 +46,10 @@ A complete, deployed system, not a prototype:
 - **Evaluations:** 40 versioned worker cases scored deterministically and by an LLM judge,
   run offline on every CI push and against real models on demand, with results tracked as
   Braintrust experiments ([evals](evals/README.md)).
-- **Engineering:** FastAPI + React 19 + TypeScript, uv and pnpm workspaces, about 1,000
+- **Engineering:** FastAPI + React 19 + TypeScript, uv and pnpm workspaces, about 1,300
   automated tests (pytest, Vitest, Playwright end-to-end), strict typing and linting,
-  a Locust load test against the offline stack ([load testing](docs/load-testing.md)), CodeQL, OpenTelemetry traces and metrics (local Prometheus and Grafana, or Grafana Cloud
+  a Locust load test against the offline stack ([load testing](docs/load-testing.md)),
+  CodeQL, OpenTelemetry traces and metrics (local Prometheus and Grafana, or Grafana Cloud
   with importable dashboards), 13 decision records.
 - **Delivery:** Railway (infrastructure as code) and Vercel, tagged releases with a
   changelog, a daily health check and a one-command offline demo for Codespaces.
