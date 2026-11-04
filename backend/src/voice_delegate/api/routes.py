@@ -318,9 +318,11 @@ def build_router(
     @router.post("/sessions/{session_id}/close")
     async def close(session: Annotated[Session, Depends(owned)]) -> Closed:
         manager = root.owner_for(session)
-        finalized = await manager.close(session)
+        finalized = await manager.close(session, summarize=True)
         return Closed(
-            finalized=finalized, costs=session.costs.snapshot() if session.costs else None
+            finalized=finalized,
+            costs=session.costs.snapshot() if session.costs else None,
+            summary=session.summary,
         )
 
     @router.post("/sessions/{session_id}/interrupt")

@@ -47,6 +47,7 @@ Approved requests appear in `make invite-list` as `email-<hash>`; revoke them wi
 - `VOICE_SESSION_TTL_SECONDS` bounds a conversation's lifetime. Heartbeat expiry reclaims abandoned sessions; neither heartbeat nor fallback extends the absolute TTL.
 - `VOICE_MAX_DELEGATIONS_PER_SESSION` caps accepted distinct worker requests. An over-limit request does not cancel already-running work.
 - Worker step, duration, result-size and concurrency limits cap application-owned work; they are not a dollar-accurate billing meter.
+- `VOICE_SESSION_SUMMARY` (default false) adds at most one bounded worker-model call per user-closed conversation (about 2,000 input and 300 output tokens). It is counted as a worker call in the session estimate.
 
 Use project-scoped provider keys. Configure provider budget alerts and available hard spending controls; verify whether the selected provider/account treats a budget as a warning or actually rejects additional use. Monitor billed usage separately from local reserved seconds. Disable new sessions and revoke/disable a provider key if uncontrolled provider usage continues. Never assume a local timeout proves upstream billing stopped.
 

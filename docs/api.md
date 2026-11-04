@@ -16,7 +16,7 @@ The backend serves JSON over HTTPS in hosted deployments. All `/api` routes requ
 | POST | `/api/sessions/{id}/reconnect` | `sdp` and integer `generation` → SDP answer | 200 | 409 stale/used attempt or invalid state; 501 no replay-capable fallback; 502 provider failure; 504 timeout |
 | POST | `/api/sessions/{id}/heartbeat` | No body → status payload described below | 200 | 404 expired/removed session |
 | POST | `/api/sessions/{id}/interrupt` | No body → `delegation` status | 200 | — |
-| POST | `/api/sessions/{id}/close` | No body → `{"finalized":true/false}` | 200 | 404 already removed |
+| POST | `/api/sessions/{id}/close` | No body → `{"finalized":true/false}`, final `costs` and `summary` (a generated recap with `VOICE_SESSION_SUMMARY`, otherwise `null`) | 200 | 404 already removed |
 | POST | `/api/sessions/{id}/token` | No supported browser credential contract | — | 501 unsupported |
 | POST | `/api/reference/search` | `{"query":"…"}` (1–500 chars) → `sources`, `status` | 200 | — |
 | POST | `/api/reference/{id}` | No body → source by corpus ID | 200 | 404 unknown source |

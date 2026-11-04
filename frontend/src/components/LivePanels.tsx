@@ -40,10 +40,16 @@ export function SourcesPanel({ sources }: { sources: Source[] }) {
   );
 }
 
-export function RecapPanel({ recap }: { recap: string }) {
+export function RecapPanel({ recap, summary = '' }: { recap: string; summary?: string }) {
   return (
     <details className="secondary-panel">
       <summary>Conversation recap</summary>
+      {summary && (
+        <p id="summary" className="recap-summary">
+          <strong>Generated summary</strong> (written by a model at the end; may be inaccurate):{' '}
+          {summary}
+        </p>
+      )}
       <p className="muted">
         Latest request and reply from the transcript. Interrupted work may still be incomplete.
       </p>

@@ -200,11 +200,12 @@ export function createLiveSession(
     store.update(endedWorkerState(store.getSnapshot()));
     if (owner) {
       const close = () =>
-        request<{ finalized: boolean; costs?: CostSummary }>(
+        request<{ finalized: boolean; costs?: CostSummary; summary?: string | null }>(
           `/sessions/${owner.id}/close`,
           owner,
           undefined,
-          5000,
+          // Allows an opt-in server-side summary (bounded to about 7 seconds) to finish.
+          12000,
         );
       const closing =
         owner.debugRecording && userStopped
@@ -212,7 +213,11 @@ export function createLiveSession(
           : close();
       void closing
         .then((result) => {
-          if (closedAttempt === attemptId) store.update({ costs: result.costs });
+          if (closedAttempt === attemptId)
+            store.update({
+              costs: result.costs,
+              summary: typeof result.summary === 'string' ? result.summary.slice(0, 600) : '',
+            });
           if (closedAttempt === attemptId && !result.finalized)
             store.update({ status: message + ' Provider finalization unconfirmed.' });
         })
@@ -398,6 +403,7 @@ export function createLiveSession(
         decisionCostUsd: 0,
         sources: [],
         recap: 'No conversation yet.',
+        summary: '',
       });
       if (!reportPending) {
         diagnosticId = crypto.randomUUID();

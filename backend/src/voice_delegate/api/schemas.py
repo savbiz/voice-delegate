@@ -97,6 +97,8 @@ class Closed(BaseModel):
 
     finalized: bool
     costs: CostSummary | None = None
+    # Opt-in generated recap (VOICE_SESSION_SUMMARY); null keeps the extractive recap.
+    summary: str | None = None
 
 
 class AudioTiming(BaseModel):

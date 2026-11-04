@@ -397,7 +397,7 @@ export function LiveWorkspace({ code, onCode }: { code: string; onCode: (code: s
       <CostPanel cost={state.costs} />
       <Transcript messages={state.messages} />
       <SourcesPanel sources={state.sources} />
-      <RecapPanel recap={state.recap} />
+      <RecapPanel recap={state.recap} summary={state.summary} />
       <TimingsPanel state={state} />
       <FeedbackPanel
         state={state}

@@ -66,6 +66,8 @@ export type LiveState = {
   timingTransportId: number;
   sources: Source[];
   recap: string;
+  /** Opt-in generated summary returned at close; empty keeps the extractive recap. */
+  summary: string;
   feedbackStatus: string;
   debugStatus: string;
   audioStatus: string;
@@ -114,6 +116,7 @@ export function initialLiveState(): LiveState {
     timingTransportId: 0,
     sources: [],
     recap: 'No conversation yet.',
+    summary: '',
     reportPending: false,
     reportSent: false,
     reportLocked: false,

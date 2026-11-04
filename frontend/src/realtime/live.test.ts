@@ -157,13 +157,16 @@ test('stop releases media immediately and keeps ending true until close confirma
   expect(stopTrack).toHaveBeenCalledOnce();
   expect(FakePeer.instances[0]?.close).toHaveBeenCalledOnce();
   expect(store.getSnapshot().phase).toBe('ended');
-  expect(AbortSignal.timeout).toHaveBeenCalledWith(5000);
+  expect(AbortSignal.timeout).toHaveBeenCalledWith(12000);
   expect(store.getSnapshot().ending).toBe(true);
   controller?.start();
   expect(FakePeer.instances).toHaveLength(1);
-  complete(Response.json({ finalized: false }));
+  complete(Response.json({ finalized: false, summary: 'You asked about the match.' }));
   await vi.waitFor(() => expect(store.getSnapshot().ending).toBe(false));
+  // The opt-in generated summary is kept after close and cleared by the next session.
+  expect(store.getSnapshot().summary).toBe('You asked about the match.');
   controller?.start();
+  expect(store.getSnapshot().summary).toBe('');
   await vi.waitFor(() => expect(FakePeer.instances).toHaveLength(2));
   await vi.waitFor(() => expect(store.getSnapshot().phase).toBe('connected'));
   expect(store.getSnapshot().status).toBe('Connected. Speak naturally.');

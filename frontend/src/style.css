@@ -472,6 +472,12 @@ fieldset label {
   width: 100%;
   margin-top: var(--space-2);
 }
+.recap-summary {
+  padding: var(--space-3);
+  border-left: 3px solid var(--accent-line);
+  background: var(--accent-soft);
+  border-radius: var(--radius-control);
+}
 .request-access-sent {
   margin: var(--space-2) 0 0;
   padding: var(--space-3);
