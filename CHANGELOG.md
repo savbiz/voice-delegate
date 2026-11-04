@@ -14,6 +14,8 @@ Fixed: Approve and Deny in the ntfy web app reported "Failed to fetch" although 
 
 Verified through offline backend and frontend tests and hosted CI. The maintainer reported ElevenLabs Agents working live on the deployed backend on 2026-11-03; formal live acceptance, cost reconciliation and native-device acceptance remain open.
 
+Changed: CI runs once per pull request push instead of twice, tests Python 3.13 and runs CodeQL on main (CodeQL also weekly) rather than on every pull request, and skips the frontend job and container build for documentation-only changes, to stay within the free GitHub Actions minutes.
+
 ## 0.2.0 - 2026-11-03
 
 Live voice is now the primary workspace, with a per-session choice of voice provider and billing source.
