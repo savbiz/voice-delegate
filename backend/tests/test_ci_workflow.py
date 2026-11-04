@@ -22,3 +22,12 @@ def test_python_313_is_skipped_on_pull_requests_not_removed() -> None:
     ci = workflow("ci.yml")
     job = ci.split("  backend-313:\n", 1)[1].split("\n  frontend:", 1)[0]
     assert "if: github.event_name != 'pull_request'" in job
+
+
+def test_codeql_does_not_scan_every_pull_request_push() -> None:
+    codeql = workflow("codeql.yml")
+    triggers = codeql.split("\npermissions:", 1)[0]
+    assert "pull_request" not in triggers
+    assert "branches: [main]" in triggers
+    assert "schedule:" in triggers
+    assert "workflow_dispatch:" in triggers
