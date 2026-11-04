@@ -8,14 +8,6 @@
     "digest": "bf3727c08ce8bb62737c2bef2766d8f54253585f791b32a8702a97754ae617e1"
   },
   {
-    "id": "d01460560e11d775",
-    "title": "voice-delegate",
-    "path": "README.md",
-    "section": "voice-delegate",
-    "text": "<p align=\"center\">\n  <img src=\"docs/images/workspace.png\" alt=\"The voice workspace: provider choice, API access and invitation code\" width=\"720\">\n</p>",
-    "digest": "d01460560e11d775a446f5609d3e70ad148a0fab0cde0a7db89550aa72ef3312"
-  },
-  {
     "id": "782df4ea43056baa",
     "title": "voice-delegate",
     "path": "README.md",
@@ -128,12 +120,12 @@
     "digest": "11bcf96c837b4b4793c41847882c17346f2ce3633d665ac637afb065938a9d33"
   },
   {
-    "id": "8afbc3523b463f0d",
+    "id": "ce75db8263dc9743",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Status",
-    "text": "Every feature is covered by offline tests and CI, and the maintainer has used each voice\nprovider live on the hosted demo. A recorded demo video is the gate for v1.0.",
-    "digest": "8afbc3523b463f0d0037ba7a83522d36cf96267a7dd8e1fae91edbd191519db3"
+    "text": "Every feature is covered by offline tests and CI, and the maintainer has used each voice\nprovider live on the hosted demo. The demonstration above is a recording of the hosted deployment.",
+    "digest": "ce75db8263dc974370605f49437c61b9704ce6e11f39f642dd26e6b0c48fe989"
   },
   {
     "id": "820f0c70df0f342a",

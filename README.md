@@ -18,10 +18,6 @@ A 90-second demonstration: a spoken question, a calculation, and a cited documen
 
 https://github.com/user-attachments/assets/6aa298a5-4809-426e-a2ea-c4dcb1fe3eda
 
-<p align="center">
-  <img src="docs/images/workspace.png" alt="The voice workspace: provider choice, API access and invitation code" width="720">
-</p>
-
 Reviewing this repository? [Start here](docs/start-here.md) for a five-minute reading path.
 
 How it is tested beyond examples: [fuzzing, property tests and mutation testing](docs/testing.md), a [load test](docs/load-testing.md) and [nightly results](docs/results.md).

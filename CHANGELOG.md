@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-Added: a 90-second demonstration video of the hosted app (a spoken question, a calculation and a cited documentation lookup running in the background) at the top of the README. The roadmap no longer lists it as pending, and `docs/demo-video.md` records what the video covers.
+Added: a 90-second demonstration video of the hosted app (a spoken question, a calculation and a cited documentation lookup running in the background) at the top of the README, replacing the static screenshot (`docs/images/workspace.png`, now removed). The roadmap no longer lists it as pending, and `docs/demo-video.md` records what the video covers.
 
 ## 0.5.0 - 2026-11-04
 
