@@ -4,6 +4,8 @@
 
 Added: releases now carry a signed build-provenance attestation for the SBOM documents (GitHub artifact attestations), attached as `voice-delegate.intoto.jsonl` and verifiable with `gh attestation verify`. It applies from the next published release. An overview diagram of the system components is added to `docs/architecture.md`, and Sentry is recorded as a possible later addition in `docs/future-extensions.md`.
 
+Changed: the frontend build uses Node.js 26 (now an LTS line) in the image, CI and `engines`. Node is only used to build and test the frontend; the production image serves static files from nginx. The pnpm install in that image no longer depends on Corepack, which Node 25 and later do not bundle: the registry tarball is installed only if its SHA-512 matches.
+
 Added: fast-check property tests in the frontend (`frontend/src/properties.test.ts`). They generate event sequences for the session lifecycle state machine and arbitrary URLs for the evidence-link filter. fast-check (MIT) is a development dependency only.
 
 Changed: the remaining unpinned build inputs are pinned by hash. The frontend image gets pnpm through Corepack from the `packageManager` field, which now carries the release's SHA-512, and the development container base image is pinned by digest and covered by Dependabot.

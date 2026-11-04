@@ -1,6 +1,6 @@
 # Local development and PyCharm
 
-Install Python 3.12, [uv](https://docs.astral.sh/uv/getting-started/installation/), Node.js 24 and pnpm (`npm install -g pnpm@11.19.0`). These tools do not require an API subscription.
+Install Python 3.12, [uv](https://docs.astral.sh/uv/getting-started/installation/), Node.js 26 and pnpm (`npm install -g pnpm@11.19.0`). These tools do not require an API subscription.
 
 Open the **voice-delegate** directory in PyCharm: it must contain the root `pyproject.toml`, `uv.lock`, `frontend/` and `backend/`. Use the repository directory as the project root. If `uv` reports no pyproject.toml, you are in the wrong folder.
 

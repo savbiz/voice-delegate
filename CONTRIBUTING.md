@@ -1,6 +1,6 @@
 # Contributing
 
-Open the repository folder. Use Python 3.12 or 3.13, uv, Node.js 24 and the declared pnpm version. Install with `uv sync --locked` and `pnpm --dir frontend install --frozen-lockfile`. Work in small reviewable commits; add regression tests for changed behavior and preserve public HTTP/provider contracts unless the change explicitly includes a migration.
+Open the repository folder. Use Python 3.12 or 3.13, uv, Node.js 26 and the declared pnpm version. Install with `uv sync --locked` and `pnpm --dir frontend install --frozen-lockfile`. Work in small reviewable commits; add regression tests for changed behavior and preserve public HTTP/provider contracts unless the change explicitly includes a migration.
 
 ## Required checks
 
