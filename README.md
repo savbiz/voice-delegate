@@ -133,9 +133,8 @@ application allowances and provider credits are independent, see [operations](do
 
 ## Providers and worker modes
 
-`VOICE_ADAPTER` selects the default integration (`VOICE_VOICE_PROVIDER` and the values
-`live`/`realtime` are deprecated aliases for `openai`). Azure needs a `gpt-live-1`
-deployment. Azure recovery is off unless the session checkbox enables it. All adapters
+`VOICE_ADAPTER` selects the default integration (`openai`, `azure` or `elevenlabs`).
+Azure needs a `gpt-live-1` deployment. Azure recovery is off unless the session checkbox enables it. All adapters
 share the same delegation boundary; see [the session flow](docs/session-flow.md).
 
 | Adapter | UI label | Voice service and transport |
@@ -267,16 +266,12 @@ not require provider credentials or paid requests.
 
 ## Documentation
 
-- [Architecture](docs/architecture.md), [API](docs/api.md), [glossary](docs/glossary.md) and [ADRs](docs/decisions/)
-- [Configuration](docs/configuration.md), [local development](docs/local-development.md), [worker setup](docs/worker.md)
-- [Deployment](deployment/README.md), [operations](docs/operations.md), [production scope](docs/production.md)
-- [Benchmarks](docs/benchmarks.md), [worker evals](evals/README.md), [roadmap and acceptance](docs/roadmap.md)
-- [Session controls](docs/session-ui.md), [ElevenLabs setup](docs/elevenlabs.md), [cost estimates](docs/cost-estimates.md)
-- [Native packaging](docs/mobile.md), [third-party notices](THIRD_PARTY_NOTICES.md) and [contributing](CONTRIBUTING.md)
-
-- Future work: [MCP, moderation, telephone SIP and a cascaded voice pipeline](docs/future-extensions.md) (proposals only)
-
-Public protocol sources are cited in the design documents and ADRs.
+The [documentation index](docs/README.md) is organised by task: use it, deploy and operate
+it, or understand it. Highlights:
+[deployment](deployment/README.md), [operations](docs/operations.md),
+[configuration](docs/configuration.md) and the [decision records](docs/decisions/README.md).
+Proposals for MCP, moderation, SIP and a cascaded pipeline are in
+[future extensions](docs/future-extensions.md). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Independence and licence
 

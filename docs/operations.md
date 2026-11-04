@@ -152,9 +152,8 @@ Set `VOICE_API_DOCS=true` temporarily to expose Swagger; default off in producti
 
 ## Investigating interrupted audio locally
 
-For a local Live test, set `VOICE_ADAPTER=live` and `VOICE_MODEL=gpt-live-1`
+For a local Live test, set `VOICE_ADAPTER=openai` and `VOICE_MODEL=gpt-live-1`
 in the untracked root `.env`, keep the project key on the backend, and restart Python.
-The existing Realtime adapter remains available through `VOICE_ADAPTER=realtime`.
 Provider access and audible playback still require a live test; a successful SDP exchange
 alone does not establish audio quality.
 

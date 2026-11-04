@@ -6,7 +6,7 @@ The selector takes its allowlist from `/api/config`, never from a client model n
 It is locked while a conversation is starting, active or closing. Selection applies only
 to a new owned session; existing calls retain their provider.
 
-OpenAI Live and Realtime appear when the OpenAI key is configured. Azure also requires its
+OpenAI GPT-Live appears when the OpenAI key is configured. Azure also requires its
 endpoint and key. ElevenLabs additionally requires complete agent credentials,
 intent-based delegation, compatible webhook deadlines and browser transport. The existing
 server default remains visible even before a key is configured; Start still checks voice

@@ -16,3 +16,4 @@ place with a dated note rather than rewritten.
 | [009](009-cancellation-is-intent.md) | Cancellation is intent; speech pauses narration | Accepted 2026-10-24 |
 | 010 | Reserved for the MCP trust model in [future extensions](../future-extensions.md#worker-as-an-mcp-client) | Not written |
 | [011](011-read-only-web-search.md) | Read-only web search in the delegated worker | Accepted |
+| [012](012-elevenlabs-agents-webhook.md) | ElevenLabs Agents with an asynchronous server webhook | Accepted 2026-11-02 |

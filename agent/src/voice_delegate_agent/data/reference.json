@@ -152,12 +152,12 @@
     "digest": "ed294876f1e62859ac455866b063f3bd729db3a199ce4e1f5eefb33d73566dbd"
   },
   {
-    "id": "95e31691e9894e36",
+    "id": "bc84cde40e5aaf90",
     "title": "voice-delegate",
     "path": "README.md",
     "section": "Providers and worker modes",
-    "text": "`VOICE_ADAPTER` selects the default integration (`VOICE_VOICE_PROVIDER` and the values\n`live`/`realtime` are deprecated aliases for `openai`). Azure needs a `gpt-live-1`\ndeployment. Azure recovery is off unless the session checkbox enables it. All adapters\nshare the same delegation boundary; see [the session flow](docs/session-flow.md).",
-    "digest": "95e31691e9894e364d831a7c8753f47db2e8fa296ece69aedf79c09b464fc20d"
+    "text": "`VOICE_ADAPTER` selects the default integration (`openai`, `azure` or `elevenlabs`).\nAzure needs a `gpt-live-1` deployment. Azure recovery is off unless the session checkbox enables it. All adapters\nshare the same delegation boundary; see [the session flow](docs/session-flow.md).",
+    "digest": "bc84cde40e5aaf90462fe7d501f74f502e6504c3c32c750683e8f29992338fdf"
   },
   {
     "id": "0fb3a0058350f09f",
@@ -256,6 +256,14 @@
     "digest": "e1cdc92b8c709e70b8ab8ab3e8ba7d6fa6d4739529543ff733ac975f481bb167"
   },
   {
+    "id": "128a43289808c8c2",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Documentation",
+    "text": "The [documentation index](docs/README.md) is organised by task: use it, deploy and operate\nit, or understand it. Highlights:\n[deployment](deployment/README.md), [operations](docs/operations.md),\n[configuration](docs/configuration.md) and the [decision records](docs/decisions/README.md).\nProposals for MCP, moderation, SIP and a cascaded pipeline are in\n[future extensions](docs/future-extensions.md). Contributions: [CONTRIBUTING.md](CONTRIBUTING.md).",
+    "digest": "128a43289808c8c29d865eb5001fb4a9f3843c8a4f5d50d78350f95a2fefe971"
+  },
+  {
     "id": "cd5cc7bab4d6420e",
     "title": "voice-delegate",
     "path": "README.md",
@@ -288,12 +296,12 @@
     "digest": "a290f1daf6c232833b8ff9cbbe69ffb87f890adfc8e1448e3f1cc91d214ba95f"
   },
   {
-    "id": "6b590eb82700b918",
+    "id": "cf18a51ef3853579",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Provider adapters",
-    "text": "`OpenAILiveProvider` implements GPT-Live WebRTC setup, sideband events, commentary and finalization.\n`AzureLiveProvider` uses the Azure `/openai/v1/live` namespace with Bearer authentication,\nthe same Live events, and client delegation. Recovery requires session consent and seeds\nat most twelve bounded text fragments through `session.thinking.append`, never tool calls.\nLegacy Realtime classes remain only for historical wire regression tests; the app factory\nregisters `openai`, `azure` and optionally `elevenlabs`. See [session flow](session-flow.md).",
-    "digest": "6b590eb82700b9183d4e17c47926f374b72e84a9ad79b385fe0f8538bc28fd1e"
+    "text": "`OpenAILiveProvider` implements GPT-Live WebRTC setup, sideband events, commentary and finalization.\n`AzureLiveProvider` uses the Azure `/openai/v1/live` namespace with Bearer authentication,\nthe same Live events, and client delegation. Recovery requires session consent and seeds\nat most twelve bounded text fragments through `session.thinking.append`, never tool calls.\nThe app factory registers `openai`, `azure` and optionally `elevenlabs`; the Realtime\nadapters were removed in 0.3.0. See [session flow](session-flow.md).",
+    "digest": "cf18a51ef3853579ce4ed5cfdd1d6a7dfc4b8387c98fa87717a5d3213db6099f"
   },
   {
     "id": "8e90758fce0d0248",
@@ -320,12 +328,12 @@
     "digest": "1bab2d16876212c357428db3daf0c9656c2eb5742311fa564f5d1941446646c5"
   },
   {
-    "id": "801797fa8d44fbc5",
+    "id": "8fd2664787c96edc",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Worker, fallback and admission contracts",
-    "text": "Only sealed text segments are replayed during fallback, bounded to twelve entries and\n2048 tokens. For Live, a speaker change seals preceding segments; reconnect also seals\nevery trailing in-flight segment. Realtime uses completed transcripts. Tool calls, tool results and\naudio are never replayed. History is conversation data, never system instructions.",
-    "digest": "801797fa8d44fbc54c61d5ed3674636cfdab5051985c549ffe8624e96419446a"
+    "text": "Only sealed text segments are replayed during fallback, bounded to twelve entries and\n2048 tokens. For Live, a speaker change seals preceding segments; reconnect also seals\nevery trailing in-flight segment. Tool calls, tool results and\naudio are never replayed. History is conversation data, never system instructions.",
+    "digest": "8fd2664787c96edca1b4957b3b591571edb642aa5c8aa7aabe0788912374aea1"
   },
   {
     "id": "0ba854d978400f8f",
@@ -400,12 +408,12 @@
     "digest": "5196a28d1a83764eef4d80972b7964a2bddcac331e4e17a5c941098f97f10af1"
   },
   {
-    "id": "8afe0c7f90d7e32c",
+    "id": "6a16e8ddedd9d834",
     "title": "Architecture",
     "path": "docs/architecture.md",
     "section": "Optional intent cancellation",
-    "text": "The event reader never awaits a worker or classifier. An optional Decider classifies the\nlatest bounded utterance with cancellation and relevance predicates per active task. A\nclassification timeout or error preserves work. Jobs survive a transport replacement and\nare delivered through the new connection; a detached Realtime result uses a text item,\nnot an old function-call ID. See [ADR 009](decisions/009-cancellation-is-intent.md) for budgets,\nterminal acknowledgements, pricing caveats and the default-off rollout.",
-    "digest": "8afe0c7f90d7e32cf30628fbce49b2a0876b1eaa6b6e019cb866f78c1dfe11c5"
+    "text": "The event reader never awaits a worker or classifier. An optional Decider classifies the\nlatest bounded utterance with cancellation and relevance predicates per active task. A\nclassification timeout or error preserves work. Jobs survive a transport replacement and\nare delivered through the new connection, never under an old delegation ID. See [ADR 009](decisions/009-cancellation-is-intent.md) for budgets,\nterminal acknowledgements, pricing caveats and the default-off rollout.",
+    "digest": "6a16e8ddedd9d8348eddb7866bf2393da557205ae1ff73616dcda4baf10cd82b"
   },
   {
     "id": "caad20e0f9608e7c",
@@ -736,6 +744,54 @@
     "digest": "375fd28b9c5385d42b2344129793fe9479f1262c517bda00091b633453a6c0b1"
   },
   {
+    "id": "dfaeaa3c2ed629cb",
+    "title": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "path": "docs/decisions/012-elevenlabs-agents-webhook.md",
+    "section": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "text": "Context: ElevenLabs offers Agents (SDK-managed WebRTC with client or server tools) and a\nstandalone WebSocket Realtime API. The project needs a second voice vendor that keeps the\nsingle `delegate_task` boundary, the worker and the silence-gated delivery unchanged.",
+    "digest": "dfaeaa3c2ed629cbc08720d2db17a3f49dab457b393881b8813478b17d50e2e5"
+  },
+  {
+    "id": "8c816d1afc57cabc",
+    "title": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "path": "docs/decisions/012-elevenlabs-agents-webhook.md",
+    "section": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "text": "Decision: use Agents WebRTC for media and one **webhook** tool, `delegate_task`, with\n`execution_mode=async`. The browser gets a backend-minted conversation token; audio goes\ndirectly to ElevenLabs. The backend admits the job and answers the provider's HTTP request\nwith the bounded result once the delivery gate allows it.",
+    "digest": "8c816d1afc57cabcddf3083e141f4997ef912a68a81675890a772114839d30ef"
+  },
+  {
+    "id": "d3ef1a28377744c2",
+    "title": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "path": "docs/decisions/012-elevenlabs-agents-webhook.md",
+    "section": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "text": "- The webhook route sits outside the browser `/api` Origin policy. A stored header secret and\n  the reserved conversation ID bind each request to a session this backend minted; tool\n  arguments cannot choose a principal, credential, worker or session.",
+    "digest": "d3ef1a28377744c29e4bf97df2e33615be9c5e1be380467355b1b2ad80599508"
+  },
+  {
+    "id": "9dda2646275c0e9a",
+    "title": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "path": "docs/decisions/012-elevenlabs-agents-webhook.md",
+    "section": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "text": "- The documented webhook schema has no stable invocation ID, so identical goals coalesce per\n  conversation.",
+    "digest": "9dda2646275c0e9a2a59189a65dfe0fd495a36f941972d866a4fb203e0376e5e"
+  },
+  {
+    "id": "d7302bb0655561e0",
+    "title": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "path": "docs/decisions/012-elevenlabs-agents-webhook.md",
+    "section": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "text": "- The browser still reports activity and transcripts; missing observations hold delivery\n  until expiry. Closed media does not prove upstream finalization.",
+    "digest": "d7302bb0655561e0c8c4903a64725a0a83695385e6895809270de61489d1a33c"
+  },
+  {
+    "id": "3bebe318dcd98420",
+    "title": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "path": "docs/decisions/012-elevenlabs-agents-webhook.md",
+    "section": "ADR 012: ElevenLabs Agents with an asynchronous server webhook",
+    "text": "Setup and limits: [ElevenLabs integration](../elevenlabs.md). Sources:\n[webhook tools](https://elevenlabs.io/docs/eleven-agents/customization/tools/webhook-tools),\n[client tools](https://elevenlabs.io/docs/eleven-agents/customization/tools/client-tools),\n[dynamic variables](https://elevenlabs.io/docs/eleven-agents/customization/personalization/dynamic-variables).",
+    "digest": "3bebe318dcd98420b521fe4c2e309cc3f84bc7cb6d0d8319e9c9bd0174fbb71e"
+  },
+  {
     "id": "6cc11666e98522dd",
     "title": "Architecture decision records",
     "path": "docs/decisions/README.md",
@@ -808,12 +864,12 @@
     "digest": "409dcd0ad3d8e88aceb041bcb29ffee3a4bb454dee75d47ebf73bf2ebc1386ad"
   },
   {
-    "id": "86d8e5a888fbd742",
+    "id": "c28c5be6530bf2b5",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Codespaces and Dev Containers",
-    "text": "The script persists `DEMO_ALLOWED_ORIGINS` in ignored `deployment/demo/.env`, which\nCompose reloads for subsequent commands with the same Compose file. No provider\ncredentials are written. Locally the list contains only `http://localhost:8080`.\nIn Codespaces it also contains `https://localhost:8080` and the public forwarded\norigin derived from `CODESPACE_NAME` and `GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN`.\nThe backend uses `VOICE_ALLOWED_ORIGINS`; `VOICE_ALLOWED_ORIGIN` remains a deprecated\nsingle-origin alias. An explicit list takes precedence over the alias.",
-    "digest": "86d8e5a888fbd74285b9a6621d24df40675735c1aef81525dc58516829715990"
+    "text": "The script persists `DEMO_ALLOWED_ORIGINS` in ignored `deployment/demo/.env`, which\nCompose reloads for subsequent commands with the same Compose file. No provider\ncredentials are written. Locally the list contains only `http://localhost:8080`.\nIn Codespaces it also contains `https://localhost:8080` and the public forwarded\norigin derived from `CODESPACE_NAME` and `GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN`.\nThe backend reads `VOICE_ALLOWED_ORIGINS`, a JSON list of exact origins.",
+    "digest": "c28c5be6530bf2b5547f34e2d60c9098dc0e873ba5f4830d039e02a5afce1cd6"
   },
   {
     "id": "c1ade21e0b7c09e0",
@@ -880,12 +936,12 @@
     "digest": "56ee299f888474fef999cc6151363eefc889d2e130dffddd6e79004a20aa9c65"
   },
   {
-    "id": "45d7c4e260a85287",
+    "id": "078500d0860ecab0",
     "title": "Local development and PyCharm",
     "path": "docs/local-development.md",
     "section": "Common local environment variables",
-    "text": "`VOICE_ADAPTER` selects `openai`, `azure` or `elevenlabs`. Legacy `live` and\n`realtime` values migrate to `openai`; no production Realtime client is registered. The old\n`VOICE_VOICE_PROVIDER` name remains accepted as a deprecated alias; if both names\nare present in the same source, `VOICE_ADAPTER` wins. Keep your existing keys and change only the\nnon-sensitive selectors/model values when migrating a local configuration.",
-    "digest": "45d7c4e260a852875a6b51fa68436a394314359a2ee59ff781e321e51daaf93a"
+    "text": "`VOICE_ADAPTER` selects `openai`, `azure` or `elevenlabs` (the legacy values `live` and\n`realtime` still map to `openai`). Since 0.3.0 the backend refuses to start if the removed\n`VOICE_VOICE_PROVIDER` or `VOICE_ALLOWED_ORIGIN` is set, naming the replacement. Keep your existing keys and change only the\nnon-sensitive selectors/model values when migrating a local configuration.",
+    "digest": "078500d0860ecab04b7612dd0fc26a1bd3db5ab817c9bcfda84a1534ecfd7a9f"
   },
   {
     "id": "0d420d00b9426672",

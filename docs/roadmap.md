@@ -170,7 +170,7 @@ or cloud deployments. No new live acceptance or measured model comparison is cla
 
 ### ElevenLabs transport evaluation and implementation
 
-The [transport evaluation](elevenlabs-transport.md) selects private Agents WebRTC with one
+The [transport decision](decisions/012-elevenlabs-agents-webhook.md) selects private Agents WebRTC with one
 async server webhook for delegate_task. The browser owns SDK media and activity/transcript
 observations; the backend owns tool admission, the existing worker and bounded HTTP result
 delivery. The earlier client-tool forwarding and browser result polling have been removed.

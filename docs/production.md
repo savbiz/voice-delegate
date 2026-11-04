@@ -3,8 +3,8 @@
 voice-delegate is a development reference for a controlled voice demo, not a hosted
 multi-tenant service. The [architecture](architecture.md) describes its boundaries;
 [deployment instructions](../deployment/README.md) describe the supported single-process
-profile and private same-host scaling exercise. Live voice, Azure calls and public hosting
-acceptance remain pending in the [roadmap](roadmap.md).
+profile and private same-host scaling exercise. The maintainer has used every voice provider
+live on the hosted deployment; formal recorded acceptance is tracked in the [roadmap](roadmap.md).
 
 Internal use by any organisation requires its own dependency and licence review; this repository provides [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) as input, not as clearance.
 
