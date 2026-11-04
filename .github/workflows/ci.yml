@@ -1,7 +1,11 @@
 name: ci
+
+# Runs once per pull request push (pull_request), and on main and release tags (push). Running
+# on every branch push as well would repeat the same checks for any branch with an open pull
+# request. A branch without a pull request gets no CI; open a draft pull request to run it.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
     tags: ["*"]
   pull_request:
 permissions:

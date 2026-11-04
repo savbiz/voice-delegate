@@ -18,6 +18,8 @@ Changed: the recap's latest request joins user turns split by the provider; Elev
 
 Fixed: Approve and Deny in the ntfy web app reported "Failed to fetch" and kept the buttons although the decision succeeded; the `/access/` routes now allow the notification origin to read the result. The root `railway.json` was removed after the Railway Infrastructure as Code cutover.
 
+Changed: CI runs once per pull request push instead of twice, tests Python 3.13 and runs CodeQL on main (CodeQL also weekly) rather than on every pull request, and skips the frontend job and container build for documentation-only changes, to stay within the free GitHub Actions minutes.
+
 ## 0.2.0 - 2026-11-03
 
 Live voice is now the primary workspace, with a per-session choice of voice provider and billing source.

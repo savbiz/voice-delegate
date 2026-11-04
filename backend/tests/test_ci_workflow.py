@@ -45,3 +45,11 @@ def test_docs_only_skips_fail_open_and_never_use_path_filters() -> None:
     assert "!cancelled()" in frontend
     backend = ci.split("  backend-312:\n", 1)[1].split("\n    runs-on:", 1)[0]
     assert "!cancelled()" in backend
+
+
+def test_ci_does_not_run_twice_for_a_pull_request_branch() -> None:
+    triggers = workflow("ci.yml").split("\npermissions:", 1)[0]
+    assert 'branches: ["**"]' not in triggers
+    assert "branches: [main]" in triggers
+    assert 'tags: ["*"]' in triggers
+    assert "\n  pull_request:" in triggers
