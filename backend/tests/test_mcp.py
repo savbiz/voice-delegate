@@ -388,13 +388,22 @@ async def test_call_is_cancellable_and_not_retried() -> None:
     reg = registry(fake)
     await reg.snapshot()
     fake.hang = True
+
+    def initializations() -> int:
+        return sum(json.loads(r.content)["method"] == "initialize" for r in fake.requests)
+
     task = asyncio.create_task(worker(reg).delegate_task('mcp notes__lookup {"query": "x"}', ""))
+    # Wait for the call to reach the server rather than for a fixed time, so a busy machine
+    # cannot cancel the task before it starts.
+    for _ in range(500):
+        if initializations() == 2:
+            break
+        await asyncio.sleep(0.01)
     await asyncio.sleep(0.05)
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
-    initializations = sum(json.loads(r.content)["method"] == "initialize" for r in fake.requests)
-    assert initializations == 2  # discovery plus one call attempt, never a retry
+    assert initializations() == 2  # discovery plus one call attempt, never a retry
 
 
 async def test_redirects_are_not_followed() -> None:

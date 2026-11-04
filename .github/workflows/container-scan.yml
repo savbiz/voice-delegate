@@ -40,6 +40,8 @@ jobs:
             dockerfile: deployment/Dockerfile.frontend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # No layer cache here: a scan must see the current operating-system packages, and a cached
+      # layer would keep an old package set.
       - name: Build the image
         run: docker build -f "${{ matrix.dockerfile }}" -t "voice-delegate-${{ matrix.image }}:scan" .
       - name: List the findings (readable; never fails the run)

@@ -92,6 +92,17 @@ def test_playwright_browsers_are_cached_between_runs() -> None:
     assert commands[cache]["with"]["path"] == "~/.cache/ms-playwright"
 
 
+def test_backend_image_build_reuses_layers_but_the_vulnerability_scan_does_not() -> None:
+    action = load(ROOT / ".github/actions/backend/action.yml")
+    build = next(s for s in action["runs"]["steps"] if "build-push-action" in s.get("uses", ""))
+    assert build["with"]["load"] is True
+    assert build["with"]["cache-from"].startswith("type=gha")
+    assert build["with"]["cache-to"].startswith("type=gha")
+    # A cached layer would keep an old package set and hide newly published vulnerabilities.
+    scan = (ROOT / ".github/workflows/container-scan.yml").read_text()
+    assert "cache-from" not in scan and "build-push-action" not in scan
+
+
 def test_pnpm_only_runs_inside_the_frontend_directory() -> None:
     for path in WORKFLOWS:
         workflow = load(path)
