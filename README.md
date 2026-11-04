@@ -2,6 +2,7 @@
 
 [![ci](https://github.com/savbiz/voice-delegate/actions/workflows/ci.yml/badge.svg)](https://github.com/savbiz/voice-delegate/actions/workflows/ci.yml)
 [![hosted API health](https://github.com/savbiz/voice-delegate/actions/workflows/health.yml/badge.svg)](https://github.com/savbiz/voice-delegate/actions/workflows/health.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/savbiz/voice-delegate/badge)](https://scorecard.dev/viewer/?uri=github.com/savbiz/voice-delegate)
 [![coverage gate](https://img.shields.io/badge/coverage%20gate-%E2%89%A585%25-brightgreen.svg)](.github/actions/backend/action.yml)
 [![license](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![release](https://img.shields.io/github/v/release/savbiz/voice-delegate)](https://github.com/savbiz/voice-delegate/releases)
