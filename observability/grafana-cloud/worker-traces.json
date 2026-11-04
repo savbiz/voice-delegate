@@ -356,7 +356,7 @@
               "mode": "normal"
             }
           },
-          "unit": "short"
+          "unit": "suffix: spans/s"
         },
         "overrides": []
       },
@@ -377,8 +377,9 @@
           "tableType": "traces"
         }
       ],
-      "title": "Spans per minute by name",
-      "type": "timeseries"
+      "title": "Span rate by name (spans per second)",
+      "type": "timeseries",
+      "description": "TraceQL rate(): matching spans per second, by span name."
     },
     {
       "datasource": {
