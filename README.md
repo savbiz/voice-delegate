@@ -131,6 +131,9 @@ provider live on the hosted demo. Recorded live acceptance is the gate for v1.0.
 **Live dashboard:** [latency, errors and estimated cost from the hosted demo](https://valiantocelot1730.grafana.net/public-dashboards/22ada44e8fa241b98648a33f34de9b98)
 (Grafana Cloud, last 30 days, read-only). Traffic is light, so some panels are sparse.
 
+**Eval results:** [40 worker cases with GPT-6 Luna: 98% judged correct, 99% grounded in cited sources, 0 failures](https://www.braintrust.dev/app/savibiz/p/voice-delegate/experiments/openai-20261104T144642-6b482952)
+(public Braintrust experiment, 2026-11-04; synthetic cases from `evals/data/worker-v4.json`).
+
 | Area | Works today | Not yet claimed |
 |---|---|---|
 | OpenAI GPT-Live | Live conversations and tool use | Recorded acceptance checklist |

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Added: a full live worker evaluation (40 cases, GPT-6 Luna with an LLM judge, 117 model calls) is published as a public Braintrust experiment: 98% judged correct, 99% grounded, 100% numeric and evidence retrieval, p50 2.4 s per case. Fixed: the eval scorers accept a typographic minus sign and curly apostrophes, which had marked correct answers as wrong.
+
 Added: `VOICE_UNLIMITED_INVITES` lists invitation names (the operator's own) that skip the daily session and voice-second allowances without drawing on the shared daily budget; concurrency and session length still apply.
 
 Fixed: spoken cancellation now works with GPT-Live. Its user transcript arrives one word at a time, and each word discarded the pending decision; the classifier now waits for the utterance to settle (0.4 s) and decides once, and its default deadline is 3 seconds instead of 1. The voice prompt no longer lets the assistant claim it stopped work before confirmation. The worker receives today's date, so questions about today or yesterday resolve. ElevenLabs captions no longer show expressive audio tags such as `[happy]`. README: iOS and Android shells and the evaluation setup are listed. Production logs are JSON on stdout with the real level, so Railway no longer shows every restart as errors, and successful polling calls are no longer logged.

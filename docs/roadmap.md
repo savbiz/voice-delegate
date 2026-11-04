@@ -10,7 +10,7 @@ is in the [evidence log](milestones/evidence-log.md).
 | Area | What exists | Used live |
 | --- | --- | --- |
 | Voice sessions | GPT-Live on OpenAI and Azure, ElevenLabs Agents; WebRTC audio straight to the provider; bounded lifetimes and cleanup | Yes, all three providers |
-| Background worker | LangGraph worker with calculator, cited project-docs search and optional web search; up to two tasks at once, delivered after a pause | Yes |
+| Background worker | LangGraph worker with calculator, cited project-docs search and optional web search; up to two tasks at once, delivered after a pause | Yes; 40-case GPT-6 Luna eval: 98% judged correct, 99% grounded (2026-11-04) |
 | Recovery | Opt-in single Azure recovery with bounded text history | Not yet recorded |
 | Access and quotas | Your own keys, or invitation codes with daily quotas; Request access with phone approval | Yes |
 | Costs | Per-session cost estimates from a versioned price snapshot | Estimates only, not reconciled with invoices |
