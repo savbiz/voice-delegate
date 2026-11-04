@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = "==3.14.*"
 
 [manifest]
@@ -2287,7 +2287,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "python-dotenv", specifier = ">=1.2.3" },
     { name = "tiktoken", specifier = ">=0.14.0" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.53.0" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.54.0" },
     { name = "voice-delegate-agent", editable = "agent" },
     { name = "websockets", specifier = ">=16,<18" },
 ]
