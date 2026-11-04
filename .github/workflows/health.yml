@@ -1,0 +1,30 @@
+name: health
+
+# Daily check that the hosted API answers, including a cold start from app sleeping.
+# A failed scheduled run emails the repository owner. Checking more often would keep
+# the sleeping service awake and remove its cost saving.
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  healthz:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check /healthz
+        env:
+          URL: https://voice-delegate-api-production.up.railway.app/healthz
+        run: |
+          for attempt in 1 2 3; do
+            if curl --fail --silent --show-error --max-time 60 "$URL"; then
+              echo
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::$URL did not answer after three attempts"
+          exit 1
