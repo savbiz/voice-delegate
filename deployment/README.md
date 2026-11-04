@@ -26,7 +26,7 @@ Use this shared backend configuration. Secrets stay in platform dashboards; the 
 | `VOICE_ENVIRONMENT` | `production` |
 | `VOICE_PUBLIC_DEMO` | `true` |
 | `VOICE_INVITE_TOKENS` | Secret JSON mapping invitation names to unique random tokens of at least 32 characters |
-| `VOICE_ALLOWED_ORIGIN` | `https://voice-delegate.vercel.app` |
+| `VOICE_ALLOWED_ORIGINS` | `["https://voice-delegate.vercel.app"]` |
 | `VOICE_ALLOWED_HOSTS` | Railway: `["voice-delegate-api-production.up.railway.app","healthcheck.railway.app","localhost","127.0.0.1"]`; Render: its assigned public hostname plus `localhost` and `127.0.0.1` for container checks |
 | `VOICE_TRUST_PROXY` | `true`, after verifying trusted ingress |
 | `VOICE_TRUSTED_PROXY_HOPS` | `1`, after verifying the chain below |
@@ -39,7 +39,7 @@ To verify the hop count, send `/healthz` from a known public IP and correlate it
 
 ## Switching platform
 
-The frontend CSP allows exactly one API host. To switch to Render, update `connect-src` in `frontend/vercel.json`, set the backend `VOICE_ALLOWED_ORIGIN` to the Vercel origin and `VOICE_ALLOWED_HOSTS` to the Render hostname, and change `VITE_API_BASE_URL` in Vercel. Update both deployment and frontend READMEs with that host, then redeploy the frontend. Move persistent quota/feedback data through the backup/restore procedure in [operations](../docs/operations.md); never discard existing daily reservations during a switch. CI checks the CSP host against both READMEs.
+The frontend CSP allows exactly one API host. To switch to Render, update `connect-src` in `frontend/vercel.json`, set the backend `VOICE_ALLOWED_ORIGINS` to the Vercel origin and `VOICE_ALLOWED_HOSTS` to the Render hostname, and change `VITE_API_BASE_URL` in Vercel. Update both deployment and frontend READMEs with that host, then redeploy the frontend. Move persistent quota/feedback data through the backup/restore procedure in [operations](../docs/operations.md); never discard existing daily reservations during a switch. CI checks the CSP host against both READMEs.
 
 Generate each invitation token locally with `uv run python -c 'import secrets; print(secrets.token_urlsafe(32))'`. Assign each token a distinct invitation name and share it only with that user, who enter it in the frontend field. Keep it out of Git and build logs. Check `/healthz`, set Vercel's backend URL, redeploy the frontend, and test using the exact permitted origin. Preview deployment URLs are not automatically allowed.
 
@@ -153,7 +153,7 @@ before forwarding the verified address. Host-mismatch requests also consume the 
 Multi-process/global limits require an external shared limiter.
 
 For the bundled Compose deployment, set `VOICE_ALLOWED_HOSTS` to a JSON array of
-the public API hostnames, alongside `VOICE_ALLOWED_ORIGIN` for the frontend origin.
+the public API hostnames, alongside `VOICE_ALLOWED_ORIGINS` for the frontend origin.
 The local smoke-test default accepts only localhost and 127.0.0.1.
 
 
@@ -222,7 +222,7 @@ For a local authorized run, inject the provider key and invitation settings thro
 process environment, without writing them into a file. Then run from the repository:
 
 ```sh
-VOICE_ALLOWED_ORIGIN=http://127.0.0.1:5173 uv run uvicorn voice_delegate.api.app:create_app --factory --host 127.0.0.1 --port 8000
+VOICE_ALLOWED_ORIGINS='["http://127.0.0.1:5173"]' uv run uvicorn voice_delegate.api.app:create_app --factory --host 127.0.0.1 --port 8000
 ```
 
 From `frontend/`, in another terminal:

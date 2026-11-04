@@ -30,7 +30,7 @@ services:
         value: /app/.local/quotas.sqlite3
       - key: VOICE_FEEDBACK_DATABASE
         value: /app/.local/feedback.sqlite3
-      - key: VOICE_ALLOWED_ORIGIN
-        value: https://voice-delegate.vercel.app
+      - key: VOICE_ALLOWED_ORIGINS
+        value: '["https://voice-delegate.vercel.app"]'
       - key: VOICE_ALLOWED_HOSTS
         sync: false

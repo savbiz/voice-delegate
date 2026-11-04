@@ -30,11 +30,11 @@ The optional web-search tool uses [worker-web.md](src/voice_delegate_agent/promp
 These Markdown files ship inside the Python package; they are not loaded from the current
 working directory. Restart the backend or private worker after editing them.
 
-Voice system prompts live in
-[the backend prompts package](../backend/src/voice_delegate/prompts/voice-classic.md):
-`voice-classic.md` is the default; `voice-intent.md` separates speech interruption from task
-cancellation; `voice-semantic.md` also describes opt-in semantic cancellation. Each has a
-`-web.md` variant selected only when the server enables web search. Per-session language
+Voice system prompts are composed from the blocks in
+[the backend prompts package](../backend/src/voice_delegate/prompts/blocks/): each rule set is
+written once, and server settings choose the tool sentence (with or without web search) and
+the cancellation mode (`classic`, `intent` or `semantic`). Print any combination with
+`uv run python -m voice_delegate.prompts --mode intent --web-search`. Per-session language
 and conversation preferences are appended by server code. LangChain supplies message
 and tool interfaces; it does not supply a hidden project system prompt.
 

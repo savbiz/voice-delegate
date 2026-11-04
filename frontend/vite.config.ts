@@ -48,6 +48,9 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: mode === 'native' ? 'dist-native' : 'dist',
       rolldownOptions: { output: { comments: { legal: true } } },
+      // The ~600 kB ElevenLabs/LiveKit SDK is a separate chunk loaded only by dynamic import
+      // when an ElevenLabs session starts; the main bundle stays under the default limit.
+      chunkSizeWarningLimit: 650,
     },
     server: {
       host: '127.0.0.1',

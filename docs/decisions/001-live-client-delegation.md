@@ -9,3 +9,7 @@ Decision: use GPT-Live over WebRTC and client delegation. Keep `RealtimeProvider
 Consequences: public-provider events stay inside adapters. The first `/token` endpoint returns 501; the supported Live browser setup is server-mediated SDP. Azure and Realtime adapters now share a WebRTC implementation with one explicit fallback attempt. `OpenAIRealtimeProvider` is implemented alongside `OpenAILiveProvider` and `AzureRealtimeProvider`. Adapter capabilities determine supported fallback; [ADR 006](006-fallback-history.md) defines reconnect and replay.
 
 Sources: [Live overview](https://developers.openai.com/api/docs/guides/live), [client delegation](https://developers.openai.com/api/docs/guides/live-delegation), [WebRTC](https://developers.openai.com/api/docs/guides/voice-webrtc?api=live).
+
+Amended 2026-11-04: the OpenAI and Azure Realtime adapters were removed in 0.3.0. GPT-Live
+on OpenAI and on Azure (`AzureLiveProvider`) are the supported WebRTC adapters; ElevenLabs
+Agents uses its own transport. Fallback remains one explicit attempt to Azure Live.

@@ -153,8 +153,8 @@ web search; automated tests use deterministic HTTP fakes with no provider calls.
 
 System instructions are editable packaged Markdown in the
 [worker prompts](../agent/src/voice_delegate_agent/prompts/worker.md) and
-[voice prompts](../backend/src/voice_delegate/prompts/voice-classic.md).
-Capability-specific variants are selected by server settings. Restart after editing.
+[voice prompt blocks](../backend/src/voice_delegate/prompts/blocks/).
+Server settings select which blocks are composed. Restart after editing.
 LangChain supplies interfaces; the project owns these prompts and the execution policy.
 
 Verification: `uv run pytest backend/tests/test_web_search.py

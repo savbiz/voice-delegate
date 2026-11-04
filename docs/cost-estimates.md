@@ -19,9 +19,9 @@ outside Git and avoid secrets: the file needs only numeric tariffs and public so
 | Decisions | Reported input tokens; cancellation and planner decisions | $0.10 per million; input-only assumption |
 | Tavily | Basic search attempts, including failed requests | $0.008/search PAYG; free credits/discounts excluded |
 | Azure GPT-Live | Observed connected seconds | Assumed equal to the OpenAI GPT-Live rate; Azure publishes no `gpt-live-1` meter, so check your invoice |
-| Realtime, ElevenLabs | Observed connected seconds | Unpriced; configure an explicit account-specific per-second assumption |
+| ElevenLabs | Observed connected seconds | Unpriced by default; provider-reported credits/USD are shown when available |
 
-Realtime audio token billing is not a published per-second tariff. A missing voice/model
+Audio token billing is not a published per-second tariff. A missing voice/model
 rate or missing/ambiguous token usage makes the result **partial**, not zero-cost. Failed or
 cancelled external requests may still be billed; they increment attempt counts and mark
 usage uncertain. Remote workers return numeric usage on terminal results; an interrupted

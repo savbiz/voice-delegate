@@ -210,7 +210,7 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "801797fa8d44fbc5"
+          "8fd2664787c96edc"
         ],
         "rubric": "Only sealed text is replayed, at most twelve entries and 2048 tokens; no tool executions or audio."
       }
@@ -459,7 +459,7 @@
         ],
         "rubric": "Hashes of user IDs, UTC dates, counts and reserved seconds; not tokens or transcripts.",
         "top1_source_id": "1e2d7689f6dd0559",
-        "distractor_source_id": "801797fa8d44fbc5"
+        "distractor_source_id": "8fd2664787c96edc"
       }
     },
     {
@@ -487,10 +487,10 @@
       "expected": {
         "tool": "search_documentation",
         "source_ids": [
-          "801797fa8d44fbc5"
+          "8fd2664787c96edc"
         ],
         "rubric": "Only sealed text is replayed, at most twelve entries and 2048 tokens; no tool executions or audio.",
-        "top1_source_id": "801797fa8d44fbc5",
+        "top1_source_id": "8fd2664787c96edc",
         "distractor_source_id": "a290f1daf6c23283"
       }
     },

@@ -10,9 +10,8 @@ Neither measures provider quality, voice recognition or physical speaker latency
 | Provider | Transport | Model/version | Live samples | First audio p50/p95 | Turn p50/p95 | Delegation accuracy |
 | --- | --- | --- | --- | --- | --- | --- |
 | GPT-Live | Direct WebRTC | Pending: record configured model | 0 | Pending | Pending | Pending |
-| OpenAI Realtime | Direct WebRTC | Pending: record configured model | 0 | Pending | Pending | Pending |
 | Azure Live | Direct WebRTC | Pending: record deployment and underlying model version | 0 | Pending | Pending | Pending |
-| ElevenLabs | Not implemented | Pending transport decision | 0 | Unsupported | Unsupported | Unsupported |
+| ElevenLabs Agents | SDK WebRTC and async webhook | Pending: record agent configuration | 0 | Pending | Pending | Pending |
 
 Do not replace Pending with scripted numbers. Earlier exploratory conversations are not
 the fixed-input benchmark. A model alias can change server-side; record its resolved
@@ -49,9 +48,8 @@ Timer scheduling, codecs, network, hardware and VAD affect results. Repeat the s
 hashes and browser version on the same host/network, then record those conditions in the
 published run notes. Do not compare a hosted run with a local run as a provider-only change.
 
-Delegation is observed via GPT-Live `session.delegation.created`, Realtime/Azure
-`response.function_call_arguments.done` for `delegate_task`, and the owned heartbeat task
-state. Payloads and transcripts are discarded. A response can contain narration while a
+Delegation is observed via the GPT-Live `session.delegation.created` event (OpenAI and
+Azure), the ElevenLabs webhook, and the owned heartbeat task state. Payloads and transcripts are discarded. A response can contain narration while a
 worker is still running; this benchmark measures the voice model's delegation decision,
 not the worker planner's tool-selection accuracy. See the separate
 [planner comparison](../evals/README.md#planner-comparison).
@@ -146,11 +144,11 @@ VOICE_BENCHMARK_LIVE=true pnpm benchmark:voice --live --allow-paid \
 ```
 
 The provider/model arguments are labels, not client overrides. They **must match** the
-backend configuration: use `VOICE_ADAPTER=realtime` and `VOICE_REALTIME_MODEL` for
-OpenAI Realtime, or `VOICE_ADAPTER=azure`, `VOICE_AZURE_ENDPOINT`,
+backend configuration: use `VOICE_ADAPTER=openai` and `VOICE_MODEL` for OpenAI
+GPT-Live, or `VOICE_ADAPTER=azure`, `VOICE_AZURE_ENDPOINT`,
 `VOICE_AZURE_DEPLOYMENT` and `VOICE_AZURE_API_KEY` for Azure. Restart the dedicated backend
-between providers. Azure requires valid existing endpoint credentials; ElevenLabs is
-rejected until its adapter exists. Never enable fallback during a provider comparison.
+between providers. Azure requires valid existing endpoint credentials. The benchmark
+runner does not support ElevenLabs yet, although the backend adapter exists. Never enable fallback during a provider comparison.
 
 Run the Python summarizer on each complete capture as shown above. The exact session
 budget is mandatory: 30 for one trial, 60 with `--trials 2`. There are no retries. Each

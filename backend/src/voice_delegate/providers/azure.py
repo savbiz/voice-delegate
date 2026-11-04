@@ -1,4 +1,4 @@
-"""Azure Live runtime; legacy Realtime classes remain for offline wire regression tests."""
+"""Azure Live runtime: GPT-Live on an Azure deployment with bounded recovery context."""
 
 import asyncio
 import json
@@ -7,23 +7,8 @@ import httpx
 
 from .models import ProviderCapabilities, SessionConfig
 from .openai import OpenAILiveConnection, OpenAILiveProvider
-from .webrtc import RealtimeWebRTCConnection, RealtimeWebRTCProvider, normalize_event
 
-__all__ = [
-    "AzureLiveProvider",
-    "AzureRealtimeConnection",
-    "AzureRealtimeProvider",
-    "normalize_event",
-]
-
-AzureRealtimeConnection = RealtimeWebRTCConnection
-
-
-class AzureRealtimeProvider(RealtimeWebRTCProvider):
-    name = "Azure"
-
-    def __init__(self, endpoint: str, api_key: str, http: httpx.AsyncClient | None = None) -> None:
-        super().__init__(endpoint.rstrip("/") + "/openai/v1/realtime", {"api-key": api_key}, http)
+__all__ = ["AzureLiveProvider"]
 
 
 class AzureLiveProvider(OpenAILiveProvider):

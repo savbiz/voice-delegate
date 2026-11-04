@@ -144,6 +144,11 @@ Record the deployed commit/image and settings before rollout. Disable new sessio
 
 ## Monitor and escalate
 
+The [health workflow](../.github/workflows/health.yml) calls the hosted `/healthz` once a day, allowing for a cold start from app sleeping, and a failed run posts to the ntfy topic in the `HEALTH_NTFY_URL` repository secret (for
+example the access-request topic). Without that secret, the only alert is GitHub's failed-run
+email, which goes to the schedule actor and depends on their notification settings. Run it on
+demand from the Actions tab. It is deliberately infrequent: polling every few minutes would keep the sleeping service awake. An external monitor such as UptimeRobot has the same trade-off.
+
 Check backend health, worker busy/timeouts, provider error/cancelled outcomes, lease counts and provider billed usage. Use [observability](../observability/README.md) for optional local dashboards; hosted alerting and trace retention are operator responsibilities. For a security issue use the [private reporting channel](../SECURITY.md), not a public transcript or log dump.
 
 ## Temporary API documentation
@@ -152,9 +157,8 @@ Set `VOICE_API_DOCS=true` temporarily to expose Swagger; default off in producti
 
 ## Investigating interrupted audio locally
 
-For a local Live test, set `VOICE_ADAPTER=live` and `VOICE_MODEL=gpt-live-1`
+For a local Live test, set `VOICE_ADAPTER=openai` and `VOICE_MODEL=gpt-live-1`
 in the untracked root `.env`, keep the project key on the backend, and restart Python.
-The existing Realtime adapter remains available through `VOICE_ADAPTER=realtime`.
 Provider access and audible playback still require a live test; a successful SDP exchange
 alone does not establish audio quality.
 

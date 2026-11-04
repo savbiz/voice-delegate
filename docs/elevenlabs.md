@@ -25,9 +25,18 @@ No environment file or provider account is created or changed automatically.
 
 The agent already exists in ElevenLabs and owns its voice, language and prompt. The browser
 uses default language/style; unsupported overrides and mixed-audio recording are rejected.
-Configure the agent prompt to route calculation, project documentation and opted-in web
-requests through `delegate_task`, treat returned evidence as data, and describe cancellation,
-expiry and failure as incomplete work. The worker owns all individual tools and limits.
+Use the same instructions as the other providers so behavior does not drift: print them with
+`uv run python -m voice_delegate.prompts` and paste the output into the agent's system
+prompt. Match the server settings: `--mode semantic` when `VOICE_DECISIONS_CANCEL=true`,
+otherwise the default `--mode intent`; add `--web-search` only when web search is enabled and
+the worker is not in `offline` mode, as the server does.
+
+The tool's `goal` is natural language, so ElevenLabs needs a model-backed worker
+(`VOICE_WORKER_MODE=openai` or `decisions`, the default when `OPENAI_API_KEY` is set). The
+`offline` planner only recognises fixed demonstration phrasings and answers anything else
+with "No action was taken". Re-paste after
+changing a block in `backend/src/voice_delegate/prompts/blocks/`. The worker owns all
+individual tools and limits.
 
 ## Required agent tool
 
@@ -38,7 +47,7 @@ configuration before minting a browser token, including referenced tool definiti
 {
   "type": "webhook",
   "name": "delegate_task",
-  "description": "Delegate bounded work to the application worker and use its returned result.",
+  "description": "Ask the worker for calculations, project documentation or public web results. The answer arrives later; keep talking meanwhile.",
   "execution_mode": "async",
   "interruption_mode": "allow",
   "response_timeout_secs": 120,
@@ -55,7 +64,7 @@ configuration before minting a browser token, including referenced tool definiti
       "type": "object",
       "required": ["goal"],
       "properties": {
-        "goal": {"type": "string", "description": "The bounded task requested by the user"}
+        "goal": {"type": "string", "description": "A self-contained request in the user's words, including every number and detail needed"}
       }
     }
   }

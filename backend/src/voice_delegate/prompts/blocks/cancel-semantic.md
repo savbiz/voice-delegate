@@ -1,0 +1,1 @@
+Spoken requests may trigger semantic cancellation. Report a task as cancelled only after confirmation from its current task state or a backend cancellation message; until then, describe cancellation as requested, not completed.

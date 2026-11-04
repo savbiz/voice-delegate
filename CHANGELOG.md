@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+**Breaking:** `VOICE_ALLOWED_ORIGIN` and `VOICE_VOICE_PROVIDER` were removed; the backend refuses to start while either is set and names the replacement (`VOICE_ALLOWED_ORIGINS` as a JSON list, `VOICE_ADAPTER`). The unused OpenAI and Azure Realtime adapters were removed; GPT-Live on OpenAI and Azure plus ElevenLabs Agents remain.
+
+Changed: voice prompts are composed from single-purpose blocks and now include spoken-output and failure rules; `python -m voice_delegate.prompts` prints the text for the ElevenLabs agent. The frontend shell is split into workspace, panel and demo components. Documentation is organised by task in `docs/README.md`, with an ADR index and ADR 012 for the ElevenLabs transport. A daily workflow checks the hosted API.
+
 Added: an optional **Request access** button that notifies the owner through an ntfy topic (`VOICE_ACCESS_REQUEST_URL`); requests are rate limited and never stored. With `VOICE_PUBLIC_API_URL` set, the owner can approve from the notification and receives the new code with a prefilled email to send, without a redeploy. Invitations can be added, listed and revoked in the database with `make invite-add/list/revoke` (or `python -m voice_delegate.invites` on the server), and the public demo no longer requires `VOICE_INVITE_TOKENS`.
 
 Added: the page waits up to 30 seconds for a sleeping backend to start, showing a starting message, before discovering providers; the Railway service is described with Infrastructure as Code in `.railway/railway.ts`.

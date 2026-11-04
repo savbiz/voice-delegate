@@ -183,8 +183,8 @@ WebRTC audio buffers belong to the browser and provider. We do not claim to boun
 `AzureLiveProvider` uses the Azure `/openai/v1/live` namespace with Bearer authentication,
 the same Live events, and client delegation. Recovery requires session consent and seeds
 at most twelve bounded text fragments through `session.thinking.append`, never tool calls.
-Legacy Realtime classes remain only for historical wire regression tests; the app factory
-registers `openai`, `azure` and optionally `elevenlabs`. See [session flow](session-flow.md).
+The app factory registers `openai`, `azure` and optionally `elevenlabs`; the Realtime
+adapters were removed in 0.3.0. See [session flow](session-flow.md).
 
 ## Speech interruption authority
 
@@ -210,7 +210,7 @@ the worker execution budget. Noncooperative workers occupy capacity until they f
 
 Only sealed text segments are replayed during fallback, bounded to twelve entries and
 2048 tokens. For Live, a speaker change seals preceding segments; reconnect also seals
-every trailing in-flight segment. Realtime uses completed transcripts. Tool calls, tool results and
+every trailing in-flight segment. Tool calls, tool results and
 audio are never replayed. History is conversation data, never system instructions.
 
 A provider stream failure retains the owned session in the reconnecting state and closes
@@ -260,8 +260,7 @@ interrupting audio already playing. This is not an acoustic guarantee; live vali
 The event reader never awaits a worker or classifier. An optional Decider classifies the
 latest bounded utterance with cancellation and relevance predicates per active task. A
 classification timeout or error preserves work. Jobs survive a transport replacement and
-are delivered through the new connection; a detached Realtime result uses a text item,
-not an old function-call ID. See [ADR 009](decisions/009-cancellation-is-intent.md) for budgets,
+are delivered through the new connection, never under an old delegation ID. See [ADR 009](decisions/009-cancellation-is-intent.md) for budgets,
 terminal acknowledgements, pricing caveats and the default-off rollout.
 
 Task duration includes waiting for delivery and stops at the terminal state. The owner heartbeat
@@ -388,7 +387,7 @@ still provisions only Prometheus. No queryable trace storage or live result is i
 
 ## Optional ElevenLabs Agents transport
 
-The [Agents integration](elevenlabs.md) uses direct browser WebRTC media and an authenticated async server webhook for delegate_task. The existing local/remote worker and silence-gated portfolio stay on the backend; the browser supplies owned activity/transcript observations but never submits tools or polls results. Exact goals coalesce per conversation, and HTTP responses carry bounded results. Provider finalization requires status evidence; live acceptance remains pending. See the [transport evaluation](elevenlabs-transport.md).
+The [Agents integration](elevenlabs.md) uses direct browser WebRTC media and an authenticated async server webhook for delegate_task. The existing local/remote worker and silence-gated portfolio stay on the backend; the browser supplies owned activity/transcript observations but never submits tools or polls results. Exact goals coalesce per conversation, and HTTP responses carry bounded results. Provider finalization requires status evidence; live acceptance remains pending. See the [transport evaluation](decisions/012-elevenlabs-agents-webhook.md).
 
 ## Session accounting
 

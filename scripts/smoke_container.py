@@ -142,7 +142,7 @@ def main() -> None:
     env = {
         "VOICE_PUBLIC_DEMO": "true",
         "VOICE_ENVIRONMENT": "production",
-        "VOICE_ALLOWED_ORIGIN": "https://demo.example",
+        "VOICE_ALLOWED_ORIGINS": '["https://demo.example"]',
         "VOICE_ALLOWED_HOSTS": '["127.0.0.1"]',
         "VOICE_INVITE_TOKENS": json.dumps({"tester": token}),
         "VOICE_DAILY_SESSIONS_PER_USER": "1",

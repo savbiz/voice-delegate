@@ -124,8 +124,7 @@ Compose reloads for subsequent commands with the same Compose file. No provider
 credentials are written. Locally the list contains only `http://localhost:8080`.
 In Codespaces it also contains `https://localhost:8080` and the public forwarded
 origin derived from `CODESPACE_NAME` and `GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN`.
-The backend uses `VOICE_ALLOWED_ORIGINS`; `VOICE_ALLOWED_ORIGIN` remains a deprecated
-single-origin alias. An explicit list takes precedence over the alias.
+The backend reads `VOICE_ALLOWED_ORIGINS`, a JSON list of exact origins.
 
 ### Measured Codespaces proxy behaviour
 
@@ -215,10 +214,9 @@ entry point; they are rejected by the local launcher. `make fe` uses an empty
 `VITE_API_BASE_URL` by default to proxy to the local backend. Override that public URL
 only when explicitly selecting a hosted API; it is not a place for credentials.
 
-`VOICE_ADAPTER` selects `openai`, `azure` or `elevenlabs`. Legacy `live` and
-`realtime` values migrate to `openai`; no production Realtime client is registered. The old
-`VOICE_VOICE_PROVIDER` name remains accepted as a deprecated alias; if both names
-are present in the same source, `VOICE_ADAPTER` wins. Keep your existing keys and change only the
+`VOICE_ADAPTER` selects `openai`, `azure` or `elevenlabs` (the legacy values `live` and
+`realtime` still map to `openai`). Since 0.3.0 the backend refuses to start if the removed
+`VOICE_VOICE_PROVIDER` or `VOICE_ALLOWED_ORIGIN` is set, naming the replacement. Keep your existing keys and change only the
 non-sensitive selectors/model values when migrating a local configuration.
 
 ## Copyable local configuration

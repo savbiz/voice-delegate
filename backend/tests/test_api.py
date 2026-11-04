@@ -134,21 +134,18 @@ async def test_provider_configuration_uses_existing_settings(
     from voice_delegate.providers.fake import FakeConnection
     from voice_delegate.providers.models import SessionConfig
     from voice_delegate.providers.openai import OpenAILiveProvider
-    from voice_delegate.providers.webrtc import RealtimeWebRTCProvider
 
     configs: list[SessionConfig] = []
     timeouts: list[float] = []
 
     async def connect(
-        self: OpenAILiveProvider | RealtimeWebRTCProvider,
+        self: OpenAILiveProvider,
         *,
         config: SessionConfig,
         offer_sdp: str,
     ) -> FakeConnection:
         configs.append(config)
-        timeouts.append(
-            self._close_timeout if isinstance(self, OpenAILiveProvider) else self.close_timeout
-        )
+        timeouts.append(self._close_timeout)
         return FakeConnection()
 
     for cls in (OpenAILiveProvider, AzureLiveProvider):

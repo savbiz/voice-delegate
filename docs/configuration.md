@@ -30,7 +30,6 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `model` | `VOICE_MODEL` | `"gpt-live-1"` | `{"type": "string"}` |
 | `voice` | `VOICE_VOICE` | `"marin"` | `{"type": "string"}` |
 | `allowed_origins` | `VOICE_ALLOWED_ORIGINS` | `["http://localhost:5173"]` | `{"type": "array", "items": {"type": "string"}, "minItems": 1}` |
-| `allowed_origin` | `VOICE_ALLOWED_ORIGIN` | `null` | `{"anyOf": [{"type": "string"}, {"type": "null"}]}` |
 | `allowed_hosts` | `VOICE_ALLOWED_HOSTS` | `["localhost", "127.0.0.1", "testserver"]` | `{"type": "array", "items": {"type": "string"}}` |
 | `trust_proxy` | `VOICE_TRUST_PROXY` | `false` | `{"type": "boolean"}` |
 | `trusted_proxy_hops` | `VOICE_TRUSTED_PROXY_HOPS` | `1` | `{"type": "integer", "minimum": 1, "maximum": 32}` |
@@ -84,7 +83,6 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `close_timeout_seconds` | `VOICE_CLOSE_TIMEOUT_SECONDS` | `5` | `{"type": "number", "exclusiveMinimum": 0}` |
 | `max_body_bytes` | `VOICE_MAX_BODY_BYTES` | `65536` | `{"type": "integer", "minimum": 1024, "maximum": 1048576}` |
 
-`VOICE_ADAPTER` also accepts `VOICE_VOICE_PROVIDER` for backward compatibility; the first name takes precedence within the same settings source.
 
 ## Automatic features
 
@@ -200,9 +198,7 @@ def validate_web_search(self) -> "Settings":
 
 @model_validator(mode="after")
 def validate_origins(self) -> "Settings":
-    """Accept the deprecated singular setting only when no list was supplied."""
-    if self.allowed_origin is not None and "allowed_origins" not in self.model_fields_set:
-        self.allowed_origins = [self.allowed_origin]
+    """Require canonical browser origins."""
     for origin in self.allowed_origins:
         if self.native_clients and origin == "capacitor://localhost":
             continue
@@ -315,9 +311,9 @@ def validate_production(self) -> "Settings":
 
 ## Browser origin compatibility
 
-Use `VOICE_ALLOWED_ORIGINS` as a JSON array of exact origins. The deprecated
-`VOICE_ALLOWED_ORIGIN` accepts one origin only when no list was supplied.
-The list takes precedence if both variables are configured. Production requires
+Use `VOICE_ALLOWED_ORIGINS` as a JSON array of exact origins. The singular
+`VOICE_ALLOWED_ORIGIN` and `VOICE_VOICE_PROVIDER` were removed in 0.3.0; startup
+fails with the replacement name if either is still set. Production requires
 HTTPS for every browser origin. The `capacitor://localhost` iOS origin may also
 be explicitly listed. Android uses
 `https://localhost`. Neither native origin is added automatically. Routes, CORS
