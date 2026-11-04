@@ -31,3 +31,17 @@ def test_codeql_does_not_scan_every_pull_request_push() -> None:
     assert "branches: [main]" in triggers
     assert "schedule:" in triggers
     assert "workflow_dispatch:" in triggers
+
+
+def test_docs_only_skips_fail_open_and_never_use_path_filters() -> None:
+    ci = workflow("ci.yml")
+    triggers = ci.split("\npermissions:", 1)[0]
+    # Workflow-level path filters leave required checks unreported, which blocks merges.
+    assert "paths" not in triggers
+    # Only an explicit "true" skips work; a failed detection runs everything.
+    assert ci.count("needs.changes.outputs.docs_only != 'true'") == 2
+    assert "needs.changes.outputs.docs_only == 'true'" not in ci
+    frontend = ci.split("  frontend:\n", 1)[1].split("\n    runs-on:", 1)[0]
+    assert "!cancelled()" in frontend
+    backend = ci.split("  backend-312:\n", 1)[1].split("\n    runs-on:", 1)[0]
+    assert "!cancelled()" in backend

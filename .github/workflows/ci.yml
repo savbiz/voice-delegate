@@ -13,8 +13,41 @@ jobs:
   # The main ruleset requires the checks "backend (3.12)", "backend (3.13)" and "frontend".
   # Keep these job names exactly. A job skipped by `if` counts as passed for a required check,
   # but a job that never exists (a dropped matrix leg, a workflow-level path filter) blocks merges.
+  #
+  # A pull request that changes only documentation skips the frontend job, the container build
+  # and the smoke tests; backend lint, types, tests and the documentation checks still run. Every
+  # condition fails open: if this detection fails, the full pipeline runs.
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      docs_only: ${{ steps.filter.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          docs_only=false
+          if [ "$EVENT" = pull_request ]; then
+            if files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate \
+                --jq '.[] | .filename, (.previous_filename // empty)'); then
+              docs_only=$(printf '%s\n' "$files" | python3 scripts/ci_docs_only.py) || docs_only=false
+            fi
+          fi
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "docs_only=$docs_only"
   backend-312:
     name: backend (3.12)
+    needs: changes
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -22,7 +55,7 @@ jobs:
       - uses: ./.github/actions/backend
         with:
           python: "3.12"
-          containers: "true"
+          containers: ${{ needs.changes.outputs.docs_only != 'true' }}
   # Python 3.13 runs on main and tags only; pull requests rely on 3.12.
   backend-313:
     name: backend (3.13)
@@ -36,6 +69,8 @@ jobs:
           python: "3.13"
   frontend:
     name: frontend
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
