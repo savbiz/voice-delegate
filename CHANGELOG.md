@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Changed: the v1.0 gate is narrowed to a recorded demo video. The per-provider live acceptance runs and the paid voice benchmark are now optional and listed under "Later" in the roadmap; their procedures stay documented and no results are claimed. README and ADR 003 are updated to match. The OpenSSF Best Practices questionnaire is noted as a possible later addition.
+
 Changed: the frontend image unpacks the checksum-verified pnpm tarball itself instead of running `npm install` on it, because OpenSSF Scorecard counts any `npm install` without a hash as an unpinned dependency.
 
 Changed: dependency refresh. Python packages are re-locked to their latest releases (FastAPI 0.141 → 0.162, Pydantic 2.14, websockets 17, langgraph 1.2.19, langchain-openai 1.7 and others), the frontend tools are updated (Vitest 5.1, `@types/node` 26, the ElevenLabs client 1.33, Tailwind 4.3.4) and the build backend `uv_build` is aligned with uv 0.13. The OpenAI chat clients now set `use_responses_api=False`, because langchain-openai 1.7 would otherwise switch some models to the Responses API, which the worker and its cost accounting do not use. pnpm stays on 11.19.0: pnpm 12 writes a second YAML document with its own binaries into `pnpm-lock.yaml`, which the lockfile tests and Dependabot do not expect.

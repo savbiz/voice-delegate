@@ -133,7 +133,7 @@ and Prometheus/Grafana with a deterministic planner on http://localhost:8080, al
 ## Status
 
 Every feature is covered by offline tests and CI, and the maintainer has used each voice
-provider live on the hosted demo. Recorded live acceptance is the gate for v1.0.
+provider live on the hosted demo. A recorded demo video is the gate for v1.0.
 
 **Live dashboard:** [latency, errors and estimated cost from the hosted demo](https://valiantocelot1730.grafana.net/public-dashboards/22ada44e8fa241b98648a33f34de9b98)
 (Grafana Cloud, last 30 days, read-only). Traffic is light, so some panels are sparse.
