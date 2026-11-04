@@ -120,6 +120,14 @@
     "digest": "cdbf8004aea2a549db71ae51852d4495fa373ae936c395e5fc49e257e66c77f5"
   },
   {
+    "id": "820f0c70df0f342a",
+    "title": "voice-delegate",
+    "path": "README.md",
+    "section": "Status",
+    "text": "**Live dashboard:** [latency, errors and estimated cost from the hosted demo](https://valiantocelot1730.grafana.net/public-dashboards/22ada44e8fa241b98648a33f34de9b98)\n(Grafana Cloud, last 30 days, read-only). Traffic is light, so some panels are sparse.",
+    "digest": "820f0c70df0f342abd6020a83b7c3df802d7b1d554487d6ce069ddc7cdb45827"
+  },
+  {
     "id": "44f02a7715947f29",
     "title": "voice-delegate",
     "path": "README.md",
