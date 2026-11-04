@@ -34,6 +34,9 @@ def test_documentation_only_changes_are_recognised(paths: list[str]) -> None:
         # Prompts are markdown that ships in the container: they are code.
         ["backend/src/voice_delegate/prompts/blocks/core.md"],
         ["agent/src/voice_delegate_agent/prompts/worker.md"],
+        # Even a README is packaged data when it lives under src/.
+        ["backend/src/voice_delegate/limits/data/README.md"],
+        ["agent/src/voice_delegate_agent/README.md", "docs/architecture.md"],
         ["docs/architecture.md", "frontend/src/App.tsx"],
         [".github/workflows/ci.yml"],
         [".github/actions/backend/action.yml"],

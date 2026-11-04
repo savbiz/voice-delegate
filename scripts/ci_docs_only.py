@@ -32,6 +32,9 @@ MAX_PATHS = 3000
 
 
 def is_documentation(path: str) -> bool:
+    # Anything under a src/ directory is packaged code or runtime data, even when it is Markdown.
+    if path.startswith("src/") or "/src/" in path:
+        return False
     return any(fnmatchcase(path, pattern) for pattern in DOCUMENTATION)
 
 
