@@ -43,7 +43,7 @@ See [local profiles](local-development.md#copyable-local-configuration) and the
 | `decisions_cancel` | `VOICE_DECISIONS_CANCEL` | `false` | `{"type": "boolean"}` |
 | `session_summary` | `VOICE_SESSION_SUMMARY` | `false` | `{"type": "boolean"}` |
 | `decisions_threshold` | `VOICE_DECISIONS_THRESHOLD` | `0.85` | `{"type": "number", "minimum": 0.5, "maximum": 1}` |
-| `decisions_timeout_seconds` | `VOICE_DECISIONS_TIMEOUT_SECONDS` | `1` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
+| `decisions_timeout_seconds` | `VOICE_DECISIONS_TIMEOUT_SECONDS` | `3` | `{"type": "number", "maximum": 5, "exclusiveMinimum": 0}` |
 | `decisions_max_calls` | `VOICE_DECISIONS_MAX_CALLS` | `60` | `{"type": "integer", "minimum": 1, "maximum": 300}` |
 | `decisions_input_usd_per_million` | `VOICE_DECISIONS_INPUT_USD_PER_MILLION` | `0.1` | `{"type": "number", "minimum": 0, "maximum": 100}` |
 | `debug_directory` | `VOICE_DEBUG_DIRECTORY` | `".local/debug"` | `{"type": "string"}` |

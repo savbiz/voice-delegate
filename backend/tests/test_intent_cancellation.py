@@ -439,3 +439,46 @@ async def test_cancellation_guidance_matches_enabled_policy(semantic: bool) -> N
         assert ("cancellation as requested, not completed" in instructions) is semantic
     finally:
         await manager.aclose()
+
+
+async def test_word_by_word_cancellation_decides_once_on_the_settled_utterance(
+    blocking_worker: BlockingWorker, fake_clock: FakeClock
+) -> None:
+    """GPT-Live streams one word per transcript; each word used to discard the decision."""
+
+    class Recording(FakeDecider):
+        def __init__(self) -> None:
+            super().__init__(probability=1)
+            self.texts: list[str] = []
+
+        async def decide(self, text: str, questions: tuple[Question, ...]) -> Decision:
+            self.texts.append(text)
+            return await super().decide(text, questions)
+
+    decider = Recording()
+    base = DelegationRunner(blocking_worker)
+    settings = Settings(
+        intent_cancellation=True, decisions_cancel=True, openai_api_key=SecretStr("fixture")
+    )
+    runner = IntentRunner(base, settings, fake_clock, decider)
+    runner.settle_seconds = 0.05
+    state = Portfolio()
+    try:
+        runner.start(state, "a", DelegationInput(goal="who plays today"), 0)
+        spoken = ""
+        for word in ("Anzi,", "cancella", "quello", "che", "t'ho", "detto"):
+            spoken = f"{spoken} {word}".strip()
+            runner.transcript(state, spoken, "")
+            await asyncio.sleep(0.01)
+        assert state.decision is not None
+        await state.decision
+        assert len(decider.texts) == 1
+        assert "cancella quello che t'ho detto" in decider.texts[0]
+        assert state.jobs["a"].status == "cancelled"
+    finally:
+        await runner.close(state)
+        await base.aclose()
+
+
+def test_decision_deadline_defaults_to_three_seconds() -> None:
+    assert Settings().decisions_timeout_seconds == 3

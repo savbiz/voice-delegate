@@ -139,7 +139,7 @@ class Settings(BaseSettings):
     # Opt-in: one worker-model call at user close; needs an OpenAI key and a non-offline worker.
     session_summary: bool = False
     decisions_threshold: float = Field(default=0.85, ge=0.5, le=1)
-    decisions_timeout_seconds: float = Field(default=1, gt=0, le=5)
+    decisions_timeout_seconds: float = Field(default=3, gt=0, le=5)
     decisions_max_calls: int = Field(default=60, ge=1, le=300)
     decisions_input_usd_per_million: float = Field(default=0.1, ge=0, le=100)
     debug_recording: bool = False
