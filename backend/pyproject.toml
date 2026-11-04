@@ -31,3 +31,31 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 voice-delegate-agent = { workspace = true }
+
+# Mutation testing of the limits and admission code: `make mutation` from the repository root
+# (scripts/mutation.py). Run from this directory so mutmut sees the standard src/ layout.
+[tool.mutmut]
+source_paths = ["src/"]
+only_mutate = ["src/voice_delegate/limits/*.py", "src/voice_delegate/admission/*.py"]
+pytest_add_cli_args_test_selection = [
+    "tests/test_admission.py",
+    "tests/test_admission_properties.py",
+    "tests/test_admission_rules.py",
+    "tests/test_limits_boundaries.py",
+    "tests/test_ratelimit.py",
+    "tests/test_ratelimit_properties.py",
+    "tests/test_body_limit.py",
+    "tests/test_session.py",
+    "tests/test_session_edges.py",
+    "tests/test_personal_sessions.py",
+    "tests/test_result_citations.py",
+    "tests/test_runner_edges.py",
+]
+also_copy = ["tests/"]
+# The repository's pytest settings live in the root pyproject.toml, which mutmut does not see.
+pytest_add_cli_args = [
+    "-p", "no:cacheprovider",
+    "-o", "asyncio_mode=auto",
+    "--disable-socket", "--allow-unix-socket",
+    "--timeout=30",
+]

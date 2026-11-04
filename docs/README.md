@@ -21,7 +21,7 @@ Start with the [project README](../README.md). Pick the path that matches what y
 | [Configuration reference](configuration.md) | Every setting, its default and its bounds (generated) |
 | [Azure setup](azure-setup.md) | Creating the `gpt-live-1` deployment and its endpoint |
 | [ElevenLabs integration](elevenlabs.md) | Agent prompt, the `delegate_task` webhook tool and its authentication |
-| [Testing beyond examples](testing.md) | Contract fuzzing and property-based tests of admission and rate limits |
+| [Testing beyond examples](testing.md) | Contract fuzzing, property-based tests and mutation testing of admission and rate limits |
 | [Load testing](load-testing.md) | Locust scenario against the offline backend, budgets and reference results |
 | [Supply-chain checks](supply-chain.md) | Dependency audit, SBOMs, Scorecard and what the tests enforce |
 | [Production scope](production.md) | What this reference does and does not provide for a real service |

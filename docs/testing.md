@@ -43,3 +43,49 @@ off-by-one on capacity, on the per-user, daily and global limits, on lease expir
 personal-session reserve; a missing burst cap; a doubled refill; a dropped unlimited-invitation
 check). Every one is caught except a "+1 second of global slack", which is equivalent here
 because each reservation is a multiple of 11 seconds.
+
+## Mutation testing (mutmut)
+
+Coverage says a line ran, not that a test would notice if the line were wrong. Mutation testing
+makes small wrong changes to the code (flip `>=` to `>`, drop a check, edit an error message) and
+runs the tests against each one. A change that no test notices is a *surviving mutant*: behaviour
+nothing pins down.
+
+```sh
+make mutation                 # or: uv run --group mutation python scripts/mutation.py --min-score 85
+```
+
+It targets `limits/` (rate limiter, body limit, token and result clipping) and `admission/`
+(authentication, quotas, leases), 707 mutants, and takes two to four minutes. The configuration
+is `[tool.mutmut]` in `backend/pyproject.toml`; the weekly `mutation` workflow runs it and fails
+below the minimum score.
+
+### What it found
+
+The first run scored **72.7%** (514 of 707 mutants detected) on code with high line coverage.
+The survivors were not noise:
+
+- `authenticate` did not test that a bare token without the `Bearer ` prefix is refused, that
+  database invitations authenticate at all, or that an unknown token never falls back to the open
+  local identity.
+- The property test of admission drew one user four times in a day too rarely to exercise the
+  per-user seconds cap, never asserted the refusal reason, never used the doubled reservation for
+  Azure recovery, and rarely landed on a lease's exact expiry instant.
+- `truncate` had no test at its exact token, byte and 100,000-character boundaries, and its
+  multibyte test never actually split a character (the chosen emoji is a single token).
+- The body-limit and rate-limit middlewares were not checked for the shape of their 413 and 429
+  answers, and idle rate-limit buckets were never shown to be evicted.
+
+Each of these was fixed with a test (`test_admission_rules.py`, `test_limits_boundaries.py`, a
+sharper `test_admission_properties.py`). The score is now about **89.5%**.
+
+### What the remaining survivors are
+
+Most of the rest cannot be killed or are not worth killing: SQL keywords written in another case
+(SQLite ignores case), the SQLite connection timeout, defaults of a private helper, log wording,
+and `strict=None` or `last=None` where `None` and `False` behave the same. Chasing 100% would mean
+asserting implementation trivia. The minimum is set to 85% to leave room for run-to-run noise, not
+as a target.
+
+mutmut occasionally reports a surviving mutant's test process as a crash (`crashed` in the
+report). Those are counted as *not* detected, so the score errs low.

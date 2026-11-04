@@ -32,8 +32,12 @@ eval = [
 loadtest = [
     "locust>=2.43,<3",
 ]
+mutation = [
+    "mutmut>=3,<4",
+]
 
 [tool.ruff]
+extend-exclude = ["mutants"]
 target-version = "py312"
 line-length = 100
 
