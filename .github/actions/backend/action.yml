@@ -36,6 +36,11 @@ runs:
     - name: Check public API host documentation
       shell: bash
       run: uv run python scripts/check_deployment.py
+    - name: Check forbidden files and whitespace rules
+      shell: bash
+      run: |
+        uv run python scripts/check_forbidden_files.py --tracked
+        uv run python scripts/check_editorconfig.py --tracked
     - name: Audit container definitions
       shell: bash
       run: uv run python scripts/check_containers.py

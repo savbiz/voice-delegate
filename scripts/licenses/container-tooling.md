@@ -19,6 +19,7 @@ licence material when redistributing images; this table is not an OS package inv
 | OpenSSF Scorecard action 2.5.0 (CI only) | Apache-2.0 | [scorecard-action licence](https://github.com/ossf/scorecard-action/blob/v2.5.0/LICENSE) |
 | `actions/upload-artifact` 7.0.2 (CI only) | MIT | [licence](https://github.com/actions/upload-artifact/blob/v7.0.2/LICENSE) |
 | Trivy 0.70.0, run by `aquasecurity/trivy-action` 0.36.0 (CI only, scans the built images) | Apache-2.0 | [Trivy licence](https://github.com/aquasecurity/trivy/blob/v0.70.0/LICENSE), [trivy-action licence](https://github.com/aquasecurity/trivy-action/blob/v0.36.0/LICENSE) |
+| pre-commit 4.7.0 (optional developer tool, installed by the developer with `uv tool install`; the repository fetches no hook repository) | MIT | [pre-commit licence](https://github.com/pre-commit/pre-commit/blob/v4.7.0/LICENSE) |
 
 uv 0.12.15 and pnpm 11.19.0 are existing build tools; their installed dependency
 attributions are included above where present. This optional stack does not grant
