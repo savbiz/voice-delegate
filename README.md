@@ -15,30 +15,75 @@ and the answer is spoken when you pause. Interrupting the voice never throws tha
   <img src="docs/images/workspace.png" alt="The voice workspace: provider choice, API access and invitation code" width="720">
 </p>
 
-- **Three voice providers, chosen per session:** OpenAI GPT-Live, Azure (a GPT-Live
-  deployment) and ElevenLabs Agents.
-- **Background delegation:** up to two tasks run at once; results wait for silence and
-  carry the original request.
-- **Your keys or the platform's:** bring your own provider keys (memory only) or use an
-  invitation code with daily quotas.
-- **Cost estimates** per session, optional Azure recovery, OpenTelemetry metrics and an
-  opt-in iOS/Android shell.
+## What's implemented
 
-## How it works
+A complete, deployed system, not a prototype:
+
+- **Real-time voice** with three providers chosen per session: OpenAI GPT-Live, Azure
+  (a GPT-Live deployment) and ElevenLabs Agents. Audio goes over WebRTC straight from the
+  browser to the provider.
+- **Background delegation:** the voice model has a single tool, `delegate_task`. A bounded
+  LangGraph worker runs up to two tasks at once (calculator, cited documentation search,
+  optional web search, optional read-only MCP tools) and the answer is spoken when you pause.
+- **Safety:** read-only tools only; optional moderation that reviews goals and tool
+  results and quarantines instructions injected into retrieved text; MCP limited to an
+  operator allowlist and gated by moderation.
+- **Access and cost control:** bring your own keys (held in memory only) or use invitation
+  codes with durable daily quotas; Request access with approval from a phone notification;
+  per-session cost estimates.
+- **Reliability:** bounded session lifetimes, heartbeats, one consented Azure recovery,
+  explicit client state machine, separate worker service for scaling.
+- **Engineering:** FastAPI + React 19 + TypeScript, uv and pnpm workspaces, about 1,000
+  automated tests (pytest, Vitest, Playwright end-to-end), strict typing and linting,
+  CodeQL, OpenTelemetry metrics with Prometheus and Grafana, 13 decision records.
+- **Delivery:** Railway (infrastructure as code) and Vercel, tagged releases with a
+  changelog, a daily health check and a one-command offline demo for Codespaces.
+
+## System design
 
 ```mermaid
 flowchart LR
-    U["You speak"] <-->|WebRTC audio| V["Voice model"]
-    V -->|delegate_task| A["FastAPI session owner"]
-    A --> W["LangGraph worker"]
-    W --> T["Calculator · project docs · web search"]
-    W -->|bounded, cited result| A
-    A -->|after a silence| V
+    subgraph Browser["Browser (React)"]
+        UI["Voice workspace"]
+        Live["Session controller<br/>WebRTC + state machine"]
+    end
+
+    subgraph Providers["Voice providers"]
+        OAI["OpenAI GPT-Live"]
+        AZ["Azure GPT-Live"]
+        EL["ElevenLabs Agents"]
+    end
+
+    subgraph API["FastAPI backend (Railway)"]
+        S["Session owner<br/>admission, quotas, costs"]
+        DB[("SQLite<br/>invitations, leases")]
+        R["Recovery<br/>one Azure fallback"]
+    end
+
+    subgraph Worker["LangGraph worker (in-process or private service)"]
+        M["Moderation"]
+        P["Planner"]
+        T["Calculator · docs search<br/>web search · MCP (read-only)"]
+    end
+
+    UI --> Live
+    Live <-->|"WebRTC audio"| OAI & AZ & EL
+    Live -->|"HTTPS: create, offer, heartbeat"| S
+    OAI & AZ -.->|"sideband events"| S
+    EL -.->|"delegate_task webhook"| S
+    S --- DB
+    S --- R
+    S -->|"delegate_task"| M --> P --> T
+    T -->|"cited result"| S
+    S -->|"spoken after a pause"| OAI
+    S -.-> O["OpenTelemetry<br/>Prometheus + Grafana"]
+    S -.-> N["ntfy<br/>access requests"]
 ```
 
 Audio flows directly between the browser and the voice provider. The backend owns the
 session, admission, quotas and delegated work; the voice model never sees the worker's
-individual tools.
+individual tools. Details: the [documentation index](docs/README.md) and
+[session flow](docs/session-flow.md).
 
 ## Try it
 
