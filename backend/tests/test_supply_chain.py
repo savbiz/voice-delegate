@@ -93,6 +93,20 @@ def test_sbom_workflow_attaches_both_documents_to_releases() -> None:
     assert workflow["permissions"] == {"contents": "read"}
 
 
+def test_release_documents_carry_a_signed_provenance_attestation() -> None:
+    workflow = load(ROOT / ".github/workflows/sbom.yml")
+    job = workflow["jobs"]["sbom"]
+    # Signing needs the OIDC token and attestation storage, granted to this one job only.
+    assert job["permissions"]["id-token"] == "write"
+    assert job["permissions"]["attestations"] == "write"
+    assert "id-token" not in workflow["permissions"]
+    attest = next(s for s in job["steps"] if "attest-build-provenance" in s.get("uses", ""))
+    assert attest["if"] == "github.event_name == 'release'"
+    assert attest["with"]["subject-path"] == "sbom/*.cdx.json"
+    upload = next(s for s in job["steps"] if "gh release upload" in s.get("run", ""))
+    assert "voice-delegate.intoto.jsonl" in upload["run"]
+
+
 def test_scorecard_publishes_results_with_the_permissions_it_requires() -> None:
     workflow = load(ROOT / ".github/workflows/scorecard.yml")
     job = workflow["jobs"]["analysis"]

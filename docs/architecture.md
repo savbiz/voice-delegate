@@ -13,6 +13,47 @@ server-side authority without routing the microphone through Python. Backend res
 commentary, separate from trusted instructions.
 
 ```mermaid
+flowchart LR
+    subgraph Browser
+        UI["React UI<br/>captions, controls"]
+        Media["Microphone and<br/>WebRTC playback"]
+    end
+    subgraph API["FastAPI backend"]
+        Routes["HTTP API<br/>admission, session keys, budgets"]
+        Manager["Session manager<br/>one provider connection per session"]
+        Adapter["Provider adapter<br/>typed events"]
+        Store[("Admission store<br/>quotas and leases")]
+    end
+    Provider["GPT-Live provider<br/>OpenAI or Azure"]
+    Agents["ElevenLabs Agents"]
+    subgraph Worker["Delegation worker"]
+        Graph["LangGraph worker<br/>delegate_task"]
+        Tools["Calculator, project docs,<br/>optional web search and MCP"]
+        Guard["Optional moderation"]
+    end
+    Telemetry["OpenTelemetry collector<br/>Prometheus and Grafana"]
+
+    UI -->|"create session, heartbeat"| Routes
+    Routes --> Store
+    Routes --> Manager
+    Media <-->|"audio, direct WebRTC"| Provider
+    Media <-->|"audio, SDK-managed WebRTC"| Agents
+    Manager <-->|"sideband events"| Adapter
+    Adapter <--> Provider
+    Agents -->|"delegate_task webhook"| Routes
+    Manager -->|"delegate_task(goal, context)"| Graph
+    Graph --> Tools
+    Graph --> Guard
+    Graph -->|"result as commentary"| Manager
+    API -.->|"traces and metrics"| Telemetry
+```
+
+The worker runs inside the API process or, in the scaled and offline stacks, as a separate private
+service. Audio media bypasses the backend; session control, lifecycle events, transcripts and
+delegation requests and results are all handled by it. OpenAI and Azure sessions use a sideband
+event channel; ElevenLabs Agents use browser-managed WebRTC and call the backend through a webhook.
+
+```mermaid
 sequenceDiagram
     participant B as Browser
     participant A as FastAPI
