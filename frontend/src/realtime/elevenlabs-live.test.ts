@@ -101,3 +101,16 @@ it('closes an SDK that completes startup after the user stops', async () => {
   await pending;
   expect(setup.sdk.endSession).toHaveBeenCalled();
 });
+
+it('removes expressive audio tags from agent captions', async () => {
+  const { stripAudioTags } = await import('./elevenlabs-live');
+  expect(stripAudioTags("[happy] I'm here, I can hear you fine.")).toBe(
+    "I'm here, I can hear you fine.",
+  );
+  expect(stripAudioTags('[sad] I checked. [whispers] Nothing yet.')).toBe(
+    'I checked. Nothing yet.',
+  );
+  expect(stripAudioTags('[happy]')).toBe('');
+  // Ordinary brackets that are not lowercase-word tags stay.
+  expect(stripAudioTags('Result [1] from the docs')).toBe('Result [1] from the docs');
+});
