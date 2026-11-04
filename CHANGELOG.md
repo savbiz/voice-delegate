@@ -12,6 +12,12 @@ Added: the page waits up to 30 seconds for a sleeping backend to start, showing 
 
 Changed: the provider menu names OpenAI as "OpenAI · GPT-Live" and Azure simply as "Azure". Documentation: the maintainer reported ElevenLabs Agents working live on the deployed backend on 2026-11-03 (formal acceptance and cost reconciliation remain pending); future-extension proposals added under `docs/`.
 
+Added: an opt-in generated conversation summary at the end of a session (`VOICE_SESSION_SUMMARY`, default off), labelled as generated and falling back to the extractive recap; a Gmail compose button next to the mail-app button in the approved-invitation notification.
+
+Changed: the recap's latest request joins user turns split by the provider; ElevenLabs Agents voice time is estimated at an assumed $0.08/minute (price snapshot 2026-11-04) and cost summaries list the voice adapters used; the Request access form uses the standard button and is replaced by its confirmation once sent.
+
+Fixed: Approve and Deny in the ntfy web app reported "Failed to fetch" and kept the buttons although the decision succeeded; the `/access/` routes now allow the notification origin to read the result. The root `railway.json` was removed after the Railway Infrastructure as Code cutover.
+
 ## 0.2.0 - 2026-11-03
 
 Live voice is now the primary workspace, with a per-session choice of voice provider and billing source.
