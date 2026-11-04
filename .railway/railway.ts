@@ -1,6 +1,6 @@
 import { defineRailway, github, project, service, volume } from "railway/iac";
 
-// Railway Infrastructure as Code for the hosted API. Replaces the deprecated railway.json.
+// Railway Infrastructure as Code for the hosted API. Replaced the deprecated root railway.json.
 // This repository manages only its own resources in the environment.
 // See https://docs.railway.com/infrastructure-as-code#multi-repo-projects
 export const partial = "voice-delegate-api";
@@ -20,7 +20,9 @@ export default defineRailway(() => {
     healthcheck: "/healthz",
     healthcheckTimeout: 300,
     replicas: { "europe-west4-drams3a": 1 },
-    deploy: { sleepApplication: true, restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 10 },
+    // Restart policy is left at Railway's default (On Failure, up to 10 restarts). Railway stores
+    // the default as unset, so declaring it here shows a permanent diff and redeploys on every apply.
+    deploy: { sleepApplication: true },
     volumeMounts: { "/app/.local": data },
   });
 
