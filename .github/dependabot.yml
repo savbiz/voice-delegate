@@ -33,7 +33,9 @@ updates:
 
   # Container base images are pinned by digest, so nothing updates them unless Dependabot does.
   - package-ecosystem: docker
-    directory: /deployment
+    directories:
+      - /deployment
+      - /.devcontainer
     schedule:
       interval: weekly
     groups:

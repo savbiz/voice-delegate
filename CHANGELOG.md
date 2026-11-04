@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Changed: the remaining unpinned build inputs are pinned by hash. The frontend image gets pnpm through Corepack from the `packageManager` field, which now carries the release's SHA-512, and the development container base image is pinned by digest and covered by Dependabot.
+
 Changed: CodeQL also scans pull requests, so every change is analysed before merge (OpenSSF Scorecard's SAST check measures this). CodeQL, the container scan and the supply-chain audit cancel an older run when a newer commit arrives on the same branch.
 
 Added: a nightly results workflow and page (`docs/results.md`). It runs the test suite with coverage, the load test and the offline worker evaluation, shows the numbers in the run summary and builds a static page with a 90-run history. Publishing to GitHub Pages is off until the owner enables Pages and sets `PUBLISH_RESULTS`.
