@@ -27,6 +27,7 @@
     "@capacitor/core": "8.6.0",
     "@capacitor/ios": "8.6.0",
     "@elevenlabs/client": "1.33.0",
+    "@vercel/analytics": "2.0.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
