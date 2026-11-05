@@ -195,6 +195,17 @@ Explicit `VOICE_OTEL_ENDPOINT` and `VOICE_OTEL_METRICS_ENDPOINT` take precedence
 standard variables. Without any endpoint, traces go to the service log and metrics are not
 exported. Exported data contains no transcripts, session IDs, credentials or tool results. For a security issue use the [private reporting channel](../SECURITY.md), not a public transcript or log dump.
 
+## Visitor counts (Vercel Web Analytics)
+
+The hosted UI counts page views and unique daily visitors with Vercel Web Analytics, to show whether anyone opens the demo. According to Vercel's documentation it is cookieless: nothing is stored in the browser, and a visitor is recognised for a day from a hash of request data that is then discarded.
+
+- **Switch it on once:** in the Vercel dashboard open the project, then **Analytics**, then **Enable**. Until then the script request returns 404 and nothing is counted, which is harmless.
+- **Where it runs:** only in the production build served from a `*.vercel.app` host. It never runs in local development, Codespaces or the native shells, and it is skipped for visitors who send Do Not Track. If the UI moves to a custom domain, change `ANALYTICS_HOST_SUFFIX` in `frontend/src/analytics.ts`.
+- **What is sent:** the origin and path of the page only. The query string and the hash (the tab name) are removed before sending, and a test covers it.
+- **Where to read it:** Vercel dashboard, project, **Analytics**.
+- **What it does not count:** API calls, voice sessions (those are in Grafana) and people who only read the README or watch the video.
+- **Content-Security-Policy:** no change is needed. The script and its beacon are same-origin requests under `/_vercel/insights/`.
+
 ## Temporary API documentation
 
 Set `VOICE_API_DOCS=true` temporarily to expose Swagger; default off in production. Restart the backend to apply it. This also exposes ReDoc and the OpenAPI schema without invitation authentication, subject to host and rate middleware. Restore `false` and restart after inspection. Development exposes these routes by default.
