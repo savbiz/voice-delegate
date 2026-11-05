@@ -1,5 +1,5 @@
 FROM ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 AS uv
-FROM python:3.14-slim@sha256:930e1abba7c4e8f96ed93e8012c35d174d7732752731bbd5e8e757d7ec6f3966 AS builder
+FROM python:3.14-slim@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d AS builder
 COPY --from=uv /uv /uvx /bin/
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PYTHONUNBUFFERED=1
@@ -8,18 +8,12 @@ COPY backend/ ./backend/
 COPY agent/ ./agent/
 RUN uv sync --locked --no-dev --no-editable
 
-FROM python:3.14-slim@sha256:930e1abba7c4e8f96ed93e8012c35d174d7732752731bbd5e8e757d7ec6f3966
+FROM python:3.14-slim@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 # The runtime needs no installer; the base image's pip bundles copies of other packages that
 # vulnerability scanners report separately from the locked dependencies.
 RUN python -m pip uninstall -y pip
-# The pinned base image still ships apt 3.0.3, which has a fixed HIGH vulnerability
-# (CVE-2026-109518, fixed in 3.0.4). Upgrade only those two packages until the base image catches
-# up, then delete this line. The Trivy scan fails the build if a fixable finding comes back.
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends --only-upgrade apt libapt-pkg7.0 \
-    && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/backend/logging.json /app/logging.json
 RUN useradd --uid 10001 --create-home app && mkdir /app/.local && chown app /app/.local
