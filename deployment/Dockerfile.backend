@@ -14,6 +14,12 @@ ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 # The runtime needs no installer; the base image's pip bundles copies of other packages that
 # vulnerability scanners report separately from the locked dependencies.
 RUN python -m pip uninstall -y pip
+# The pinned base image still ships apt 3.0.3, which has a fixed HIGH vulnerability
+# (CVE-2026-109518, fixed in 3.0.4). Upgrade only those two packages until the base image catches
+# up, then delete this line. The Trivy scan fails the build if a fixable finding comes back.
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends --only-upgrade apt libapt-pkg7.0 \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/backend/logging.json /app/logging.json
 RUN useradd --uid 10001 --create-home app && mkdir /app/.local && chown app /app/.local
