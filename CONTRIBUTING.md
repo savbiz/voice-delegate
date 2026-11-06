@@ -33,6 +33,10 @@ Run pnpm only for `frontend/`. Backend tests disable IP sockets and use fakes; d
 
 Never commit `.env`, provider keys, invitations, session keys, private recordings or exported cloud settings. Use synthetic fixture data. Report vulnerabilities privately through [SECURITY.md](SECURITY.md).
 
+## Conduct
+
+Be respectful in issues, pull requests and discussions. The expectations and how to report a problem are in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
 ## Architecture decisions
 
 For a durable architectural choice, add the next numbered Markdown file under [docs/decisions](docs/decisions/). Include title, `Status: accepted YYYY-MM-DD` (or proposed until accepted), context, decision, consequences and supporting sources. Describe implemented behavior in present tense and identify unverified assumptions. Keep historical acceptance evidence under [docs/milestones](docs/milestones/) and current status in [docs/roadmap.md](docs/roadmap.md).
