@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Added: a short code of conduct ([CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)), written for this project, with expected behavior, scope and how to report a problem; `CONTRIBUTING.md` links to it.
+
 Added: the hosted UI counts page views and unique visitors with Vercel Web Analytics (`@vercel/analytics`, MIT), so the maintainer can see whether anyone opens the demo. It is cookieless, runs only in the production build on a `*.vercel.app` host (never locally, in Codespaces or in the native shells), skips visitors who send Do Not Track, and sends only the origin and path, never the query string or the hash. See [operations](docs/operations.md#visitor-counts-vercel-web-analytics).
 
 ## 1.0.0 - 2026-11-05
