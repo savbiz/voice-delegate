@@ -15008,7 +15008,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@elevenlabs/client` 1.33.0
+### `@elevenlabs/client` 1.35.0
 
 Licence: MIT.
 
@@ -15038,7 +15038,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@elevenlabs/types` 0.27.0
+### `@elevenlabs/types` 0.29.0
 
 Licence: MIT.
 
@@ -15099,6 +15099,36 @@ SOFTWARE.
 ````
 
 ### `@eslint-community/regexpp` 4.12.2
+
+Licence: MIT.
+
+Source: LICENSE
+
+````text
+MIT License
+
+Copyright (c) 2018 Toru Nagashima
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+````
+
+### `@eslint-community/regexpp` 4.12.3
 
 Licence: MIT.
 
@@ -18211,7 +18241,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@playwright/test` 1.64.1
+### `@playwright/test` 1.65.0
 
 Licence: Apache-2.0.
 
@@ -18432,7 +18462,7 @@ This software contains code derived from the Puppeteer project (https://github.c
 available under the Apache 2.0 license (https://github.com/puppeteer/puppeteer/blob/master/LICENSE).
 ````
 
-### `@rolldown/binding-darwin-arm64` 1.2.16
+### `@rolldown/binding-darwin-arm64` 1.2.18
 
 Licence: MIT.
 
@@ -18466,7 +18496,7 @@ end of terms and conditions
 The licenses of externally maintained libraries from which parts of the Software is derived are listed [here](https://github.com/rolldown/rolldown/blob/main/THIRD-PARTY-LICENSE).
 ````
 
-### `@rolldown/pluginutils` 1.0.1
+### `@rolldown/pluginutils` 1.1.0
 
 Licence: MIT.
 
@@ -18496,7 +18526,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/node` 4.3.4
+### `@tailwindcss/node` 4.3.5
 
 Licence: MIT.
 
@@ -18526,7 +18556,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/oxide` 4.3.4
+### `@tailwindcss/oxide` 4.3.5
 
 Licence: MIT.
 
@@ -18556,7 +18586,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/oxide-darwin-arm64` 4.3.4
+### `@tailwindcss/oxide-darwin-arm64` 4.3.5
 
 Licence: MIT.
 
@@ -18586,7 +18616,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/oxide-wasm32-wasi` 4.3.4
+### `@tailwindcss/oxide-wasm32-wasi` 4.3.5
 
 Licence: MIT.
 
@@ -18809,7 +18839,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ````
 
-### `@tailwindcss/vite` 4.3.4
+### `@tailwindcss/vite` 4.3.5
 
 Licence: MIT.
 
@@ -19169,7 +19199,7 @@ Source: LICENSE
     SOFTWARE
 ````
 
-### `@typescript-eslint/eslint-plugin` 8.72.1
+### `@typescript-eslint/eslint-plugin` 8.72.2
 
 Licence: MIT.
 
@@ -19199,7 +19229,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/parser` 8.72.1
+### `@typescript-eslint/parser` 8.72.2
 
 Licence: MIT.
 
@@ -19229,7 +19259,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/project-service` 8.72.1
+### `@typescript-eslint/project-service` 8.72.2
 
 Licence: MIT.
 
@@ -19259,7 +19289,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/scope-manager` 8.72.1
+### `@typescript-eslint/scope-manager` 8.72.2
 
 Licence: MIT.
 
@@ -19289,7 +19319,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/tsconfig-utils` 8.72.1
+### `@typescript-eslint/tsconfig-utils` 8.72.2
 
 Licence: MIT.
 
@@ -19319,7 +19349,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/type-utils` 8.72.1
+### `@typescript-eslint/type-utils` 8.72.2
 
 Licence: MIT.
 
@@ -19349,7 +19379,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/types` 8.72.1
+### `@typescript-eslint/types` 8.72.2
 
 Licence: MIT.
 
@@ -19379,7 +19409,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/typescript-estree` 8.72.1
+### `@typescript-eslint/typescript-estree` 8.72.2
 
 Licence: MIT.
 
@@ -19409,7 +19439,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/utils` 8.72.1
+### `@typescript-eslint/utils` 8.72.2
 
 Licence: MIT.
 
@@ -19439,7 +19469,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@typescript-eslint/visitor-keys` 8.72.1
+### `@typescript-eslint/visitor-keys` 8.72.2
 
 Licence: MIT.
 
@@ -19499,7 +19529,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@vitejs/plugin-react` 6.2.1
+### `@vitejs/plugin-react` 6.3.0
 
 Licence: MIT.
 
@@ -23527,7 +23557,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `jose` 6.2.15
+### `jose` 6.2.17
 
 Licence: MIT.
 
@@ -25796,7 +25826,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `playwright` 1.64.1
+### `playwright` 1.65.0
 
 Licence: Apache-2.0.
 
@@ -26017,7 +26047,7 @@ This software contains code derived from the Puppeteer project (https://github.c
 available under the Apache 2.0 license (https://github.com/puppeteer/puppeteer/blob/master/LICENSE).
 ````
 
-### `playwright-core` 1.64.1
+### `playwright-core` 1.65.0
 
 Licence: Apache-2.0.
 
@@ -26644,7 +26674,7 @@ will be liable to anyone for any damages related to this
 software or this license, under any kind of legal claim.***
 ````
 
-### `rolldown` 1.2.16
+### `rolldown` 1.2.18
 
 Licence: MIT.
 
@@ -27255,7 +27285,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `sdp` 3.2.2
+### `sdp` 3.2.3
 
 Licence: MIT.
 
@@ -27715,7 +27745,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `tailwindcss` 4.3.4
+### `tailwindcss` 4.3.5
 
 Licence: MIT.
 
@@ -28173,7 +28203,7 @@ If the Work includes a "NOTICE" text file as part of its distribution, then any 
 END OF TERMS AND CONDITIONS
 ````
 
-### `typescript-eslint` 8.72.1
+### `typescript-eslint` 8.72.2
 
 Licence: MIT.
 
@@ -28362,7 +28392,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `vite` 8.3.5
+### `vite` 8.3.7
 
 Licence: MIT.
 
