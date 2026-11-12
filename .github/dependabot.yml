@@ -1,6 +1,7 @@
-# Minor and patch updates (where most security fixes arrive) are grouped into one weekly pull
-# request per ecosystem. Major updates are left out of the groups, so each one is its own pull
-# request that can be reviewed, tested and reverted alone.
+# Package updates (uv, npm), where most security fixes arrive, are checked weekly; minor and
+# patch updates are grouped into one pull request per ecosystem, and each major update is its
+# own pull request that can be reviewed, tested and reverted alone. Actions and container images
+# change less often and are checked monthly.
 version: 2
 updates:
   - package-ecosystem: uv
@@ -30,31 +31,40 @@ updates:
       - /
       - /.github/actions/backend
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       workflow-actions:
         patterns: ["*"]
         update-types: ["minor", "patch"]
 
   # Container base images are pinned by digest, so nothing updates them unless Dependabot does.
+  # A digest-only refresh has no semver update type, so the group takes every update it is offered;
+  # moving to a new major image line, or a new Python minor, is a manual upgrade (pyproject, CI
+  # matrix and test_python_version change with it), so those are ignored here.
   - package-ecosystem: docker
     directories:
       - /deployment
       - /.devcontainer
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       container-base-images:
         patterns: ["*"]
-        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "python"
+        update-types: ["version-update:semver-minor"]
 
   - package-ecosystem: docker-compose
     directories:
       - /deployment/demo
       - /deployment/scaling
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
       compose-images:
         patterns: ["*"]
-        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]

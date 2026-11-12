@@ -5,7 +5,7 @@ GitHub Actions; none of it needs a secret or a paid service.
 
 | Check | Workflow | When | What it answers |
 |---|---|---|---|
-| Dependabot | `.github/dependabot.yml` | weekly | Which updates exist (Python, npm, GitHub Actions, container images). Minor and patch updates arrive as one grouped pull request per ecosystem; every major update is its own pull request |
+| Dependabot | `.github/dependabot.yml` | weekly (Python, npm), monthly (GitHub Actions, container images) | Which updates exist. Minor and patch updates arrive as one grouped pull request per ecosystem; every major package update is its own pull request. Image groups also take digest refreshes; major image lines and Python minor versions are upgraded by hand |
 | CodeQL | `codeql.yml` | pull requests, `main` and weekly | Does the code contain known vulnerability patterns |
 | Dependency audit | `supply-chain.yml` | weekly, on demand, and on a lockfile change | Does a locked package have a published advisory |
 | SBOM and provenance | `sbom.yml` | SBOMs on each published release or on demand; provenance attestation only on a published release | What exactly is in the release, and who built it |
