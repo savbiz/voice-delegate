@@ -59,15 +59,39 @@ def test_workflows_run_on_commits_cancel_superseded_runs(path: Path) -> None:
     assert "github.ref" in concurrency["group"]
 
 
+IMAGE_ECOSYSTEMS = {"docker", "docker-compose"}
+
+
 def test_dependabot_groups_minor_and_patch_updates_and_leaves_majors_separate() -> None:
     config = load(ROOT / ".github/dependabot.yml")
     ecosystems = {entry["package-ecosystem"] for entry in config["updates"]}
     assert {"uv", "npm", "github-actions", "docker", "docker-compose"} <= ecosystems
     for entry in config["updates"]:
-        assert entry["schedule"]["interval"] == "weekly"
+        ecosystem = entry["package-ecosystem"]
+        # Package ecosystems carry most security fixes, so they are checked every week.
+        expected = "weekly" if ecosystem in {"uv", "npm"} else "monthly"
+        assert entry["schedule"]["interval"] == expected, ecosystem
         for name, group in entry["groups"].items():
-            # A major update inside a group would hide a breaking change in a routine batch.
-            assert group["update-types"] == ["minor", "patch"], name
+            if ecosystem in IMAGE_ECOSYSTEMS:
+                # Digest refreshes have no semver type, so image groups take every update and
+                # majors are kept out by an ignore rule instead.
+                assert "update-types" not in group, name
+                ignored = {
+                    (rule["dependency-name"], tuple(rule["update-types"]))
+                    for rule in entry.get("ignore", [])
+                }
+                assert ("*", ("version-update:semver-major",)) in ignored, name
+            else:
+                # A major update inside a group would hide a breaking change in a routine batch.
+                assert group["update-types"] == ["minor", "patch"], name
+
+
+def test_dependabot_leaves_python_version_upgrades_to_a_manual_change() -> None:
+    config = load(ROOT / ".github/dependabot.yml")
+    docker = next(e for e in config["updates"] if e["package-ecosystem"] == "docker")
+    rules = {r["dependency-name"]: r["update-types"] for r in docker["ignore"]}
+    # test_python_version pins the image to the project's Python; a bump must change both.
+    assert rules["python"] == ["version-update:semver-minor"]
 
 
 @pytest.mark.parametrize("path", COMPOSITE_ACTIONS, ids=lambda p: p.parent.name)
