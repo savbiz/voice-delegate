@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Changed: CI checks the Android shell's committed Gradle wrapper jar against Gradle's published checksums (`gradle/actions/wrapper-validation`), and the wrapper verifies the Gradle distribution it downloads (`distributionSha256Sum`).
+
 Changed: Dependabot opens fewer pull requests. Python and npm updates are still checked weekly; GitHub Actions and container images are checked monthly. Image digest refreshes now join the grouped image pull request instead of arriving one per image, and new major image lines and new Python minor versions are left to a manual upgrade, since the Python version is pinned in `pyproject.toml`, the CI matrix and `test_python_version` together.
 
 Added: a short code of conduct ([CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)), written for this project, with expected behavior, scope and how to report a problem; `CONTRIBUTING.md` links to it.

@@ -151,6 +151,16 @@ def test_supply_chain_audits_both_ecosystems_weekly_and_on_lockfile_changes() ->
     assert "--locked" in commands, "audit the lock file, not a fresh resolution"
 
 
+def test_committed_gradle_wrapper_is_validated_and_its_download_checksummed() -> None:
+    workflow = load(ROOT / ".github/workflows/supply-chain.yml")
+    assert "frontend/android/gradle/wrapper/**" in triggers(workflow)["pull_request"]["paths"]
+    uses = [str(step.get("uses", "")) for step in steps(workflow)]
+    # Scorecard accepts the committed wrapper jar only when this action checks it.
+    assert any(u.startswith("gradle/actions/wrapper-validation@") for u in uses)
+    properties = ROOT / "frontend/android/gradle/wrapper/gradle-wrapper.properties"
+    assert re.search(r"^distributionSha256Sum=[0-9a-f]{64}$", properties.read_text(), re.M)
+
+
 def test_sbom_workflow_attaches_both_documents_to_releases() -> None:
     workflow = load(ROOT / ".github/workflows/sbom.yml")
     assert "release" in triggers(workflow)
