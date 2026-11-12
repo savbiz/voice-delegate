@@ -15008,7 +15008,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@elevenlabs/client` 1.33.0
+### `@elevenlabs/client` 1.35.0
 
 Licence: MIT.
 
@@ -15038,7 +15038,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@elevenlabs/types` 0.27.0
+### `@elevenlabs/types` 0.29.0
 
 Licence: MIT.
 
@@ -18211,7 +18211,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@playwright/test` 1.64.1
+### `@playwright/test` 1.65.0
 
 Licence: Apache-2.0.
 
@@ -18466,7 +18466,7 @@ end of terms and conditions
 The licenses of externally maintained libraries from which parts of the Software is derived are listed [here](https://github.com/rolldown/rolldown/blob/main/THIRD-PARTY-LICENSE).
 ````
 
-### `@rolldown/pluginutils` 1.0.1
+### `@rolldown/pluginutils` 1.1.0
 
 Licence: MIT.
 
@@ -18496,7 +18496,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/node` 4.3.4
+### `@tailwindcss/node` 4.3.5
 
 Licence: MIT.
 
@@ -18526,7 +18526,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/oxide` 4.3.4
+### `@tailwindcss/oxide` 4.3.5
 
 Licence: MIT.
 
@@ -18556,7 +18556,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/oxide-darwin-arm64` 4.3.4
+### `@tailwindcss/oxide-darwin-arm64` 4.3.5
 
 Licence: MIT.
 
@@ -18586,7 +18586,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@tailwindcss/oxide-wasm32-wasi` 4.3.4
+### `@tailwindcss/oxide-wasm32-wasi` 4.3.5
 
 Licence: MIT.
 
@@ -18809,7 +18809,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ````
 
-### `@tailwindcss/vite` 4.3.4
+### `@tailwindcss/vite` 4.3.5
 
 Licence: MIT.
 
@@ -19499,7 +19499,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `@vitejs/plugin-react` 6.2.1
+### `@vitejs/plugin-react` 6.3.0
 
 Licence: MIT.
 
@@ -23527,7 +23527,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `jose` 6.2.15
+### `jose` 6.2.16
 
 Licence: MIT.
 
@@ -25796,7 +25796,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ````
 
-### `playwright` 1.64.1
+### `playwright` 1.65.0
 
 Licence: Apache-2.0.
 
@@ -26017,7 +26017,7 @@ This software contains code derived from the Puppeteer project (https://github.c
 available under the Apache 2.0 license (https://github.com/puppeteer/puppeteer/blob/master/LICENSE).
 ````
 
-### `playwright-core` 1.64.1
+### `playwright-core` 1.65.0
 
 Licence: Apache-2.0.
 
@@ -27255,7 +27255,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ````
 
-### `sdp` 3.2.2
+### `sdp` 3.2.3
 
 Licence: MIT.
 
@@ -27715,7 +27715,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `tailwindcss` 4.3.4
+### `tailwindcss` 4.3.5
 
 Licence: MIT.
 
@@ -28362,7 +28362,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ````
 
-### `vite` 8.3.5
+### `vite` 8.3.6
 
 Licence: MIT.
 
