@@ -59,12 +59,12 @@ services:
     depends_on:
       backend: {condition: service_healthy}
   collector:
-    image: otel/opentelemetry-collector-contrib:0.164.0
+    image: otel/opentelemetry-collector-contrib:0.165.0
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes: ["../../observability/collector.yaml:/etc/otelcol/config.yaml:ro"]
     mem_limit: 256m
   prometheus:
-    image: prom/prometheus:v3.15.1
+    image: prom/prometheus:v3.16.0
     command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=24h"]
     volumes: ["../../observability/prometheus.yaml:/etc/prometheus/prometheus.yml:ro"]
     ports: ["127.0.0.1:9090:9090"]
