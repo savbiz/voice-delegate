@@ -16,6 +16,7 @@ on:
       - agent/pyproject.toml
       - frontend/pnpm-lock.yaml
       - frontend/package.json
+      - frontend/android/gradle/wrapper/**
       - .github/workflows/supply-chain.yml
 
 concurrency:
@@ -56,3 +57,13 @@ jobs:
           version: "11.19.0"
           package_json_file: frontend/package.json
       - run: pnpm audit --audit-level moderate
+
+  # The Android shell commits Gradle's wrapper jar, a binary that runs on every build. This checks
+  # it against the checksums Gradle publishes for each release, so a tampered jar fails here.
+  gradle-wrapper:
+    name: Gradle wrapper
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
